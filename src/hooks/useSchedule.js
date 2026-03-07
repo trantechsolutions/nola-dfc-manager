@@ -9,12 +9,18 @@ export const useSchedule = (user) => {
 
   const fetchScheduleData = useCallback(async () => {
     setLoading(true);
+    // 1. Fetch Blackouts from Firestore
+    let blackoutsList = [];
     try {
-      // 1. Fetch Blackouts from Firestore
       const blackouts = await firebaseService.getAll('blackouts');
-      setBlackoutDates(blackouts.map(b => b.id));
+      blackoutsList = blackouts.map(b => b.id);
+    } catch (err) {
+      console.warn("Skipping blackouts: User likely not logged in.");
+    }
+    setBlackoutDates(blackoutsList);
 
-      // 2. Fetch Ollie Sports iCal
+    // 2. Fetch Ollie Sports iCal
+    try {
       const icsUrl = `https://api.olliesports.com/ical/team-McFNdDsJbcFwAO8L5yCQShQ_DJN_.ics`;
       const response = await fetch(icsUrl);
       const icsString = await response.text();
@@ -46,7 +52,7 @@ export const useSchedule = (user) => {
         past: parsedEvents.filter(e => e.timestamp < now).sort((a, b) => b.timestamp - a.timestamp)
       });
     } catch (error) {
-      console.error("Schedule fetch error:", error);
+      console.error("iCal fetch error:", error);
     } finally {
       setLoading(false);
     }

@@ -95,8 +95,12 @@ export default function Dashboard({
                     <p className="font-black text-slate-900">{player.firstName} {player.lastName}</p>
                     <div className="flex items-center gap-3 mt-1">
                       <p className="text-xs font-bold text-slate-400">#{player.jerseyNumber || '??'}</p>
+                      
+                      {/* Updated Waiver Badge Styling */}
                       {player.seasonProfiles?.[selectedSeasonData?.id]?.feeWaived && (
-                        <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded uppercase">Fee Waived</span>
+                        <span className="text-[10px] font-black bg-amber-100 text-amber-700 px-2 py-0.5 rounded uppercase tracking-widest shadow-sm">
+                          Fee Waived
+                        </span>
                       )}
                     </div>
                   </div>

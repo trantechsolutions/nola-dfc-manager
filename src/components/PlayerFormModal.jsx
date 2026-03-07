@@ -7,23 +7,20 @@ export default function PlayerFormModal({ show, onClose, onSubmit, onArchive, in
     lastName: '',
     jerseyNumber: '',
     status: 'active',
-    guardians: [{ name: '', email: '', phone: '' }],
-    feeWaived: false
+    guardians: [{ name: '', email: '', phone: '' }]
   });
 
   useEffect(() => {
     if (initialData) {
         setFormData({
-        ...initialData,
-        guardians: initialData.guardians?.length ? initialData.guardians : [{ name: '', email: '', phone: '' }],
-        status: initialData.status || 'active',
-        feeWaived: initialData.seasonProfiles?.[selectedSeason]?.feeWaived || false
+          ...initialData,
+          guardians: initialData.guardians?.length ? initialData.guardians : [{ name: '', email: '', phone: '' }],
+          status: initialData.status || 'active'
         });
     } else {
         setFormData({
-        firstName: '', lastName: '', jerseyNumber: '', status: 'active',
-        guardians: [{ name: '', email: '', phone: '' }],
-        feeWaived: false
+          firstName: '', lastName: '', jerseyNumber: '', status: 'active',
+          guardians: [{ name: '', email: '', phone: '' }]
         });
     }
   }, [initialData, show, selectedSeason]);
@@ -48,21 +45,18 @@ export default function PlayerFormModal({ show, onClose, onSubmit, onArchive, in
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Safely update the player's season profile with the fee waiver status
+    // Safely update the player's season profile while preserving existing 
+    // data like baseFee and feeWaived managed by the Budget view
     const profiles = initialData?.seasonProfiles || {};
     profiles[selectedSeason] = {
       ...(profiles[selectedSeason] || {}),
-      feeWaived: formData.feeWaived,
-      status: formData.status // keep local status in sync with seasonal logic if needed
+      status: formData.status 
     };
 
     const submissionData = {
       ...formData,
       seasonProfiles: profiles
     };
-    
-    // Clean up our temporary modal state key
-    delete submissionData.feeWaived; 
     
     onSubmit(submissionData);
   };
@@ -103,11 +97,6 @@ export default function PlayerFormModal({ show, onClose, onSubmit, onArchive, in
                   <option value="archived">Archived / Inactive</option>
                 </select>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-2 px-1">
-             <input type="checkbox" id="feeWaived" checked={formData.feeWaived} onChange={e => setFormData({...formData, feeWaived: e.target.checked})} className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 border-slate-300" />
-             <label htmlFor="feeWaived" className="text-sm font-bold text-slate-700 cursor-pointer">Waive Team Fee for {selectedSeason}</label>
           </div>
 
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">

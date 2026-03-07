@@ -24,40 +24,54 @@ export default function Sponsors({
   const currentSeasonData = seasons.find(s => s.id === selectedSeason);
   const isBudgetLocked = currentSeasonData?.isFinalized;
 
-  // Helper to ensure 'cleared' boolean logic works with imported CSV strings
   const isCleared = (tx) => tx.cleared === true || String(tx.cleared).toLowerCase() === 'true';
 
-  // Filter for the outputs of the waterfall (the actual credits applied to players/team)
+  // Extract raw credits
   const sponsorTxs = transactions.filter(tx => tx.category === 'SPO' && isCleared(tx) && tx.waterfallBatchId);
   const fundraiserTxs = transactions.filter(tx => tx.category === 'FUN' && isCleared(tx) && tx.waterfallBatchId);
-  const allCredits = [...sponsorTxs, ...fundraiserTxs].sort((a, b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
+  const allCredits = [...sponsorTxs, ...fundraiserTxs];
 
-  // Filter for the raw ledger deposits
+  // --- REFINED: GROUP HISTORY BY BATCH ID ---
+  const groupedHistoryMap = {};
+  allCredits.forEach(tx => {
+    if (!groupedHistoryMap[tx.waterfallBatchId]) {
+      groupedHistoryMap[tx.waterfallBatchId] = {
+        batchId: tx.waterfallBatchId,
+        originalTxId: tx.originalTxId,
+        // Clean up the title so the receipt row looks nice
+        title: tx.title.replace(' (Team Pool Overflow)', ''),
+        date: tx.date,
+        totalAmount: 0,
+        recipients: []
+      };
+    }
+    groupedHistoryMap[tx.waterfallBatchId].totalAmount += Number(tx.amount || 0);
+    groupedHistoryMap[tx.waterfallBatchId].recipients.push({
+      name: tx.playerName || 'Team Pool',
+      amount: Number(tx.amount || 0)
+    });
+  });
+
+  // Sort receipts by newest first
+  const historyList = Object.values(groupedHistoryMap).sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
+
+  // Undistributed
   const undistributedSponsors = transactions.filter(tx => 
     tx.category === 'SPO' && Number(tx.amount || 0) > 0 && !tx.distributed && !tx.waterfallBatchId
   );
 
-  // --- REFINED: Fundraising Rollup Data ---
+  // Fundraising Rollup
   const allFundraisingTxs = transactions.filter(tx => tx.category === 'FUN' && isCleared(tx));
   
   const fundraisingByPlayer = seasonalPlayers.map(player => {
     const fullName = `${player.firstName} ${player.lastName}`.trim().toLowerCase();
-    
-    // Match by strict ID or fallback to imported CSV string names
     const playerTxs = allFundraisingTxs.filter(tx => {
       if (tx.playerId === player.id) return true;
       const txName = (tx.playerName || tx.Name || '').trim().toLowerCase();
       return txName === fullName;
     });
-    
-    // Ensure amount is parsed as a number from CSV imports
     const total = playerTxs.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
-    
-    return {
-      ...player,
-      fundraisingTxs: playerTxs,
-      fundraisingTotal: total
-    };
+    return { ...player, fundraisingTxs: playerTxs, fundraisingTotal: total };
   }).filter(p => p.fundraisingTotal > 0 || p.fundraisingTxs.length > 0)
     .sort((a, b) => b.fundraisingTotal - a.fundraisingTotal);
 
@@ -128,7 +142,7 @@ export default function Sponsors({
         </div>
       )}
 
-      {/* --- DISTRIBUTED VIEW --- */}
+      {/* --- DISTRIBUTED VIEW (RECEIPT GROUPS) --- */}
       {activeTab === 'distributed' && (
         <div className="animate-in fade-in duration-300">
           <h3 className="font-black text-slate-800 mb-4 flex items-center gap-2">
@@ -140,45 +154,53 @@ export default function Sponsors({
                 <thead className="bg-slate-50 border-b border-slate-100">
                   <tr className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                     <th className="px-6 py-4">Title / Source</th>
-                    <th className="px-6 py-4">Applied To</th>
-                    <th className="px-6 py-4 text-right">Amount</th>
+                    <th className="px-6 py-4">Waterfall Breakdown</th>
+                    <th className="px-6 py-4 text-right">Total Applied</th>
                     <th className="px-6 py-4 text-center">Undo</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {allCredits.length === 0 ? (
+                  {historyList.length === 0 ? (
                     <tr>
                       <td colSpan="4" className="px-6 py-12 text-center text-slate-400 font-bold italic">
                         No distributed sponsorships or fundraising found.
                       </td>
                     </tr>
                   ) : (
-                    allCredits.map((tx) => (
-                      <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4">
-                          <p className="font-bold text-slate-800 text-sm">{tx.title}</p>
-                          <p className="text-[10px] text-slate-400 font-medium">
-                            {tx.date?.seconds ? new Date(tx.date.seconds * 1000).toLocaleDateString() : 'Pending'}
+                    historyList.map((group) => (
+                      <tr key={group.batchId} className="hover:bg-slate-50 transition-colors items-start">
+                        <td className="px-6 py-4 align-top">
+                          <p className="font-bold text-slate-800 text-sm">{group.title}</p>
+                          <p className="text-[10px] text-slate-400 font-medium mt-1">
+                            {group.date?.seconds ? new Date(group.date.seconds * 1000).toLocaleDateString() : 'Pending'}
                           </p>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className={`text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider ${tx.playerName ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>
-                            {tx.playerName || 'Team Pool'}
-                          </span>
+                        <td className="px-6 py-4 align-top">
+                           <div className="flex flex-col gap-2">
+                             <span className="text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider bg-blue-50 text-blue-600 w-fit">
+                               {group.recipients.length} Recipient{group.recipients.length !== 1 && 's'}
+                             </span>
+                             <div className="text-xs text-slate-500 space-y-1">
+                               {group.recipients.map((r, i) => (
+                                 <div key={i} className="flex justify-between max-w-[200px] border-b border-slate-100 last:border-0 pb-1 last:pb-0">
+                                   <span className="font-medium text-slate-700">{r.name}</span>
+                                   <span className="font-bold text-slate-900">{formatMoney(r.amount)}</span>
+                                 </div>
+                               ))}
+                             </div>
+                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right font-black text-emerald-600">
-                          {formatMoney(tx.amount)}
+                        <td className="px-6 py-4 text-right font-black text-emerald-600 align-top">
+                          {formatMoney(group.totalAmount)}
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          {tx.waterfallBatchId && (
-                            <button 
-                              onClick={() => onReset(tx.waterfallBatchId, tx.originalTxId)} 
-                              className="text-slate-300 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50"
-                              title="Undo this distribution"
-                            >
-                              <Undo2 size={16}/>
-                            </button>
-                          )}
+                        <td className="px-6 py-4 text-center align-top">
+                          <button 
+                            onClick={() => onReset(group.batchId, group.originalTxId)} 
+                            className="text-slate-300 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50"
+                            title="Undo this distribution"
+                          >
+                            <Undo2 size={16}/>
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -190,7 +212,7 @@ export default function Sponsors({
         </div>
       )}
 
-      {/* --- REFINED: FUNDRAISING ROLLUP VIEW --- */}
+      {/* --- FUNDRAISING ROLLUP VIEW --- */}
       {activeTab === 'fundraising' && (
         <div className="animate-in fade-in duration-300">
           <h3 className="font-black text-slate-800 mb-4 flex items-center gap-2">
@@ -204,8 +226,6 @@ export default function Sponsors({
             ) : (
               fundraisingByPlayer.map(player => (
                 <div key={player.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                  
-                  {/* Accordion Header */}
                   <button 
                     onClick={() => setExpandedPlayerId(expandedPlayerId === player.id ? null : player.id)}
                     className="w-full flex justify-between items-center p-5 hover:bg-slate-50 transition-colors"
@@ -222,7 +242,6 @@ export default function Sponsors({
                     </div>
                   </button>
                   
-                  {/* Accordion Body (Individual Transactions) */}
                   {expandedPlayerId === player.id && (
                     <div className="bg-slate-50 border-t border-slate-100 p-4">
                       <table className="w-full text-left text-sm">
@@ -242,7 +261,6 @@ export default function Sponsors({
                       </table>
                     </div>
                   )}
-                  
                 </div>
               ))
             )}
@@ -275,7 +293,7 @@ export default function Sponsors({
                   <option value="">Team Pool (Split Evenly)</option>
                   {seasonalPlayers.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}
                 </select>
-                <p className="text-[10px] text-slate-400 mt-2">Any funds exceeding a player's remaining fee will automatically waterfall into the Team Pool.</p>
+                <p className="text-[10px] text-slate-400 mt-2">Any funds exceeding a player's remaining fee will automatically waterfall to the rest of the team.</p>
               </div>
               
               <div className="flex gap-3 pt-4 border-t border-slate-100">

@@ -35,11 +35,15 @@ export default function ScheduleView({ events, blackoutDates, onToggleBlackout }
       {scheduleMode === 'list' ? (
         <Schedule events={events} />
       ) : (
-        <CalendarView 
-          events={events} 
-          blackoutDates={blackoutDates} 
-          onToggleBlackout={onToggleBlackout} 
-        />
+        <div className="w-full overflow-x-auto pb-4 custom-scrollbar">
+          <div className="min-w-[700px]"> {/* Forces the calendar to stay wide enough to read */}
+            <CalendarView 
+              events={events} 
+              blackoutDates={blackoutDates} 
+              onToggleBlackout={onToggleBlackout} 
+            />
+          </div>
+        </div>
       )}
     </div>
   );

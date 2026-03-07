@@ -19,6 +19,7 @@ import PublicCalendarView from './views/PublicCalendarView';
 import TransactionModal from './components/TransactionModal';
 import PlayerFormModal from './components/PlayerFormModal';
 import PlayerModal from './components/PlayerModal';
+import ConfirmModal from './components/ConfirmModal';
 
 // Services & Hooks
 import { firebaseService } from './services/firebaseService';
@@ -50,6 +51,7 @@ function App() {
   const [playerToView, setPlayerToView] = useState(null);
   const [showTxForm, setShowTxForm] = useState(false);
   const [txToEdit, setTxToEdit] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   // Hooks
   const { seasons, selectedSeason, setSelectedSeason, currentSeasonData, refreshSeasons } = useSoccerYear(user);
@@ -61,7 +63,7 @@ function App() {
         firebaseService.getAll('players'),
         firebaseService.getAll('transactions')
       ]);
-      setPlayers(pData);
+      setPlayers(pData.sort((a,b) => a.lastName > b.lastName ? 1 : -1));
       setTransactions(tData);
     } catch (e) {
       console.error("Data fetch error", e);
@@ -70,9 +72,25 @@ function App() {
     }
   };
 
-  const showToast = (msg, isError = false) => {
-    setToast({ msg, isError });
+  const showToast = (msg, isError = false, action = null) => {
+    setToast({ msg, isError, action });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const showConfirm = (message) => {
+    return new Promise((resolve) => {
+      setConfirmDialog({
+        message,
+        onConfirm: () => {
+          resolve(true);
+          setConfirmDialog(null);
+        },
+        onCancel: () => {
+          resolve(false);
+          setConfirmDialog(null);
+        }
+      });
+    });
   };
 
   // Logic & Filtering
@@ -231,8 +249,8 @@ function App() {
           {/* Manager Only Routes */}
           {role === 'manager' && (
             <>
-              <Route path="/ledger" element={<LedgerView transactions={seasonalTransactions} formatMoney={formatMoney} onAddTx={() => { setTxToEdit(null); setShowTxForm(true); }} onEditTx={(tx) => { setTxToEdit(tx); setShowTxForm(true); }} onDeleteTx={handleDeleteTransaction} />} />
-              <Route path="/budget" element={<BudgetView selectedSeason={selectedSeason} formatMoney={formatMoney} seasons={seasons} setSelectedSeason={setSelectedSeason} refreshSeasons={refreshSeasons} />} />
+              <Route path="/ledger" element={<LedgerView transactions={seasonalTransactions} formatMoney={formatMoney} onAddTx={() => { setTxToEdit(null); setShowTxForm(true); }} onEditTx={(tx) => { setTxToEdit(tx); setShowTxForm(true); }} onDeleteTx={ async (id) => {const confirmed = await showConfirm("Are you sure you want to delete this transaction? This cannot be undone."); if (confirmed) { await handleDeleteTransaction(id); showToast("Transaction deleted"); } }} />} />
+              <Route path="/budget" element={<BudgetView selectedSeason={selectedSeason} formatMoney={formatMoney} seasons={seasons} setSelectedSeason={setSelectedSeason} refreshSeasons={refreshSeasons} showToast={showToast} showConfirm={showConfirm} />} />
               <Route path="/sponsors" element={<Sponsors transactions={seasonalTransactions} selectedSeason={selectedSeason} formatMoney={formatMoney} onDistribute={async (amt, title, pId, originalId) => { try { await handleWaterfallCredit(amt, title, pId, originalId); fetchData(); showToast("Funds Distributed!"); } catch (error) { showToast(error.message, true); } }} onReset={async (batchId, originalTxId) => { await revertWaterfall(batchId, originalTxId); fetchData(); showToast("Distribution Reverted."); }} seasonalPlayers={seasonalPlayers} seasons={seasons} />} />
             </>
           )}
@@ -260,16 +278,16 @@ function App() {
       {/* --- MODALS --- */}
       {showPlayerModal && (
         <PlayerModal 
-          player={playerToView} transactions={seasonalTransactions} onClose={() => { setShowPlayerModal(false); setPlayerToView(null); }}
+          player={playerToView} transactions={seasonalTransactions} selectedSeason={selectedSeason} onClose={() => { setShowPlayerModal(false); setPlayerToView(null); }}
           calculateFinancials={calculatePlayerFinancials} formatMoney={formatMoney}
-          onToggleCompliance={async (id, field, currentState) => { await firebaseService.updateDocument('players', id, { [field]: !currentState }); fetchData(); }}
+          onToggleCompliance={async (id, field, currentState) => { setPlayerToView(prev => ({ ...prev, [field]: !currentState })); await firebaseService.updateDocument('players', id, { [field]: !currentState }); fetchData(); }}
         />
       )}
 
       <PlayerFormModal 
         show={showPlayerForm} initialData={playerToEdit} selectedSeason={selectedSeason}
         onSubmit={async (data) => { await handleSavePlayer(data); setShowPlayerForm(false); showToast(playerToEdit ? "Player Updated" : "Player Added"); }} 
-        onArchive={async (id) => { await handleArchivePlayer(id); setShowPlayerForm(false); showToast("Player Archived"); }} 
+        onArchive={async (id) => { const confirmed = await showConfirm("Archive this player? They will be removed from active rosters."); if (confirmed) { await handleArchivePlayer(id); setShowPlayerForm(false); showToast("Player Archived"); } }} 
         onClose={() => setShowPlayerForm(false)} 
       />
       
@@ -279,11 +297,32 @@ function App() {
         onClose={() => setShowTxForm(false)} players={seasonalPlayers} 
       />
 
+      {confirmDialog && (
+      <ConfirmModal 
+          message={confirmDialog.message} 
+          onConfirm={confirmDialog.onConfirm} 
+          onCancel={confirmDialog.onCancel} 
+        />
+      )}
+
       {/* --- TOAST --- */}
       {toast && (
-        <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 text-white px-6 py-4 rounded-2xl shadow-2xl font-black z-[200] border-2 flex items-center gap-2 ${toast.isError ? 'bg-red-600 border-red-400 shadow-red-500/20' : 'bg-slate-900 border-slate-700 shadow-slate-900/20'}`}>
+        <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 text-white px-6 py-4 rounded-2xl shadow-2xl font-black z-[200] border-2 flex items-center gap-3 ${toast.isError ? 'bg-red-600 border-red-400 shadow-red-500/20' : 'bg-slate-900 border-slate-700 shadow-slate-900/20'}`}>
           {toast.isError && <Settings size={20} className="animate-spin" />}
-          {toast.msg}
+          <span>{toast.msg}</span>
+          
+          {/* Render the Undo action if it exists */}
+          {toast.action && (
+            <button 
+              onClick={() => { 
+                toast.action.onClick(); 
+                setToast(null); 
+              }}
+              className="ml-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 active:scale-95 rounded-lg text-xs font-black uppercase tracking-wider transition-all"
+            >
+              {toast.action.label}
+            </button>
+          )}
         </div>
       )}
     </div>
