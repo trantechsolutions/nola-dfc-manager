@@ -134,3 +134,6 @@ The most complex logic in the app governs how external money (fundraising/sponso
 
 ### Financial Aggregation (PlayerModal.jsx)
 A player's balance is dynamically computed on the fly by combining their seasonProfiles.[seasonId].baseFee with a filtered reduction of all cleared transactions linked to their ID. If a player's feeWaived boolean is set to true by the Budgeting tool, the engine forces their baseFee to $0, ensuring they do not show a false negative balance even if accidental charges are logged.
+
+### Optimistic UI & Toast Actions
+The application relies heavily on Optimistic UI updates. When a Manager toggles a waiver or compliance switch, the UI updates instantly while the Firestore updateDoc runs in the background. Errors gracefully revert the UI. Deletions and sensitive toggles trigger a custom asynchronous Confirmation Modal and Toast system that supports recursive "Undo" actions.
