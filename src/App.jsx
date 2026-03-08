@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from './firebase';
+import { supabase } from './supabase';
 import { 
   LayoutDashboard, ReceiptText, Wallet, Users, 
   Calendar, Plus, Settings, LogOut
@@ -22,7 +21,7 @@ import PlayerModal from './components/PlayerModal';
 import ConfirmModal from './components/ConfirmModal';
 
 // Services & Hooks
-import { firebaseService } from './services/firebaseService';
+import { supabaseService } from './services/supabaseService';
 import { useSoccerYear } from './hooks/useSoccerYear';
 import { useFinance } from './hooks/useFinance';
 import { useSchedule } from './hooks/useSchedule';
@@ -60,10 +59,10 @@ function App() {
   const fetchData = async () => {
     try {
       const [pData, tData] = await Promise.all([
-        firebaseService.getAll('players'),
-        firebaseService.getAll('transactions')
+        supabaseService.getAllPlayers(),
+        supabaseService.getAllTransactions()
       ]);
-      setPlayers(pData.sort((a,b) => a.lastName > b.lastName ? 1 : -1));
+      setPlayers(pData);
       setTransactions(tData);
     } catch (e) {
       console.error("Data fetch error", e);
@@ -81,14 +80,8 @@ function App() {
     return new Promise((resolve) => {
       setConfirmDialog({
         message,
-        onConfirm: () => {
-          resolve(true);
-          setConfirmDialog(null);
-        },
-        onCancel: () => {
-          resolve(false);
-          setConfirmDialog(null);
-        }
+        onConfirm: () => { resolve(true); setConfirmDialog(null); },
+        onCancel: () => { resolve(false); setConfirmDialog(null); }
       });
     });
   };
@@ -122,9 +115,13 @@ function App() {
     fetchData, selectedSeason, handleWaterfallCredit
   );
 
+  // ── SUPABASE AUTH LISTENER ──
   useEffect(() => {
     const ADMIN_EMAILS = ['jonny5v@gmail.com', 'lauren.willie@gmail.com'];
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const currentUser = session?.user || null;
       setUser(currentUser);
       if (currentUser) {
         setRole(ADMIN_EMAILS.includes(currentUser.email) ? 'manager' : 'parent');
@@ -133,7 +130,20 @@ function App() {
         setLoading(false);
       }
     });
-    return () => unsubscribe();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+      if (currentUser) {
+        setRole(ADMIN_EMAILS.includes(currentUser.email) ? 'manager' : 'parent');
+        fetchData();
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const teamBalance = seasonalTransactions.reduce((acc, tx) => {
@@ -202,7 +212,7 @@ function App() {
         </nav>
 
         <div className="p-4 border-t border-slate-800">
-          <button onClick={() => signOut(auth)} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-red-400 hover:bg-red-900/20 transition-all">
+          <button onClick={() => supabase.auth.signOut()} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-red-400 hover:bg-red-900/20 transition-all">
             <LogOut size={20} />
             <span className="text-sm">Logout</span>
           </button>
@@ -216,17 +226,15 @@ function App() {
           <select value={selectedSeason} onChange={(e) => setSelectedSeason(e.target.value)} className="text-xs font-bold text-blue-600 bg-slate-50 rounded-lg border-none px-2 py-1">
             {seasons.map(s => <option key={s.id} value={s.id}>{s.id}</option>)}
           </select>
-          <button onClick={() => signOut(auth)} className="text-red-500"><LogOut size={18}/></button>
+          <button onClick={() => supabase.auth.signOut()} className="text-red-500"><LogOut size={18}/></button>
         </div>
       </header>
 
       {/* --- CONTENT AREA WITH ROUTES --- */}
       <main className="flex-grow p-4 md:p-8 pb-32 md:pb-8 max-w-6xl mx-auto w-full">
         <Routes>
-          {/* Default Redirect */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           
-          {/* Shared Routes */}
           <Route path="/dashboard" element={
             role === 'manager' ? (
               <Dashboard 
@@ -246,16 +254,36 @@ function App() {
              <ScheduleView events={events} blackoutDates={blackoutDates} onToggleBlackout={role === 'manager' ? toggleBlackout : null} />
           } />
 
-          {/* Manager Only Routes */}
           {role === 'manager' && (
             <>
               <Route path="/ledger" element={<LedgerView transactions={seasonalTransactions} formatMoney={formatMoney} onAddTx={() => { setTxToEdit(null); setShowTxForm(true); }} onEditTx={(tx) => { setTxToEdit(tx); setShowTxForm(true); }} onDeleteTx={ async (id) => {const confirmed = await showConfirm("Are you sure you want to delete this transaction? This cannot be undone."); if (confirmed) { await handleDeleteTransaction(id); showToast("Transaction deleted"); } }} />} />
               <Route path="/budget" element={<BudgetView selectedSeason={selectedSeason} formatMoney={formatMoney} seasons={seasons} setSelectedSeason={setSelectedSeason} refreshSeasons={refreshSeasons} showToast={showToast} showConfirm={showConfirm} />} />
-              <Route path="/sponsors" element={<Sponsors transactions={seasonalTransactions} selectedSeason={selectedSeason} formatMoney={formatMoney} onDistribute={async (amt, title, pId, originalId) => { try { await handleWaterfallCredit(amt, title, pId, originalId); fetchData(); showToast("Funds Distributed!"); } catch (error) { showToast(error.message, true); } }} onReset={async (batchId, originalTxId) => { await revertWaterfall(batchId, originalTxId); fetchData(); showToast("Distribution Reverted."); }} seasonalPlayers={seasonalPlayers} seasons={seasons} />} />
+              <Route path="/sponsors" element={
+                <Sponsors 
+                  transactions={seasonalTransactions} 
+                  selectedSeason={selectedSeason} 
+                  formatMoney={formatMoney} 
+                  onDistribute={async (amt, title, pId, originalId, category) => { 
+                    try { 
+                      await handleWaterfallCredit(amt, title, pId, originalId, category); 
+                      await fetchData(); 
+                      showToast("Funds Distributed!"); 
+                    } catch (error) { 
+                      showToast(error.message, true); 
+                    } 
+                  }} 
+                  onReset={async (batchId, originalTxId) => { 
+                    await revertWaterfall(batchId, originalTxId); 
+                    await fetchData(); 
+                    showToast("Distribution Reverted."); 
+                  }} 
+                  seasonalPlayers={seasonalPlayers} 
+                  seasons={seasons} 
+                />
+              } />
             </>
           )}
 
-          {/* Catch-all */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
@@ -280,7 +308,11 @@ function App() {
         <PlayerModal 
           player={playerToView} transactions={seasonalTransactions} selectedSeason={selectedSeason} onClose={() => { setShowPlayerModal(false); setPlayerToView(null); }}
           calculateFinancials={calculatePlayerFinancials} formatMoney={formatMoney}
-          onToggleCompliance={async (id, field, currentState) => { setPlayerToView(prev => ({ ...prev, [field]: !currentState })); await firebaseService.updateDocument('players', id, { [field]: !currentState }); fetchData(); }}
+          onToggleCompliance={async (id, field, currentState) => { 
+            setPlayerToView(prev => ({ ...prev, [field]: !currentState })); 
+            await supabaseService.updatePlayerField(id, field, !currentState); 
+            fetchData(); 
+          }}
         />
       )}
 
@@ -298,7 +330,7 @@ function App() {
       />
 
       {confirmDialog && (
-      <ConfirmModal 
+        <ConfirmModal 
           message={confirmDialog.message} 
           onConfirm={confirmDialog.onConfirm} 
           onCancel={confirmDialog.onCancel} 
@@ -310,14 +342,9 @@ function App() {
         <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 text-white px-6 py-4 rounded-2xl shadow-2xl font-black z-[200] border-2 flex items-center gap-3 ${toast.isError ? 'bg-red-600 border-red-400 shadow-red-500/20' : 'bg-slate-900 border-slate-700 shadow-slate-900/20'}`}>
           {toast.isError && <Settings size={20} className="animate-spin" />}
           <span>{toast.msg}</span>
-          
-          {/* Render the Undo action if it exists */}
           {toast.action && (
             <button 
-              onClick={() => { 
-                toast.action.onClick(); 
-                setToast(null); 
-              }}
+              onClick={() => { toast.action.onClick(); setToast(null); }}
               className="ml-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 active:scale-95 rounded-lg text-xs font-black uppercase tracking-wider transition-all"
             >
               {toast.action.label}

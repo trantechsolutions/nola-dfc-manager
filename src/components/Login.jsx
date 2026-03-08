@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signInWithPopup, 
-  GoogleAuthProvider 
-} from 'firebase/auth';
-import { auth } from '../firebase';
+import { supabase } from '../supabase';
 
 export default function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -18,19 +12,28 @@ export default function Login() {
     setError('');
     try {
       if (isRegistering) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
       }
     } catch (err) {
-      setError(isRegistering ? 'Failed to create account. Email may already be in use.' : 'Invalid email or password.');
+      setError(isRegistering 
+        ? 'Failed to create account. Email may already be in use.' 
+        : 'Invalid email or password.');
     }
   };
 
   const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const { error } = await supabase.auth.signInWithOAuth({ 
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + window.location.pathname
+        }
+      });
+      if (error) throw error;
     } catch (err) {
       setError('Google Sign-In failed. Please try again.');
     }

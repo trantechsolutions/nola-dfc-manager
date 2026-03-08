@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import ICAL from 'ical.js';
-import { firebaseService } from '../services/firebaseService';
+import { supabaseService } from '../services/supabaseService';
 
 export const useSchedule = (user) => {
   const [events, setEvents] = useState({ upcoming: [], past: [] });
@@ -9,13 +9,12 @@ export const useSchedule = (user) => {
 
   const fetchScheduleData = useCallback(async () => {
     setLoading(true);
-    // 1. Fetch Blackouts from Firestore
+    // 1. Fetch Blackouts from Supabase
     let blackoutsList = [];
     try {
-      const blackouts = await firebaseService.getAll('blackouts');
-      blackoutsList = blackouts.map(b => b.id);
+      blackoutsList = await supabaseService.getAllBlackouts();
     } catch (err) {
-      console.warn("Skipping blackouts: User likely not logged in.");
+      console.warn("Skipping blackouts:", err.message);
     }
     setBlackoutDates(blackoutsList);
 
@@ -66,12 +65,10 @@ export const useSchedule = (user) => {
     const isCurrentlyBlackout = blackoutDates.includes(dateStr);
     try {
       if (isCurrentlyBlackout) {
-        // Since our service layer handles delete via batch or manual, 
-        // we call the update/delete directly for specific IDs
-        await firebaseService.deleteDocument('blackouts', dateStr); 
+        await supabaseService.deleteBlackout(dateStr);
         setBlackoutDates(prev => prev.filter(d => d !== dateStr));
       } else {
-        await firebaseService.saveDocument('blackouts', dateStr, { isBlackout: true });
+        await supabaseService.saveBlackout(dateStr);
         setBlackoutDates(prev => [...prev, dateStr]);
       }
     } catch (e) {

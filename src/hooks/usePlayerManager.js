@@ -1,12 +1,12 @@
-import { firebaseService } from '../services/firebaseService';
+import { supabaseService } from '../services/supabaseService';
 
 export const usePlayerManager = (refreshData) => {
   const handleSavePlayer = async (playerData) => {
     try {
       if (playerData.id) {
-        await firebaseService.updateDocument('players', playerData.id, playerData);
+        await supabaseService.updatePlayer(playerData.id, playerData);
       } else {
-        await firebaseService.addDocument('players', { ...playerData, status: 'active' });
+        await supabaseService.addPlayer({ ...playerData, status: 'active' });
       }
       await refreshData();
       return { success: true };
@@ -18,16 +18,14 @@ export const usePlayerManager = (refreshData) => {
 
   const handleArchivePlayer = async (playerId) => {
     if (window.confirm("Archive this player? This will remove them from the active roster.")) {
-      await firebaseService.updateDocument('players', playerId, { status: 'archived' });
+      await supabaseService.updatePlayerField(playerId, 'status', 'archived');
       await refreshData();
     }
   };
 
   const handleToggleWaiveFee = async (playerId, selectedSeason, currentState) => {
     try {
-      await firebaseService.updateDocument('players', playerId, {
-        [`seasonProfiles.${selectedSeason}.feeWaived`]: !currentState
-      });
+      await supabaseService.updateSeasonProfile(playerId, selectedSeason, { feeWaived: !currentState });
       await refreshData();
     } catch (error) {
       console.error("Toggle waive fee failed:", error);

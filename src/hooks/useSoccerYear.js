@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { firebaseService } from '../services/firebaseService';
+import { supabaseService } from '../services/supabaseService';
 
 export const useSoccerYear = (user) => {
   const [seasons, setSeasons] = useState([]);
@@ -9,10 +9,10 @@ export const useSoccerYear = (user) => {
   const fetchSeasons = async () => {
     setLoading(true);
     try {
-      const data = await firebaseService.getAll('seasons');
+      const data = await supabaseService.getAllSeasons();
       // Ensure 2025-2026 is always present
       if (!data.find(s => s.id === '2025-2026')) {
-        data.push({ id: '2025-2026', status: 'active', isFinalized: false });
+        data.push({ id: '2025-2026', isFinalized: false });
       }
       data.sort((a, b) => b.id.localeCompare(a.id));
       setSeasons(data);

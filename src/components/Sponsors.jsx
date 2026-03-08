@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Award, UserCheck, TrendingUp, Share2, Undo2, Lock, 
-  ArrowDownNarrowWide, CheckCircle2, ChevronDown 
+  ArrowDownNarrowWide, CheckCircle2, ChevronDown, Zap, Loader2 
 } from 'lucide-react';
 
 export default function Sponsors({ 
@@ -18,31 +18,34 @@ export default function Sponsors({
   const [distTitle, setDistTitle] = useState('');
   const [sourcePlayerId, setSourcePlayerId] = useState('');
   const [originalTxId, setOriginalTxId] = useState(null); 
+  const [distCategory, setDistCategory] = useState('SPO'); // NEW: Track the category
   const [activeTab, setActiveTab] = useState('undistributed'); 
   const [expandedPlayerId, setExpandedPlayerId] = useState(null);
+  const [isDistributingAll, setIsDistributingAll] = useState(false);
+  const [distributeAllProgress, setDistributeAllProgress] = useState({ current: 0, total: 0, currentTitle: '' });
 
   const currentSeasonData = seasons.find(s => s.id === selectedSeason);
   const isBudgetLocked = currentSeasonData?.isFinalized;
 
   const isCleared = (tx) => tx.cleared === true || String(tx.cleared).toLowerCase() === 'true';
 
-  // Extract raw credits
+  // Extract raw credits for the history tab
   const sponsorTxs = transactions.filter(tx => tx.category === 'SPO' && isCleared(tx) && tx.waterfallBatchId);
   const fundraiserTxs = transactions.filter(tx => tx.category === 'FUN' && isCleared(tx) && tx.waterfallBatchId);
   const allCredits = [...sponsorTxs, ...fundraiserTxs];
 
-  // --- REFINED: GROUP HISTORY BY BATCH ID ---
+  // GROUP HISTORY BY BATCH ID
   const groupedHistoryMap = {};
   allCredits.forEach(tx => {
     if (!groupedHistoryMap[tx.waterfallBatchId]) {
       groupedHistoryMap[tx.waterfallBatchId] = {
         batchId: tx.waterfallBatchId,
         originalTxId: tx.originalTxId,
-        // Clean up the title so the receipt row looks nice
         title: tx.title.replace(' (Team Pool Overflow)', ''),
         date: tx.date,
         totalAmount: 0,
-        recipients: []
+        recipients: [],
+        category: tx.category // Helpful for UI badges
       };
     }
     groupedHistoryMap[tx.waterfallBatchId].totalAmount += Number(tx.amount || 0);
@@ -52,20 +55,21 @@ export default function Sponsors({
     });
   });
 
-  // Sort receipts by newest first
   const historyList = Object.values(groupedHistoryMap).sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
 
-  // Undistributed
+  // --- NEW: UNDISTRIBUTED FUNDS (Combines SPO and FUN) ---
   const undistributedSponsors = transactions.filter(tx => 
-    tx.category === 'SPO' && Number(tx.amount || 0) > 0 && !tx.distributed && !tx.waterfallBatchId
+    ['SPO', 'FUN'].includes(tx.category) && Number(tx.amount || 0) > 0 && !tx.distributed && !tx.waterfallBatchId
   );
 
-  // Fundraising Rollup
-  const allFundraisingTxs = transactions.filter(tx => tx.category === 'FUN' && isCleared(tx));
+  // --- NEW: FUNDRAISING ROLLUP ---
+  // We ONLY look at the raw ledger deposits (!tx.waterfallBatchId) to build the leaderboard
+  // so we don't double-count the money once it's been distributed!
+  const rawFundraisingTxs = transactions.filter(tx => tx.category === 'FUN' && isCleared(tx) && !tx.waterfallBatchId);
   
   const fundraisingByPlayer = seasonalPlayers.map(player => {
     const fullName = `${player.firstName} ${player.lastName}`.trim().toLowerCase();
-    const playerTxs = allFundraisingTxs.filter(tx => {
+    const playerTxs = rawFundraisingTxs.filter(tx => {
       if (tx.playerId === player.id) return true;
       const txName = (tx.playerName || tx.Name || '').trim().toLowerCase();
       return txName === fullName;
@@ -74,6 +78,43 @@ export default function Sponsors({
     return { ...player, fundraisingTxs: playerTxs, fundraisingTotal: total };
   }).filter(p => p.fundraisingTotal > 0 || p.fundraisingTxs.length > 0)
     .sort((a, b) => b.fundraisingTotal - a.fundraisingTotal);
+
+  // Sort undistributed: SPO first, then FUN (preserves original order within each category)
+  const sortedUndistributed = [...undistributedSponsors].sort((a, b) => {
+    const order = { SPO: 0, FUN: 1 };
+    return (order[a.category] ?? 2) - (order[b.category] ?? 2);
+  });
+
+  const handleDistributeAll = async () => {
+    if (!isBudgetLocked) {
+      alert('Budget must be finalized before distributing funds.');
+      return;
+    }
+    if (sortedUndistributed.length === 0) return;
+
+    const confirmed = window.confirm(
+      `This will sequentially distribute ${sortedUndistributed.length} pending fund(s) using the Waterfall Engine (Sponsorships first, then Fundraising).\n\nEach transaction will credit its linked player first, then overflow to the team.\n\nProceed?`
+    );
+    if (!confirmed) return;
+
+    setIsDistributingAll(true);
+    setDistributeAllProgress({ current: 0, total: sortedUndistributed.length, currentTitle: '' });
+
+    try {
+      for (let i = 0; i < sortedUndistributed.length; i++) {
+        const tx = sortedUndistributed[i];
+        setDistributeAllProgress({ current: i + 1, total: sortedUndistributed.length, currentTitle: tx.title });
+        // Sequential await — each run recalculates balances before the next
+        await onDistribute(tx.amount, tx.title, tx.playerId || '', tx.id, tx.category);
+      }
+    } catch (err) {
+      console.error('Distribute All failed at item:', distributeAllProgress.current, err);
+      alert(`Distribution stopped at "${distributeAllProgress.currentTitle}". ${err.message || 'Check the console for details.'}`);
+    } finally {
+      setIsDistributingAll(false);
+      setDistributeAllProgress({ current: 0, total: 0, currentTitle: '' });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -109,18 +150,79 @@ export default function Sponsors({
       {/* --- UNDISTRIBUTED VIEW --- */}
       {activeTab === 'undistributed' && (
         <div className="animate-in fade-in duration-300">
-          <h3 className="font-black text-slate-800 mb-4 flex items-center gap-2">
-            <Lock size={18} className="text-amber-500" /> Pending Distributions
-          </h3>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+            <h3 className="font-black text-slate-800 flex items-center gap-2">
+              <Lock size={18} className="text-amber-500" /> Pending Distributions
+            </h3>
+            {undistributedSponsors.length > 1 && (
+              <button
+                onClick={handleDistributeAll}
+                disabled={isDistributingAll || !isBudgetLocked}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-sm transition-all shadow-md ${
+                  !isBudgetLocked 
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
+                    : isDistributingAll 
+                      ? 'bg-amber-500 text-white cursor-wait' 
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                }`}
+                title={!isBudgetLocked ? 'Finalize the budget first' : ''}
+              >
+                {isDistributingAll ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> 
+                    Distributing {distributeAllProgress.current}/{distributeAllProgress.total}...
+                  </>
+                ) : (
+                  <>
+                    <Zap size={16} /> Distribute All ({undistributedSponsors.length})
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Progress Bar (visible during Distribute All) */}
+          {isDistributingAll && (
+            <div className="mb-4 bg-white p-4 rounded-2xl border border-amber-200 shadow-sm animate-in fade-in duration-200">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Processing</span>
+                <span className="text-xs font-black text-slate-700">
+                  {distributeAllProgress.current} of {distributeAllProgress.total}
+                </span>
+              </div>
+              <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-500 ease-out" 
+                  style={{ width: `${(distributeAllProgress.current / distributeAllProgress.total) * 100}%` }}
+                />
+              </div>
+              <p className="text-sm font-bold text-slate-600 mt-2 truncate">
+                {distributeAllProgress.currentTitle}
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-4">
             {undistributedSponsors.length === 0 ? (
               <div className="bg-slate-50 p-12 rounded-2xl border border-slate-200 text-center text-slate-400 font-bold italic">
                 All sponsorship funds have been distributed.
               </div>
             ) : (
-              undistributedSponsors.map(tx => (
-                <div key={tx.id} className="bg-white p-5 rounded-2xl border border-blue-200 flex justify-between items-center shadow-sm">
+              sortedUndistributed.map(tx => (
+                <div key={tx.id} className={`bg-white p-5 rounded-2xl border flex justify-between items-center shadow-sm ${isDistributingAll ? 'opacity-60 pointer-events-none' : ''} ${tx.category === 'SPO' ? 'border-blue-200' : 'border-emerald-200'}`}>
                   <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${
+                        tx.category === 'SPO' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'
+                      }`}>
+                        {tx.category === 'SPO' ? 'Sponsorship' : 'Fundraising'}
+                      </span>
+                      {tx.playerName && (
+                        <span className="text-[10px] font-bold text-slate-400">
+                          via {tx.playerName}
+                        </span>
+                      )}
+                    </div>
                     <p className="font-black text-slate-800 text-lg">{tx.title}</p>
                     <p className="text-sm font-bold text-slate-500 mt-1">Amount: <span className="text-emerald-600">{formatMoney(tx.amount)}</span></p>
                   </div>
@@ -129,6 +231,8 @@ export default function Sponsors({
                       setDistAmount(tx.amount);
                       setDistTitle(tx.title);
                       setOriginalTxId(tx.id);
+                      setDistCategory(tx.category); // Pass category
+                      setSourcePlayerId(tx.playerId || ''); // Pre-select the kid if they raised it
                       setShowDistribute(true);
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-md"
@@ -308,7 +412,8 @@ export default function Sponsors({
                 </button>
                 <button 
                   onClick={() => { 
-                    onDistribute(distAmount, distTitle, sourcePlayerId, originalTxId); 
+                    // Pass distCategory as the 5th argument
+                    onDistribute(distAmount, distTitle, sourcePlayerId, originalTxId, distCategory); 
                     setShowDistribute(false);
                     setOriginalTxId(null); 
                   }} 
