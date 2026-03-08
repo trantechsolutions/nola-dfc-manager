@@ -29,7 +29,7 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
 
   // Budget State
   const [budgetItems, setBudgetItems] = useState([]);
-  const [rosterSize, setRosterSize] = useState(13);
+  const [rosterSize, setRosterSize] = useState(0);
   const [bufferPercent, setBufferPercent] = useState(5);
   const [cloneSource, setCloneSource] = useState('');
 
