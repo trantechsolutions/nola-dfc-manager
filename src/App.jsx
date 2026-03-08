@@ -242,6 +242,7 @@ function App() {
               <Dashboard 
                 players={seasonalPlayers} archivedPlayers={archivedPlayers} teamBalance={teamBalance} 
                 totalExpenses={totalExpenses} formatMoney={formatMoney} selectedSeasonData={currentSeasonData} 
+                transactions={seasonalTransactions} calculatePlayerFinancials={calculatePlayerFinancials}
                 onAddPlayer={() => { setPlayerToEdit(null); setShowPlayerForm(true); }} 
                 onEditPlayer={(p) => { setPlayerToEdit(p); setShowPlayerForm(true); }} 
                 onViewPlayer={(p) => { setPlayerToView(p); setShowPlayerModal(true); }} 
