@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import ICAL from 'ical.js';
 import { supabaseService } from '../services/supabaseService';
+import { classifyEvent } from '../utils/eventClassifier';
 
 export const useSchedule = (user) => {
   const [events, setEvents] = useState({ upcoming: [], past: [] });
@@ -9,7 +10,6 @@ export const useSchedule = (user) => {
 
   const fetchScheduleData = useCallback(async () => {
     setLoading(true);
-    // 1. Fetch Blackouts from Supabase
     let blackoutsList = [];
     try {
       blackoutsList = await supabaseService.getAllBlackouts();
@@ -18,7 +18,6 @@ export const useSchedule = (user) => {
     }
     setBlackoutDates(blackoutsList);
 
-    // 2. Fetch Ollie Sports iCal
     try {
       const icsUrl = `https://api.olliesports.com/ical/team-McFNdDsJbcFwAO8L5yCQShQ_DJN_.ics`;
       const response = await fetch(icsUrl);
@@ -30,11 +29,24 @@ export const useSchedule = (user) => {
       const parsedEvents = vcalendar.getAllSubcomponents('vevent').map(vevent => {
         const event = new ICAL.Event(vevent);
         const jsDate = event.startDate.toJSDate();
+
+        // Extract DESCRIPTION and STATUS from the raw component
+        const descProp = vevent.getFirstPropertyValue('description');
+        const description = descProp ? String(descProp) : '';
+        const status = vevent.getFirstPropertyValue('status') || 'CONFIRMED';
+        const isCancelled = status.toUpperCase() === 'CANCELLED';
+
+        // Classify using SUMMARY + DESCRIPTION
+        const eventType = classifyEvent(event.summary, description);
+
         return {
           id: event.uid,
           title: event.summary,
+          description,
           location: event.location || 'TBD',
           timestamp: event.startDate.toUnixTime(),
+          eventType,     // 'tournament' | 'league' | 'friendly' | 'practice' | 'event'
+          isCancelled,
           displayDate: jsDate.toLocaleDateString(undefined, { 
             weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' 
           }),
@@ -47,7 +59,7 @@ export const useSchedule = (user) => {
 
       const now = Math.floor(Date.now() / 1000);
       setEvents({
-        upcoming: parsedEvents.filter(e => e.timestamp >= now).sort((a, b) => a.timestamp - b.timestamp),
+        upcoming: parsedEvents.filter(e => e.timestamp >= now && !e.isCancelled).sort((a, b) => a.timestamp - b.timestamp),
         past: parsedEvents.filter(e => e.timestamp < now).sort((a, b) => b.timestamp - a.timestamp)
       });
     } catch (error) {
@@ -57,9 +69,7 @@ export const useSchedule = (user) => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchScheduleData();
-  }, [user, fetchScheduleData]);
+  useEffect(() => { fetchScheduleData(); }, [user, fetchScheduleData]);
 
   const toggleBlackout = async (dateStr) => {
     const isCurrentlyBlackout = blackoutDates.includes(dateStr);
@@ -71,9 +81,7 @@ export const useSchedule = (user) => {
         await supabaseService.saveBlackout(dateStr);
         setBlackoutDates(prev => [...prev, dateStr]);
       }
-    } catch (e) {
-      console.error("Blackout toggle failed", e);
-    }
+    } catch (e) { console.error("Blackout toggle failed", e); }
   };
 
   return { events, blackoutDates, toggleBlackout, refreshSchedule: fetchScheduleData, loading };

@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { supabase } from './supabase';
 import { 
   LayoutDashboard, ReceiptText, Wallet, Users, 
-  Calendar, Plus, Settings, LogOut
+  Calendar, Plus, Settings, LogOut, Sparkles
 } from 'lucide-react';
 
 // Components & Views
@@ -12,6 +12,7 @@ import Dashboard from './components/Dashboard';
 import Sponsors from './components/Sponsors';
 import LedgerView from './views/LedgerView';
 import BudgetView from './views/BudgetView';
+import InsightsView from './views/InsightsView';
 import ScheduleView from './views/ScheduleView';
 import ParentView from './views/ParentView';
 import PublicCalendarView from './views/PublicCalendarView';
@@ -177,6 +178,7 @@ function App() {
         { id: 'ledger', label: 'Ledger', icon: ReceiptText },
         { id: 'budget', label: 'Budget', icon: Settings },
         { id: 'sponsors', label: 'Sponsors', icon: Wallet },
+        { id: 'insights', label: 'Insights', icon: Sparkles },
         { id: 'schedule', label: 'Schedule', icon: Calendar },
       ]
     : [
@@ -258,6 +260,17 @@ function App() {
             <>
               <Route path="/ledger" element={<LedgerView transactions={seasonalTransactions} formatMoney={formatMoney} onAddTx={() => { setTxToEdit(null); setShowTxForm(true); }} onEditTx={(tx) => { setTxToEdit(tx); setShowTxForm(true); }} onDeleteTx={ async (id) => {const confirmed = await showConfirm("Are you sure you want to delete this transaction? This cannot be undone."); if (confirmed) { await handleDeleteTransaction(id); showToast("Transaction deleted"); } }} />} />
               <Route path="/budget" element={<BudgetView selectedSeason={selectedSeason} formatMoney={formatMoney} seasons={seasons} setSelectedSeason={setSelectedSeason} refreshSeasons={refreshSeasons} showToast={showToast} showConfirm={showConfirm} />} />
+              <Route path="/insights" element={
+                <InsightsView 
+                  transactions={seasonalTransactions}
+                  players={seasonalPlayers}
+                  selectedSeason={selectedSeason}
+                  currentSeasonData={currentSeasonData}
+                  calculatePlayerFinancials={calculatePlayerFinancials}
+                  formatMoney={formatMoney}
+                  events={events}
+                />
+              } />
               <Route path="/sponsors" element={
                 <Sponsors 
                   transactions={seasonalTransactions} 

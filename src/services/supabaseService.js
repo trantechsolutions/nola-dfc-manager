@@ -189,6 +189,15 @@ export const supabaseService = {
     if (error) throw error;
   },
 
+  removePlayerFromSeason: async (playerId, seasonId) => {
+    const { error } = await supabase
+      .from('player_seasons')
+      .delete()
+      .eq('player_id', playerId)
+      .eq('season_id', seasonId);
+    if (error) throw error;
+  },
+
   // ─────────────────────────────────────────
   // TRANSACTIONS (reshapes with player name via JOIN)
   // ─────────────────────────────────────────
@@ -323,6 +332,14 @@ export const supabaseService = {
     const { error } = await supabase
       .from('seasons')
       .upsert(row, { onConflict: 'id' });
+    if (error) throw error;
+  },
+
+  deleteSeason: async (seasonId) => {
+    // Delete transactions for this season first (FK is not CASCADE)
+    await supabase.from('transactions').delete().eq('season_id', seasonId);
+    // budget_items and player_seasons will CASCADE from seasons delete
+    const { error } = await supabase.from('seasons').delete().eq('id', seasonId);
     if (error) throw error;
   },
 
