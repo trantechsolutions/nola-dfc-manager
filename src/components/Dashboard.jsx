@@ -92,6 +92,17 @@ export default function Dashboard({
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
+      {/* ── DRAFT BUDGET NOTICE ── */}
+      {!isFinalized && baseFee > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
+          <div className="p-2 bg-amber-100 rounded-xl shrink-0"><AlertCircle size={18} className="text-amber-600" /></div>
+          <div>
+            <p className="text-sm font-black text-amber-800">Budget is in Draft</p>
+            <p className="text-xs text-amber-600">Player fees are estimated at <span className="font-black">{formatMoney(baseFee)}</span> based on the current budget. Fees will be locked when the budget is finalized. Fund distributions are disabled until finalization.</p>
+          </div>
+        </div>
+      )}
+
       {/* ── STAT CARDS ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white p-4 md:p-5 rounded-2xl shadow-lg shadow-emerald-200/50">
@@ -118,9 +129,13 @@ export default function Dashboard({
         </div>
 
         <div className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-lg shadow-slate-100">
-          <div className="flex items-center justify-between mb-3"><Wallet size={18} className="text-slate-400" /></div>
+          <div className="flex items-center justify-between mb-3">
+            <Wallet size={18} className="text-slate-400" />
+            {!isFinalized && baseFee > 0 && <span className="text-[8px] font-black bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded uppercase">Estimated</span>}
+            {isFinalized && <span className="text-[8px] font-black bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded uppercase">Locked</span>}
+          </div>
           <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">{formatMoney(baseFee)}</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Season Fee</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Season Fee{!isFinalized && baseFee > 0 ? ' (Draft)' : ''}</p>
         </div>
       </div>
 

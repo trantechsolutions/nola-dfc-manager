@@ -19,7 +19,7 @@ const BUDGET_CATEGORIES = [
 ];
 const EXPENSE_CODES = BUDGET_CATEGORIES.filter(c => c.type === 'expense').map(c => c.code);
 
-export default function BudgetView({ selectedSeason, formatMoney, seasons, setSelectedSeason, refreshSeasons, showToast, showConfirm }) {
+export default function BudgetView({ selectedSeason, formatMoney, seasons, setSelectedSeason, refreshSeasons, showToast, showConfirm, onDataChange }) {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isFinalized, setIsFinalized] = useState(false);
@@ -200,6 +200,7 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
       }
       await refreshSeasons();
       if (finalize) fetchData();
+      onDataChange?.();
       if (showToast) showToast(finalize ? 'Budget Finalized & Fees Applied!' : 'Draft Saved.');
     } catch (e) { if (showToast) showToast('Save failed.', true); }
     finally { setIsSaving(false); }
@@ -215,6 +216,7 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
       // Switch to the first available season or create a fallback
       const remaining = allSeasonsList.filter(s => s.id !== selectedSeason);
       setSelectedSeason(remaining.length > 0 ? remaining[0].id : '2025-2026');
+      onDataChange?.();
       if (showToast) showToast(`Season "${selectedSeason}" deleted.`);
     } catch (e) { if (showToast) showToast('Delete failed.', true); }
     finally { setIsSaving(false); }
@@ -239,6 +241,7 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
     try {
       await Promise.all(selectedPlayers.map(id => supabaseService.addPlayerToSeason(id, selectedSeason, { baseFee: roundedBaseFee, feeWaived: false, status: 'active' })));
       setSelectedPlayers([]); await fetchData();
+      onDataChange?.();
       if (showToast) showToast(`Imported ${selectedPlayers.length} players.`);
     } catch (e) { if (showToast) showToast('Import failed.', true); }
     finally { setIsSaving(false); }
@@ -261,6 +264,7 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
     setAvailablePlayers(prev => prev.map(p => p.id === playerId ? { ...p, seasonProfiles: { ...p.seasonProfiles, [selectedSeason]: { ...p.seasonProfiles[selectedSeason], feeWaived: !currentWaivedStatus } } } : p));
     try {
       await supabaseService.updateSeasonProfile(playerId, selectedSeason, { feeWaived: !currentWaivedStatus });
+      onDataChange?.();
       if (showToast) showToast(!currentWaivedStatus ? 'Player fee waived.' : 'Fee reinstated.', false, { label: 'Undo', onClick: () => handleToggleWaiver(playerId, !currentWaivedStatus) });
     } catch (e) { if (showToast) showToast('Failed.', true); fetchData(); }
   };
@@ -280,6 +284,7 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
       await supabaseService.addPlayer({ ...playerData, seasonProfiles: profiles, status: 'active' });
       setShowPlayerForm(false);
       await fetchData();
+      onDataChange?.();
       if (showToast) showToast(`${playerData.firstName} ${playerData.lastName} added and assigned to ${selectedSeason}.`);
     } catch (e) {
       console.error('Add player failed:', e);
@@ -293,6 +298,7 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
     try {
       await supabaseService.removePlayerFromSeason(player.id, selectedSeason);
       await fetchData();
+      onDataChange?.();
       if (showToast) showToast(`${player.firstName} removed from ${selectedSeason}.`);
     } catch (e) {
       if (showToast) showToast('Remove failed.', true);

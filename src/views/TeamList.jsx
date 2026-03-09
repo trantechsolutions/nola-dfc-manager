@@ -18,7 +18,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
   // Invite form
   const [showInvite, setShowInvite] = useState(null); // teamId or null
   const [inviteRole, setInviteRole] = useState('team_manager');
-  const [inviteUserId, setInviteUserId] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
 
   // Fetch roles for expanded team
   useEffect(() => {
@@ -58,18 +58,18 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
   };
 
   const handleAssignRole = async (teamId) => {
-    if (!inviteUserId.trim()) return;
+    if (!inviteEmail.trim()) return;
     setIsSaving(true);
     try {
-      await supabaseService.assignRole(inviteUserId.trim(), inviteRole, { teamId });
+      await supabaseService.assignRoleByEmail(inviteEmail.trim(), inviteRole, { teamId });
       setShowInvite(null);
-      setInviteUserId('');
+      setInviteEmail('');
       setTeamRoles(prev => ({ ...prev, [teamId]: null })); // force refetch
       setExpandedTeam(null);
       setTimeout(() => setExpandedTeam(teamId), 50);
       if (showToast) showToast('Role assigned.');
     } catch (e) {
-      if (showToast) showToast('Assignment failed. Check the user ID.', true);
+      if (showToast) showToast(e.message || 'Assignment failed.', true);
     } finally { setIsSaving(false); }
   };
 
@@ -173,20 +173,28 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                     ) : (
                       <div className="space-y-1.5">
                         {roles.map(r => (
-                          <div key={r.id} className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-slate-100">
-                            <div>
-                              <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded mr-2 ${
+                          <div key={r.id} className={`flex items-center justify-between p-2.5 rounded-lg border ${r.isClubLevel ? 'bg-violet-50/50 border-violet-100' : 'bg-white border-slate-100'}`}>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0 ${
+                                r.role === 'club_admin' ? 'bg-red-100 text-red-700' :
+                                r.role === 'club_manager' ? 'bg-violet-100 text-violet-700' :
                                 r.role === 'team_manager' ? 'bg-blue-100 text-blue-700' :
                                 r.role === 'treasurer' ? 'bg-emerald-100 text-emerald-700' :
                                 r.role === 'scheduler' ? 'bg-violet-100 text-violet-700' :
                                 r.role === 'head_coach' ? 'bg-amber-100 text-amber-700' :
                                 'bg-slate-100 text-slate-600'
                               }`}>{ALL_ROLES[r.role]?.label || r.role}</span>
-                              <span className="text-[10px] text-slate-400 font-mono">{r.userId.slice(0, 8)}...</span>
+                              <span className="text-[10px] text-slate-500 truncate">{r.displayName || r.email || r.userId.slice(0, 8) + '...'}</span>
+                              {r.isClubLevel && <span className="text-[8px] font-bold text-violet-400 uppercase shrink-0">via club</span>}
                             </div>
-                            <button onClick={() => handleRevokeRole(r.id, team.id)} className="text-slate-300 hover:text-red-500 transition-colors">
-                              <X size={12} />
-                            </button>
+                            {/* Only allow revoking direct team roles, not inherited club roles */}
+                            {!r.isClubLevel ? (
+                              <button onClick={() => handleRevokeRole(r.id, team.id)} className="text-slate-300 hover:text-red-500 transition-colors shrink-0">
+                                <X size={12} />
+                              </button>
+                            ) : (
+                              <span className="text-[8px] text-slate-300 shrink-0" title="Manage in Club Settings">🔒</span>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -195,9 +203,9 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                     {/* Invite form */}
                     {showInvite === team.id && (
                       <div className="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-200 space-y-2">
-                        <p className="text-[10px] font-bold text-blue-700">Assign a role to a user (use their auth.users UUID)</p>
+                        <p className="text-[10px] font-bold text-blue-700">Assign a role to a user by their login email</p>
                         <div className="flex gap-2">
-                          <input type="text" placeholder="User UUID..." value={inviteUserId} onChange={e => setInviteUserId(e.target.value)}
+                          <input type="email" placeholder="coach@example.com" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
                             className="flex-grow bg-white border border-blue-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500" />
                           <select value={inviteRole} onChange={e => setInviteRole(e.target.value)}
                             className="bg-white border border-blue-200 rounded-lg px-2 py-1.5 text-xs font-bold outline-none">
@@ -206,9 +214,10 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                             ))}
                           </select>
                         </div>
+                        <p className="text-[9px] text-slate-400">User must have an existing account. If they don't, use the Invite flow in Club → Users instead.</p>
                         <div className="flex gap-2">
                           <button onClick={() => setShowInvite(null)} className="text-xs font-bold text-slate-500 px-3 py-1.5">Cancel</button>
-                          <button onClick={() => handleAssignRole(team.id)} disabled={isSaving || !inviteUserId.trim()}
+                          <button onClick={() => handleAssignRole(team.id)} disabled={isSaving || !inviteEmail.trim()}
                             className="text-xs font-black text-white bg-blue-600 px-4 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50">
                             Assign
                           </button>

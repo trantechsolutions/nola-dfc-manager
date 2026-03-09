@@ -13,7 +13,7 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
 
   // Club-level role invite
   const [showInvite, setShowInvite] = useState(false);
-  const [inviteUserId, setInviteUserId] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('club_manager');
 
   // Fetch all roles across the club
@@ -53,16 +53,16 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
   };
 
   const handleAssignClubRole = async () => {
-    if (!inviteUserId.trim()) return;
+    if (!inviteEmail.trim()) return;
     setIsSaving(true);
     try {
-      await supabaseService.assignRole(inviteUserId.trim(), inviteRole, { clubId: club.id });
+      await supabaseService.assignRoleByEmail(inviteEmail.trim(), inviteRole, { clubId: club.id });
       setShowInvite(false);
-      setInviteUserId('');
+      setInviteEmail('');
       await refreshContext();
       if (showToast) showToast('Club role assigned.');
     } catch (e) {
-      if (showToast) showToast('Assignment failed.', true);
+      if (showToast) showToast(e.message || 'Assignment failed.', true);
     } finally { setIsSaving(false); }
   };
 
@@ -138,9 +138,9 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
 
         {showInvite && (
           <div className="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-200 space-y-2">
-            <p className="text-[10px] font-bold text-blue-700">Assign a club-level role (use their auth.users UUID)</p>
+            <p className="text-[10px] font-bold text-blue-700">Assign a club-level role by email address</p>
             <div className="flex gap-2">
-              <input type="text" placeholder="User UUID..." value={inviteUserId} onChange={e => setInviteUserId(e.target.value)}
+              <input type="email" placeholder="admin@example.com" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
                 className="flex-grow bg-white border border-blue-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500" />
               <select value={inviteRole} onChange={e => setInviteRole(e.target.value)}
                 className="bg-white border border-blue-200 rounded-lg px-2 py-1.5 text-xs font-bold outline-none">
@@ -149,9 +149,10 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
                 ))}
               </select>
             </div>
+            <p className="text-[9px] text-slate-400">User must have an existing account. If they don't, use the Invite flow in Club → Users instead.</p>
             <div className="flex gap-2">
               <button onClick={() => setShowInvite(false)} className="text-xs font-bold text-slate-500 px-3 py-1.5">Cancel</button>
-              <button onClick={handleAssignClubRole} disabled={isSaving || !inviteUserId.trim()}
+              <button onClick={handleAssignClubRole} disabled={isSaving || !inviteEmail.trim()}
                 className="text-xs font-black text-white bg-blue-600 px-4 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50">
                 Assign
               </button>
@@ -166,10 +167,13 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
           <p className="text-xs text-slate-400 italic py-4">No roles assigned yet.</p>
         ) : (
           <div className="space-y-2">
-            {Object.values(rolesByUser).map(({ userId, roles }) => (
+            {Object.values(rolesByUser).map(({ userId, roles }) => {
+              const firstWithEmail = roles.find(r => r.email || r.displayName);
+              const displayLabel = firstWithEmail?.displayName || firstWithEmail?.email || userId.slice(0, 12) + '...';
+              return (
               <div key={userId} className="bg-slate-50 p-3 rounded-xl">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-mono text-slate-500">{userId.slice(0, 12)}...</span>
+                  <span className="text-[10px] font-bold text-slate-600">{displayLabel}</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {roles.map(r => (
@@ -194,7 +198,8 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
                   ))}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

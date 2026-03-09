@@ -49,6 +49,7 @@ export const PERMISSIONS = {
   TEAM_EDIT_SPONSORS:   'team:edit_sponsors',     // Distribute/revert waterfall credits
   TEAM_VIEW_INSIGHTS:   'team:view_insights',     // See insights/projections, use AI chat
   TEAM_MANAGE_WAIVERS:  'team:manage_waivers',    // Toggle fee waivers
+  TEAM_MANAGE_USERS:    'team:manage_users',      // Assign roles to team parents/guardians
 };
 
 /**
@@ -72,6 +73,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.TEAM_VIEW_SPONSORS, PERMISSIONS.TEAM_EDIT_SPONSORS,
     PERMISSIONS.TEAM_VIEW_INSIGHTS,
     PERMISSIONS.TEAM_MANAGE_WAIVERS,
+    PERMISSIONS.TEAM_MANAGE_USERS,
   ],
 
   club_manager: [
@@ -95,6 +97,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.TEAM_VIEW_SPONSORS, PERMISSIONS.TEAM_EDIT_SPONSORS,
     PERMISSIONS.TEAM_VIEW_INSIGHTS,
     PERMISSIONS.TEAM_MANAGE_WAIVERS,
+    PERMISSIONS.TEAM_MANAGE_USERS,
   ],
 
   scheduler: [
@@ -188,6 +191,7 @@ export function getNavItemsForRole(userRoles, teamId) {
   if (check(PERMISSIONS.TEAM_VIEW_SPONSORS))  items.push('sponsors');
   if (check(PERMISSIONS.TEAM_VIEW_INSIGHTS))  items.push('insights');
   if (check(PERMISSIONS.TEAM_VIEW_SCHEDULE))  items.push('schedule');
+  if (check(PERMISSIONS.TEAM_MANAGE_USERS))   items.push('team-users');
 
   return items;
 }

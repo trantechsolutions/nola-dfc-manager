@@ -24,6 +24,7 @@ import ClubCalendarView from './views/ClubCalendarView';
 import TeamOnboarding from './views/TeamOnboarding';
 import DocumentManager from './views/DocumentManager';
 import UserManagement from './views/UserManagement';
+import TeamUserManagement from './views/TeamUserManagement';
 import TransactionModal from './components/TransactionModal';
 import PlayerFormModal from './components/PlayerFormModal';
 import PlayerModal from './components/PlayerModal';
@@ -52,6 +53,7 @@ const NAV_ICON_MAP = {
   'club-settings': Shield,
   'club-onboard': Wand2,
   'club-users': UserPlus,
+  'team-users': Users,
   documents: FileText,
 };
 
@@ -149,7 +151,7 @@ function App() {
   const teamSeasonId = currentTeamSeason?.id || currentSeasonData?.teamSeasonId || null;
 
   const { calculatePlayerFinancials, handleWaterfallCredit, revertWaterfall } = useFinance(
-    selectedSeason, seasonalPlayers, currentSeasonData?.isFinalized, teamSeasonId
+    selectedSeason, seasonalPlayers, currentSeasonData?.isFinalized, teamSeasonId, currentSeasonData
   );
 
   const { handleSavePlayer, handleArchivePlayer, handleToggleWaiveFee } = usePlayerManager(
@@ -210,11 +212,13 @@ function App() {
     { id: 'club-settings', label: 'Settings', icon: Shield, section: 'club' },
   ] : [];
 
+  const NAV_LABELS = { dashboard: 'Dashboard', 'team-users': 'Team Users', documents: 'Documents' };
+
   const teamNavItems = isStaff
     ? [
         ...roleNavItems.map(id => ({
           id,
-          label: id === 'dashboard' ? 'Dashboard' : id.charAt(0).toUpperCase() + id.slice(1),
+          label: NAV_LABELS[id] || id.charAt(0).toUpperCase() + id.slice(1),
           icon: NAV_ICON_MAP[id] || LayoutDashboard,
           section: 'team',
         })),
@@ -433,7 +437,7 @@ function App() {
               )}
               {can(PERMISSIONS.TEAM_VIEW_BUDGET) && (
                 <Route path="/budget" element={
-                  <BudgetView selectedSeason={selectedSeason} formatMoney={formatMoney} seasons={seasons} setSelectedSeason={setSelectedSeason} refreshSeasons={refreshSeasons} showToast={showToast} showConfirm={showConfirm} />
+                  <BudgetView selectedSeason={selectedSeason} formatMoney={formatMoney} seasons={seasons} setSelectedSeason={setSelectedSeason} refreshSeasons={refreshSeasons} showToast={showToast} showConfirm={showConfirm} onDataChange={fetchData} />
                 } />
               )}
               {can(PERMISSIONS.TEAM_VIEW_INSIGHTS) && (
@@ -445,11 +449,11 @@ function App() {
                 <Route path="/sponsors" element={
                   <Sponsors 
                     transactions={seasonalTransactions} selectedSeason={selectedSeason} formatMoney={formatMoney} 
-                    onDistribute={can(PERMISSIONS.TEAM_EDIT_SPONSORS) ? async (amt, title, pId, originalId, category) => { 
+                    onDistribute={(can(PERMISSIONS.TEAM_EDIT_SPONSORS) && currentSeasonData?.isFinalized) ? async (amt, title, pId, originalId, category) => { 
                       try { await handleWaterfallCredit(amt, title, pId, originalId, category); await fetchData(); showToast("Funds Distributed!"); } 
                       catch (error) { showToast(error.message, true); } 
                     } : null}
-                    onReset={can(PERMISSIONS.TEAM_EDIT_SPONSORS) ? async (batchId, originalTxId) => { 
+                    onReset={(can(PERMISSIONS.TEAM_EDIT_SPONSORS) && currentSeasonData?.isFinalized) ? async (batchId, originalTxId) => { 
                       await revertWaterfall(batchId, originalTxId); await fetchData(); showToast("Distribution Reverted."); 
                     } : null}
                     seasonalPlayers={seasonalPlayers} seasons={seasons} 
@@ -464,6 +468,11 @@ function App() {
                     formatMoney={formatMoney} showToast={showToast} showConfirm={showConfirm}
                     can={can} PERMISSIONS={PERMISSIONS}
                   />
+                } />
+              )}
+              {can(PERMISSIONS.TEAM_MANAGE_USERS) && (
+                <Route path="/team-users" element={
+                  <TeamUserManagement selectedTeam={selectedTeam} showToast={showToast} showConfirm={showConfirm} />
                 } />
               )}
             </>

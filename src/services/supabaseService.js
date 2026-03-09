@@ -572,12 +572,42 @@ export const supabaseService = {
   },
 
   getTeamRoles: async (teamId) => {
+    // Get the team's club_id first
+    const { data: team, error: tErr } = await supabase
+      .from('teams')
+      .select('club_id')
+      .eq('id', teamId)
+      .single();
+    if (tErr) throw tErr;
+
+    // Fetch direct team roles + club-level roles (who have implicit access)
     const { data, error } = await supabase
       .from('user_roles')
       .select('*')
-      .eq('team_id', teamId);
+      .or(`team_id.eq.${teamId},club_id.eq.${team.club_id}`);
     if (error) throw error;
-    return data.map(r => ({ id: r.id, userId: r.user_id, teamId: r.team_id, role: r.role }));
+
+    // Fetch profiles separately (no FK between user_roles and user_profiles)
+    const userIds = [...new Set(data.map(r => r.user_id))];
+    let profileMap = {};
+    if (userIds.length > 0) {
+      try {
+        const profiles = await supabaseService.getUserProfiles(userIds);
+        profiles.forEach(p => { profileMap[p.userId] = p; });
+      } catch (e) {
+        console.warn('Could not fetch user profiles:', e.message);
+      }
+    }
+
+    return data.map(r => {
+      const profile = profileMap[r.user_id] || {};
+      return { 
+        id: r.id, userId: r.user_id, teamId: r.team_id, clubId: r.club_id, role: r.role,
+        displayName: profile.displayName || null,
+        email: profile.email || null,
+        isClubLevel: !r.team_id && !!r.club_id,
+      };
+    });
   },
 
   assignRole: async (userId, role, { clubId, teamId } = {}) => {
@@ -587,6 +617,97 @@ export const supabaseService = {
     const { data, error } = await supabase.from('user_roles').insert(row).select().single();
     if (error) throw error;
     return data;
+  },
+
+  // Get all guardians on a team with their account/role status
+  getTeamGuardiansWithStatus: async (teamId) => {
+    // 1. Get players + guardians for this team
+    const { data: players, error } = await supabase
+      .from('players')
+      .select('id, first_name, last_name, jersey_number, guardians(*)')
+      .eq('team_id', teamId)
+      .eq('status', 'active')
+      .order('last_name');
+    if (error) throw error;
+
+    // 2. Collect unique guardian emails
+    const guardianMap = {};
+    players.forEach(p => {
+      (p.guardians || []).forEach(g => {
+        const email = (g.email || '').toLowerCase().trim();
+        if (!email) return;
+        if (!guardianMap[email]) {
+          guardianMap[email] = {
+            guardianId: g.id,
+            name: g.name,
+            email,
+            phone: g.phone,
+            players: [],
+            userId: null,
+            hasAccount: false,
+            roles: [],
+          };
+        }
+        guardianMap[email].players.push({
+          id: p.id,
+          name: `${p.first_name} ${p.last_name}`,
+          jersey: p.jersey_number,
+        });
+      });
+    });
+
+    // 3. Look up which guardians have accounts + roles
+    const emails = Object.keys(guardianMap);
+    if (emails.length > 0) {
+      // Get team roles
+      const { data: teamRoles } = await supabase
+        .from('user_roles')
+        .select('*')
+        .eq('team_id', teamId);
+
+      // Try to resolve emails to user IDs via profiles
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('user_id, email, display_name')
+        .in('email', emails);
+
+      const emailToProfile = {};
+      (profiles || []).forEach(p => {
+        if (p.email) emailToProfile[p.email.toLowerCase()] = p;
+      });
+
+      // Match
+      emails.forEach(email => {
+        const profile = emailToProfile[email];
+        if (profile) {
+          guardianMap[email].userId = profile.user_id;
+          guardianMap[email].hasAccount = true;
+          guardianMap[email].displayName = profile.display_name;
+          // Find their roles on this team
+          guardianMap[email].roles = (teamRoles || [])
+            .filter(r => r.user_id === profile.user_id)
+            .map(r => ({ id: r.id, role: r.role }));
+        }
+      });
+    }
+
+    return Object.values(guardianMap).sort((a, b) => a.name.localeCompare(b.name));
+  },
+
+  getUserIdByEmail: async (email) => {
+    const { data, error } = await supabase.rpc('get_user_id_by_email', { p_email: email.toLowerCase().trim() });
+    if (error) throw error;
+    return data; // uuid or null
+  },
+
+  assignRoleByEmail: async (email, role, { clubId, teamId } = {}) => {
+    // 1. Look up user by email
+    const userId = await supabaseService.getUserIdByEmail(email);
+    if (!userId) {
+      throw new Error(`No account found for "${email}". Send them an invitation instead.`);
+    }
+    // 2. Assign the role
+    return await supabaseService.assignRole(userId, role, { clubId, teamId });
   },
 
   revokeRole: async (roleId) => {

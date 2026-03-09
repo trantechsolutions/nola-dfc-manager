@@ -1,15 +1,24 @@
 // src/hooks/useFinance.js
 // Financial calculations and waterfall distribution.
-// Now team-season aware: waterfall transactions include team_season_id.
+//
+// KEY BEHAVIOR:
+//   Draft budget   → uses currentSeasonData.calculatedBaseFee for ALL players
+//   Finalized      → uses each player's locked-in seasonProfiles[season].baseFee
+//
+// This ensures the Dashboard, Ledger, and Parent View always show the 
+// correct fee even while the budget is still being built.
 
 import { supabaseService } from '../services/supabaseService';
 import { useCallback } from 'react';
 
-export const useFinance = (selectedSeason, seasonalPlayers, isBudgetLocked, teamSeasonId = null) => {
-  
+export const useFinance = (selectedSeason, seasonalPlayers, isBudgetLocked, teamSeasonId = null, currentSeasonData = null) => {
+
+  // The live fee from the budget calculator (updates on every draft save)
+  const liveBaseFee = currentSeasonData?.calculatedBaseFee || 0;
+
   const calculatePlayerFinancials = useCallback((player, transactions = []) => {
     if (!transactions || !Array.isArray(transactions)) {
-      return { baseFee: 0, totalPaid: 0, fundraising: 0, sponsorships: 0, credits: 0, remainingBalance: 0, isWaived: false };
+      return { baseFee: 0, totalPaid: 0, fundraising: 0, sponsorships: 0, credits: 0, remainingBalance: 0, isWaived: false, isDraft: !isBudgetLocked };
     }
 
     const isCleared = (tx) => tx.cleared === true || String(tx.cleared).toLowerCase() === 'true';
@@ -24,7 +33,20 @@ export const useFinance = (selectedSeason, seasonalPlayers, isBudgetLocked, team
     });
 
     const isWaived = player.seasonProfiles?.[selectedSeason]?.feeWaived || false;
-    const baseFee = isWaived ? 0 : Number(player.seasonProfiles?.[selectedSeason]?.baseFee ?? 750);
+
+    // ── FEE DETERMINATION ──
+    // Draft: use the live calculated fee from the budget (same for everyone)
+    // Finalized: use the locked per-player fee from their season profile
+    let baseFee;
+    if (isWaived) {
+      baseFee = 0;
+    } else if (!isBudgetLocked && liveBaseFee > 0) {
+      // Draft mode: everyone gets the current calculated fee
+      baseFee = liveBaseFee;
+    } else {
+      // Finalized mode: use the locked per-player fee
+      baseFee = Number(player.seasonProfiles?.[selectedSeason]?.baseFee ?? 0);
+    }
 
     let paid = 0, fun = 0, spo = 0, cre = 0;
     
@@ -37,11 +59,11 @@ export const useFinance = (selectedSeason, seasonalPlayers, isBudgetLocked, team
     });
 
     const remainingBalance = Math.max(0, baseFee - (paid + fun + spo + cre));
-    return { baseFee, totalPaid: paid, fundraising: fun, sponsorships: spo, credits: cre, remainingBalance, isWaived };
-  }, [selectedSeason]);
+    return { baseFee, totalPaid: paid, fundraising: fun, sponsorships: spo, credits: cre, remainingBalance, isWaived, isDraft: !isBudgetLocked };
+  }, [selectedSeason, isBudgetLocked, liveBaseFee]);
 
   const handleWaterfallCredit = async (totalAmount, title, sourcePlayerId, originalTxId, category = 'SPO') => {
-    if (!isBudgetLocked) throw new Error("Budget must be finalized first.");
+    if (!isBudgetLocked) throw new Error("Budget must be finalized before distributing funds.");
 
     const batchId = `waterfall_${Date.now()}`;
     let remainingAmount = parseFloat(totalAmount);

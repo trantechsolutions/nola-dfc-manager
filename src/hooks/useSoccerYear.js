@@ -46,16 +46,19 @@ export const useSoccerYear = (user, teamId = null) => {
     const globalSeason = seasons.find(s => s.id === selectedSeason) || {};
     if (currentTeamSeason) {
       // Merge team_season data over global season
+      // IMPORTANT: calculatedBaseFee comes from the seasons table (updated on every draft save).
+      // team_season.baseFee is only set on finalization. Prefer the season-level value 
+      // so the dashboard reflects the live draft fee.
       return {
         ...globalSeason,
         id: selectedSeason,
         teamSeasonId: currentTeamSeason.id,
         isFinalized: currentTeamSeason.isFinalized,
-        calculatedBaseFee: currentTeamSeason.baseFee,
-        bufferPercent: currentTeamSeason.bufferPercent,
-        expectedRosterSize: currentTeamSeason.expectedRosterSize,
-        totalProjectedExpenses: currentTeamSeason.totalProjectedExpenses,
-        totalProjectedIncome: currentTeamSeason.totalProjectedIncome,
+        calculatedBaseFee: globalSeason.calculatedBaseFee || currentTeamSeason.baseFee,
+        bufferPercent: currentTeamSeason.bufferPercent ?? globalSeason.bufferPercent,
+        expectedRosterSize: currentTeamSeason.expectedRosterSize ?? globalSeason.expectedRosterSize,
+        totalProjectedExpenses: globalSeason.totalProjectedExpenses ?? currentTeamSeason.totalProjectedExpenses,
+        totalProjectedIncome: globalSeason.totalProjectedIncome ?? currentTeamSeason.totalProjectedIncome,
       };
     }
     return globalSeason;
