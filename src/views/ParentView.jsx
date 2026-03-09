@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { ShieldCheck, ShieldX, ChevronDown, Receipt } from 'lucide-react';
+import { ShieldCheck, ShieldX, ChevronDown, Receipt, Users } from 'lucide-react';
 
-export default function ParentView({ players, transactions, calculatePlayerFinancials, formatMoney }) {
+export default function ParentView({ players, transactions, calculatePlayerFinancials, formatMoney, teams = [] }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   if (!players || players.length === 0) return (
@@ -23,6 +23,18 @@ export default function ParentView({ players, transactions, calculatePlayerFinan
     ? Math.min(100, Math.round(((financials.baseFee - financials.remainingBalance) / financials.baseFee) * 100)) 
     : 100;
 
+  // Find the team for the active player
+  const playerTeam = useMemo(() => {
+    if (!activePlayer?.teamId || teams.length === 0) return null;
+    return teams.find(t => t.id === activePlayer.teamId) || null;
+  }, [activePlayer, teams]);
+
+  // Check if players span multiple teams
+  const multipleTeams = useMemo(() => {
+    const teamIds = new Set(players.map(p => p.teamId).filter(Boolean));
+    return teamIds.size > 1;
+  }, [players]);
+
   // Recent transactions for this player
   const recentTxs = useMemo(() => {
     const fullName = `${activePlayer.firstName} ${activePlayer.lastName}`.toLowerCase();
@@ -39,28 +51,33 @@ export default function ParentView({ players, transactions, calculatePlayerFinan
   return (
     <div className="max-w-lg mx-auto space-y-4 pb-24 md:pb-6">
       
-      {/* ── SIBLING SWITCHER ── */}
+      {/* ── CHILD SWITCHER ── */}
       {players.length > 1 && (
         <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
-          {players.map((p, index) => (
-            <button 
-              key={p.id}
-              onClick={() => setSelectedIndex(index)}
-              className={`flex-1 py-2.5 px-3 rounded-lg font-black text-xs transition-all ${
-                selectedIndex === index 
-                  ? 'bg-white text-slate-900 shadow-sm' 
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              {p.firstName}
-            </button>
-          ))}
+          {players.map((p, index) => {
+            const pTeam = teams.find(t => t.id === p.teamId);
+            return (
+              <button 
+                key={p.id}
+                onClick={() => setSelectedIndex(index)}
+                className={`flex-1 py-2.5 px-3 rounded-lg font-black text-xs transition-all ${
+                  selectedIndex === index 
+                    ? 'bg-white text-slate-900 shadow-sm' 
+                    : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                <span className="block">{p.firstName}</span>
+                {multipleTeams && pTeam && (
+                  <span className="block text-[9px] font-bold text-slate-400 mt-0.5">{pTeam.name}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 
       {/* ── BALANCE HERO CARD ── */}
       <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-6 rounded-2xl shadow-xl relative overflow-hidden">
-        {/* Decorative circle */}
         <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full" />
         <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full" />
         
@@ -71,7 +88,15 @@ export default function ParentView({ players, transactions, calculatePlayerFinan
             </div>
             <div>
               <h2 className="text-lg font-black leading-tight">{activePlayer.firstName} {activePlayer.lastName}</h2>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Season Balance</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                {playerTeam && (
+                  <span className="text-[10px] font-bold text-blue-400 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: playerTeam.colorPrimary || '#3b82f6' }} />
+                    {playerTeam.name}
+                  </span>
+                )}
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Season Balance</span>
+              </div>
             </div>
           </div>
           
@@ -82,17 +107,13 @@ export default function ParentView({ players, transactions, calculatePlayerFinan
             {financials.remainingBalance <= 0 ? 'Fully paid — thank you!' : 'Remaining amount due'}
           </p>
 
-          {/* Progress bar */}
           <div className="mt-4">
             <div className="flex justify-between text-[10px] font-bold text-slate-400 mb-1.5">
               <span>{paidPercent}% paid</span>
               <span>{formatMoney(financials.baseFee)} total</span>
             </div>
             <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-              <div 
-                className={`h-full rounded-full transition-all duration-1000 ${paidPercent >= 100 ? 'bg-emerald-400' : 'bg-blue-400'}`}
-                style={{ width: `${paidPercent}%` }}
-              />
+              <div className={`h-full rounded-full transition-all duration-1000 ${paidPercent >= 100 ? 'bg-emerald-400' : 'bg-blue-400'}`} style={{ width: `${paidPercent}%` }} />
             </div>
           </div>
         </div>
@@ -127,10 +148,7 @@ export default function ParentView({ players, transactions, calculatePlayerFinan
           ].map((item, i) => (
             <div key={i} className={`p-3 rounded-xl border text-center ${item.done ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
               <div className="flex justify-center mb-1.5">
-                {item.done 
-                  ? <ShieldCheck size={20} className="text-emerald-600" /> 
-                  : <ShieldX size={20} className="text-red-500" />
-                }
+                {item.done ? <ShieldCheck size={20} className="text-emerald-600" /> : <ShieldX size={20} className="text-red-500" />}
               </div>
               <p className="text-[10px] font-bold uppercase tracking-wide text-slate-600">{item.label}</p>
               <p className={`text-xs font-black mt-0.5 ${item.done ? 'text-emerald-600' : 'text-red-500'}`}>

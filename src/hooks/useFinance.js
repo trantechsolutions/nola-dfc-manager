@@ -1,7 +1,11 @@
+// src/hooks/useFinance.js
+// Financial calculations and waterfall distribution.
+// Now team-season aware: waterfall transactions include team_season_id.
+
 import { supabaseService } from '../services/supabaseService';
 import { useCallback } from 'react';
 
-export const useFinance = (selectedSeason, seasonalPlayers, isBudgetLocked) => {
+export const useFinance = (selectedSeason, seasonalPlayers, isBudgetLocked, teamSeasonId = null) => {
   
   const calculatePlayerFinancials = useCallback((player, transactions = []) => {
     if (!transactions || !Array.isArray(transactions)) {
@@ -80,22 +84,28 @@ export const useFinance = (selectedSeason, seasonalPlayers, isBudgetLocked) => {
     }
 
     const promises = [];
+    const baseTxData = {
+      seasonId: selectedSeason,
+      waterfallBatchId: batchId,
+      originalTxId: originalTxId || null,
+      date: today,
+      cleared: true,
+      distributed: false,
+      ...(teamSeasonId ? { teamSeasonId } : {}),
+    };
 
     // 3. CREATE PLAYER TRANSACTIONS
     Object.entries(creditsToApply).forEach(([pId, amt]) => {
       promises.push(supabaseService.addTransaction({
-        title, amount: Number(amt.toFixed(2)), playerId: pId, category,
-        seasonId: selectedSeason, waterfallBatchId: batchId,
-        originalTxId: originalTxId || null, date: today, cleared: true, distributed: false,
+        ...baseTxData, title, amount: Number(amt.toFixed(2)), playerId: pId, category,
       }));
     });
 
     // 4. OVERFLOW TO TEAM POOL
     if (remainingAmount > 0.01) {
       promises.push(supabaseService.addTransaction({
-        title: `${title} (Team Pool Overflow)`, amount: Number(remainingAmount.toFixed(2)),
-        playerId: null, category, seasonId: selectedSeason, waterfallBatchId: batchId,
-        originalTxId: originalTxId || null, date: today, cleared: true, distributed: false,
+        ...baseTxData, title: `${title} (Team Pool Overflow)`, amount: Number(remainingAmount.toFixed(2)),
+        playerId: null, category,
       }));
     }
 

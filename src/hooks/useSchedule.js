@@ -1,15 +1,23 @@
+// src/hooks/useSchedule.js
+// Fetches iCal events for a specific team using the team's ical_url.
+// Falls back to the legacy hardcoded URL if no team is provided.
+
 import { useState, useEffect, useCallback } from 'react';
 import ICAL from 'ical.js';
 import { supabaseService } from '../services/supabaseService';
 import { classifyEvent } from '../utils/eventClassifier';
 
-export const useSchedule = (user) => {
+const LEGACY_ICAL_URL = 'https://api.olliesports.com/ical/team-McFNdDsJbcFwAO8L5yCQShQ_DJN_.ics';
+
+export const useSchedule = (user, team = null) => {
   const [events, setEvents] = useState({ upcoming: [], past: [] });
   const [blackoutDates, setBlackoutDates] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchScheduleData = useCallback(async () => {
     setLoading(true);
+
+    // 1. Blackouts
     let blackoutsList = [];
     try {
       blackoutsList = await supabaseService.getAllBlackouts();
@@ -18,8 +26,16 @@ export const useSchedule = (user) => {
     }
     setBlackoutDates(blackoutsList);
 
+    // 2. Determine iCal URL
+    const icsUrl = team?.icalUrl || LEGACY_ICAL_URL;
+    if (!icsUrl) {
+      setEvents({ upcoming: [], past: [] });
+      setLoading(false);
+      return;
+    }
+
+    // 3. Fetch & parse iCal
     try {
-      const icsUrl = `https://api.olliesports.com/ical/team-McFNdDsJbcFwAO8L5yCQShQ_DJN_.ics`;
       const response = await fetch(icsUrl);
       const icsString = await response.text();
       
@@ -30,13 +46,10 @@ export const useSchedule = (user) => {
         const event = new ICAL.Event(vevent);
         const jsDate = event.startDate.toJSDate();
 
-        // Extract DESCRIPTION and STATUS from the raw component
         const descProp = vevent.getFirstPropertyValue('description');
         const description = descProp ? String(descProp) : '';
         const status = vevent.getFirstPropertyValue('status') || 'CONFIRMED';
         const isCancelled = status.toUpperCase() === 'CANCELLED';
-
-        // Classify using SUMMARY + DESCRIPTION
         const eventType = classifyEvent(event.summary, description);
 
         return {
@@ -45,8 +58,10 @@ export const useSchedule = (user) => {
           description,
           location: event.location || 'TBD',
           timestamp: event.startDate.toUnixTime(),
-          eventType,     // 'tournament' | 'league' | 'friendly' | 'practice' | 'event'
+          eventType,
           isCancelled,
+          teamId: team?.id || null,
+          teamName: team?.name || null,
           displayDate: jsDate.toLocaleDateString(undefined, { 
             weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' 
           }),
@@ -64,10 +79,11 @@ export const useSchedule = (user) => {
       });
     } catch (error) {
       console.error("iCal fetch error:", error);
+      setEvents({ upcoming: [], past: [] });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [team?.id, team?.icalUrl]);
 
   useEffect(() => { fetchScheduleData(); }, [user, fetchScheduleData]);
 

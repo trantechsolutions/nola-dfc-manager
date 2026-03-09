@@ -1,9 +1,11 @@
+// src/hooks/useLedgerManager.js
+// Transaction CRUD. Now team-season aware.
+
 import { supabaseService } from '../services/supabaseService';
 
-export const useLedgerManager = (refreshData, selectedSeason) => {
+export const useLedgerManager = (refreshData, selectedSeason, teamSeasonId = null) => {
   const handleSaveTransaction = async (txData) => {
     try {
-      // Normalize the date to a YYYY-MM-DD string
       let dateStr = txData.date;
       if (txData.date && txData.date.seconds) {
         dateStr = new Date(txData.date.seconds * 1000).toISOString().split('T')[0];
@@ -15,6 +17,8 @@ export const useLedgerManager = (refreshData, selectedSeason) => {
         ...txData,
         date: dateStr,
         seasonId: txData.seasonId || selectedSeason,
+        // Attach team_season_id if available (new transactions get scoped)
+        ...(teamSeasonId && !txData.teamSeasonId ? { teamSeasonId } : {}),
       };
 
       if (formattedData.id) {
