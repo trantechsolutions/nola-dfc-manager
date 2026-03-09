@@ -2,17 +2,17 @@ import React from 'react';
 
 export default function PlayerModal({ 
   player, 
-  transactions,
   selectedSeason,
+  stats,
   onClose, 
   onToggleCompliance, 
-  calculateFinancials, 
   formatMoney 
 }) {
   if (!player) return null;
 
-  const stats = calculateFinancials(player, transactions);
-  const isWaived = player.seasonProfiles?.[selectedSeason]?.feeWaived === true;
+  // stats comes directly from the player_financials VIEW — no calculation needed
+  const fin = stats || { baseFee: 0, totalPaid: 0, fundraising: 0, sponsorships: 0, credits: 0, remainingBalance: 0, feeWaived: false };
+  const isWaived = fin.feeWaived || player.seasonProfiles?.[selectedSeason]?.feeWaived === true;
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center p-4 z-50">
@@ -54,84 +54,80 @@ export default function PlayerModal({
             </div>
           </div>
 
-          {/* Guardian Info */}
-          {player.guardians && player.guardians.length > 0 && (
-            <div className="mb-6">
+          {/* Guardians */}
+          {player.guardians?.length > 0 && (
+            <div className="mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Guardians</h4>
-              <div className="space-y-3">
-                {player.guardians.map((g, idx) => (
-                  <div key={idx} className="bg-white border border-slate-200 p-3 rounded-lg flex justify-between items-center shadow-sm">
-                    <div>
-                      <p className="font-bold text-slate-800 text-sm">{g.name}</p>
-                      <p className="text-xs text-slate-500">{g.email || 'No email'}</p>
-                    </div>
-                    {g.phone && (
-                      <a href={`tel:${g.phone}`} className="bg-blue-50 text-blue-600 px-3 py-1 rounded-md text-xs font-bold hover:bg-blue-100 transition-colors">
-                        Call
-                      </a>
-                    )}
+              <div className="space-y-2">
+                {player.guardians.map((g, i) => (
+                  <div key={i} className="text-sm">
+                    <p className="font-bold text-slate-800">{g.name}</p>
+                    {g.email && <p className="text-slate-500 text-xs">{g.email}</p>}
+                    {g.phone && <p className="text-slate-500 text-xs">{g.phone}</p>}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Financials */}
-          <div>
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Financials</h4>
-            <div className="space-y-2 text-sm">
-              <div className="bg-slate-50 rounded-lg p-3 flex justify-between items-center border border-slate-100">
-                <span className="text-slate-800 font-bold">Remaining Balance</span>
-                <span className={`text-xl font-black ${stats.remainingBalance > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                  {stats.remainingBalance <= 0 ? formatMoney(0) : formatMoney(stats.remainingBalance)}
-                </span>
-              </div>
+          {/* Financial Summary — straight from player_financials view */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Financial Summary</h4>
+
+            {/* Balance Display */}
+            <div className="text-center mb-4">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                {isWaived ? 'Fee Waived' : 'Remaining Balance'}
+              </p>
+              <span className={`text-3xl font-black ${fin.remainingBalance > 0 && !isWaived ? 'text-red-500' : 'text-emerald-600'}`}>
+                {isWaived ? formatMoney(0) : formatMoney(fin.remainingBalance)}
+              </span>
+            </div>
               
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mt-4">
-                <h3 className="font-bold text-slate-800 mb-4 uppercase text-xs tracking-widest">Fee Breakdown</h3>
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mt-4">
+              <h3 className="font-bold text-slate-800 mb-4 uppercase text-xs tracking-widest">Fee Breakdown</h3>
+              
+              {isWaived && (
+                <div className="bg-amber-50 text-amber-700 p-3 rounded-xl mb-4 text-xs font-bold border border-amber-200 flex items-center gap-2">
+                  ⚠️ Player is exempt from the {selectedSeason} team fee.
+                </div>
+              )}
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between items-center py-1 border-b border-slate-100">
+                  <span className="text-slate-500">Base Season Fee</span>
+                  <span className={`font-bold ${isWaived ? 'text-slate-300 line-through' : 'text-slate-800'}`}>
+                    {formatMoney(fin.baseFee)}
+                  </span>
+                </div>
                 
-                {isWaived && (
-                  <div className="bg-amber-50 text-amber-700 p-3 rounded-xl mb-4 text-xs font-bold border border-amber-200 flex items-center gap-2">
-                    ⚠️ Player is exempt from the {selectedSeason} team fee.
+                {fin.totalPaid > 0 && (
+                  <div className="flex justify-between items-center py-1 border-b border-slate-100">
+                    <span className="text-slate-500">Team Fees Paid</span>
+                    <span className="font-bold text-emerald-600">-{formatMoney(fin.totalPaid)}</span>
                   </div>
                 )}
-
-                <div className="space-y-2 text-sm">
+                
+                {fin.fundraising > 0 && (
                   <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                    <span className="text-slate-500">Base Season Fee</span>
-                    <span className={`font-bold ${isWaived ? 'text-slate-300 line-through' : 'text-slate-800'}`}>
-                      {formatMoney(stats.baseFee)}
-                    </span>
+                    <span className="text-slate-500">Fundraising Applied</span>
+                    <span className="font-bold text-emerald-600">-{formatMoney(fin.fundraising)}</span>
                   </div>
-                  
-                  {stats.totalPaid > 0 && (
-                    <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                      <span className="text-slate-500">Team Fees Paid</span>
-                      <span className="font-bold text-emerald-600">-{formatMoney(stats.totalPaid)}</span>
-                    </div>
-                  )}
-                  
-                  {stats.fundraising > 0 && (
-                    <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                      <span className="text-slate-500">Fundraising Applied</span>
-                      <span className="font-bold text-emerald-600">-{formatMoney(stats.fundraising)}</span>
-                    </div>
-                  )}
-                  
-                  {stats.sponsorships > 0 && (
-                    <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                      <span className="text-slate-500">Sponsorships Applied</span>
-                      <span className="font-bold text-emerald-600">-{formatMoney(stats.sponsorships)}</span>
-                    </div>
-                  )}
-                  
-                  {stats.credits > 0 && (
-                    <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                      <span className="text-slate-500 font-bold">Credits / Discounts</span>
-                      <span className="font-bold text-blue-600">-{formatMoney(stats.credits)}</span>
-                    </div>
-                  )}
-                </div>
+                )}
+                
+                {fin.sponsorships > 0 && (
+                  <div className="flex justify-between items-center py-1 border-b border-slate-100">
+                    <span className="text-slate-500">Sponsorships Applied</span>
+                    <span className="font-bold text-emerald-600">-{formatMoney(fin.sponsorships)}</span>
+                  </div>
+                )}
+                
+                {fin.credits > 0 && (
+                  <div className="flex justify-between items-center py-1 border-b border-slate-100">
+                    <span className="text-slate-500 font-bold">Credits / Discounts</span>
+                    <span className="font-bold text-blue-600">-{formatMoney(fin.credits)}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

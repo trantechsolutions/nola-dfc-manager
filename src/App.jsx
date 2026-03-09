@@ -71,6 +71,7 @@ function App() {
   // Data State
   const [players, setPlayers] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [playerFinancials, setPlayerFinancials] = useState({});
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
 
@@ -164,6 +165,20 @@ function App() {
   const { handleSaveTransaction, handleDeleteTransaction } = useLedgerManager(
     fetchData, selectedSeason, teamSeasonId
   );
+
+  // ── PLAYER FINANCIALS (read from view, auto-computed by DB) ──
+  useEffect(() => {
+    if (!user || !selectedSeason) return;
+    const fetchFinancials = async () => {
+      try {
+        const data = await supabaseService.getPlayerFinancials(selectedSeason, teamSeasonId);
+        const map = {};
+        data.forEach(f => { map[f.playerId] = f; });
+        setPlayerFinancials(map);
+      } catch (e) { console.error('Financials fetch:', e); }
+    };
+    fetchFinancials();
+  }, [user, selectedSeason, teamSeasonId, transactions]);
 
   // ── AUTH LISTENER (role-based, no hardcoded emails) ──
   useEffect(() => {
@@ -419,7 +434,7 @@ function App() {
               <Dashboard 
                 players={seasonalPlayers} archivedPlayers={archivedPlayers} teamBalance={teamBalance} 
                 totalExpenses={totalExpenses} formatMoney={formatMoney} selectedSeasonData={currentSeasonData} 
-                transactions={seasonalTransactions} calculatePlayerFinancials={calculatePlayerFinancials}
+                transactions={seasonalTransactions} playerFinancials={playerFinancials}
                 onAddPlayer={() => { setPlayerToEdit(null); setShowPlayerForm(true); }} 
                 onEditPlayer={(p) => { setPlayerToEdit(p); setShowPlayerForm(true); }} 
                 onViewPlayer={(p) => { setPlayerToView(p); setShowPlayerModal(true); }} 
@@ -467,7 +482,7 @@ function App() {
                     onReset={(can(PERMISSIONS.TEAM_EDIT_SPONSORS) && currentSeasonData?.isFinalized) ? async (batchId, originalTxId) => { 
                       await revertWaterfall(batchId, originalTxId); await fetchData(); showToast("Distribution Reverted."); 
                     } : null}
-                    seasonalPlayers={seasonalPlayers} seasons={seasons} 
+                    seasonalPlayers={seasonalPlayers} seasons={seasons} isBudgetLocked={currentSeasonData?.isFinalized || false}
                   />
                 } />
               )}
@@ -512,9 +527,10 @@ function App() {
       {/* ═══ MODALS ═══ */}
       {showPlayerModal && (
         <PlayerModal 
-          player={playerToView} transactions={seasonalTransactions} selectedSeason={selectedSeason} 
+          player={playerToView} selectedSeason={selectedSeason} 
+          stats={playerFinancials[playerToView?.id] || null}
           onClose={() => { setShowPlayerModal(false); setPlayerToView(null); }}
-          calculateFinancials={calculatePlayerFinancials} formatMoney={formatMoney}
+          formatMoney={formatMoney}
           onToggleCompliance={async (id, field, currentState) => { 
             setPlayerToView(prev => prev ? ({ ...prev, [field]: !currentState }) : prev); 
             await supabaseService.updatePlayerField(id, field, !currentState); fetchData(); 

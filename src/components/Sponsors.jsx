@@ -11,7 +11,8 @@ export default function Sponsors({
   onDistribute, 
   onReset, 
   seasonalPlayers,
-  seasons 
+  seasons,
+  isBudgetLocked
 }) {
   const [showDistribute, setShowDistribute] = useState(false);
   const [distAmount, setDistAmount] = useState('');
@@ -23,9 +24,6 @@ export default function Sponsors({
   const [expandedPlayerId, setExpandedPlayerId] = useState(null);
   const [isDistributingAll, setIsDistributingAll] = useState(false);
   const [distributeAllProgress, setDistributeAllProgress] = useState({ current: 0, total: 0, currentTitle: '' });
-
-  const currentSeasonData = seasons.find(s => s.id === selectedSeason);
-  const isBudgetLocked = currentSeasonData?.isFinalized;
 
   const isCleared = (tx) => tx.cleared === true || String(tx.cleared).toLowerCase() === 'true';
 

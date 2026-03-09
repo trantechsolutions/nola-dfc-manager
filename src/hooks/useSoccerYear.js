@@ -1,12 +1,16 @@
 // src/hooks/useSoccerYear.js
+// Manages seasons and team-seasons.
 //
-// Seasons table = simple registry of season names (managed by club admins).
-// Team_seasons table = all budget data per team per season.
-// The team fee is DERIVED from team_season ingredients, never stored.
+// SCHEMA REALITY:
+//   seasons table:      only has id, name, created_at, updated_at
+//   team_seasons table: has ALL budget fields (base_fee, buffer_percent, 
+//                       expected_roster_size, total_projected_expenses,
+//                       total_projected_income, is_finalized)
+//
+// So currentSeasonData gets everything from team_seasons. No merge needed.
 
 import { useState, useEffect, useMemo } from 'react';
 import { supabaseService } from '../services/supabaseService';
-import { calculateTeamFeeFromSeason } from '../utils/feeCalculator';
 
 export const useSoccerYear = (user, teamId = null) => {
   const [seasons, setSeasons] = useState([]);
@@ -17,18 +21,18 @@ export const useSoccerYear = (user, teamId = null) => {
   const fetchSeasons = async () => {
     setLoading(true);
     try {
-      // Seasons = just a list of names (e.g., "2025-2026")
       const data = await supabaseService.getAllSeasons();
       if (!data.find(s => s.id === '2025-2026')) {
-        data.push({ id: '2025-2026', name: '2025-2026' });
+        data.push({ id: '2025-2026' });
       }
       data.sort((a, b) => b.id.localeCompare(a.id));
       setSeasons(data);
 
-      // Team_seasons = all budget data per team
       if (teamId) {
         const tsData = await supabaseService.getTeamSeasons(teamId);
         setTeamSeasons(tsData);
+      } else {
+        setTeamSeasons([]);
       }
     } catch (error) {
       console.error("Season fetch failed", error);
@@ -41,32 +45,37 @@ export const useSoccerYear = (user, teamId = null) => {
     if (user) fetchSeasons();
   }, [user, teamId]);
 
+  // Find the team_season for the selected season
   const currentTeamSeason = useMemo(() => 
     teamSeasons.find(ts => ts.seasonId === selectedSeason) || null,
   [teamSeasons, selectedSeason]);
 
+  // Build currentSeasonData — team_seasons is the ONLY source for budget fields
   const currentSeasonData = useMemo(() => {
-    // Base: just the season name from the registry
-    const base = { id: selectedSeason, name: selectedSeason };
-
     if (currentTeamSeason) {
-      // Team_season is the ONLY source of budget data.
-      // Fee is derived from ingredients, never stored.
       return {
-        ...base,
+        id: selectedSeason,
         teamSeasonId: currentTeamSeason.id,
         isFinalized: currentTeamSeason.isFinalized,
-        calculatedBaseFee: calculateTeamFeeFromSeason(currentTeamSeason),
+        // calculatedBaseFee is what useFinance + Dashboard read for the live fee
+        calculatedBaseFee: currentTeamSeason.baseFee,
         bufferPercent: currentTeamSeason.bufferPercent ?? 5,
-        expectedRosterSize: currentTeamSeason.expectedRosterSize ?? 0,
-        totalProjectedExpenses: currentTeamSeason.totalProjectedExpenses ?? 0,
-        totalProjectedIncome: currentTeamSeason.totalProjectedIncome ?? 0,
+        expectedRosterSize: currentTeamSeason.expectedRosterSize,
+        totalProjectedExpenses: currentTeamSeason.totalProjectedExpenses,
+        totalProjectedIncome: currentTeamSeason.totalProjectedIncome,
       };
     }
-
-    // No team_season yet — return empty budget state
-    return { ...base, isFinalized: false, calculatedBaseFee: 0, bufferPercent: 5, expectedRosterSize: 0, totalProjectedExpenses: 0, totalProjectedIncome: 0 };
-  }, [seasons, currentTeamSeason, selectedSeason]);
+    // No team_season exists yet — return bare minimum
+    return {
+      id: selectedSeason,
+      isFinalized: false,
+      calculatedBaseFee: 0,
+      bufferPercent: 5,
+      expectedRosterSize: null,
+      totalProjectedExpenses: null,
+      totalProjectedIncome: null,
+    };
+  }, [currentTeamSeason, selectedSeason]);
 
   return {
     seasons,
