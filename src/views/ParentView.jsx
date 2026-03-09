@@ -95,17 +95,28 @@ export default function ParentView({ players, transactions, calculatePlayerFinan
                 </div>
               </div>
 
-              {/* Draft indicator */}
+              {/* Draft indicator — prominent banner */}
               {financials.isDraft && financials.baseFee > 0 && (
-                <div className="flex items-center gap-2 mb-3 bg-amber-500/20 rounded-lg px-3 py-1.5">
-                  <AlertCircle size={12} className="text-amber-400" />
-                  <span className="text-[10px] font-bold text-amber-300">Budget in draft — fee is estimated</span>
+                <div className="flex items-center gap-2.5 mb-4 bg-amber-500/20 border border-amber-400/30 border-dashed rounded-xl px-3.5 py-2.5">
+                  <AlertCircle size={14} className="text-amber-400 shrink-0" />
+                  <div>
+                    <p className="text-[11px] font-black text-amber-300">Budget Still Being Drafted</p>
+                    <p className="text-[10px] text-amber-400/80 mt-0.5">
+                      Your estimated fee of <span className="font-black text-amber-300">{formatMoney(financials.baseFee)}</span> may change. 
+                      Final fees will be locked once the team manager finalizes the budget.
+                    </p>
+                  </div>
                 </div>
               )}
               
               <p className={`text-4xl font-black mt-1 ${financials.remainingBalance <= 0 ? 'text-emerald-400' : 'text-white'}`}>
                 {financials.remainingBalance <= 0 ? formatMoney(0) : formatMoney(financials.remainingBalance)}
               </p>
+              {financials.isDraft && financials.remainingBalance > 0 && (
+                <span className="inline-block text-[9px] font-bold bg-amber-500/30 text-amber-300 px-2 py-0.5 rounded mt-1">
+                  ~ estimated balance
+                </span>
+              )}
               <p className="text-xs text-slate-400 mt-1">
                 {financials.remainingBalance <= 0 ? 'Fully paid — thank you!' : 'Remaining amount due'}
               </p>
@@ -126,8 +137,23 @@ export default function ParentView({ players, transactions, calculatePlayerFinan
           <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
             <h3 className="font-bold text-slate-800 mb-3 text-xs uppercase tracking-widest">Fee Breakdown</h3>
             <div className="space-y-0">
+              {/* Season Fee row — draft-aware */}
+              <div className="flex justify-between items-center py-3 border-b border-slate-50">
+                <span className="text-sm text-slate-500">Base Season Fee</span>
+                <div className="text-right">
+                  <span className={`text-sm font-bold ${financials.isDraft ? 'text-amber-700' : 'text-slate-800'}`}>
+                    {formatMoney(financials.baseFee)}
+                  </span>
+                  {financials.isDraft && (
+                    <span className="text-[9px] text-amber-500 font-black block uppercase tracking-wide">
+                      estimated · draft
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Remaining breakdown rows */}
               {[
-                { label: 'Base Season Fee', value: financials.baseFee, color: 'text-slate-800', show: true, sign: '', bold: true },
                 { label: 'Team Fees Paid', value: financials.totalPaid, color: 'text-emerald-600', show: financials.totalPaid > 0, sign: '-' },
                 { label: 'Fundraising Applied', value: financials.fundraising, color: 'text-emerald-600', show: financials.fundraising > 0, sign: '-' },
                 { label: 'Sponsorships Applied', value: financials.sponsorships, color: 'text-emerald-600', show: financials.sponsorships > 0, sign: '-' },
@@ -144,84 +170,6 @@ export default function ParentView({ players, transactions, calculatePlayerFinan
                 <span className={`text-lg font-black ${financials.remainingBalance <= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   {formatMoney(financials.remainingBalance)}
                 </span>
-              </div>
-            </div>
-          </div>
-
-          {/* ── RECENT TRANSACTIONS (desktop: below fee breakdown) ── */}
-          {recentTxs.length > 0 && (
-            <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <h3 className="font-bold text-slate-800 mb-3 text-xs uppercase tracking-widest flex items-center gap-2">
-                <Receipt size={14} /> Recent Activity
-              </h3>
-              <div className="space-y-0">
-                {recentTxs.map(tx => (
-                  <div key={tx.id} className="flex justify-between items-center py-3 border-b border-slate-50 last:border-0">
-                    <div className="min-w-0 flex-grow mr-3">
-                      <p className="text-sm font-bold text-slate-700 truncate">{tx.title}</p>
-                      <p className="text-[10px] text-slate-400 font-medium">
-                        {tx.date?.seconds ? new Date(tx.date.seconds * 1000).toLocaleDateString() : ''} · {tx.category}
-                      </p>
-                    </div>
-                    <span className={`text-sm font-black shrink-0 ${tx.amount < 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                      {formatMoney(tx.amount)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* RIGHT COLUMN: Compliance + Quick Info (2 cols on desktop) */}
-        <div className="md:col-span-2 space-y-4 mt-4 md:mt-0">
-          {/* ── COMPLIANCE STATUS ── */}
-          <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <h3 className="font-bold text-slate-800 mb-4 text-xs uppercase tracking-widest">Compliance Status</h3>
-            <div className="space-y-3">
-              {[
-                { label: 'Medical Release', done: activePlayer.medicalRelease },
-                { label: 'ReePlayer Waiver', done: activePlayer.reePlayerWaiver },
-              ].map((item, i) => (
-                <div key={i} className={`flex items-center gap-3 p-4 rounded-xl border ${item.done ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                  {item.done 
-                    ? <ShieldCheck size={22} className="text-emerald-600 shrink-0" /> 
-                    : <ShieldX size={22} className="text-red-500 shrink-0" />
-                  }
-                  <div>
-                    <p className="text-sm font-bold text-slate-700">{item.label}</p>
-                    <p className={`text-xs font-black ${item.done ? 'text-emerald-600' : 'text-red-500'}`}>
-                      {item.done ? 'Complete' : 'Needed'}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ── PLAYER INFO CARD ── */}
-          <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <h3 className="font-bold text-slate-800 mb-4 text-xs uppercase tracking-widest">Player Info</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-400">Jersey #</span>
-                <span className="text-sm font-black text-slate-800">{activePlayer.jerseyNumber || '—'}</span>
-              </div>
-              {playerTeam && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-400">Team</span>
-                  <span className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: playerTeam.colorPrimary }} />
-                    {playerTeam.name}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-400">Season Fee</span>
-                <div className="text-right">
-                  <span className="text-sm font-black text-slate-800">{formatMoney(financials.baseFee)}</span>
-                  {financials.isDraft && <span className="text-[9px] text-amber-500 font-bold block">estimated</span>}
-                </div>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-slate-400">Total Paid</span>
@@ -262,8 +210,94 @@ export default function ParentView({ players, transactions, calculatePlayerFinan
                 </div>
                 <span>{paidPercent}%</span>
               </div>
+              {/* Draft disclaimer */}
+              {financials.isDraft && (
+                <div className="mt-3 pt-3 border-t border-dashed border-amber-200">
+                  <p className="text-[10px] text-amber-600 font-bold flex items-center gap-1.5">
+                    <AlertCircle size={10} className="shrink-0" />
+                    This progress is based on a draft budget. Amounts may shift when the budget is finalized.
+                  </p>
+                </div>
+              )}
             </div>
           )}
+        </div>
+
+        {/* RIGHT COLUMN: Info + Compliance + Transactions (2 cols on desktop) */}
+        <div className="md:col-span-2 space-y-4 mt-4 md:mt-0">
+          {/* ── COMPLIANCE ── */}
+          <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h3 className="font-bold text-slate-800 mb-4 text-xs uppercase tracking-widest">Compliance</h3>
+            <div className="space-y-3">
+              {[
+                { label: 'Medical Release', done: activePlayer.medicalRelease },
+                { label: 'ReePlayer Waiver', done: activePlayer.reePlayerWaiver },
+              ].map((item, i) => (
+                <div key={i} className={`flex items-center gap-3 p-3 rounded-xl border ${item.done ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                  {item.done 
+                    ? <ShieldCheck size={22} className="text-emerald-600 shrink-0" /> 
+                    : <ShieldX size={22} className="text-red-500 shrink-0" />
+                  }
+                  <div>
+                    <p className="text-sm font-bold text-slate-700">{item.label}</p>
+                    <p className={`text-xs font-black ${item.done ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {item.done ? 'Complete' : 'Needed'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── PLAYER INFO CARD ── */}
+          <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h3 className="font-bold text-slate-800 mb-4 text-xs uppercase tracking-widest">Player Info</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-400">Jersey #</span>
+                <span className="text-sm font-black text-slate-800">{activePlayer.jerseyNumber || '—'}</span>
+              </div>
+              {playerTeam && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-400">Team</span>
+                  <span className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: playerTeam.colorPrimary }} />
+                    {playerTeam.name}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── RECENT TRANSACTIONS ── */}
+          <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h3 className="font-bold text-slate-800 mb-4 text-xs uppercase tracking-widest flex items-center gap-2">
+              <Receipt size={14} className="text-blue-600" /> Recent Activity
+            </h3>
+            {recentTxs.length === 0 ? (
+              <p className="text-sm text-slate-400 italic">No transactions yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {recentTxs.map(tx => {
+                  const isPositive = tx.amount > 0;
+                  const dateStr = tx.date?.seconds 
+                    ? new Date(tx.date.seconds * 1000).toLocaleDateString() 
+                    : 'N/A';
+                  return (
+                    <div key={tx.id} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0">
+                      <div className="min-w-0 flex-grow">
+                        <p className="text-xs font-bold text-slate-700 truncate">{tx.title}</p>
+                        <p className="text-[10px] text-slate-400">{dateStr} · {tx.category}</p>
+                      </div>
+                      <span className={`text-sm font-black shrink-0 ml-3 ${isPositive ? 'text-emerald-600' : 'text-red-500'}`}>
+                        {isPositive ? '+' : ''}{formatMoney(tx.amount)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

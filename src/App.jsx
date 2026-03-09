@@ -57,6 +57,9 @@ const NAV_ICON_MAP = {
   documents: FileText,
 };
 
+// Budget expense categories — must match BudgetView's EXPENSE_CODES
+const BUDGET_EXPENSE_CATS = ['OPE', 'COA', 'TOU', 'LEA', 'FRI'];
+
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -127,29 +130,18 @@ function App() {
     });
   };
 
-  // ── TEAM-SEASON ID (needed for filtering + hooks) ──
-  const teamSeasonId = currentTeamSeason?.id || currentSeasonData?.teamSeasonId || null;
-
-  // ── FILTERED DATA (scoped to selected team + season) ──
+  // ── FILTERED DATA ──
   const seasonalPlayers = useMemo(() => 
-    players.filter(p => 
-      p.seasonProfiles?.[selectedSeason] && 
-      p.status !== 'archived' &&
-      (!selectedTeamId || p.teamId === selectedTeamId)
-    ),
-  [players, selectedSeason, selectedTeamId]);
+    players.filter(p => p.seasonProfiles?.[selectedSeason] && p.status !== 'archived'),
+  [players, selectedSeason]);
 
   const archivedPlayers = useMemo(() => 
-    players.filter(p => p.status === 'archived' && (!selectedTeamId || p.teamId === selectedTeamId)),
-  [players, selectedTeamId]);
+    players.filter(p => p.status === 'archived'),
+  [players]);
 
   const seasonalTransactions = useMemo(() => 
-    transactions.filter(tx => {
-      if (tx.seasonId !== selectedSeason) return false;
-      if (teamSeasonId && tx.teamSeasonId && tx.teamSeasonId !== teamSeasonId) return false;
-      return true;
-    }),
-  [transactions, selectedSeason, teamSeasonId]);
+    transactions.filter(tx => tx.seasonId === selectedSeason),
+  [transactions, selectedSeason]);
 
   const myPlayers = useMemo(() => {
     if (!user || role === 'manager') return [];
@@ -159,6 +151,7 @@ function App() {
   }, [players, user, role]);
 
   // ── HOOKS (now with team context) ──
+  const teamSeasonId = currentTeamSeason?.id || currentSeasonData?.teamSeasonId || null;
 
   const { calculatePlayerFinancials, handleWaterfallCredit, revertWaterfall } = useFinance(
     selectedSeason, seasonalPlayers, currentSeasonData?.isFinalized, teamSeasonId, currentSeasonData
@@ -193,7 +186,16 @@ function App() {
 
   // ── COMPUTED ──
   const teamBalance = seasonalTransactions.reduce((acc, tx) => (tx.cleared && !tx.waterfallBatchId) ? acc + tx.amount : acc, 0);
-  const totalExpenses = seasonalTransactions.reduce((acc, tx) => tx.amount < 0 ? acc + Math.abs(tx.amount) : acc, 0);
+
+  // FIX: Only count expenses from the 5 budget categories, matching BudgetView's actuals
+  const totalExpenses = seasonalTransactions.reduce((acc, tx) => {
+    const cleared = tx.cleared === true || String(tx.cleared).toLowerCase() === 'true';
+    if (tx.amount < 0 && cleared && !tx.waterfallBatchId && BUDGET_EXPENSE_CATS.includes(tx.category)) {
+      return acc + Math.abs(tx.amount);
+    }
+    return acc;
+  }, 0);
+
   const formatMoney = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
   if (loading || contextLoading) return <div className="min-h-screen flex items-center justify-center font-black text-slate-300 animate-pulse">LOADING...</div>;
@@ -232,7 +234,6 @@ function App() {
           icon: NAV_ICON_MAP[id] || LayoutDashboard,
           section: 'team',
         })),
-        // Documents tab for anyone who can view roster
         ...(can(PERMISSIONS.TEAM_VIEW_ROSTER) ? [{ id: 'documents', label: 'Documents', icon: FileText, section: 'team' }] : []),
       ]
     : [
@@ -447,7 +448,7 @@ function App() {
               )}
               {can(PERMISSIONS.TEAM_VIEW_BUDGET) && (
                 <Route path="/budget" element={
-                  <BudgetView selectedSeason={selectedSeason} formatMoney={formatMoney} seasons={seasons} setSelectedSeason={setSelectedSeason} refreshSeasons={refreshSeasons} showToast={showToast} showConfirm={showConfirm} onDataChange={fetchData} />
+                  <BudgetView selectedSeason={selectedSeason} selectedTeamId={selectedTeamId} formatMoney={formatMoney} seasons={seasons} setSelectedSeason={setSelectedSeason} refreshSeasons={refreshSeasons} showToast={showToast} showConfirm={showConfirm} onDataChange={fetchData} />
                 } />
               )}
               {can(PERMISSIONS.TEAM_VIEW_INSIGHTS) && (
@@ -494,7 +495,6 @@ function App() {
 
       {/* ═══ MOBILE BOTTOM NAV ═══ */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 h-20 flex items-center justify-around px-2 z-50">
-        {/* Club overview shortcut for admins */}
         {isClubAdmin && (
           <button onClick={() => navigate('/club-overview')} className={`flex flex-col items-center gap-1 flex-1 ${currentView === 'club-overview' ? 'text-violet-600' : 'text-slate-400'}`}>
             <Building2 size={20} strokeWidth={currentView === 'club-overview' ? 3 : 2} />
@@ -507,20 +507,16 @@ function App() {
             <span className="text-[9px] font-bold">{item.label}</span>
           </button>
         ))}
-        {canEditLedger && (
-          <button onClick={() => { setTxToEdit(null); setShowTxForm(true); }} className="mb-10 bg-slate-900 text-white p-4 rounded-full shadow-xl border-4 border-white active:scale-90 transition-transform">
-            <Plus size={24} strokeWidth={3} />
-          </button>
-        )}
       </nav>
 
       {/* ═══ MODALS ═══ */}
       {showPlayerModal && (
         <PlayerModal 
-          player={playerToView} transactions={seasonalTransactions} selectedSeason={selectedSeason} onClose={() => { setShowPlayerModal(false); setPlayerToView(null); }}
+          player={playerToView} transactions={seasonalTransactions} selectedSeason={selectedSeason} 
+          onClose={() => { setShowPlayerModal(false); setPlayerToView(null); }}
           calculateFinancials={calculatePlayerFinancials} formatMoney={formatMoney}
           onToggleCompliance={async (id, field, currentState) => { 
-            setPlayerToView(prev => ({ ...prev, [field]: !currentState })); 
+            setPlayerToView(prev => prev ? ({ ...prev, [field]: !currentState }) : prev); 
             await supabaseService.updatePlayerField(id, field, !currentState); fetchData(); 
           }}
         />
@@ -539,16 +535,20 @@ function App() {
         onClose={() => setShowTxForm(false)} players={seasonalPlayers} 
       />
 
-      {confirmDialog && <ConfirmModal message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={confirmDialog.onCancel} />}
+      {confirmDialog && (
+        <ConfirmModal
+          message={confirmDialog.message}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={confirmDialog.onCancel}
+        />
+      )}
 
-      {/* Toast */}
+      {/* ═══ TOAST ═══ */}
       {toast && (
-        <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 text-white px-6 py-4 rounded-2xl shadow-2xl font-black z-[200] border-2 flex items-center gap-3 ${toast.isError ? 'bg-red-600 border-red-400' : 'bg-slate-900 border-slate-700'}`}>
-          {toast.isError && <Settings size={20} className="animate-spin" />}
+        <div className={`fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl shadow-2xl font-bold text-sm flex items-center gap-3 ${toast.isError ? 'bg-red-600 text-white' : 'bg-slate-900 text-white'}`}>
           <span>{toast.msg}</span>
           {toast.action && (
-            <button onClick={() => { toast.action.onClick(); setToast(null); }}
-              className="ml-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-black uppercase tracking-wider transition-all">
+            <button onClick={toast.action.onClick} className="underline text-blue-300 font-black">
               {toast.action.label}
             </button>
           )}

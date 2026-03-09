@@ -8,7 +8,6 @@ export const supabaseService = {
   // ─────────────────────────────────────────
 
   getAllPlayers: async () => {
-    // Fetch players with their guardians and season enrollments in one go
     const { data: players, error: pErr } = await supabase
       .from('players')
       .select(`
@@ -20,8 +19,6 @@ export const supabaseService = {
 
     if (pErr) throw pErr;
 
-    // Reshape into the format components expect:
-    // { id, firstName, lastName, ..., guardians: [...], seasonProfiles: { "2025-2026": { baseFee, feeWaived, status } } }
     return players.map(p => ({
       id: p.id,
       firstName: p.first_name,
@@ -40,6 +37,7 @@ export const supabaseService = {
       })),
       seasonProfiles: (p.player_seasons || []).reduce((acc, ps) => {
         acc[ps.season_id] = {
+          baseFee: Number(ps.base_fee || 0),
           feeWaived: ps.fee_waived,
           status: ps.status,
           teamSeasonId: ps.team_season_id,
@@ -50,7 +48,6 @@ export const supabaseService = {
   },
 
   addPlayer: async (playerData) => {
-    // 1. Insert the player
     const { data: player, error: pErr } = await supabase
       .from('players')
       .insert({
@@ -68,7 +65,6 @@ export const supabaseService = {
 
     if (pErr) throw pErr;
 
-    // 2. Insert guardians
     if (playerData.guardians?.length > 0) {
       const guardianRows = playerData.guardians
         .filter(g => g.name)
@@ -84,13 +80,13 @@ export const supabaseService = {
       }
     }
 
-    // 3. Insert season profiles
     if (playerData.seasonProfiles) {
       const seasonRows = Object.entries(playerData.seasonProfiles).map(([seasonId, profile]) => ({
         player_id: player.id,
         season_id: seasonId,
         fee_waived: profile.feeWaived ?? false,
-        status: profile.status || 'active'
+        status: profile.status || 'active',
+        ...(profile.teamSeasonId ? { team_season_id: profile.teamSeasonId } : {}),
       }));
       if (seasonRows.length > 0) {
         const { error: sErr } = await supabase.from('player_seasons').insert(seasonRows);
@@ -102,7 +98,6 @@ export const supabaseService = {
   },
 
   updatePlayer: async (playerId, playerData) => {
-    // 1. Update core player fields
     const { error: pErr } = await supabase
       .from('players')
       .update({
@@ -115,7 +110,6 @@ export const supabaseService = {
 
     if (pErr) throw pErr;
 
-    // 2. Replace guardians (delete all, re-insert)
     if (playerData.guardians) {
       await supabase.from('guardians').delete().eq('player_id', playerId);
       const guardianRows = playerData.guardians
@@ -132,7 +126,6 @@ export const supabaseService = {
       }
     }
 
-    // 3. Upsert season profiles
     if (playerData.seasonProfiles) {
       for (const [seasonId, profile] of Object.entries(playerData.seasonProfiles)) {
         const { error: sErr } = await supabase
@@ -149,7 +142,6 @@ export const supabaseService = {
   },
 
   updatePlayerField: async (playerId, field, value) => {
-    // Map camelCase component fields to snake_case DB columns
     const fieldMap = {
       medicalRelease: 'medical_release',
       reePlayerWaiver: 'reeplayer_waiver',
@@ -164,9 +156,9 @@ export const supabaseService = {
   },
 
   updateSeasonProfile: async (playerId, seasonId, updates) => {
-    // Updates to the player_seasons junction table
     const dbUpdates = {};
     if ('feeWaived' in updates) dbUpdates.fee_waived = updates.feeWaived;
+    if ('baseFee' in updates) dbUpdates.base_fee = updates.baseFee;
     if ('status' in updates) dbUpdates.status = updates.status;
 
     const { error } = await supabase
@@ -201,7 +193,7 @@ export const supabaseService = {
   },
 
   // ─────────────────────────────────────────
-  // TRANSACTIONS (reshapes with player name via JOIN)
+  // TRANSACTIONS
   // ─────────────────────────────────────────
 
   getAllTransactions: async () => {
@@ -215,8 +207,6 @@ export const supabaseService = {
 
     if (error) throw error;
 
-    // Reshape: add playerName, convert date to Firestore-like { seconds } format
-    // so existing components don't need to change their date handling
     return data.map(tx => ({
       id: tx.id,
       seasonId: tx.season_id,
@@ -286,7 +276,6 @@ export const supabaseService = {
   },
 
   deleteTransaction: async (txId) => {
-    // Also delete any waterfall children that reference this as originalTxId
     await supabase.from('transactions').delete().eq('original_tx_id', txId);
     const { error } = await supabase.from('transactions').delete().eq('id', txId);
     if (error) throw error;
@@ -300,24 +289,27 @@ export const supabaseService = {
   },
 
   // ─────────────────────────────────────────
-  // SEASONS
+  // SEASONS (table only has: id, name, created_at, updated_at)
+  // All budget fields live on team_seasons.
   // ─────────────────────────────────────────
 
   getAllSeasons: async () => {
     const { data, error } = await supabase
       .from('seasons')
-      .select('id, name, created_at')
+      .select('*')
       .order('id', { ascending: false });
     if (error) throw error;
     return data.map(s => ({
       id: s.id,
-      name: s.name || s.id,
+      name: s.name,
     }));
   },
 
   saveSeason: async (seasonId, data) => {
-    // Seasons table is a simple registry — just id and name
-    const row = { id: seasonId, name: data.name || seasonId };
+    const row = {
+      id: seasonId,
+      name: data.name || seasonId,
+    };
     const { error } = await supabase
       .from('seasons')
       .upsert(row, { onConflict: 'id' });
@@ -325,9 +317,7 @@ export const supabaseService = {
   },
 
   deleteSeason: async (seasonId) => {
-    // Delete transactions for this season first (FK is not CASCADE)
     await supabase.from('transactions').delete().eq('season_id', seasonId);
-    // budget_items and player_seasons will CASCADE from seasons delete
     const { error } = await supabase.from('seasons').delete().eq('id', seasonId);
     if (error) throw error;
   },
@@ -336,24 +326,12 @@ export const supabaseService = {
   // BUDGET ITEMS
   // ─────────────────────────────────────────
 
-  getBudgetItems: async (seasonId, teamSeasonId = null) => {
-    let data, error;
-    
-    if (teamSeasonId) {
-      // Team-scoped: only this team's items
-      ({ data, error } = await supabase.from('budget_items').select('*').eq('team_season_id', teamSeasonId));
-      if (error) throw error;
-      
-      // Fall back to legacy items (no team_season_id) only if none found
-      if (data.length === 0) {
-        ({ data, error } = await supabase.from('budget_items').select('*').eq('season_id', seasonId).is('team_season_id', null));
-        if (error) throw error;
-      }
-    } else {
-      // No team_season — return empty. Never load all teams' items.
-      data = [];
-    }
-    
+  getBudgetItems: async (seasonId) => {
+    const { data, error } = await supabase
+      .from('budget_items')
+      .select('*')
+      .eq('season_id', seasonId);
+    if (error) throw error;
     return data.map(item => ({
       id: item.id,
       category: item.category,
@@ -365,25 +343,18 @@ export const supabaseService = {
     }));
   },
 
-  saveBudgetItems: async (seasonId, items, teamSeasonId = null) => {
-    if (!teamSeasonId) {
-      console.warn('saveBudgetItems called without teamSeasonId — skipping to prevent cross-team contamination');
-      return;
-    }
-
-    // Delete only this team's items + any orphaned legacy items
-    await supabase.from('budget_items').delete().eq('team_season_id', teamSeasonId);
-    await supabase.from('budget_items').delete().eq('season_id', seasonId).is('team_season_id', null);
+  saveBudgetItems: async (seasonId, items) => {
+    await supabase.from('budget_items').delete().eq('season_id', seasonId);
 
     if (items.length > 0) {
       const rows = items.map(item => ({
         season_id: seasonId,
-        team_season_id: teamSeasonId,
         category: item.category,
         label: item.label,
         income: item.income || 0,
         expenses_fall: item.expensesFall || 0,
         expenses_spring: item.expensesSpring || 0,
+        ...(item.teamSeasonId ? { team_season_id: item.teamSeasonId } : {}),
       }));
       const { error } = await supabase.from('budget_items').insert(rows);
       if (error) throw error;
@@ -408,7 +379,10 @@ export const supabaseService = {
   },
 
   deleteBlackout: async (dateStr) => {
-    const { error } = await supabase.from('blackouts').delete().eq('date_str', dateStr);
+    const { error } = await supabase
+      .from('blackouts')
+      .delete()
+      .eq('date_str', dateStr);
     if (error) throw error;
   },
 
@@ -416,22 +390,19 @@ export const supabaseService = {
   // CLUBS
   // ─────────────────────────────────────────
 
-  getClub: async (clubId) => {
-    const { data, error } = await supabase.from('clubs').select('*').eq('id', clubId).single();
-    if (error) throw error;
-    return { id: data.id, name: data.name, slug: data.slug, logoUrl: data.logo_url, settings: data.settings };
-  },
-
   getClubForUser: async () => {
-    // Get the first club the current user has any role in
-    const { data, error } = await supabase
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data: roles, error } = await supabase
       .from('user_roles')
-      .select('club_id, clubs(*), team_id, teams(club_id, name)')
+      .select('club_id, team_id, teams(club_id)')
+      .eq('user_id', user.id)
       .limit(1);
-    if (error) throw error;
-    if (!data || data.length === 0) return null;
-    const row = data[0];
-    const club = row.clubs || (row.teams ? { id: row.teams.club_id } : null);
+    if (error || !roles?.length) return null;
+    const row = roles[0];
+    const clubId = row.club_id || (row.teams ? row.teams.club_id : null);
+    if (!clubId) return null;
+    const { data: club } = await supabase.from('clubs').select('*').eq('id', clubId).single();
     if (!club) return null;
     return { id: club.id, name: club.name, slug: club.slug };
   },
@@ -494,7 +465,7 @@ export const supabaseService = {
   },
 
   // ─────────────────────────────────────────
-  // TEAM SEASONS
+  // TEAM SEASONS (where budget fields live)
   // ─────────────────────────────────────────
 
   getTeamSeasons: async (teamId) => {
@@ -540,7 +511,7 @@ export const supabaseService = {
       team_id: teamSeasonData.teamId,
       season_id: teamSeasonData.seasonId,
       is_finalized: teamSeasonData.isFinalized ?? false,
-      // NOTE: base_fee is NOT written — the fee is always derived from the ingredients below
+      base_fee: teamSeasonData.baseFee ?? 0,
       buffer_percent: teamSeasonData.bufferPercent ?? 5,
       expected_roster_size: teamSeasonData.expectedRosterSize ?? null,
       total_projected_expenses: teamSeasonData.totalProjectedExpenses ?? null,
@@ -565,53 +536,59 @@ export const supabaseService = {
       .eq('user_id', user.id);
     if (error) throw error;
     return data.map(r => ({
-      id: r.id,
-      userId: r.user_id,
-      clubId: r.club_id,
-      teamId: r.team_id,
-      role: r.role,
-      clubName: r.clubs?.name || null,
-      teamName: r.teams?.name || null,
+      id: r.id, userId: r.user_id, clubId: r.club_id, teamId: r.team_id,
+      role: r.role, clubName: r.clubs?.name || null, teamName: r.teams?.name || null,
     }));
   },
 
   getTeamRoles: async (teamId) => {
-    // Get the team's club_id first
     const { data: team, error: tErr } = await supabase
-      .from('teams')
-      .select('club_id')
-      .eq('id', teamId)
-      .single();
+      .from('teams').select('club_id').eq('id', teamId).single();
     if (tErr) throw tErr;
 
-    // Fetch direct team roles + club-level roles (who have implicit access)
     const { data, error } = await supabase
-      .from('user_roles')
-      .select('*')
+      .from('user_roles').select('*')
       .or(`team_id.eq.${teamId},club_id.eq.${team.club_id}`);
     if (error) throw error;
 
-    // Fetch profiles separately (no FK between user_roles and user_profiles)
     const userIds = [...new Set(data.map(r => r.user_id))];
     let profileMap = {};
     if (userIds.length > 0) {
       try {
         const profiles = await supabaseService.getUserProfiles(userIds);
         profiles.forEach(p => { profileMap[p.userId] = p; });
-      } catch (e) {
-        console.warn('Could not fetch user profiles:', e.message);
-      }
+      } catch (e) { console.warn('Could not fetch user profiles:', e.message); }
     }
 
     return data.map(r => {
       const profile = profileMap[r.user_id] || {};
-      return { 
+      return {
         id: r.id, userId: r.user_id, teamId: r.team_id, clubId: r.club_id, role: r.role,
-        displayName: profile.displayName || null,
-        email: profile.email || null,
+        displayName: profile.displayName || null, email: profile.email || null,
         isClubLevel: !r.team_id && !!r.club_id,
       };
     });
+  },
+
+  getUserProfiles: async (userIds) => {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .in('user_id', userIds);
+    if (error) throw error;
+    return data.map(p => ({
+      userId: p.user_id, displayName: p.display_name, email: p.email, phone: p.phone, isActive: p.is_active,
+    }));
+  },
+
+  getUserIdByEmail: async (email) => {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('user_id')
+      .eq('email', email.toLowerCase().trim())
+      .maybeSingle();
+    if (error) throw error;
+    return data?.user_id || null;
   },
 
   assignRole: async (userId, role, { clubId, teamId } = {}) => {
@@ -623,94 +600,9 @@ export const supabaseService = {
     return data;
   },
 
-  // Get all guardians on a team with their account/role status
-  getTeamGuardiansWithStatus: async (teamId) => {
-    // 1. Get players + guardians for this team
-    const { data: players, error } = await supabase
-      .from('players')
-      .select('id, first_name, last_name, jersey_number, guardians(*)')
-      .eq('team_id', teamId)
-      .eq('status', 'active')
-      .order('last_name');
-    if (error) throw error;
-
-    // 2. Collect unique guardian emails
-    const guardianMap = {};
-    players.forEach(p => {
-      (p.guardians || []).forEach(g => {
-        const email = (g.email || '').toLowerCase().trim();
-        if (!email) return;
-        if (!guardianMap[email]) {
-          guardianMap[email] = {
-            guardianId: g.id,
-            name: g.name,
-            email,
-            phone: g.phone,
-            players: [],
-            userId: null,
-            hasAccount: false,
-            roles: [],
-          };
-        }
-        guardianMap[email].players.push({
-          id: p.id,
-          name: `${p.first_name} ${p.last_name}`,
-          jersey: p.jersey_number,
-        });
-      });
-    });
-
-    // 3. Look up which guardians have accounts + roles
-    const emails = Object.keys(guardianMap);
-    if (emails.length > 0) {
-      // Get team roles
-      const { data: teamRoles } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('team_id', teamId);
-
-      // Try to resolve emails to user IDs via profiles
-      const { data: profiles } = await supabase
-        .from('user_profiles')
-        .select('user_id, email, display_name')
-        .in('email', emails);
-
-      const emailToProfile = {};
-      (profiles || []).forEach(p => {
-        if (p.email) emailToProfile[p.email.toLowerCase()] = p;
-      });
-
-      // Match
-      emails.forEach(email => {
-        const profile = emailToProfile[email];
-        if (profile) {
-          guardianMap[email].userId = profile.user_id;
-          guardianMap[email].hasAccount = true;
-          guardianMap[email].displayName = profile.display_name;
-          // Find their roles on this team
-          guardianMap[email].roles = (teamRoles || [])
-            .filter(r => r.user_id === profile.user_id)
-            .map(r => ({ id: r.id, role: r.role }));
-        }
-      });
-    }
-
-    return Object.values(guardianMap).sort((a, b) => a.name.localeCompare(b.name));
-  },
-
-  getUserIdByEmail: async (email) => {
-    const { data, error } = await supabase.rpc('get_user_id_by_email', { p_email: email.toLowerCase().trim() });
-    if (error) throw error;
-    return data; // uuid or null
-  },
-
   assignRoleByEmail: async (email, role, { clubId, teamId } = {}) => {
-    // 1. Look up user by email
     const userId = await supabaseService.getUserIdByEmail(email);
-    if (!userId) {
-      throw new Error(`No account found for "${email}". Send them an invitation instead.`);
-    }
-    // 2. Assign the role
+    if (!userId) throw new Error(`No account found for "${email}". Send them an invitation instead.`);
     return await supabaseService.assignRole(userId, role, { clubId, teamId });
   },
 
@@ -720,7 +612,7 @@ export const supabaseService = {
   },
 
   // ─────────────────────────────────────────
-  // TEAM-SCOPED QUERIES (for Phase 2+ use)
+  // TEAM-SCOPED QUERIES
   // ─────────────────────────────────────────
 
   getPlayersByTeam: async (teamId) => {
@@ -737,7 +629,7 @@ export const supabaseService = {
       clubId: p.club_id, teamId: p.team_id,
       guardians: (p.guardians || []).map(g => ({ id: g.id, name: g.name, email: g.email, phone: g.phone })),
       seasonProfiles: (p.player_seasons || []).reduce((acc, ps) => {
-        acc[ps.season_id] = { feeWaived: ps.fee_waived, status: ps.status, teamSeasonId: ps.team_season_id };
+        acc[ps.season_id] = { baseFee: Number(ps.base_fee || 0), feeWaived: ps.fee_waived, status: ps.status, teamSeasonId: ps.team_season_id };
         return acc;
       }, {}),
     }));
@@ -778,15 +670,12 @@ export const supabaseService = {
   },
 
   // ─────────────────────────────────────────
-  // DOCUMENTS (file metadata + Supabase Storage)
+  // DOCUMENTS
   // ─────────────────────────────────────────
 
   getPlayerDocuments: async (playerId) => {
     const { data, error } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('player_id', playerId)
-      .order('created_at', { ascending: false });
+      .from('documents').select('*').eq('player_id', playerId).order('created_at', { ascending: false });
     if (error) throw error;
     return data.map(d => ({
       id: d.id, playerId: d.player_id, clubId: d.club_id, teamId: d.team_id, seasonId: d.season_id,
@@ -815,201 +704,109 @@ export const supabaseService = {
   },
 
   uploadDocument: async (file, playerId, docMeta) => {
-    // 1. Upload file to Supabase Storage
     const ext = file.name.split('.').pop();
     const storagePath = `${docMeta.clubId}/${playerId}/${Date.now()}_${docMeta.docType}.${ext}`;
-    
+
     const { error: uploadErr } = await supabase.storage
       .from('player-documents')
       .upload(storagePath, file, { contentType: file.type });
     if (uploadErr) throw uploadErr;
 
-    // 2. Insert document record
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data, error } = await supabase.from('documents').insert({
+    const { data: docRow, error: dbErr } = await supabase.from('documents').insert({
       player_id: playerId,
-      club_id: docMeta.clubId || null,
-      team_id: docMeta.teamId || null,
-      season_id: docMeta.seasonId || null,
+      club_id: docMeta.clubId,
+      team_id: docMeta.teamId,
+      season_id: docMeta.seasonId,
       doc_type: docMeta.docType,
-      title: docMeta.title || file.name,
+      title: docMeta.title || `${docMeta.docType} - ${file.name}`,
       file_name: file.name,
       file_path: storagePath,
       file_size: file.size,
       mime_type: file.type,
       status: 'uploaded',
-      uploaded_by: user.id,
+      uploaded_by: docMeta.uploadedBy,
     }).select().single();
+    if (dbErr) throw dbErr;
+    return docRow;
+  },
+
+  deleteDocument: async (docId, filePath) => {
+    if (filePath) {
+      await supabase.storage.from('player-documents').remove([filePath]);
+    }
+    const { error } = await supabase.from('documents').delete().eq('id', docId);
     if (error) throw error;
-    return data;
+  },
+
+  updateDocumentStatus: async (docId, status, verifiedBy = null) => {
+    const updates = { status };
+    if (verifiedBy) { updates.verified_by = verifiedBy; updates.verified_at = new Date().toISOString(); }
+    const { error } = await supabase.from('documents').update(updates).eq('id', docId);
+    if (error) throw error;
   },
 
   getDocumentUrl: async (filePath) => {
     const { data, error } = await supabase.storage
       .from('player-documents')
-      .createSignedUrl(filePath, 3600); // 1hr signed URL
+      .createSignedUrl(filePath, 3600);
     if (error) throw error;
     return data.signedUrl;
   },
 
-  updateDocumentStatus: async (docId, status, notes = null) => {
-    const updates = { status };
-    if (notes !== null) updates.notes = notes;
-    if (status === 'verified') {
-      const { data: { user } } = await supabase.auth.getUser();
-      updates.verified_by = user.id;
-      updates.verified_at = new Date().toISOString();
-    }
-    const { error } = await supabase.from('documents').update(updates).eq('id', docId);
-    if (error) throw error;
-  },
-
-  deleteDocument: async (docId, filePath) => {
-    // Delete from storage
-    if (filePath) {
-      await supabase.storage.from('player-documents').remove([filePath]);
-    }
-    // Delete record
-    const { error } = await supabase.from('documents').delete().eq('id', docId);
-    if (error) throw error;
-  },
-
   // ─────────────────────────────────────────
-  // INVITATIONS
+  // GUARDIAN STATUS (for team user management)
   // ─────────────────────────────────────────
 
-  getInvitations: async (clubId) => {
-    const { data, error } = await supabase
-      .from('invitations')
-      .select('*')
-      .eq('club_id', clubId)
-      .order('created_at', { ascending: false });
+  getTeamGuardiansWithStatus: async (teamId) => {
+    const { data: players, error } = await supabase
+      .from('players')
+      .select('id, first_name, last_name, jersey_number, guardians(*)')
+      .eq('team_id', teamId)
+      .eq('status', 'active')
+      .order('last_name');
     if (error) throw error;
-    return data.map(inv => ({
-      id: inv.id, clubId: inv.club_id, teamId: inv.team_id,
-      email: inv.email, role: inv.role, invitedName: inv.invited_name,
-      status: inv.status, token: inv.token, expiresAt: inv.expires_at,
-      acceptedBy: inv.accepted_by, acceptedAt: inv.accepted_at,
-      invitedBy: inv.invited_by, createdAt: inv.created_at,
-    }));
-  },
 
-  createInvitation: async (invData) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data, error } = await supabase.from('invitations').insert({
-      club_id: invData.clubId,
-      team_id: invData.teamId || null,
-      email: invData.email.toLowerCase().trim(),
-      role: invData.role,
-      invited_name: invData.name || null,
-      invited_by: user.id,
-    }).select().single();
-    if (error) throw error;
-    return data;
-  },
-
-  revokeInvitation: async (invId) => {
-    const { error } = await supabase.from('invitations').update({ status: 'revoked' }).eq('id', invId);
-    if (error) throw error;
-  },
-
-  acceptInvitation: async (token) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Must be logged in to accept invitation');
-
-    // 1. Find the invitation
-    const { data: inv, error: findErr } = await supabase
-      .from('invitations')
-      .select('*')
-      .eq('token', token)
-      .eq('status', 'pending')
-      .single();
-    if (findErr || !inv) throw new Error('Invalid or expired invitation');
-
-    // 2. Check expiration
-    if (new Date(inv.expires_at) < new Date()) {
-      await supabase.from('invitations').update({ status: 'expired' }).eq('id', inv.id);
-      throw new Error('Invitation has expired');
-    }
-
-    // 3. Assign the role
-    const roleData = { user_id: user.id, role: inv.role };
-    if (inv.role.startsWith('club_')) roleData.club_id = inv.club_id;
-    else roleData.team_id = inv.team_id;
-    
-    const { error: roleErr } = await supabase.from('user_roles').insert(roleData);
-    if (roleErr && !roleErr.message.includes('duplicate')) throw roleErr;
-
-    // 4. Create/update user profile
-    await supabase.from('user_profiles').upsert({
-      user_id: user.id,
-      email: user.email,
-      display_name: inv.invited_name || user.email.split('@')[0],
-    }, { onConflict: 'user_id' });
-
-    // 5. Mark invitation as accepted
-    await supabase.from('invitations').update({
-      status: 'accepted', accepted_by: user.id, accepted_at: new Date().toISOString()
-    }).eq('id', inv.id);
-
-    return { role: inv.role, teamId: inv.team_id, clubId: inv.club_id };
-  },
-
-  // ─────────────────────────────────────────
-  // USER PROFILES & DIRECTORY
-  // ─────────────────────────────────────────
-
-  getUserProfiles: async (userIds) => {
-    if (!userIds || userIds.length === 0) return [];
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .in('user_id', userIds);
-    if (error) throw error;
-    return data.map(p => ({
-      id: p.id, userId: p.user_id, displayName: p.display_name,
-      email: p.email, phone: p.phone, avatarUrl: p.avatar_url,
-      isActive: p.is_active, lastLogin: p.last_login,
-    }));
-  },
-
-  getClubUsers: async (clubId) => {
-    // Get all user_ids that have any role in this club
-    const { data: roles, error: rErr } = await supabase
-      .from('user_roles')
-      .select('user_id, role, club_id, team_id, teams(name)')
-      .or(`club_id.eq.${clubId},team_id.in.(${
-        (await supabase.from('teams').select('id').eq('club_id', clubId)).data?.map(t => t.id).join(',') || ''
-      })`);
-    if (rErr) throw rErr;
-
-    const userIds = [...new Set(roles.map(r => r.user_id))];
-    const profiles = await supabaseService.getUserProfiles(userIds);
-    const profileMap = {};
-    profiles.forEach(p => { profileMap[p.userId] = p; });
-
-    // Group roles by user
-    const users = {};
-    roles.forEach(r => {
-      if (!users[r.user_id]) {
-        const profile = profileMap[r.user_id] || {};
-        users[r.user_id] = {
-          userId: r.user_id,
-          displayName: profile.displayName || r.user_id.slice(0, 8),
-          email: profile.email || '',
-          phone: profile.phone || '',
-          isActive: profile.isActive ?? true,
-          roles: [],
-        };
-      }
-      users[r.user_id].roles.push({
-        role: r.role,
-        clubId: r.club_id,
-        teamId: r.team_id,
-        teamName: r.teams?.name || null,
+    const guardianMap = {};
+    players.forEach(p => {
+      (p.guardians || []).forEach(g => {
+        const email = (g.email || '').toLowerCase().trim();
+        if (!email) return;
+        if (!guardianMap[email]) {
+          guardianMap[email] = {
+            guardianId: g.id, name: g.name, email, phone: g.phone,
+            players: [], userId: null, hasAccount: false, roles: [],
+          };
+        }
+        guardianMap[email].players.push({
+          id: p.id, name: `${p.first_name} ${p.last_name}`, jersey: p.jersey_number,
+        });
       });
     });
-    return Object.values(users);
+
+    const emails = Object.keys(guardianMap);
+    if (emails.length > 0) {
+      const { data: profiles } = await supabase
+        .from('user_profiles').select('user_id, email').in('email', emails);
+      (profiles || []).forEach(p => {
+        const email = p.email.toLowerCase().trim();
+        if (guardianMap[email]) {
+          guardianMap[email].userId = p.user_id;
+          guardianMap[email].hasAccount = true;
+        }
+      });
+
+      const userIds = Object.values(guardianMap).filter(g => g.userId).map(g => g.userId);
+      if (userIds.length > 0) {
+        const { data: roles } = await supabase
+          .from('user_roles').select('*').in('user_id', userIds);
+        (roles || []).forEach(r => {
+          const guardian = Object.values(guardianMap).find(g => g.userId === r.user_id);
+          if (guardian) guardian.roles.push({ id: r.id, role: r.role, teamId: r.team_id, clubId: r.club_id });
+        });
+      }
+    }
+
+    return Object.values(guardianMap);
   },
 
   updateUserProfile: async (userId, updates) => {

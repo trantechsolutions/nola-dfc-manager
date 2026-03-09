@@ -1,17 +1,20 @@
 // src/hooks/useFinance.js
 // Financial calculations and waterfall distribution.
 //
-// THE FEE IS ALWAYS DERIVED from currentSeasonData.calculatedBaseFee,
-// which is computed by feeCalculator.js from budget ingredients.
-// We never read player_seasons.base_fee for fee determination.
+// KEY BEHAVIOR:
+//   Draft budget   → uses currentSeasonData.calculatedBaseFee for ALL players
+//   Finalized      → uses each player's locked-in seasonProfiles[season].baseFee
+//
+// This ensures the Dashboard, Ledger, and Parent View always show the 
+// correct fee even while the budget is still being built.
 
 import { supabaseService } from '../services/supabaseService';
 import { useCallback } from 'react';
 
 export const useFinance = (selectedSeason, seasonalPlayers, isBudgetLocked, teamSeasonId = null, currentSeasonData = null) => {
 
-  // The derived fee — always calculated from budget ingredients
-  const derivedFee = currentSeasonData?.calculatedBaseFee || 0;
+  // The live fee from the budget calculator (updates on every draft save)
+  const liveBaseFee = currentSeasonData?.calculatedBaseFee || 0;
 
   const calculatePlayerFinancials = useCallback((player, transactions = []) => {
     if (!transactions || !Array.isArray(transactions)) {
@@ -22,30 +25,46 @@ export const useFinance = (selectedSeason, seasonalPlayers, isBudgetLocked, team
     const seasonTxs = transactions.filter(tx => tx.seasonId === selectedSeason && isCleared(tx));
     
     const fullName = `${player.firstName} ${player.lastName}`.trim().toLowerCase();
+
     const playerTxs = seasonTxs.filter(tx => {
       if (tx.playerId === player.id) return true;
-      return (tx.playerName || '').trim().toLowerCase() === fullName;
+      const txName = (tx.playerName || '').trim().toLowerCase();
+      return txName === fullName;
     });
 
     const isWaived = player.seasonProfiles?.[selectedSeason]?.feeWaived || false;
 
-    // Fee is ALWAYS derived from the budget, never from stored per-player values.
-    // Waived players owe $0.
-    const baseFee = isWaived ? 0 : derivedFee;
+    // ── FEE DETERMINATION ──
+    // Draft: use the live calculated fee from the budget (same for everyone)
+    // Finalized: use the locked per-player fee from their season profile
+    let baseFee;
+    if (isWaived) {
+      baseFee = 0;
+    } else if (!isBudgetLocked && liveBaseFee > 0) {
+      // Draft mode: everyone gets the current calculated fee
+      baseFee = liveBaseFee;
+    } else {
+      // Finalized mode: use the locked per-player fee
+      baseFee = Number(player.seasonProfiles?.[selectedSeason]?.baseFee ?? 0);
+    }
 
     let paid = 0, fun = 0, spo = 0, cre = 0;
     
     playerTxs.forEach(tx => {
       const amt = Number(tx.amount || 0);
       if (tx.category === 'TMF') paid += amt;
-      if (tx.category === 'FUN' && (tx.waterfallBatchId || tx.distributed)) fun += amt;
-      if (tx.category === 'SPO' && (tx.waterfallBatchId || tx.distributed)) spo += amt; 
+      // FIX: Only count waterfall-generated credits (waterfallBatchId),
+      // NOT the original deposit (tx.distributed). The original deposit is
+      // team-level income — its "distributed" flag is just a status marker.
+      // Counting both would double-count for the source player.
+      if (tx.category === 'FUN' && tx.waterfallBatchId) fun += amt;
+      if (tx.category === 'SPO' && tx.waterfallBatchId) spo += amt;
       if (tx.category === 'CRE') cre += amt;
     });
 
     const remainingBalance = Math.max(0, baseFee - (paid + fun + spo + cre));
     return { baseFee, totalPaid: paid, fundraising: fun, sponsorships: spo, credits: cre, remainingBalance, isWaived, isDraft: !isBudgetLocked };
-  }, [selectedSeason, isBudgetLocked, derivedFee]);
+  }, [selectedSeason, isBudgetLocked, liveBaseFee]);
 
   const handleWaterfallCredit = async (totalAmount, title, sourcePlayerId, originalTxId, category = 'SPO') => {
     if (!isBudgetLocked) throw new Error("Budget must be finalized before distributing funds.");
@@ -57,6 +76,7 @@ export const useFinance = (selectedSeason, seasonalPlayers, isBudgetLocked, team
     const currentTxs = await supabaseService.getAllTransactions();
     const creditsToApply = {};
 
+    // 1. PRIMARY PLAYER CAP
     if (sourcePlayerId) {
       const primaryPlayer = seasonalPlayers.find(p => p.id === sourcePlayerId);
       if (primaryPlayer) {
@@ -66,6 +86,7 @@ export const useFinance = (selectedSeason, seasonalPlayers, isBudgetLocked, team
       }
     }
 
+    // 2. DISTRIBUTE REMAINDER
     if (remainingAmount > 0.01) {
       let pool = seasonalPlayers.filter(p => 
         p.id !== sourcePlayerId && !p.seasonProfiles?.[selectedSeason]?.feeWaived
@@ -90,18 +111,23 @@ export const useFinance = (selectedSeason, seasonalPlayers, isBudgetLocked, team
 
     const promises = [];
     const baseTxData = {
-      seasonId: selectedSeason, waterfallBatchId: batchId,
-      originalTxId: originalTxId || null, date: today,
-      cleared: true, distributed: false,
+      seasonId: selectedSeason,
+      waterfallBatchId: batchId,
+      originalTxId: originalTxId || null,
+      date: today,
+      cleared: true,
+      distributed: false,
       ...(teamSeasonId ? { teamSeasonId } : {}),
     };
 
+    // 3. CREATE PLAYER TRANSACTIONS
     Object.entries(creditsToApply).forEach(([pId, amt]) => {
       promises.push(supabaseService.addTransaction({
         ...baseTxData, title, amount: Number(amt.toFixed(2)), playerId: pId, category,
       }));
     });
 
+    // 4. OVERFLOW TO TEAM POOL
     if (remainingAmount > 0.01) {
       promises.push(supabaseService.addTransaction({
         ...baseTxData, title: `${title} (Team Pool Overflow)`, amount: Number(remainingAmount.toFixed(2)),

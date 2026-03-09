@@ -18,14 +18,10 @@ const JerseyBadge = ({ number, size = 40, className = '', color = 'slate' }) => 
   return (
     <div className={`shrink-0 ${className}`} style={{ width: size, height: size }}>
       <svg viewBox="0 0 40 44" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
-        {/* Jersey body */}
         <path d="M8 12L4 8L10 4L15 2H25L30 4L36 8L32 12V40H8V12Z" fill={c.fill} stroke={c.stroke} strokeWidth="1.5" strokeLinejoin="round" />
-        {/* Sleeves */}
         <path d="M8 12L4 8L2 14L6 16L8 12Z" fill={c.fill} stroke={c.stroke} strokeWidth="1" strokeLinejoin="round" />
         <path d="M32 12L36 8L38 14L34 16L32 12Z" fill={c.fill} stroke={c.stroke} strokeWidth="1" strokeLinejoin="round" />
-        {/* Collar */}
         <path d="M15 2C15 2 17 6 20 6C23 6 25 2 25 2" stroke={c.stroke} strokeWidth="1.5" fill="none" />
-        {/* Number */}
         <text x="20" y="29" textAnchor="middle" fill={c.text} fontSize={String(number).length > 2 ? '10' : '13'} fontWeight="900" fontFamily="system-ui, sans-serif">
           {number ?? '?'}
         </text>
@@ -92,19 +88,59 @@ export default function Dashboard({
 
   return (
     <div className="space-y-6 pb-20 md:pb-6">
-      {/* ── DRAFT BUDGET NOTICE ── */}
-      {!isFinalized && baseFee > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
-          <div className="p-2 bg-amber-100 rounded-xl shrink-0"><AlertCircle size={18} className="text-amber-600" /></div>
-          <div>
-            <p className="text-sm font-black text-amber-800">Budget is in Draft</p>
-            <p className="text-xs text-amber-600">Player fees are estimated at <span className="font-black">{formatMoney(baseFee)}</span> based on the current budget. Fees will be locked when the budget is finalized. Fund distributions are disabled until finalization.</p>
+
+      {/* ── DRAFT BUDGET NOTICE (dynamic — updates on every saved draft) ── */}
+      {!isFinalized && baseFee > 0 && (() => {
+        const projExpenses = selectedSeasonData?.totalProjectedExpenses || 0;
+        const projIncome = selectedSeasonData?.totalProjectedIncome || 0;
+        const rosterCount = selectedSeasonData?.expectedRosterSize || 0;
+        const buffer = selectedSeasonData?.bufferPercent ?? 0;
+        const gap = projExpenses - projIncome;
+        return (
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 border-dashed rounded-2xl p-4 md:p-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-amber-100 rounded-xl shrink-0 mt-0.5">
+                <AlertCircle size={18} className="text-amber-600" />
+              </div>
+              <div className="flex-grow min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-black text-amber-800">Budget is in Draft</p>
+                  <span className="text-[9px] font-black bg-amber-200 text-amber-700 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                    Not Finalized
+                  </span>
+                </div>
+                <p className="text-xs text-amber-700 mt-1.5 leading-relaxed">
+                  Estimated season fee: <span className="font-black text-amber-900">{formatMoney(baseFee)}</span>
+                  {rosterCount > 0 && (
+                    <span className="text-amber-600"> · {rosterCount} player{rosterCount !== 1 && 's'}</span>
+                  )}
+                  {buffer > 0 && (
+                    <span className="text-amber-600"> · {buffer}% buffer</span>
+                  )}
+                </p>
+                {projExpenses > 0 && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[10px] font-bold">
+                    <span className="text-red-600">Projected Spend: {formatMoney(projExpenses)}</span>
+                    {projIncome > 0 && (
+                      <span className="text-emerald-600">Projected Income: {formatMoney(projIncome)}</span>
+                    )}
+                    {gap > 0 && (
+                      <span className="text-amber-700">Gap: {formatMoney(gap)}</span>
+                    )}
+                  </div>
+                )}
+                <p className="text-[10px] text-amber-500 mt-2">
+                  Fees and balances will change as the budget is revised. Fund distributions are disabled until finalization.
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── STAT CARDS ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        {/* Available Cash */}
         <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white p-4 md:p-5 rounded-2xl shadow-lg shadow-emerald-200/50">
           <div className="flex items-center justify-between mb-3">
             <DollarSign size={18} className="opacity-70" />
@@ -114,28 +150,35 @@ export default function Dashboard({
           <p className="text-[10px] font-bold text-emerald-200 uppercase tracking-widest mt-1">Available Cash</p>
         </div>
 
-        <div className={`p-4 md:p-5 rounded-2xl shadow-lg ${remainingBudget < 0 ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-red-200/50' : 'bg-white border border-slate-200 shadow-slate-100'}`}>
+        {/* Remaining Budget */}
+        <div className={`p-4 md:p-5 rounded-2xl shadow-lg ${!isFinalized ? 'border-dashed ' : ''}${remainingBudget < 0 ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-red-200/50' : 'bg-white border border-slate-200 shadow-slate-100'}`}>
           <div className="flex items-center justify-between mb-3">
             <TrendingDown size={18} className={remainingBudget < 0 ? 'text-white/70' : 'text-slate-400'} />
+            {!isFinalized && <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${remainingBudget < 0 ? 'bg-white/20' : 'bg-amber-100 text-amber-600'}`}>Draft</span>}
           </div>
           <p className={`text-xl md:text-2xl font-black tracking-tight ${remainingBudget < 0 ? '' : 'text-slate-900'}`}>{formatMoney(remainingBudget)}</p>
-          <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${remainingBudget < 0 ? 'text-red-200' : 'text-slate-400'}`}>Remaining Budget</p>
+          <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${remainingBudget < 0 ? 'text-red-200' : 'text-slate-400'}`}>Remaining Budget{!isFinalized ? ' (Est.)' : ''}</p>
         </div>
 
+        {/* Active Players */}
         <div className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-lg shadow-slate-100">
           <div className="flex items-center justify-between mb-3"><Users size={18} className="text-slate-400" /></div>
           <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">{players.length}</p>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Active Players</p>
         </div>
 
-        <div className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-lg shadow-slate-100">
+        {/* Season Fee */}
+        <div className={`bg-white p-4 md:p-5 rounded-2xl border shadow-lg shadow-slate-100 ${!isFinalized && baseFee > 0 ? 'border-dashed border-amber-200' : 'border-slate-200'}`}>
           <div className="flex items-center justify-between mb-3">
             <Wallet size={18} className="text-slate-400" />
             {!isFinalized && baseFee > 0 && <span className="text-[8px] font-black bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded uppercase">Estimated</span>}
             {isFinalized && <span className="text-[8px] font-black bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded uppercase">Locked</span>}
           </div>
           <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">{formatMoney(baseFee)}</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Season Fee{!isFinalized && baseFee > 0 ? ' (Draft)' : ''}</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Season Fee</p>
+          {!isFinalized && baseFee > 0 && (
+            <p className="text-[9px] font-bold text-amber-500 mt-0.5">May change until finalized</p>
+          )}
         </div>
       </div>
 
@@ -184,36 +227,41 @@ export default function Dashboard({
             <h3 className="font-black text-slate-800 text-sm flex items-center gap-2">
               <Activity size={16} className="text-blue-600"/> Budget Burn Rate
             </h3>
-            <span className={`text-xs font-black px-2 py-1 rounded-lg ${spendPercentage > 90 ? 'bg-red-50 text-red-600' : spendPercentage > 60 ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
-              {Math.round(spendPercentage)}% spent
-            </span>
+            <div className="flex items-center gap-1">
+              <span className={`text-xs font-black px-2 py-1 rounded-lg ${spendPercentage > 90 ? 'bg-red-50 text-red-600' : spendPercentage > 60 ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                {Math.round(spendPercentage)}%
+              </span>
+              {!isFinalized && (
+                <span className="text-[8px] font-bold bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded ml-1">DRAFT</span>
+              )}
+            </div>
           </div>
           <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-            <div className={`h-full rounded-full transition-all duration-1000 ${spendPercentage > 90 ? 'bg-red-500' : spendPercentage > 60 ? 'bg-amber-500' : 'bg-blue-500'}`} 
-              style={{ width: `${Math.min(spendPercentage, 100)}%` }} />
+            <div className={`h-full rounded-full transition-all duration-700 ${spendPercentage > 90 ? 'bg-red-500' : spendPercentage > 60 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+              style={{ width: `${Math.min(100, spendPercentage)}%` }} />
           </div>
-          <div className="flex justify-between mt-3 text-xs text-slate-400 font-bold">
+          <div className="flex justify-between mt-2 text-[10px] font-bold text-slate-400">
             <span>Spent: {formatMoney(totalExpenses)}</span>
-            <span>Projected: {formatMoney(projectedSpend)}</span>
+            <span>Budget: {formatMoney(projectedSpend)}</span>
           </div>
         </div>
 
         <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
           <h3 className="font-black text-slate-800 text-sm flex items-center gap-2 mb-4">
-            <Shield size={16} className="text-blue-600"/> Compliance Overview
+            <Shield size={16} className="text-violet-600" /> Compliance
           </h3>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center p-3 bg-slate-50 rounded-xl">
-              <p className={`text-2xl font-black ${complianceStats.medical === complianceStats.total ? 'text-emerald-600' : 'text-amber-500'}`}>{complianceStats.medical}/{complianceStats.total}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Medical</p>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div>
+              <p className="text-xl font-black text-slate-900">{complianceStats.fullyCompliant}</p>
+              <p className="text-[10px] font-bold text-emerald-600">Compliant</p>
             </div>
-            <div className="text-center p-3 bg-slate-50 rounded-xl">
-              <p className={`text-2xl font-black ${complianceStats.reeplayer === complianceStats.total ? 'text-emerald-600' : 'text-amber-500'}`}>{complianceStats.reeplayer}/{complianceStats.total}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">ReePlayer</p>
+            <div>
+              <p className="text-xl font-black text-slate-900">{complianceStats.medical}</p>
+              <p className="text-[10px] font-bold text-slate-400">Medical</p>
             </div>
-            <div className="text-center p-3 bg-slate-50 rounded-xl">
-              <p className="text-2xl font-black text-blue-600">{complianceStats.fullyCompliant}/{complianceStats.total}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Complete</p>
+            <div>
+              <p className="text-xl font-black text-slate-900">{complianceStats.reeplayer}</p>
+              <p className="text-[10px] font-bold text-slate-400">ReePlayer</p>
             </div>
           </div>
         </div>
@@ -222,9 +270,8 @@ export default function Dashboard({
       {/* ── ROSTER ── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-4 md:p-6 border-b border-slate-100">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-            <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-              <Users size={20} className="text-blue-600"/> 
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h3 className="font-black text-slate-800 text-sm">
               {viewArchived ? `Archived (${archivedPlayers.length})` : `Roster (${players.length})`}
             </h3>
             <div className="flex items-center gap-2 w-full md:w-auto">
@@ -292,7 +339,6 @@ export default function Dashboard({
                     </div>
                   </div>
 
-                  {/* Balance bar (only for players who owe) */}
                   {hasBalance && (
                     <div className="mt-2.5 flex items-center gap-2">
                       <div className="flex-grow h-1 bg-red-100 rounded-full overflow-hidden">
