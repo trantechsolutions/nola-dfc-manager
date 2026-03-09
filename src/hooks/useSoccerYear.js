@@ -1,13 +1,12 @@
 // src/hooks/useSoccerYear.js
-// Manages seasons and team-seasons.
-//
-// SCHEMA REALITY:
-//   seasons table:      only has id, name, created_at, updated_at
-//   team_seasons table: has ALL budget fields (base_fee, buffer_percent, 
-//                       expected_roster_size, total_projected_expenses,
-//                       total_projected_income, is_finalized)
-//
-// So currentSeasonData gets everything from team_seasons. No merge needed.
+// ──────────────────────────────────────────────────────────────────────
+// Manages seasons and team-seasons. 
+// 
+// SCHEMA FIX: The `seasons` table only has id + name.
+// All budget metadata (isFinalized, baseFee, bufferPercent, etc.)
+// lives on `team_seasons`. This hook no longer reads ghost columns
+// from seasons and builds currentSeasonData purely from team_seasons.
+// ──────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useMemo } from 'react';
 import { supabaseService } from '../services/supabaseService';
@@ -21,13 +20,15 @@ export const useSoccerYear = (user, teamId = null) => {
   const fetchSeasons = async () => {
     setLoading(true);
     try {
+      // seasons table only returns { id, name }
       const data = await supabaseService.getAllSeasons();
       if (!data.find(s => s.id === '2025-2026')) {
-        data.push({ id: '2025-2026' });
+        data.push({ id: '2025-2026', name: '2025-2026' });
       }
       data.sort((a, b) => b.id.localeCompare(a.id));
       setSeasons(data);
 
+      // Fetch team-specific season data (where budget metadata lives)
       if (teamId) {
         const tsData = await supabaseService.getTeamSeasons(teamId);
         setTeamSeasons(tsData);
@@ -45,37 +46,45 @@ export const useSoccerYear = (user, teamId = null) => {
     if (user) fetchSeasons();
   }, [user, teamId]);
 
-  // Find the team_season for the selected season
-  const currentTeamSeason = useMemo(() => 
+  // The team_season record for the currently selected season + team
+  const currentTeamSeason = useMemo(() =>
     teamSeasons.find(ts => ts.seasonId === selectedSeason) || null,
   [teamSeasons, selectedSeason]);
 
-  // Build currentSeasonData — team_seasons is the ONLY source for budget fields
+  // Unified season data object consumed by components.
+  // ALL budget fields come from team_seasons — seasons table only provides id/name.
   const currentSeasonData = useMemo(() => {
+    const base = seasons.find(s => s.id === selectedSeason) || { id: selectedSeason, name: selectedSeason };
+
     if (currentTeamSeason) {
       return {
         id: selectedSeason,
+        name: base.name,
         teamSeasonId: currentTeamSeason.id,
         isFinalized: currentTeamSeason.isFinalized,
-        // calculatedBaseFee is what useFinance + Dashboard read for the live fee
+        baseFee: currentTeamSeason.baseFee,
         calculatedBaseFee: currentTeamSeason.baseFee,
-        bufferPercent: currentTeamSeason.bufferPercent ?? 5,
+        bufferPercent: currentTeamSeason.bufferPercent,
         expectedRosterSize: currentTeamSeason.expectedRosterSize,
         totalProjectedExpenses: currentTeamSeason.totalProjectedExpenses,
         totalProjectedIncome: currentTeamSeason.totalProjectedIncome,
       };
     }
-    // No team_season exists yet — return bare minimum
+
+    // No team_season yet — return minimal object (budget not set up)
     return {
       id: selectedSeason,
+      name: base.name,
+      teamSeasonId: null,
       isFinalized: false,
-      calculatedBaseFee: 0,
+      baseFee: 0,
+      calculatedBaseFee: null,
       bufferPercent: 5,
       expectedRosterSize: null,
       totalProjectedExpenses: null,
       totalProjectedIncome: null,
     };
-  }, [currentTeamSeason, selectedSeason]);
+  }, [seasons, currentTeamSeason, selectedSeason]);
 
   return {
     seasons,
@@ -85,6 +94,6 @@ export const useSoccerYear = (user, teamId = null) => {
     currentSeasonData,
     currentTeamSeason,
     refreshSeasons: fetchSeasons,
-    loading
+    loading,
   };
 };

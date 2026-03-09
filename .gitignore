@@ -28,3 +28,6 @@ serviceAccountKey.json
 *.csv
 *.cjs
 *.mjs
+
+supabase*.json
+supabase*.md
