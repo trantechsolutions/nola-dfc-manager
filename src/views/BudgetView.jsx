@@ -5,6 +5,7 @@ import {
   ArrowDownRight, Sparkles, FileSpreadsheet, UserPlus, AlertTriangle
 } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService';
+import { calculateTeamFee } from '../utils/feeCalculator';
 import PlayerFormModal from '../components/PlayerFormModal';
 
 const BUDGET_CATEGORIES = [
@@ -19,11 +20,12 @@ const BUDGET_CATEGORIES = [
 ];
 const EXPENSE_CODES = BUDGET_CATEGORIES.filter(c => c.type === 'expense').map(c => c.code);
 
-export default function BudgetView({ selectedSeason, formatMoney, seasons, setSelectedSeason, refreshSeasons, showToast, showConfirm, onDataChange }) {
+export default function BudgetView({ selectedSeason, formatMoney, seasons, setSelectedSeason, refreshSeasons, showToast, showConfirm, onDataChange, teamSeasonId, selectedTeamId }) {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isFinalized, setIsFinalized] = useState(false);
   const [activeTab, setActiveTab] = useState('budget');
+  const [resolvedTsId, setResolvedTsId] = useState(teamSeasonId); // resolved team_season ID from fetchData
 
   // Budget
   const [budgetItems, setBudgetItems] = useState([]);
@@ -49,31 +51,71 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
 
   // ─── DATA FETCHING ───
   const fetchData = async () => {
+    if (!selectedTeamId) { setLoading(false); return; }
     setLoading(true);
     try {
+      // Seasons = simple registry of names
       const allSeasons = await supabaseService.getAllSeasons();
       setAllSeasonsList(allSeasons);
-      const seasonData = allSeasons.find(s => s.id === selectedSeason);
 
-      if (seasonData) {
-        setRosterSize(seasonData.expectedRosterSize || 13);
-        setBufferPercent(seasonData.bufferPercent ?? 5);
-        setIsFinalized(seasonData.isFinalized || false);
-      } else {
-        setRosterSize(13); setBufferPercent(5); setIsFinalized(false);
+      // Ensure the season exists in the registry
+      if (!allSeasons.find(s => s.id === selectedSeason)) {
+        await supabaseService.saveSeason(selectedSeason, { name: selectedSeason });
       }
 
-      const items = await supabaseService.getBudgetItems(selectedSeason);
-      setBudgetItems(items.length > 0 ? items : []);
-      setAvailablePlayers(await supabaseService.getAllPlayers());
+      // Get or create the team_season (ONLY source of budget data)
+      let teamSeasonData = await supabaseService.getTeamSeason(selectedTeamId, selectedSeason);
+      if (!teamSeasonData) {
+        // Auto-create with defaults so we always have a valid ID
+        const created = await supabaseService.saveTeamSeason({
+          teamId: selectedTeamId,
+          seasonId: selectedSeason,
+          isFinalized: false,
+          bufferPercent: 5,
+          expectedRosterSize: 13,
+          totalProjectedExpenses: 0,
+          totalProjectedIncome: 0,
+        });
+        teamSeasonData = {
+          id: created.id,
+          isFinalized: false,
+          bufferPercent: 5,
+          expectedRosterSize: 13,
+          totalProjectedExpenses: 0,
+          totalProjectedIncome: 0,
+        };
+      }
 
+      // Now we ALWAYS have a valid team_season ID
+      const tsId = teamSeasonData.id;
+      setResolvedTsId(tsId);
+
+      setRosterSize(teamSeasonData.expectedRosterSize || 13);
+      setBufferPercent(teamSeasonData.bufferPercent ?? 5);
+      setIsFinalized(teamSeasonData.isFinalized || false);
+
+      // Budget items — scoped to this team_season
+      const items = await supabaseService.getBudgetItems(selectedSeason, tsId);
+      setBudgetItems(items.length > 0 ? items : []);
+
+      // Players scoped to selected team
+      const allPlayers = await supabaseService.getAllPlayers();
+      setAvailablePlayers(allPlayers.filter(p => p.teamId === selectedTeamId));
+
+      // Transactions scoped to this team_season
       const allTx = await supabaseService.getAllTransactions();
       setAllTransactions(allTx);
-      setSeasonTransactions(allTx.filter(tx => tx.seasonId === selectedSeason));
+      setSeasonTransactions(allTx.filter(tx => {
+        if (tx.seasonId !== selectedSeason) return false;
+        if (tx.teamSeasonId && tx.teamSeasonId !== tsId) return false;
+        return true;
+      }));
 
-      const finalized = allSeasons.filter(s => s.isFinalized && s.id !== selectedSeason);
+      // Historical budgets from finalized team_seasons (same team, other seasons)
+      const teamSeasons = await supabaseService.getTeamSeasons(selectedTeamId);
+      const finalized = teamSeasons.filter(ts => ts.isFinalized && ts.seasonId !== selectedSeason);
       const budgets = {};
-      for (const s of finalized) { budgets[s.id] = await supabaseService.getBudgetItems(s.id); }
+      for (const ts of finalized) { budgets[ts.seasonId] = await supabaseService.getBudgetItemsByTeamSeason(ts.id); }
       setHistoricalBudgets(budgets);
     } catch (error) {
       console.error('Budget fetch error:', error);
@@ -81,7 +123,7 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchData(); }, [selectedSeason]);
+  useEffect(() => { fetchData(); }, [selectedSeason, selectedTeamId, teamSeasonId]);
 
   useEffect(() => {
     const active = availablePlayers.filter(p =>
@@ -135,13 +177,15 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
   , [subtotals]);
 
   const bufferAmount = totalExpenseAmount * (bufferPercent / 100);
+  const roundedBaseFee = calculateTeamFee(totalExpenseAmount, bufferPercent, rosterSize);
   const rawFee = rosterSize > 0 ? (totalExpenseAmount + bufferAmount) / rosterSize : 0;
-  const roundedBaseFee = Math.ceil(rawFee / 50) * 50;
 
   // ─── PROJECTIONS ───
   const projections = useMemo(() => {
     const isCleared = (tx) => tx.cleared === true || String(tx.cleared).toLowerCase() === 'true';
-    const pastSeasons = allSeasonsList.filter(s => s.isFinalized && s.id !== selectedSeason);
+    // Past seasons come from historicalBudgets (already team-scoped in fetchData)
+    const pastSeasonIds = Object.keys(historicalBudgets).filter(id => id !== selectedSeason);
+    const pastSeasons = pastSeasonIds.map(id => allSeasonsList.find(s => s.id === id)).filter(Boolean);
     if (pastSeasons.length === 0) return null;
 
     const categoryHistory = {};
@@ -188,21 +232,52 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
   const toggleCollapse = (code) => setCollapsedCats(prev => ({ ...prev, [code]: !prev[code] }));
 
   const handleSaveBudget = async (finalize = false) => {
-    if (finalize) { const ok = await showConfirm('Finalizing locks the budget and applies fees to all players. Proceed?'); if (!ok) return; }
+    if (finalize) { const ok = await showConfirm('Finalizing locks the budget and prevents further edits. Proceed?'); if (!ok) return; }
     setIsSaving(true);
     try {
-      await supabaseService.saveSeason(selectedSeason, { name: selectedSeason, expectedRosterSize: Number(rosterSize), bufferPercent: Number(bufferPercent), totalProjectedExpenses: totalExpenseAmount, totalProjectedIncome: grandTotals.income, calculatedBaseFee: roundedBaseFee, isFinalized: finalize || isFinalized });
-      await supabaseService.saveBudgetItems(selectedSeason, budgetItems);
+      // 1. Ensure the season row exists (shared — no per-team data here)
+      await supabaseService.saveSeason(selectedSeason, { name: selectedSeason });
+      
+      // 2. Save team_season with INGREDIENTS (the fee is calculated from these, never stored)
+      let savedTeamSeasonId = resolvedTsId || teamSeasonId;
+      if (selectedTeamId) {
+        const savedTs = await supabaseService.saveTeamSeason({
+          id: savedTeamSeasonId || undefined,
+          teamId: selectedTeamId,
+          seasonId: selectedSeason,
+          isFinalized: finalize || isFinalized,
+          bufferPercent: Number(bufferPercent),
+          expectedRosterSize: Number(rosterSize),
+          totalProjectedExpenses: totalExpenseAmount,
+          totalProjectedIncome: grandTotals.income,
+        });
+        savedTeamSeasonId = savedTs?.id || savedTeamSeasonId;
+        setResolvedTsId(savedTeamSeasonId);
+      }
+
+      // 3. Save budget items (scoped to team_season)
+      await supabaseService.saveBudgetItems(selectedSeason, budgetItems, savedTeamSeasonId);
+      
+      // 4. On finalize: ensure all players are linked to team_season (no fee writes)
       if (finalize) {
-        const active = availablePlayers.filter(p => p.seasonProfiles?.[selectedSeason]);
-        if (active.length > 0) await Promise.all(active.map(p => supabaseService.updateSeasonProfile(p.id, selectedSeason, { baseFee: roundedBaseFee })));
+        if (savedTeamSeasonId) {
+          const active = availablePlayers.filter(p => p.seasonProfiles?.[selectedSeason]);
+          if (active.length > 0) {
+            await Promise.all(active.map(p =>
+              supabaseService.addPlayerToSeason(p.id, selectedSeason, {
+                feeWaived: p.seasonProfiles?.[selectedSeason]?.feeWaived || false,
+                status: 'active'
+              }, savedTeamSeasonId)
+            ));
+          }
+        }
         setIsFinalized(true);
       }
       await refreshSeasons();
       if (finalize) fetchData();
       onDataChange?.();
-      if (showToast) showToast(finalize ? 'Budget Finalized & Fees Applied!' : 'Draft Saved.');
-    } catch (e) { if (showToast) showToast('Save failed.', true); }
+      if (showToast) showToast(finalize ? 'Budget Finalized!' : 'Draft Saved.');
+    } catch (e) { console.error('Save budget error:', e); if (showToast) showToast('Save failed.', true); }
     finally { setIsSaving(false); }
   };
 
@@ -227,10 +302,14 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
     const ok = await showConfirm(`Overwrite current items with data from ${sourceId}?`);
     if (!ok) return;
     try {
-      const items = await supabaseService.getBudgetItems(sourceId);
+      // Look up the team_season for the source season + current team
+      let sourceTeamSeasonId = null;
+      if (selectedTeamId) {
+        const sourceTs = await supabaseService.getTeamSeason(selectedTeamId, sourceId);
+        sourceTeamSeasonId = sourceTs?.id || null;
+      }
+      const items = await supabaseService.getBudgetItems(sourceId, sourceTeamSeasonId);
       if (items.length > 0) setBudgetItems(items.map(i => ({ ...i, id: `clone_${Date.now()}_${Math.random().toString(36).slice(2, 6)}` })));
-      const source = allSeasonsList.find(s => s.id === sourceId);
-      if (source) setBufferPercent(source.bufferPercent || 5);
       if (showToast) showToast(`Cloned from ${sourceId}`);
     } catch (e) { if (showToast) showToast('Clone failed.', true); }
   };
@@ -239,7 +318,7 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
     if (selectedPlayers.length === 0) return;
     setIsSaving(true);
     try {
-      await Promise.all(selectedPlayers.map(id => supabaseService.addPlayerToSeason(id, selectedSeason, { baseFee: roundedBaseFee, feeWaived: false, status: 'active' })));
+      await Promise.all(selectedPlayers.map(id => supabaseService.addPlayerToSeason(id, selectedSeason, { feeWaived: false, status: 'active' }, resolvedTsId || teamSeasonId)));
       setSelectedPlayers([]); await fetchData();
       onDataChange?.();
       if (showToast) showToast(`Imported ${selectedPlayers.length} players.`);
@@ -252,7 +331,7 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
     if (!newSeasonName.trim()) return;
     setIsSaving(true);
     try {
-      await supabaseService.saveSeason(newSeasonName.trim(), { name: newSeasonName.trim(), isFinalized: false });
+      await supabaseService.saveSeason(newSeasonName.trim(), { name: newSeasonName.trim() });
       await refreshSeasons(); setSelectedSeason(newSeasonName.trim()); setShowNewSeasonModal(false); setNewSeasonName('');
       if (showToast) showToast(`Created ${newSeasonName.trim()}`);
     } catch (e) { if (showToast) showToast('Create failed.', true); }
@@ -280,7 +359,7 @@ export default function BudgetView({ selectedSeason, formatMoney, seasons, setSe
     try {
       // Ensure the player is assigned to the current season on creation
       const profiles = playerData.seasonProfiles || {};
-      profiles[selectedSeason] = { ...(profiles[selectedSeason] || {}), status: playerData.status || 'active', baseFee: roundedBaseFee, feeWaived: false };
+      profiles[selectedSeason] = { ...(profiles[selectedSeason] || {}), status: playerData.status || 'active', feeWaived: false };
       await supabaseService.addPlayer({ ...playerData, seasonProfiles: profiles, status: 'active' });
       setShowPlayerForm(false);
       await fetchData();

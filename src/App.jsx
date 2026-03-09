@@ -127,18 +127,29 @@ function App() {
     });
   };
 
-  // ── FILTERED DATA ──
+  // ── TEAM-SEASON ID (needed for filtering + hooks) ──
+  const teamSeasonId = currentTeamSeason?.id || currentSeasonData?.teamSeasonId || null;
+
+  // ── FILTERED DATA (scoped to selected team + season) ──
   const seasonalPlayers = useMemo(() => 
-    players.filter(p => p.seasonProfiles?.[selectedSeason] && p.status !== 'archived'),
-  [players, selectedSeason]);
+    players.filter(p => 
+      p.seasonProfiles?.[selectedSeason] && 
+      p.status !== 'archived' &&
+      (!selectedTeamId || p.teamId === selectedTeamId)
+    ),
+  [players, selectedSeason, selectedTeamId]);
 
   const archivedPlayers = useMemo(() => 
-    players.filter(p => p.status === 'archived'),
-  [players]);
+    players.filter(p => p.status === 'archived' && (!selectedTeamId || p.teamId === selectedTeamId)),
+  [players, selectedTeamId]);
 
   const seasonalTransactions = useMemo(() => 
-    transactions.filter(tx => tx.seasonId === selectedSeason),
-  [transactions, selectedSeason]);
+    transactions.filter(tx => {
+      if (tx.seasonId !== selectedSeason) return false;
+      if (teamSeasonId && tx.teamSeasonId && tx.teamSeasonId !== teamSeasonId) return false;
+      return true;
+    }),
+  [transactions, selectedSeason, teamSeasonId]);
 
   const myPlayers = useMemo(() => {
     if (!user || role === 'manager') return [];
@@ -148,7 +159,6 @@ function App() {
   }, [players, user, role]);
 
   // ── HOOKS (now with team context) ──
-  const teamSeasonId = currentTeamSeason?.id || currentSeasonData?.teamSeasonId || null;
 
   const { calculatePlayerFinancials, handleWaterfallCredit, revertWaterfall } = useFinance(
     selectedSeason, seasonalPlayers, currentSeasonData?.isFinalized, teamSeasonId, currentSeasonData

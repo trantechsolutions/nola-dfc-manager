@@ -30,6 +30,8 @@ export const supabaseService = {
       status: p.status,
       medicalRelease: p.medical_release,
       reePlayerWaiver: p.reeplayer_waiver,
+      clubId: p.club_id,
+      teamId: p.team_id,
       guardians: (p.guardians || []).map(g => ({
         id: g.id,
         name: g.name,
@@ -38,9 +40,9 @@ export const supabaseService = {
       })),
       seasonProfiles: (p.player_seasons || []).reduce((acc, ps) => {
         acc[ps.season_id] = {
-          baseFee: Number(ps.base_fee),
           feeWaived: ps.fee_waived,
-          status: ps.status
+          status: ps.status,
+          teamSeasonId: ps.team_season_id,
         };
         return acc;
       }, {})
@@ -87,7 +89,6 @@ export const supabaseService = {
       const seasonRows = Object.entries(playerData.seasonProfiles).map(([seasonId, profile]) => ({
         player_id: player.id,
         season_id: seasonId,
-        base_fee: profile.baseFee ?? 750,
         fee_waived: profile.feeWaived ?? false,
         status: profile.status || 'active'
       }));
@@ -139,7 +140,6 @@ export const supabaseService = {
           .upsert({
             player_id: playerId,
             season_id: seasonId,
-            base_fee: profile.baseFee ?? 750,
             fee_waived: profile.feeWaived ?? false,
             status: profile.status || 'active'
           }, { onConflict: 'player_id,season_id' });
@@ -167,7 +167,6 @@ export const supabaseService = {
     // Updates to the player_seasons junction table
     const dbUpdates = {};
     if ('feeWaived' in updates) dbUpdates.fee_waived = updates.feeWaived;
-    if ('baseFee' in updates) dbUpdates.base_fee = updates.baseFee;
     if ('status' in updates) dbUpdates.status = updates.status;
 
     const { error } = await supabase
@@ -182,7 +181,6 @@ export const supabaseService = {
     const row = {
       player_id: playerId,
       season_id: seasonId,
-      base_fee: profile.baseFee ?? 750,
       fee_waived: profile.feeWaived ?? false,
       status: profile.status || 'active',
       ...(teamSeasonId ? { team_season_id: teamSeasonId } : {}),
@@ -236,6 +234,7 @@ export const supabaseService = {
       distributed: tx.distributed,
       waterfallBatchId: tx.waterfall_batch_id,
       originalTxId: tx.original_tx_id,
+      teamSeasonId: tx.team_season_id,
     }));
   },
 
@@ -307,33 +306,18 @@ export const supabaseService = {
   getAllSeasons: async () => {
     const { data, error } = await supabase
       .from('seasons')
-      .select('*')
+      .select('id, name, created_at')
       .order('id', { ascending: false });
     if (error) throw error;
     return data.map(s => ({
       id: s.id,
-      name: s.name,
-      isFinalized: s.is_finalized,
-      expectedRosterSize: s.expected_roster_size,
-      bufferPercent: s.buffer_percent,
-      calculatedBaseFee: s.calculated_base_fee ? Number(s.calculated_base_fee) : null,
-      totalProjectedExpenses: s.total_projected_expenses ? Number(s.total_projected_expenses) : null,
-      totalProjectedIncome: s.total_projected_income ? Number(s.total_projected_income) : null,
+      name: s.name || s.id,
     }));
   },
 
   saveSeason: async (seasonId, data) => {
-    const row = {
-      id: seasonId,
-      name: data.name || seasonId,
-      is_finalized: data.isFinalized ?? false,
-      expected_roster_size: data.expectedRosterSize ?? null,
-      buffer_percent: data.bufferPercent ?? 5,
-      calculated_base_fee: data.calculatedBaseFee ?? null,
-      total_projected_expenses: data.totalProjectedExpenses ?? null,
-      total_projected_income: data.totalProjectedIncome ?? null,
-    };
-
+    // Seasons table is a simple registry — just id and name
+    const row = { id: seasonId, name: data.name || seasonId };
     const { error } = await supabase
       .from('seasons')
       .upsert(row, { onConflict: 'id' });
@@ -352,12 +336,24 @@ export const supabaseService = {
   // BUDGET ITEMS
   // ─────────────────────────────────────────
 
-  getBudgetItems: async (seasonId) => {
-    const { data, error } = await supabase
-      .from('budget_items')
-      .select('*')
-      .eq('season_id', seasonId);
-    if (error) throw error;
+  getBudgetItems: async (seasonId, teamSeasonId = null) => {
+    let data, error;
+    
+    if (teamSeasonId) {
+      // Team-scoped: only this team's items
+      ({ data, error } = await supabase.from('budget_items').select('*').eq('team_season_id', teamSeasonId));
+      if (error) throw error;
+      
+      // Fall back to legacy items (no team_season_id) only if none found
+      if (data.length === 0) {
+        ({ data, error } = await supabase.from('budget_items').select('*').eq('season_id', seasonId).is('team_season_id', null));
+        if (error) throw error;
+      }
+    } else {
+      // No team_season — return empty. Never load all teams' items.
+      data = [];
+    }
+    
     return data.map(item => ({
       id: item.id,
       category: item.category,
@@ -365,16 +361,24 @@ export const supabaseService = {
       income: Number(item.income),
       expensesFall: Number(item.expenses_fall),
       expensesSpring: Number(item.expenses_spring),
+      teamSeasonId: item.team_season_id,
     }));
   },
 
-  saveBudgetItems: async (seasonId, items) => {
-    // Delete existing items for the season, then insert fresh
-    await supabase.from('budget_items').delete().eq('season_id', seasonId);
+  saveBudgetItems: async (seasonId, items, teamSeasonId = null) => {
+    if (!teamSeasonId) {
+      console.warn('saveBudgetItems called without teamSeasonId — skipping to prevent cross-team contamination');
+      return;
+    }
+
+    // Delete only this team's items + any orphaned legacy items
+    await supabase.from('budget_items').delete().eq('team_season_id', teamSeasonId);
+    await supabase.from('budget_items').delete().eq('season_id', seasonId).is('team_season_id', null);
 
     if (items.length > 0) {
       const rows = items.map(item => ({
         season_id: seasonId,
+        team_season_id: teamSeasonId,
         category: item.category,
         label: item.label,
         income: item.income || 0,
@@ -536,7 +540,7 @@ export const supabaseService = {
       team_id: teamSeasonData.teamId,
       season_id: teamSeasonData.seasonId,
       is_finalized: teamSeasonData.isFinalized ?? false,
-      base_fee: teamSeasonData.baseFee ?? 0,
+      // NOTE: base_fee is NOT written — the fee is always derived from the ingredients below
       buffer_percent: teamSeasonData.bufferPercent ?? 5,
       expected_roster_size: teamSeasonData.expectedRosterSize ?? null,
       total_projected_expenses: teamSeasonData.totalProjectedExpenses ?? null,
@@ -733,7 +737,7 @@ export const supabaseService = {
       clubId: p.club_id, teamId: p.team_id,
       guardians: (p.guardians || []).map(g => ({ id: g.id, name: g.name, email: g.email, phone: g.phone })),
       seasonProfiles: (p.player_seasons || []).reduce((acc, ps) => {
-        acc[ps.season_id] = { baseFee: Number(ps.base_fee), feeWaived: ps.fee_waived, status: ps.status, teamSeasonId: ps.team_season_id };
+        acc[ps.season_id] = { feeWaived: ps.fee_waived, status: ps.status, teamSeasonId: ps.team_season_id };
         return acc;
       }, {}),
     }));
