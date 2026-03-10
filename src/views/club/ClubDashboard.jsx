@@ -3,7 +3,7 @@ import {
   Users, ChevronRight, Building2, Shield, ShieldCheck, ShieldX,
   AlertTriangle, UserCheck, FileText, CheckCircle2
 } from 'lucide-react';
-import { supabaseService } from '../services/supabaseService';
+import { supabaseService } from '../../services/supabaseService';
 
 export default function ClubDashboard({ club, teams, seasons, selectedSeason, onSelectTeam }) {
   const [teamData, setTeamData] = useState({});

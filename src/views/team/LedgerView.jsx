@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, CalendarDays, X } from 'lucide-react';
-import Ledger from '../components/Ledger'; 
+import Ledger from '../../components/Ledger'; 
 
 export default function LedgerView({ transactions, onAddTx, onEditTx, onDeleteTx, formatMoney }) {
   const [startDate, setStartDate] = useState('');

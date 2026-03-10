@@ -3,7 +3,7 @@ import {
   ChevronRight, ChevronLeft, CheckCircle2, Plus, Users, 
   Calendar, DollarSign, Sparkles, X
 } from 'lucide-react';
-import { supabaseService } from '../services/supabaseService';
+import { supabaseService } from '../../services/supabaseService';
 
 const STEPS = [
   { id: 'team', label: 'Team Info', icon: Users },

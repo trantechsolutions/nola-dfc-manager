@@ -3,8 +3,8 @@ import {
   Upload, FileText, Trash2, CheckCircle2, XCircle, Clock, Eye,
   Search, Filter, ChevronDown, X, Shield, AlertCircle, Download
 } from 'lucide-react';
-import { supabaseService } from '../services/supabaseService';
-import { ALL_ROLES } from '../utils/roles';
+import { supabaseService } from '../../services/supabaseService';
+import { ALL_ROLES } from '../../utils/roles';
 
 const DOC_TYPES = [
   { id: 'medical_release', label: 'Medical Release', required: true },

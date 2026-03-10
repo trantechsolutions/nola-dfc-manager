@@ -3,8 +3,8 @@ import {
   Plus, Users, Settings, Trash2, Edit, ChevronDown, ChevronUp,
   Shield, UserPlus, Calendar, X, CheckCircle2, Save
 } from 'lucide-react';
-import { supabaseService } from '../services/supabaseService';
-import { ALL_ROLES, TEAM_ROLES, CLUB_ASSIGNABLE_ROLES } from '../utils/roles';
+import { supabaseService } from '../../services/supabaseService';
+import { ALL_ROLES, TEAM_ROLES, CLUB_ASSIGNABLE_ROLES } from '../../utils/roles';
 
 export default function TeamList({ club, teams, onSelectTeam, formatMoney, showToast, showConfirm, refreshContext }) {
   const [showCreateForm, setShowCreateForm] = useState(false);

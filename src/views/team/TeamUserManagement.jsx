@@ -3,8 +3,8 @@ import {
   Users, UserPlus, Shield, Search, CheckCircle2, XCircle,
   X, ChevronDown, ChevronUp, Mail, Phone, User
 } from 'lucide-react';
-import { supabaseService } from '../services/supabaseService';
-import { TEAM_ROLES, ALL_ROLES, TEAM_ASSIGNABLE_ROLES } from '../utils/roles';
+import { supabaseService } from '../../services/supabaseService';
+import { TEAM_ROLES, ALL_ROLES, TEAM_ASSIGNABLE_ROLES } from '../../utils/roles';
 
 const ROLE_COLORS = {
   team_manager: 'bg-blue-100 text-blue-700',

@@ -3,7 +3,7 @@ import { Calendar, Loader2, Filter, X } from 'lucide-react';
 import ICAL from 'ical.js';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
-import { classifyEvent, EVENT_TYPES } from '../utils/eventClassifier';
+import { classifyEvent, EVENT_TYPES } from '../../utils/eventClassifier';
 
 export default function ClubCalendarView({ club, teams }) {
   const [allEvents, setAllEvents] = useState([]);

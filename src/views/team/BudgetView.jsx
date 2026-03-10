@@ -4,8 +4,8 @@ import {
   ChevronDown, ChevronRight, BarChart3, Lightbulb, ArrowUpRight, 
   ArrowDownRight, Sparkles, FileSpreadsheet, UserPlus, AlertTriangle
 } from 'lucide-react';
-import { supabaseService } from '../services/supabaseService';
-import PlayerFormModal from '../components/PlayerFormModal';
+import { supabaseService } from '../../services/supabaseService';
+import PlayerFormModal from '../../components/PlayerFormModal';
 
 const BUDGET_CATEGORIES = [
   { code: 'OPE', name: 'Operating',    type: 'expense' },

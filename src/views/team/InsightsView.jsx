@@ -5,9 +5,9 @@ import {
   Loader2, ChevronDown, ChevronUp, Info, Key, X,
   CalendarDays, CircleDollarSign, CircleAlert, CircleCheck
 } from 'lucide-react';
-import { EVENT_TYPES } from '../utils/eventClassifier';
-import { buildEventMatchReport } from '../utils/eventMatcher';
-import { filterEventsBySeason, getSeasonDateRange } from '../utils/seasonUtils';
+import { EVENT_TYPES } from '../../utils/eventClassifier';
+import { buildEventMatchReport } from '../../utils/eventMatcher';
+import { filterEventsBySeason, getSeasonDateRange } from '../../utils/seasonUtils';
 
 const GEMINI_MODEL = 'gemini-2.0-flash-lite';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;

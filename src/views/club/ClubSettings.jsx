@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Building2, Shield, Users, Save, UserPlus, X, CheckCircle2
 } from 'lucide-react';
-import { supabaseService } from '../services/supabaseService';
-import { ALL_ROLES, CLUB_ROLES } from '../utils/roles';
+import { supabaseService } from '../../services/supabaseService';
+import { ALL_ROLES, CLUB_ROLES } from '../../utils/roles';
 
 export default function ClubSettings({ club, teams, userRoles, showToast, showConfirm, refreshContext }) {
   const [clubName, setClubName] = useState(club?.name || '');

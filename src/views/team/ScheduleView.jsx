@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { List, CalendarDays, Link2, Save, Edit, X, Check } from 'lucide-react';
-import Schedule from '../components/Schedule';
-import CalendarView from '../components/CalendarView';
-import { supabaseService } from '../services/supabaseService';
+import Schedule from '../../components/Schedule';
+import CalendarView from '../../components/CalendarView';
+import { supabaseService } from '../../services/supabaseService';
 
 export default function ScheduleView({ events, blackoutDates, onToggleBlackout, selectedTeam, refreshContext, showToast }) {
   const [scheduleMode, setScheduleMode] = useState('list');

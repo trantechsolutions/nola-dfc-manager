@@ -8,23 +8,23 @@ import {
 } from 'lucide-react';
 
 // Views
-import LoginView from './views/LoginView';
-import TeamOverviewView from './views/TeamOverviewView';
-import SponsorsView from './views/SponsorsView';
-import LedgerView from './views/LedgerView';
-import BudgetView from './views/BudgetView';
-import InsightsView from './views/InsightsView';
-import ScheduleView from './views/ScheduleView';
-import ParentView from './views/ParentView';
-import PublicCalendarView from './views/PublicCalendarView';
-import ClubDashboard from './views/ClubDashboard';
-import TeamList from './views/TeamList';
-import ClubSettings from './views/ClubSettings';
-import ClubCalendarView from './views/ClubCalendarView';
-import TeamOnboarding from './views/TeamOnboarding';
-import DocumentManager from './views/DocumentManager';
-import UserManagement from './views/UserManagement';
-import TeamUserManagement from './views/TeamUserManagement';
+import LoginView from './views/general/LoginView';
+import TeamOverviewView from './views/team/TeamOverviewView';
+import SponsorsView from './views/team/SponsorsView';
+import LedgerView from './views/team/LedgerView';
+import BudgetView from './views/team/BudgetView';
+import InsightsView from './views/team/InsightsView';
+import ScheduleView from './views/team/ScheduleView';
+import ParentView from './views/team/ParentView';
+import PublicCalendarView from './views/general/PublicCalendarView';
+import ClubDashboard from './views/club/ClubDashboard';
+import TeamList from './views/club/TeamList';
+import ClubSettings from './views/club/ClubSettings';
+import ClubCalendarView from './views/club/ClubCalendarView';
+import TeamOnboarding from './views/club/TeamOnboarding';
+import DocumentManager from './views/team/DocumentManager';
+import UserManagement from './views/club/UserManagement';
+import TeamUserManagement from './views/team/TeamUserManagement';
 
 // Components
 import TransactionModal from './components/TransactionModal';

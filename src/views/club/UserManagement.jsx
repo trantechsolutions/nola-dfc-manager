@@ -3,8 +3,8 @@ import {
   UserPlus, Mail, Shield, X, CheckCircle2, Clock, XCircle, 
   Search, ChevronDown, ChevronUp, Users, Send, Copy, Ban, Edit
 } from 'lucide-react';
-import { supabaseService } from '../services/supabaseService';
-import { ALL_ROLES, CLUB_ROLES, TEAM_ROLES, CLUB_ASSIGNABLE_ROLES } from '../utils/roles';
+import { supabaseService } from '../../services/supabaseService';
+import { ALL_ROLES, CLUB_ROLES, TEAM_ROLES, CLUB_ASSIGNABLE_ROLES } from '../../utils/roles';
 
 const ROLE_COLORS = {
   club_admin: 'bg-red-100 text-red-700', club_manager: 'bg-violet-100 text-violet-700',
