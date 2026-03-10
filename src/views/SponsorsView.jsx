@@ -4,7 +4,7 @@ import {
   ArrowDownNarrowWide, CheckCircle2, ChevronDown, Zap, Loader2 
 } from 'lucide-react';
 
-export default function Sponsors({ 
+export default function SponsorsView({ 
   transactions, 
   selectedSeason, 
   formatMoney, 
@@ -12,18 +12,25 @@ export default function Sponsors({
   onReset, 
   seasonalPlayers,
   seasons,
-  isBudgetLocked
+  currentSeasonData
 }) {
   const [showDistribute, setShowDistribute] = useState(false);
   const [distAmount, setDistAmount] = useState('');
   const [distTitle, setDistTitle] = useState('');
   const [sourcePlayerId, setSourcePlayerId] = useState('');
   const [originalTxId, setOriginalTxId] = useState(null); 
-  const [distCategory, setDistCategory] = useState('SPO'); // NEW: Track the category
+  const [distCategory, setDistCategory] = useState('SPO');
   const [activeTab, setActiveTab] = useState('undistributed'); 
   const [expandedPlayerId, setExpandedPlayerId] = useState(null);
   const [isDistributingAll, setIsDistributingAll] = useState(false);
   const [distributeAllProgress, setDistributeAllProgress] = useState({ current: 0, total: 0, currentTitle: '' });
+
+  // FIX: Use the merged currentSeasonData (which includes team_season finalization)
+  // instead of re-deriving from the global seasons array.
+  // Falls back to global season lookup for backwards compatibility.
+  const isBudgetLocked = currentSeasonData?.isFinalized 
+    ?? seasons.find(s => s.id === selectedSeason)?.isFinalized 
+    ?? false;
 
   const isCleared = (tx) => tx.cleared === true || String(tx.cleared).toLowerCase() === 'true';
 
@@ -43,7 +50,7 @@ export default function Sponsors({
         date: tx.date,
         totalAmount: 0,
         recipients: [],
-        category: tx.category // Helpful for UI badges
+        category: tx.category
       };
     }
     groupedHistoryMap[tx.waterfallBatchId].totalAmount += Number(tx.amount || 0);
@@ -55,14 +62,12 @@ export default function Sponsors({
 
   const historyList = Object.values(groupedHistoryMap).sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
 
-  // --- NEW: UNDISTRIBUTED FUNDS (Combines SPO and FUN) ---
+  // UNDISTRIBUTED FUNDS (Combines SPO and FUN)
   const undistributedSponsors = transactions.filter(tx => 
     ['SPO', 'FUN'].includes(tx.category) && Number(tx.amount || 0) > 0 && !tx.distributed && !tx.waterfallBatchId
   );
 
-  // --- NEW: FUNDRAISING ROLLUP ---
-  // We ONLY look at the raw ledger deposits (!tx.waterfallBatchId) to build the leaderboard
-  // so we don't double-count the money once it's been distributed!
+  // FUNDRAISING ROLLUP — only raw ledger deposits to avoid double-counting
   const rawFundraisingTxs = transactions.filter(tx => tx.category === 'FUN' && isCleared(tx) && !tx.waterfallBatchId);
   
   const fundraisingByPlayer = seasonalPlayers.map(player => {
@@ -77,7 +82,7 @@ export default function Sponsors({
   }).filter(p => p.fundraisingTotal > 0 || p.fundraisingTxs.length > 0)
     .sort((a, b) => b.fundraisingTotal - a.fundraisingTotal);
 
-  // Sort undistributed: SPO first, then FUN (preserves original order within each category)
+  // Sort undistributed: SPO first, then FUN
   const sortedUndistributed = [...undistributedSponsors].sort((a, b) => {
     const order = { SPO: 0, FUN: 1 };
     return (order[a.category] ?? 2) - (order[b.category] ?? 2);
@@ -229,8 +234,8 @@ export default function Sponsors({
                       setDistAmount(tx.amount);
                       setDistTitle(tx.title);
                       setOriginalTxId(tx.id);
-                      setDistCategory(tx.category); // Pass category
-                      setSourcePlayerId(tx.playerId || ''); // Pre-select the kid if they raised it
+                      setDistCategory(tx.category);
+                      setSourcePlayerId(tx.playerId || '');
                       setShowDistribute(true);
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-md"
@@ -410,7 +415,6 @@ export default function Sponsors({
                 </button>
                 <button 
                   onClick={() => { 
-                    // Pass distCategory as the 5th argument
                     onDistribute(distAmount, distTitle, sourcePlayerId, originalTxId, distCategory); 
                     setShowDistribute(false);
                     setOriginalTxId(null); 

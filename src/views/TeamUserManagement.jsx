@@ -4,18 +4,16 @@ import {
   X, ChevronDown, ChevronUp, Mail, Phone, User
 } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService';
-import { TEAM_ROLES, ALL_ROLES } from '../utils/roles';
+import { TEAM_ROLES, ALL_ROLES, TEAM_ASSIGNABLE_ROLES } from '../utils/roles';
 
 const ROLE_COLORS = {
   team_manager: 'bg-blue-100 text-blue-700',
+  team_admin: 'bg-indigo-100 text-indigo-700',
   scheduler: 'bg-violet-100 text-violet-700',
   treasurer: 'bg-emerald-100 text-emerald-700',
   head_coach: 'bg-amber-100 text-amber-700',
   assistant_coach: 'bg-slate-100 text-slate-600',
 };
-
-// Roles a team manager can assign (no club-level roles)
-const ASSIGNABLE_ROLES = ['assistant_coach', 'head_coach', 'scheduler'];
 
 export default function TeamUserManagement({ selectedTeam, showToast, showConfirm }) {
   const [guardians, setGuardians] = useState([]);
@@ -23,7 +21,7 @@ export default function TeamUserManagement({ selectedTeam, showToast, showConfir
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all | with-account | no-account | has-role
   const [assigningFor, setAssigningFor] = useState(null); // guardian email
-  const [assignRole, setAssignRole] = useState('assistant_coach');
+  const [assignRole, setAssignRole] = useState(TEAM_ASSIGNABLE_ROLES[0]); // default to first assignable
   const [isSaving, setIsSaving] = useState(false);
 
   const fetchGuardians = async () => {
@@ -148,25 +146,21 @@ export default function TeamUserManagement({ selectedTeam, showToast, showConfir
                   {g.name.charAt(0).toUpperCase()}
                 </div>
 
-                {/* Info */}
                 <div className="flex-grow min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-black text-slate-800 truncate">{g.name}</p>
+                    <p className="text-sm font-bold text-slate-800 truncate">{g.name}</p>
                     {g.hasAccount ? (
                       <span className="text-[8px] font-black bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase">Account</span>
                     ) : (
                       <span className="text-[8px] font-black bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded uppercase">No Account</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 text-[10px] text-slate-400 font-medium mt-0.5">
-                    <span className="flex items-center gap-1 truncate"><Mail size={10} /> {g.email}</span>
-                    {g.phone && <span className="flex items-center gap-1"><Phone size={10} /> {g.phone}</span>}
-                  </div>
-                  {/* Children */}
+                  <p className="text-[11px] text-slate-400 font-medium truncate">{g.email}</p>
+                  {/* Player connections */}
                   <div className="flex flex-wrap gap-1 mt-1">
                     {g.players.map(p => (
-                      <span key={p.id} className="text-[9px] font-bold bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">
-                        #{p.jersey || '?'} {p.name}
+                      <span key={p.id} className="text-[9px] font-bold bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded text-slate-500">
+                        #{p.jerseyNumber || '?'} {p.name}
                       </span>
                     ))}
                   </div>
@@ -199,14 +193,14 @@ export default function TeamUserManagement({ selectedTeam, showToast, showConfir
                 </div>
               </div>
 
-              {/* Assign role form */}
+              {/* Assign role form — only TEAM_ASSIGNABLE_ROLES (team_admin, treasurer, scheduler) */}
               {isExpanded && (
                 <div className="border-t border-slate-100 p-4 bg-blue-50/50 flex items-center gap-2">
                   <span className="text-[10px] font-bold text-slate-500 shrink-0">Assign:</span>
                   <select value={assignRole} onChange={e => setAssignRole(e.target.value)}
                     className="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold outline-none flex-grow">
-                    {ASSIGNABLE_ROLES.map(key => (
-                      <option key={key} value={key}>{TEAM_ROLES[key]?.label}</option>
+                    {TEAM_ASSIGNABLE_ROLES.map(key => (
+                      <option key={key} value={key}>{TEAM_ROLES[key]?.label || ALL_ROLES[key]?.label || key}</option>
                     ))}
                   </select>
                   <button onClick={() => handleAssignRole(g)} disabled={isSaving}
@@ -226,7 +220,12 @@ export default function TeamUserManagement({ selectedTeam, showToast, showConfir
       {/* Help text */}
       <div className="bg-slate-50 p-4 rounded-xl text-[11px] text-slate-400 leading-relaxed">
         <p className="font-bold text-slate-500 mb-1">How this works:</p>
-        <p>This list shows all guardians linked to players on your roster. Guardians with a <span className="font-bold text-emerald-600">green "Account" badge</span> have signed up and can be assigned team roles. Those without accounts need to create one first — share the login page link with them. For full user management and invitations, contact a club administrator.</p>
+        <p>This list shows all guardians linked to players on your roster. Guardians with a <span className="font-bold text-emerald-600">green "Account" badge</span> have signed up and can be assigned team roles.</p>
+        <p className="mt-2 font-bold text-slate-500">Available roles:</p>
+        <p className="mt-1"><span className="font-bold text-indigo-600">Team Admin</span> — Full access to all team functions (roster, budget, ledger, schedule, sponsors, insights).</p>
+        <p><span className="font-bold text-emerald-600">Treasurer</span> — Can manage budget, ledger, transactions, sponsors, and fee waivers.</p>
+        <p><span className="font-bold text-violet-600">Scheduler</span> — Can create and manage blackout dates on the calendar.</p>
+        <p className="mt-2">Coaches and Team Managers are assigned by a Club Admin from the Club → Teams or Club → Users tab.</p>
       </div>
     </div>
   );

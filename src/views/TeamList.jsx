@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Users, Settings, Trash2, Edit, ChevronDown, ChevronUp,
-  Shield, UserPlus, Calendar, X, CheckCircle2
+  Shield, UserPlus, Calendar, X, CheckCircle2, Save
 } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService';
-import { ALL_ROLES, TEAM_ROLES } from '../utils/roles';
+import { ALL_ROLES, TEAM_ROLES, CLUB_ASSIGNABLE_ROLES } from '../utils/roles';
 
 export default function TeamList({ club, teams, onSelectTeam, formatMoney, showToast, showConfirm, refreshContext }) {
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -14,6 +14,10 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
 
   // New team form
   const [newTeam, setNewTeam] = useState({ name: '', ageGroup: '', gender: 'boys', tier: 'competitive', icalUrl: '', colorPrimary: '#1e293b' });
+
+  // Inline team name editing
+  const [editingTeamId, setEditingTeamId] = useState(null);
+  const [editingName, setEditingName] = useState('');
 
   // Invite form
   const [showInvite, setShowInvite] = useState(null); // teamId or null
@@ -54,6 +58,20 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
       if (showToast) showToast(`"${team.name}" archived.`);
     } catch (e) {
       if (showToast) showToast('Failed.', true);
+    } finally { setIsSaving(false); }
+  };
+
+  const handleSaveTeamName = async (teamId) => {
+    if (!editingName.trim()) return;
+    setIsSaving(true);
+    try {
+      await supabaseService.updateTeam(teamId, { name: editingName.trim() });
+      await refreshContext();
+      setEditingTeamId(null);
+      setEditingName('');
+      if (showToast) showToast('Team name updated.');
+    } catch (e) {
+      if (showToast) showToast('Failed to update name.', true);
     } finally { setIsSaving(false); }
   };
 
@@ -105,6 +123,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
         {teams.map(team => {
           const isExpanded = expandedTeam === team.id;
           const roles = teamRoles[team.id] || [];
+          const isEditingThis = editingTeamId === team.id;
 
           return (
             <div key={team.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -113,53 +132,66 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                 <div className="w-3 h-12 rounded-full shrink-0" style={{ backgroundColor: team.colorPrimary || '#1e293b' }} />
 
                 {/* Info */}
-                <div className="flex-grow min-w-0 cursor-pointer" onClick={() => onSelectTeam(team.id)}>
-                  <h3 className="font-black text-slate-900 text-sm">{team.name}</h3>
-                  <div className="flex items-center gap-3 text-[11px] text-slate-400 font-medium mt-0.5">
-                    <span>{team.ageGroup}</span>
-                    <span>{team.gender}</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${team.tier === 'competitive' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>{team.tier}</span>
-                    {team.icalUrl && <Calendar size={11} className="text-emerald-500" title="Calendar connected" />}
-                  </div>
+                <div className="flex-grow min-w-0">
+                  {isEditingThis ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={editingName}
+                        onChange={e => setEditingName(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleSaveTeamName(team.id); if (e.key === 'Escape') { setEditingTeamId(null); setEditingName(''); } }}
+                        className="font-black text-slate-900 text-sm border border-blue-300 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500 flex-grow"
+                      />
+                      <button onClick={() => handleSaveTeamName(team.id)} disabled={isSaving}
+                        className="text-emerald-600 hover:text-emerald-700 disabled:opacity-50">
+                        <Save size={16} />
+                      </button>
+                      <button onClick={() => { setEditingTeamId(null); setEditingName(''); }}
+                        className="text-slate-400 hover:text-slate-600">
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="cursor-pointer" onClick={() => onSelectTeam(team.id)}>
+                      <h3 className="font-black text-slate-900 text-sm">{team.name}</h3>
+                      <div className="flex items-center gap-3 text-[11px] text-slate-400 font-medium mt-0.5">
+                        <span>{team.ageGroup}</span>
+                        <span>{team.gender}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${team.tier === 'competitive' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>{team.tier}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => setExpandedTeam(isExpanded ? null : team.id)}
-                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Manage">
-                    {isExpanded ? <ChevronUp size={16} /> : <Settings size={16} />}
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditingTeamId(team.id); setEditingName(team.name); }}
+                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                    title="Edit team name"
+                  >
+                    <Edit size={14} />
                   </button>
-                  <button onClick={() => handleDeleteTeam(team)}
-                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Archive">
+                  <button onClick={(e) => { e.stopPropagation(); setExpandedTeam(isExpanded ? null : team.id); }}
+                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all" title="Manage roles">
+                    <Settings size={14} />
+                    {isExpanded ? <ChevronUp size={10} className="ml-0.5 inline" /> : <ChevronDown size={10} className="ml-0.5 inline" />}
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); handleDeleteTeam(team); }}
+                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Archive team">
                     <Trash2 size={14} />
                   </button>
                 </div>
               </div>
 
-              {/* Expanded: Roles & Settings */}
+              {/* Expanded: Role Management */}
               {isExpanded && (
-                <div className="border-t border-slate-100 p-5 bg-slate-50/50 space-y-4">
-                  {/* Team Settings */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">iCal URL</label>
-                      <p className="text-xs text-slate-600 font-medium mt-0.5 truncate">{team.icalUrl || 'Not set'}</p>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Team Color</label>
-                      <div className="flex items-center gap-1 mt-1">
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: team.colorPrimary }} />
-                        <span className="text-xs text-slate-500 font-mono">{team.colorPrimary}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Staff Roles */}
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <h4 className="text-xs font-black text-slate-700 flex items-center gap-1.5">
-                        <Shield size={13} className="text-blue-600" /> Staff Roles
-                      </h4>
+                <div className="border-t border-slate-100 p-5 bg-slate-50/50">
+                  <div className="space-y-3">
+                    {/* Header with assign button */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Team Roles</p>
                       <button onClick={() => setShowInvite(showInvite === team.id ? null : team.id)}
                         className="text-[10px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">
                         <UserPlus size={12} /> Assign Role
@@ -179,6 +211,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                                 r.role === 'club_admin' ? 'bg-red-100 text-red-700' :
                                 r.role === 'club_manager' ? 'bg-violet-100 text-violet-700' :
                                 r.role === 'team_manager' ? 'bg-blue-100 text-blue-700' :
+                                r.role === 'team_admin' ? 'bg-indigo-100 text-indigo-700' :
                                 r.role === 'treasurer' ? 'bg-emerald-100 text-emerald-700' :
                                 r.role === 'scheduler' ? 'bg-violet-100 text-violet-700' :
                                 r.role === 'head_coach' ? 'bg-amber-100 text-amber-700' :
@@ -200,17 +233,17 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                       </div>
                     )}
 
-                    {/* Invite form */}
+                    {/* Invite form — only CLUB_ASSIGNABLE_ROLES (coach, assist coach, team manager) */}
                     {showInvite === team.id && (
                       <div className="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-200 space-y-2">
-                        <p className="text-[10px] font-bold text-blue-700">Assign a role to a user by their login email</p>
+                        <p className="text-[10px] font-bold text-blue-700">Assign a coach or team manager by their login email</p>
                         <div className="flex gap-2">
                           <input type="email" placeholder="coach@example.com" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
                             className="flex-grow bg-white border border-blue-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500" />
                           <select value={inviteRole} onChange={e => setInviteRole(e.target.value)}
                             className="bg-white border border-blue-200 rounded-lg px-2 py-1.5 text-xs font-bold outline-none">
-                            {Object.entries(TEAM_ROLES).map(([key, def]) => (
-                              <option key={key} value={key}>{def.label}</option>
+                            {CLUB_ASSIGNABLE_ROLES.map(key => (
+                              <option key={key} value={key}>{TEAM_ROLES[key]?.label || key}</option>
                             ))}
                           </select>
                         </div>
@@ -240,51 +273,52 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
             <form onSubmit={handleCreateTeam} className="space-y-4">
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Team Name</label>
-                <input autoFocus required type="text" placeholder="e.g. 2014 Boys White" value={newTeam.name} onChange={e => setNewTeam({...newTeam, name: e.target.value})}
-                  className="w-full border border-slate-200 rounded-xl p-3 font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 mt-1" />
+                <input autoFocus required type="text" placeholder="e.g. 2014 Boys White"
+                  value={newTeam.name} onChange={e => setNewTeam({...newTeam, name: e.target.value})}
+                  className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 mt-1" />
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Age Group</label>
                   <input type="text" placeholder="U11" value={newTeam.ageGroup} onChange={e => setNewTeam({...newTeam, ageGroup: e.target.value})}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none mt-1" />
+                    className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gender</label>
                   <select value={newTeam.gender} onChange={e => setNewTeam({...newTeam, gender: e.target.value})}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none mt-1">
-                    <option value="boys">Boys</option>
-                    <option value="girls">Girls</option>
-                    <option value="coed">Coed</option>
+                    className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1">
+                    <option value="boys">Boys</option><option value="girls">Girls</option><option value="coed">Coed</option>
                   </select>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tier</label>
                   <select value={newTeam.tier} onChange={e => setNewTeam({...newTeam, tier: e.target.value})}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none mt-1">
-                    <option value="competitive">Competitive</option>
-                    <option value="recreational">Recreational</option>
+                    className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1">
+                    <option value="competitive">Competitive</option><option value="recreational">Recreational</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">iCal URL (optional)</label>
-                <input type="url" placeholder="https://api.olliesports.com/ical/..." value={newTeam.icalUrl} onChange={e => setNewTeam({...newTeam, icalUrl: e.target.value})}
-                  className="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none mt-1" />
-              </div>
-              <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Team Color</label>
-                <div className="flex gap-2 mt-1">
+                <div className="flex gap-2 mt-1.5">
                   {COLORS.map(c => (
                     <button key={c} type="button" onClick={() => setNewTeam({...newTeam, colorPrimary: c})}
-                      className={`w-7 h-7 rounded-lg transition-all ${newTeam.colorPrimary === c ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : 'hover:scale-105'}`}
+                      className={`w-8 h-8 rounded-lg transition-all ${newTeam.colorPrimary === c ? 'ring-2 ring-blue-500 ring-offset-2 scale-110' : 'hover:scale-105'}`}
                       style={{ backgroundColor: c }} />
                   ))}
                 </div>
               </div>
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setShowCreateForm(false)} className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl">Cancel</button>
-                <button type="submit" disabled={isSaving} className="flex-1 py-2.5 bg-slate-900 text-white font-black rounded-xl hover:bg-slate-800 shadow-lg disabled:opacity-50">Create</button>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">iCal URL (optional)</label>
+                <input type="url" placeholder="https://..." value={newTeam.icalUrl} onChange={e => setNewTeam({...newTeam, icalUrl: e.target.value})}
+                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1" />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setShowCreateForm(false)} className="text-sm font-bold text-slate-500 px-4 py-2">Cancel</button>
+                <button type="submit" disabled={isSaving || !newTeam.name.trim()}
+                  className="text-sm font-black text-white bg-slate-900 px-6 py-2 rounded-xl hover:bg-slate-800 disabled:opacity-50 shadow-lg">
+                  {isSaving ? 'Creating...' : 'Create Team'}
+                </button>
               </div>
             </form>
           </div>

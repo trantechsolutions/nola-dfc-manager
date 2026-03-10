@@ -15,7 +15,8 @@ export const CLUB_ROLES = {
  * These are scoped to a specific team. A person can hold multiple roles on different teams.
  */
 export const TEAM_ROLES = {
-  team_manager:     { label: 'Team Manager',      level: 'team', description: 'Full access to the team: roster, budget, ledger, schedule, sponsors, insights.' },
+  team_manager:     { label: 'Team Manager',      level: 'team', description: 'Full access to the team: roster, budget, ledger, schedule, sponsors, insights. Can manage team-level users.' },
+  team_admin:       { label: 'Team Admin',         level: 'team', description: 'Full access to all team functions: roster, budget, ledger, schedule, sponsors, insights.' },
   scheduler:        { label: 'Scheduler',          level: 'team', description: 'Create and edit calendar events, manage blackout dates.' },
   treasurer:        { label: 'Treasurer',          level: 'team', description: 'Manage budget, ledger, transactions, sponsors, and fee waivers.' },
   head_coach:       { label: 'Head Coach',         level: 'team', description: 'View-only access to roster, schedule, and player compliance.' },
@@ -23,6 +24,20 @@ export const TEAM_ROLES = {
 };
 
 export const ALL_ROLES = { ...CLUB_ROLES, ...TEAM_ROLES };
+
+/**
+ * CLUB-ASSIGNABLE ROLES
+ * These are the only roles that can be assigned from the Club > Teams and Club > Users tabs.
+ * Club admins assign coaches and team managers to teams.
+ */
+export const CLUB_ASSIGNABLE_ROLES = ['head_coach', 'assistant_coach', 'team_manager'];
+
+/**
+ * TEAM-ASSIGNABLE ROLES
+ * These are the only roles that team managers can assign from the Team Users tab.
+ * Team managers assign admins, treasurers, and schedulers within their team.
+ */
+export const TEAM_ASSIGNABLE_ROLES = ['team_admin', 'treasurer', 'scheduler'];
 
 /**
  * PERMISSION KEYS
@@ -100,6 +115,16 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.TEAM_MANAGE_USERS,
   ],
 
+  team_admin: [
+    PERMISSIONS.TEAM_VIEW_ROSTER,   PERMISSIONS.TEAM_EDIT_ROSTER,
+    PERMISSIONS.TEAM_VIEW_SCHEDULE, PERMISSIONS.TEAM_EDIT_SCHEDULE,
+    PERMISSIONS.TEAM_VIEW_BUDGET,   PERMISSIONS.TEAM_EDIT_BUDGET,
+    PERMISSIONS.TEAM_VIEW_LEDGER,   PERMISSIONS.TEAM_EDIT_LEDGER,
+    PERMISSIONS.TEAM_VIEW_SPONSORS, PERMISSIONS.TEAM_EDIT_SPONSORS,
+    PERMISSIONS.TEAM_VIEW_INSIGHTS,
+    PERMISSIONS.TEAM_MANAGE_WAIVERS,
+  ],
+
   scheduler: [
     PERMISSIONS.TEAM_VIEW_ROSTER,
     PERMISSIONS.TEAM_VIEW_SCHEDULE, PERMISSIONS.TEAM_EDIT_SCHEDULE,
@@ -161,10 +186,10 @@ export function getAccessibleTeamIds(userRoles, allTeamIds = []) {
 
 /**
  * Get the highest role a user holds for a specific team.
- * Priority: team_manager > treasurer > scheduler > head_coach > assistant_coach
+ * Priority: team_manager > team_admin > treasurer > scheduler > head_coach > assistant_coach
  */
 export function getHighestTeamRole(userRoles, teamId) {
-  const priority = ['team_manager', 'treasurer', 'scheduler', 'head_coach', 'assistant_coach'];
+  const priority = ['team_manager', 'team_admin', 'treasurer', 'scheduler', 'head_coach', 'assistant_coach'];
   const teamRoles = userRoles.filter(ur => ur.teamId === teamId).map(ur => ur.role);
   
   // Also check club-level roles

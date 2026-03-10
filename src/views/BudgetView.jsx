@@ -76,42 +76,49 @@ export default function BudgetView({
         setIsFinalized(false);
       }
 
-      // Budget items — scoped by team_season_id
+      // Budget items — THIS TEAM ONLY via team_season_id
       const tsId = currentTeamSeason?.id || null;
       if (tsId) {
         const items = await supabaseService.getBudgetItemsByTeamSeason(tsId);
         setBudgetItems(items);
       } else {
-        const items = await supabaseService.getBudgetItems(selectedSeason, null);
-        setBudgetItems(items);
+        // No team_season yet — empty budget (don't load other teams' items)
+        setBudgetItems([]);
       }
 
-      // Players for roster tab
+      // Players — THIS TEAM ONLY
       if (selectedTeamId) {
         const players = await supabaseService.getPlayersByTeam(selectedTeamId);
         setAvailablePlayers(players);
       } else {
-        const players = await supabaseService.getAllPlayers();
-        setAvailablePlayers(players);
+        setAvailablePlayers([]);
       }
 
-      // Transactions for actuals
-      const txs = await supabaseService.getAllTransactions();
-      const seasonTxs = txs.filter(tx => tx.seasonId === selectedSeason);
+      // Transactions — THIS TEAM + SEASON ONLY
+      let seasonTxs = [];
+      if (tsId) {
+        // Team-season scoped: only this team's transactions
+        seasonTxs = await supabaseService.getTransactionsByTeamSeason(tsId);
+      }
+      // No team_season = no transactions to show (budget hasn't been set up yet)
       setSeasonTransactions(seasonTxs);
-      setAllTransactions(txs);
 
-      // Historical budgets for projections (from OTHER team_seasons for this team)
+      // Historical data for projections — OTHER seasons for THIS TEAM ONLY
+      const histTxs = [];
       if (teamSeasons.length > 0) {
         const histBudgets = {};
         for (const ts of teamSeasons.filter(ts => ts.seasonId !== selectedSeason)) {
           try {
-            const items = await supabaseService.getBudgetItemsByTeamSeason(ts.id);
-            histBudgets[ts.seasonId] = items;
+            histBudgets[ts.seasonId] = await supabaseService.getBudgetItemsByTeamSeason(ts.id);
+            // Also fetch that season's transactions for actuals comparison
+            const tsTxs = await supabaseService.getTransactionsByTeamSeason(ts.id);
+            histTxs.push(...tsTxs);
           } catch (e) { /* skip */ }
         }
         setHistoricalBudgets(histBudgets);
       }
+      // allTransactions = current season + historical, all team-scoped
+      setAllTransactions([...seasonTxs, ...histTxs]);
 
     } catch (e) {
       console.error('Budget fetch error:', e);
@@ -253,6 +260,33 @@ export default function BudgetView({
       if (currentTeamSeason?.id) teamSeasonData.id = currentTeamSeason.id;
       const savedTs = await supabaseService.saveTeamSeason(teamSeasonData);
 
+      // Also save to team_seasons (per-team budget data)
+      if (selectedTeamId && currentTeamSeason?.id) {
+        await supabaseService.saveTeamSeason({
+          id: currentTeamSeason.id,
+          teamId: selectedTeamId,
+          seasonId: selectedSeason,
+          isFinalized: finalize || isFinalized,
+          baseFee: roundedBaseFee,
+          bufferPercent: Number(bufferPercent),
+          expectedRosterSize: Number(rosterSize),
+          totalProjectedExpenses: totalExpenseAmount,
+          totalProjectedIncome: grandTotals.income,
+        });
+      } else if (selectedTeamId) {
+        // No team_season exists yet — create one
+        await supabaseService.saveTeamSeason({
+          teamId: selectedTeamId,
+          seasonId: selectedSeason,
+          isFinalized: finalize || isFinalized,
+          baseFee: roundedBaseFee,
+          bufferPercent: Number(bufferPercent),
+          expectedRosterSize: Number(rosterSize),
+          totalProjectedExpenses: totalExpenseAmount,
+          totalProjectedIncome: grandTotals.income,
+        });
+      }
+
       // Save budget items scoped to this team_season
       const tsId = savedTs?.id || currentTeamSeason?.id;
       await supabaseService.saveBudgetItems(selectedSeason, budgetItems, tsId);
@@ -295,12 +329,11 @@ export default function BudgetView({
     if (!ok) return;
     try {
       const sourceTs = teamSeasons.find(ts => ts.seasonId === sourceId);
-      let items;
+      let items = [];
       if (sourceTs) {
         items = await supabaseService.getBudgetItemsByTeamSeason(sourceTs.id);
-      } else {
-        items = await supabaseService.getBudgetItems(sourceId, null);
       }
+      // No sourceTs means this team has no budget for that season — nothing to clone
       if (items.length > 0) setBudgetItems(items.map(i => ({ ...i, id: `clone_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, teamSeasonId: undefined })));
       if (sourceTs) setBufferPercent(sourceTs.bufferPercent || 5);
       if (showToast) showToast(`Cloned from ${sourceId}`);

@@ -517,6 +517,53 @@ export const supabaseService = {
   // TEAM-SCOPED QUERIES
   // ─────────────────────────────────────────
 
+  // Player financials from the DB VIEW — single source of truth for fees/balances
+  // This replaces all client-side fee computation for display purposes.
+  getPlayerFinancials: async (teamSeasonId) => {
+    const { data, error } = await supabase
+      .from('player_financials')
+      .select('*')
+      .eq('team_season_id', teamSeasonId);
+    if (error) throw error;
+    return data.map(f => ({
+      playerId: f.player_id,
+      seasonId: f.season_id,
+      teamSeasonId: f.team_season_id,
+      feeWaived: f.fee_waived,
+      baseFee: Number(f.base_fee),
+      totalPaid: Number(f.total_paid),
+      fundraising: Number(f.fundraising),
+      sponsorships: Number(f.sponsorships),
+      credits: Number(f.credits),
+      remainingBalance: Number(f.remaining_balance),
+    }));
+  },
+
+  // Seasonal roster from the DB VIEW — players + season enrollment in one shot
+  getSeasonalRoster: async (teamId, seasonId) => {
+    const { data, error } = await supabase
+      .from('seasonal_roster')
+      .select('*')
+      .eq('team_id', teamId)
+      .eq('season_id', seasonId);
+    if (error) throw error;
+    return data.map(r => ({
+      playerId: r.player_id,
+      firstName: r.first_name,
+      lastName: r.last_name,
+      jerseyNumber: r.jersey_number,
+      playerStatus: r.player_status,
+      medicalRelease: r.medical_release,
+      reePlayerWaiver: r.reeplayer_waiver,
+      clubId: r.club_id,
+      teamId: r.team_id,
+      seasonId: r.season_id,
+      feeWaived: r.fee_waived,
+      seasonStatus: r.season_status,
+      teamSeasonId: r.team_season_id,
+    }));
+  },
+
   getPlayersByTeam: async (teamId) => {
     const { data, error } = await supabase
       .from('players')
@@ -558,6 +605,53 @@ export const supabaseService = {
       cleared: tx.cleared, distributed: tx.distributed,
       waterfallBatchId: tx.waterfall_batch_id, originalTxId: tx.original_tx_id,
     }));
+  },
+
+  getPlayerFinancials: async (seasonId, teamSeasonId = null) => {
+    let query = supabase
+      .from('player_financials')
+      .select('*')
+      .eq('season_id', seasonId);
+    
+    // When we know the team_season, include that team + any legacy NULL records
+    if (teamSeasonId) {
+      query = query.or(`team_season_id.eq.${teamSeasonId},team_season_id.is.null`);
+    }
+    // When teamSeasonId is null (parent view), we get ALL players for the season.
+    // That's fine — we filter by guardian email on the frontend.
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    
+    // Look up finalization from team_seasons for each unique team_season_id in results
+    const tsIds = [...new Set((data || []).map(r => r.team_season_id).filter(Boolean))];
+    let finalizationMap = {};
+    if (tsIds.length > 0) {
+      const { data: tsData, error: tsErr } = await supabase
+        .from('team_seasons')
+        .select('id, is_finalized')
+        .in('id', tsIds);
+      if (!tsErr && tsData) {
+        tsData.forEach(ts => { finalizationMap[ts.id] = ts.is_finalized; });
+      }
+    }
+    
+    // Build the map keyed by player_id
+    const map = {};
+    (data || []).forEach(row => {
+      map[row.player_id] = {
+        baseFee: Number(row.base_fee || 0),
+        totalPaid: Number(row.total_paid || 0),
+        fundraising: Number(row.fundraising || 0),
+        sponsorships: Number(row.sponsorships || 0),
+        credits: Number(row.credits || 0),
+        remainingBalance: Number(row.remaining_balance || 0),
+        isWaived: row.fee_waived || false,
+        isFinalized: row.team_season_id ? (finalizationMap[row.team_season_id] || false) : false,
+        teamSeasonId: row.team_season_id || null,
+      };
+    });
+    return map;
   },
 
   // ─────────────────────────────────────────

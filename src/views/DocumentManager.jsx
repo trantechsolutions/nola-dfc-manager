@@ -39,20 +39,26 @@ export default function DocumentManager({
 
   const canEdit = can(PERMISSIONS.TEAM_EDIT_ROSTER);
 
+  // Fetch documents scoped to team AND season
   const fetchDocs = async () => {
     setLoading(true);
     try {
       if (selectedTeam) {
-        const docs = await supabaseService.getTeamDocuments(selectedTeam.id);
-        setDocuments(docs);
+        const allDocs = await supabaseService.getTeamDocuments(selectedTeam.id);
+        // Filter to current season — show docs that either match the season or have no season set
+        const seasonDocs = allDocs.filter(d => 
+          !d.seasonId || d.seasonId === selectedSeason
+        );
+        setDocuments(seasonDocs);
       }
     } catch (e) { console.error('Doc fetch error', e); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchDocs(); }, [selectedTeam?.id]);
+  // Re-fetch when team OR season changes
+  useEffect(() => { fetchDocs(); }, [selectedTeam?.id, selectedSeason]);
 
-  // Per-player compliance
+  // Per-player compliance (uses only players passed in, which are already season-filtered)
   const playerCompliance = useMemo(() => {
     const map = {};
     players.forEach(p => {

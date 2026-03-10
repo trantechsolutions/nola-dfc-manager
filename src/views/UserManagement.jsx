@@ -4,11 +4,12 @@ import {
   Search, ChevronDown, ChevronUp, Users, Send, Copy, Ban, Edit
 } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService';
-import { ALL_ROLES, CLUB_ROLES, TEAM_ROLES } from '../utils/roles';
+import { ALL_ROLES, CLUB_ROLES, TEAM_ROLES, CLUB_ASSIGNABLE_ROLES } from '../utils/roles';
 
 const ROLE_COLORS = {
   club_admin: 'bg-red-100 text-red-700', club_manager: 'bg-violet-100 text-violet-700',
-  team_manager: 'bg-blue-100 text-blue-700', scheduler: 'bg-violet-100 text-violet-700',
+  team_manager: 'bg-blue-100 text-blue-700', team_admin: 'bg-indigo-100 text-indigo-700',
+  scheduler: 'bg-violet-100 text-violet-700',
   treasurer: 'bg-emerald-100 text-emerald-700', head_coach: 'bg-amber-100 text-amber-700',
   assistant_coach: 'bg-slate-100 text-slate-600', parent: 'bg-cyan-100 text-cyan-700',
 };
@@ -24,7 +25,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Invite form
+  // Invite form — default to team_manager (a club-assignable role)
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [invForm, setInvForm] = useState({ email: '', name: '', role: 'team_manager', teamId: '' });
   const [isSending, setIsSending] = useState(false);
@@ -49,7 +50,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
     if (!invForm.email.trim()) return;
     setIsSending(true);
     try {
-      const inv = await supabaseService.createInvitation({
+      await supabaseService.createInvitation({
         clubId: club.id,
         teamId: invForm.teamId || null,
         email: invForm.email,
@@ -104,8 +105,6 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
   const pendingInvites = invitations.filter(i => i.status === 'pending');
 
   if (loading) return <div className="p-20 text-center font-black text-slate-300 animate-pulse">Loading users...</div>;
-
-  const isTeamRole = (role) => !!TEAM_ROLES[role] || role === 'parent';
 
   return (
     <div className="space-y-5 pb-24 md:pb-6">
@@ -249,25 +248,20 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Role *</label>
                   <select value={invForm.role} onChange={e => setInvForm({ ...invForm, role: e.target.value })}
                     className="w-full border border-slate-200 rounded-lg p-2.5 text-sm font-bold outline-none mt-1">
-                    <optgroup label="Club Roles">
-                      {Object.entries(CLUB_ROLES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                    </optgroup>
-                    <optgroup label="Team Roles">
-                      {Object.entries(TEAM_ROLES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                    </optgroup>
-                    <option value="parent">Parent</option>
+                    {/* Only club-assignable roles: Coach, Assistant Coach, Team Manager */}
+                    {CLUB_ASSIGNABLE_ROLES.map(key => (
+                      <option key={key} value={key}>{TEAM_ROLES[key]?.label || ALL_ROLES[key]?.label || key}</option>
+                    ))}
                   </select>
                 </div>
-                {isTeamRole(invForm.role) && (
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Team</label>
-                    <select value={invForm.teamId} onChange={e => setInvForm({ ...invForm, teamId: e.target.value })}
-                      className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1">
-                      <option value="">Select team...</option>
-                      {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
-                  </div>
-                )}
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Team</label>
+                  <select value={invForm.teamId} onChange={e => setInvForm({ ...invForm, teamId: e.target.value })}
+                    className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1">
+                    <option value="">Select team...</option>
+                    {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </div>
               </div>
 
               {/* Role description */}
@@ -276,10 +270,14 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
                 <p className="text-xs text-slate-600">{ALL_ROLES[invForm.role]?.description || 'View access to their child\'s team data.'}</p>
               </div>
 
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setShowInviteForm(false)} className="flex-1 py-2.5 font-bold text-slate-500 hover:bg-slate-50 rounded-xl">Cancel</button>
-                <button type="submit" disabled={isSending}
-                  className="flex-1 py-2.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 shadow-lg disabled:opacity-50 flex items-center justify-center gap-1.5">
+              <p className="text-[10px] text-slate-400">
+                Team-level roles like Treasurer, Scheduler, and Team Admin are managed by the Team Manager from within the team's Team Users tab.
+              </p>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setShowInviteForm(false)} className="text-sm font-bold text-slate-500 px-4 py-2">Cancel</button>
+                <button type="submit" disabled={isSending || !invForm.email.trim() || !invForm.teamId}
+                  className="flex items-center gap-1.5 text-sm font-black text-white bg-blue-600 px-6 py-2 rounded-xl hover:bg-blue-700 disabled:opacity-50 shadow-lg">
                   <Send size={14} /> {isSending ? 'Sending...' : 'Send Invite'}
                 </button>
               </div>
