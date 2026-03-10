@@ -251,11 +251,16 @@ function App() {
   if (!user) {
     return (
       <Routes>
-        <Route path="/calendar" element={<PublicCalendarView events={events} blackoutDates={blackoutDates} onBack={() => navigate('/')} />} />
+        <Route path="/calendar/:teamId?" element={
+          <PublicCalendarView onBack={() => navigate('/')} />
+        } />
         <Route path="*" element={
           <div className="relative">
             <LoginView />
-            <button onClick={() => navigate('/calendar')} className="absolute top-4 right-4 bg-white/20 px-4 py-2 rounded-xl text-white font-bold">📅 Calendar</button>
+            <button onClick={() => navigate('/calendar')} 
+              className="absolute top-4 right-4 bg-white/20 px-4 py-2 rounded-xl text-white font-bold">
+              📅 Calendar
+            </button>
           </div>
         } />
       </Routes>
@@ -463,7 +468,8 @@ function App() {
           <Route path="/schedule" element={
             <ScheduleView events={events} blackoutDates={blackoutDates} 
               onToggleBlackout={canEditSchedule ? toggleBlackout : null} 
-              selectedTeam={selectedTeam} refreshContext={refreshContext} showToast={showToast} />
+              selectedTeam={selectedTeam} refreshContext={refreshContext} 
+              showToast={showToast} canEditSchedule={canEditSchedule} />
           } />
 
           {isStaff && (

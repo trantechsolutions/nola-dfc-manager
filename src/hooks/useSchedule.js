@@ -7,7 +7,7 @@ import ICAL from 'ical.js';
 import { supabaseService } from '../services/supabaseService';
 import { classifyEvent } from '../utils/eventClassifier';
 
-const LEGACY_ICAL_URL = 'https://api.olliesports.com/ical/team-McFNdDsJbcFwAO8L5yCQShQ_DJN_.ics';
+const LEGACY_ICAL_URL = 'https://gist.githubusercontent.com/DeMarko/6142417/raw/1cd301a5917141524b712f92c2e955e86a1add19/sample.ics';
 
 export const useSchedule = (user, team = null) => {
   const [events, setEvents] = useState({ upcoming: [], past: [] });

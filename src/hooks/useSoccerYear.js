@@ -32,14 +32,11 @@ export const useSoccerYear = (user, teamId = null) => {
       // 2. Team seasons (budget data lives here)
       if (teamId) {
         const tsData = await supabaseService.getTeamSeasons(teamId);
-        console.log('[useSoccerYear] teamId:', teamId, '| team_seasons:', tsData);
         setTeamSeasons(tsData);
       } else {
-        console.log('[useSoccerYear] No teamId — clearing teamSeasons');
         setTeamSeasons([]);
       }
     } catch (error) {
-      console.error('[useSoccerYear] Fetch failed:', error);
     } finally {
       setLoading(false);
     }
@@ -52,7 +49,6 @@ export const useSoccerYear = (user, teamId = null) => {
   // ── Current team season for the selected season ──
   const currentTeamSeason = useMemo(() => {
     const match = teamSeasons.find(ts => ts.seasonId === selectedSeason) || null;
-    console.log('[useSoccerYear] selectedSeason:', selectedSeason, '| currentTeamSeason:', match);
     return match;
   }, [teamSeasons, selectedSeason]);
 
@@ -81,7 +77,6 @@ export const useSoccerYear = (user, teamId = null) => {
         totalProjectedExpenses: currentTeamSeason.totalProjectedExpenses ?? globalSeason.totalProjectedExpenses ?? null,
         totalProjectedIncome: currentTeamSeason.totalProjectedIncome ?? globalSeason.totalProjectedIncome ?? null,
       };
-      console.log('[useSoccerYear] currentSeasonData (merged):', merged);
       return merged;
     }
 
@@ -92,7 +87,6 @@ export const useSoccerYear = (user, teamId = null) => {
       teamSeasonId: null,
       isFinalized: globalSeason.isFinalized || false,
     };
-    console.log('[useSoccerYear] currentSeasonData (global fallback):', fallback);
     return fallback;
   }, [seasons, currentTeamSeason, selectedSeason]);
 
