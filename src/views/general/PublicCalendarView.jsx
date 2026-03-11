@@ -7,24 +7,30 @@ import {
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import ICAL from 'ical.js';
-import { supabase } from '../../supabase';
 import { classifyEvent, EVENT_TYPES, EVENT_CALENDAR_COLORS } from '../../utils/eventClassifier';
+
+const PUBLIC_HEADERS = {
+  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+};
 
 // ── Fetch teams directly (no auth required — uses anon key + public RLS policy) ──
 async function fetchPublicTeams() {
-  const { data, error } = await supabase
-    .from('teams')
-    .select('id, name, age_group, gender, tier, ical_url, color_primary, status')
-    .eq('status', 'active')
-    .order('name');
-  if (error) {
-    console.warn('[PublicCalendar] Could not fetch teams:', error.message);
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/teams?select=id,name,age_group,gender,tier,ical_url,color_primary,status&status=eq.active&order=name`,
+      { headers: { 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY } }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.map(t => ({
+      id: t.id, name: t.name, ageGroup: t.age_group, gender: t.gender,
+      tier: t.tier, icalUrl: t.ical_url, colorPrimary: t.color_primary || '#1e293b',
+    }));
+  } catch (err) {
+    console.warn('[PublicCalendar] Could not fetch teams:', err);
     return [];
   }
-  return data.map(t => ({
-    id: t.id, name: t.name, ageGroup: t.age_group, gender: t.gender,
-    tier: t.tier, icalUrl: t.ical_url, colorPrimary: t.color_primary || '#1e293b',
-  }));
 }
 
 // ── Fetch & parse iCal for a team ──
@@ -69,11 +75,17 @@ async function fetchTeamEvents(team) {
 
 // ── Fetch blackout dates ──
 async function fetchBlackouts() {
-  const { data, error } = await supabase
-    .from('blackouts')
-    .select('date');
-  if (error) return [];
-  return data.map(b => b.date);
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/blackouts?select=date_str`,
+      { headers: PUBLIC_HEADERS }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data;
+  } catch {
+    return [];
+  }
 }
 
 export default function PublicCalendarView({ onBack }) {
@@ -93,7 +105,7 @@ export default function PublicCalendarView({ onBack }) {
   // ── Load teams on mount ──
   useEffect(() => {
     const init = async () => {
-      const [teamList, blackouts] = await Promise.all([fetchPublicTeams(), fetchBlackouts()]);
+    const [teamList, blackouts] = await Promise.all([fetchPublicTeams(), fetchBlackouts()]);
       setTeams(teamList);
       setBlackoutDates(blackouts);
 
@@ -142,7 +154,7 @@ export default function PublicCalendarView({ onBack }) {
   // Calendar events for FullCalendar
   const calendarEvents = useMemo(() => {
     const mapped = events.filter(e => e.timestamp >= now).map(event => {
-      const colors = EVENT_CALENDAR_COLORS[event.eventType] || EVENT_CALENDAR_COLORS.event;
+    const colors = EVENT_CALENDAR_COLORS[event.eventType] || EVENT_CALENDAR_COLORS.event;
       return {
         id: event.id,
         title: selectedTeamId === 'all' ? `[${event.teamName}] ${event.title}` : event.title,
@@ -159,10 +171,16 @@ export default function PublicCalendarView({ onBack }) {
       };
     });
 
-    const blackouts = blackoutDates.map(dateStr => ({
-      id: `blackout-${dateStr}`,
+    const relevantBlackouts = blackoutDates.filter(b => 
+      selectedTeamId === 'all' 
+        ? true  // Show all blackouts when viewing all teams
+        : !b.team_id || b.team_id === selectedTeamId  // Team-specific + global
+    );
+
+     const blackouts = relevantBlackouts.map(b => ({
+      id: `blackout-${b.date_str}`,
       title: 'Unavailable',
-      start: dateStr,
+      start: b.date_str,
       backgroundColor: '#1e293b',
       borderColor: '#0f172a',
       textColor: '#94a3b8',

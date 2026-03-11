@@ -20,7 +20,7 @@ export const useSchedule = (user, team = null) => {
     // 1. Blackouts
     let blackoutsList = [];
     try {
-      blackoutsList = await supabaseService.getAllBlackouts();
+      blackoutsList = await supabaseService.getAllBlackouts(team?.id || null);
     } catch (err) {
       console.warn("Skipping blackouts:", err.message);
     }
@@ -94,7 +94,7 @@ export const useSchedule = (user, team = null) => {
         await supabaseService.deleteBlackout(dateStr);
         setBlackoutDates(prev => prev.filter(d => d !== dateStr));
       } else {
-        await supabaseService.saveBlackout(dateStr);
+        await supabaseService.saveBlackout(dateStr, team?.id || null);
         setBlackoutDates(prev => [...prev, dateStr]);
       }
     } catch (e) { console.error("Blackout toggle failed", e); }
