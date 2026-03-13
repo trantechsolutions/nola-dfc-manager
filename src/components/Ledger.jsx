@@ -4,13 +4,14 @@ import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, X, ArrowRightLeft
 } from 'lucide-react';
 
-const CATEGORY_LABELS = {
+// ── Fallback defaults (used if props not provided — ensures backwards compatibility) ──
+const DEFAULT_CATEGORY_LABELS = {
   TMF: 'Team Fees', SPO: 'Sponsorship', FUN: 'Fundraising', 
   OPE: 'Operating', TOU: 'Tournament', LEA: 'League/Refs', 
   CRE: 'Credit', FRI: 'Friendlies', TRF: 'Transfer'
 };
 
-const CATEGORY_COLORS = {
+const DEFAULT_CATEGORY_COLORS = {
   TMF: 'bg-blue-50 text-blue-700', SPO: 'bg-violet-50 text-violet-700', 
   FUN: 'bg-emerald-50 text-emerald-700', OPE: 'bg-slate-100 text-slate-600', 
   TOU: 'bg-amber-50 text-amber-700', LEA: 'bg-orange-50 text-orange-700', 
@@ -18,7 +19,15 @@ const CATEGORY_COLORS = {
   TRF: 'bg-indigo-50 text-indigo-700'
 };
 
-export default function Ledger({ transactions, onEditTx, onDeleteTx, formatMoney }) {
+export default function Ledger({ 
+  transactions, onEditTx, onDeleteTx, formatMoney,
+  categoryLabels: propLabels,     // NEW: dynamic labels from useCategoryManager
+  categoryColors: propColors,     // NEW: dynamic colors from useCategoryManager
+}) {
+  // Merge props with defaults — props take precedence, defaults fill gaps
+  const CATEGORY_LABELS = useMemo(() => ({ ...DEFAULT_CATEGORY_LABELS, ...(propLabels || {}) }), [propLabels]);
+  const CATEGORY_COLORS = useMemo(() => ({ ...DEFAULT_CATEGORY_COLORS, ...(propColors || {}) }), [propColors]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [flowFilter, setFlowFilter] = useState('all');
@@ -174,130 +183,122 @@ export default function Ledger({ transactions, onEditTx, onDeleteTx, formatMoney
             {pagedTransactions.map((tx) => (
               <tr key={tx.id} className="hover:bg-blue-50/30 transition-colors cursor-pointer" onClick={() => onEditTx(tx)}>
                 <td className="px-5 py-3 text-xs font-medium text-slate-500 whitespace-nowrap">
-                  {tx.date?.seconds ? new Date(tx.date.seconds * 1000).toLocaleDateString() : '—'}
+                  {tx.date?.seconds ? new Date(tx.date.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) : '—'}
                 </td>
                 <td className="px-5 py-3">
-                  <p className="font-bold text-slate-800 text-sm truncate max-w-[250px]">{tx.title}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                    <span className={`inline-block text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${CATEGORY_COLORS[tx.category] || 'bg-slate-100 text-slate-500'}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap ${
+                      CATEGORY_COLORS[tx.category] || 'bg-slate-100 text-slate-600'
+                    }`}>
                       {CATEGORY_LABELS[tx.category] || tx.category}
                     </span>
-                    {tx.category === 'TRF' && tx.transferFrom && tx.transferTo && <TransferBadge tx={tx} />}
+                    <span className="text-sm font-bold text-slate-800 truncate max-w-[250px]">{tx.title}</span>
                   </div>
+                  {tx.category === 'TRF' && <TransferBadge tx={tx} />}
+                  {tx.notes && <p className="text-[11px] text-slate-400 mt-0.5 truncate max-w-[350px]">{tx.notes}</p>}
                 </td>
-                <td className="px-5 py-3">
-                  {tx.category === 'TRF' ? (
-                    <span className="text-[10px] font-black px-2 py-1 bg-indigo-50 text-indigo-500 rounded">Internal</span>
-                  ) : tx.playerName ? (
-                    <span className="text-[10px] font-black px-2 py-1 bg-blue-50 text-blue-600 rounded">{tx.playerName}</span>
-                  ) : (
-                    <span className="text-[10px] font-black px-2 py-1 bg-slate-100 text-slate-400 rounded">Team</span>
-                  )}
-                </td>
+                <td className="px-5 py-3 text-xs text-slate-600">{tx.playerName || '—'}</td>
                 <td className="px-5 py-3">
                   {tx.cleared ? (
-                    <div className="flex items-center gap-1 text-emerald-600 font-bold text-[10px] uppercase"><CheckCircle2 size={12} /> Cleared</div>
+                    <span className="inline-flex items-center gap-1 text-emerald-600 text-[11px] font-bold">
+                      <CheckCircle2 size={12} /> Cleared
+                    </span>
                   ) : (
-                    <div className="flex items-center gap-1 text-amber-500 font-bold text-[10px] uppercase"><Clock size={12} /> Pending</div>
+                    <span className="inline-flex items-center gap-1 text-amber-500 text-[11px] font-bold">
+                      <Clock size={12} /> Pending
+                    </span>
                   )}
                 </td>
-                <td className={`px-5 py-3 text-right font-black text-sm ${amountColor(tx)}`}>
-                  {tx.category === 'TRF' && <ArrowRightLeft size={12} className="inline mr-1 opacity-60" />}
-                  {formatMoney(tx.amount)}
+                <td className={`px-5 py-3 text-right text-sm font-black whitespace-nowrap ${amountColor(tx)}`}>
+                  {tx.category === 'TRF' && '↔ '}
+                  {tx.amount < 0 ? '-' : tx.category !== 'TRF' ? '+' : ''}
+                  {formatMoney(Math.abs(tx.amount))}
                 </td>
-                <td className="px-3 py-3 text-center">
-                  <button onClick={(e) => { e.stopPropagation(); onDeleteTx(tx.id); }}
-                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                    <Trash2 size={14} />
-                  </button>
+                <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                  {onDeleteTx && (
+                    <button onClick={() => onDeleteTx(tx.id)}
+                      className="text-slate-300 hover:text-red-500 transition-colors p-1">
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
+            {pagedTransactions.length === 0 && (
+              <tr>
+                <td colSpan={6} className="text-center py-10 text-slate-400 text-sm font-bold">
+                  {hasActiveFilters ? 'No transactions match your filters.' : 'No transactions yet.'}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
-        {pagedTransactions.length === 0 && (
-          <div className="p-16 text-center text-slate-400 font-bold italic">No transactions found.</div>
-        )}
       </div>
 
       {/* ── MOBILE CARDS ── */}
       <div className="md:hidden space-y-2">
-        {pagedTransactions.length === 0 ? (
-          <div className="p-12 text-center text-slate-400 font-bold italic bg-white rounded-2xl border border-slate-200">No transactions found.</div>
-        ) : (
-          pagedTransactions.map(tx => (
-            <div key={tx.id} onClick={() => onEditTx(tx)}
-              className="bg-white p-4 rounded-xl border border-slate-100 active:bg-blue-50/30 transition-colors cursor-pointer">
-              <div className="flex justify-between items-start gap-2">
-                <div className="min-w-0 flex-grow">
-                  <p className="font-bold text-slate-800 text-sm truncate">{tx.title}</p>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${CATEGORY_COLORS[tx.category] || 'bg-slate-100 text-slate-500'}`}>
-                      {CATEGORY_LABELS[tx.category] || tx.category}
-                    </span>
-                    {tx.category === 'TRF' && tx.transferFrom && tx.transferTo ? (
-                      <TransferBadge tx={tx} />
-                    ) : tx.playerName ? (
-                      <span className="text-[10px] font-bold text-blue-600">{tx.playerName}</span>
-                    ) : null}
-                    {tx.cleared ? <CheckCircle2 size={12} className="text-emerald-500" /> : <Clock size={12} className="text-amber-400" />}
-                  </div>
+        {pagedTransactions.map((tx) => (
+          <div key={tx.id} onClick={() => onEditTx(tx)}
+            className="bg-white rounded-xl border border-slate-200 p-4 active:bg-slate-50 transition-colors">
+            <div className="flex justify-between items-start gap-2 mb-2">
+              <div className="min-w-0 flex-grow">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded shrink-0 ${
+                    CATEGORY_COLORS[tx.category] || 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {CATEGORY_LABELS[tx.category] || tx.category}
+                  </span>
+                  {tx.cleared ? (
+                    <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                  ) : (
+                    <Clock size={12} className="text-amber-400 shrink-0" />
+                  )}
                 </div>
-                <div className="text-right shrink-0">
-                  <p className={`font-black text-sm ${amountColor(tx)}`}>
-                    {tx.category === 'TRF' && <ArrowRightLeft size={11} className="inline mr-0.5 opacity-60" />}
-                    {formatMoney(tx.amount)}
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                    {tx.date?.seconds ? new Date(tx.date.seconds * 1000).toLocaleDateString() : '—'}
-                  </p>
-                </div>
+                <p className="text-sm font-bold text-slate-800 truncate">{tx.title}</p>
+                {tx.category === 'TRF' && <TransferBadge tx={tx} />}
               </div>
+              <span className={`text-sm font-black whitespace-nowrap ${amountColor(tx)}`}>
+                {tx.category === 'TRF' && '↔ '}
+                {tx.amount < 0 ? '-' : tx.category !== 'TRF' ? '+' : ''}
+                {formatMoney(Math.abs(tx.amount))}
+              </span>
             </div>
-          ))
+            <div className="flex items-center gap-3 text-[11px] text-slate-400 font-medium">
+              <span>{tx.date?.seconds ? new Date(tx.date.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</span>
+              {tx.playerName && <><span>·</span><span>{tx.playerName}</span></>}
+              {tx.type && <><span>·</span><span>{tx.type}</span></>}
+            </div>
+          </div>
+        ))}
+        {pagedTransactions.length === 0 && (
+          <div className="text-center py-10 text-slate-400 text-sm font-bold">
+            {hasActiveFilters ? 'No transactions match your filters.' : 'No transactions yet.'}
+          </div>
         )}
       </div>
 
       {/* ── PAGINATION ── */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-          <span className="text-xs text-slate-500 font-bold hidden sm:block">
-            Page {safePage} of {totalPages} ({filteredTransactions.length} items)
+        <div className="flex justify-center items-center gap-2 pt-2">
+          <button onClick={() => setCurrentPage(1)} disabled={safePage === 1}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 disabled:opacity-30">
+            <ChevronsLeft size={16} />
+          </button>
+          <button onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={safePage === 1}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 disabled:opacity-30">
+            <ChevronLeft size={16} />
+          </button>
+          <span className="text-xs font-bold text-slate-500 px-3">
+            Page {safePage} of {totalPages}
           </span>
-          <span className="text-xs text-slate-500 font-bold sm:hidden">{safePage}/{totalPages}</span>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setCurrentPage(1)} disabled={safePage <= 1}
-              className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-              <ChevronsLeft size={16} className="text-slate-600" />
-            </button>
-            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safePage <= 1}
-              className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-              <ChevronLeft size={16} className="text-slate-600" />
-            </button>
-            <div className="flex gap-0.5">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let page;
-                if (totalPages <= 5) page = i + 1;
-                else if (safePage <= 3) page = i + 1;
-                else if (safePage >= totalPages - 2) page = totalPages - 4 + i;
-                else page = safePage - 2 + i;
-                return (
-                  <button key={page} onClick={() => setCurrentPage(page)}
-                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
-                      page === safePage ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'
-                    }`}>{page}</button>
-                );
-              })}
-            </div>
-            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages}
-              className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-              <ChevronRight size={16} className="text-slate-600" />
-            </button>
-            <button onClick={() => setCurrentPage(totalPages)} disabled={safePage >= totalPages}
-              className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-              <ChevronsRight size={16} className="text-slate-600" />
-            </button>
-          </div>
+          <button onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={safePage === totalPages}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 disabled:opacity-30">
+            <ChevronRight size={16} />
+          </button>
+          <button onClick={() => setCurrentPage(totalPages)} disabled={safePage === totalPages}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 disabled:opacity-30">
+            <ChevronsRight size={16} />
+          </button>
         </div>
       )}
     </div>

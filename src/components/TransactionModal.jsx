@@ -112,7 +112,7 @@ export default function TransactionModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">Amount ($)</label>
-              <input required type="number" step="0.01" min="0" value={formData.amount} 
+              <input required type="number" step="0.01" value={formData.amount} 
                 onChange={e => setFormData({...formData, amount: e.target.value})} 
                 className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none" 
                 placeholder="0.00" />

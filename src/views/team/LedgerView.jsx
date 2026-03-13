@@ -1,11 +1,21 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, CalendarDays, X } from 'lucide-react';
-import Ledger from '../../components/Ledger'; 
+import { Plus, CalendarDays, X, Upload, Tag } from 'lucide-react';
+import Ledger from '../../components/Ledger';
+import BulkUploadLedgerModal from '../../components/BulkUploadLedgerModal';
 
-export default function LedgerView({ transactions, onAddTx, onEditTx, onDeleteTx, formatMoney }) {
+export default function LedgerView({ 
+  transactions, onAddTx, onEditTx, onDeleteTx, formatMoney,
+  // Dynamic categories
+  categoryLabels, categoryColors, categoryOptions,
+  // Bulk upload
+  players, onBulkUpload, selectedSeason, teamSeasonId, showToast,
+  // Category management
+  onManageCategories,
+}) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showDateRange, setShowDateRange] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(tx => {
@@ -43,7 +53,16 @@ export default function LedgerView({ transactions, onAddTx, onEditTx, onDeleteTx
             {hasDateFilter && <span className="text-blue-500"> (date filtered)</span>}
           </p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+          {/* Manage Categories button (admin only) */}
+          {onManageCategories && (
+            <button onClick={onManageCategories}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all">
+              <Tag size={14} />
+              <span className="hidden sm:inline">Categories</span>
+            </button>
+          )}
+          {/* Date Range filter */}
           <button 
             onClick={() => setShowDateRange(!showDateRange)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
@@ -55,10 +74,21 @@ export default function LedgerView({ transactions, onAddTx, onEditTx, onDeleteTx
             <CalendarDays size={14} />
             {hasDateFilter ? 'Date Active' : 'Date Range'}
           </button>
-          <button onClick={onAddTx}
-            className="flex-1 sm:flex-none bg-slate-900 text-white px-4 py-2 rounded-xl font-bold text-xs hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-all">
-            <Plus size={14} /> Add Transaction
-          </button>
+          {/* Bulk Upload button */}
+          {onBulkUpload && (
+            <button onClick={() => setShowBulkUpload(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all">
+              <Upload size={14} />
+              <span className="hidden sm:inline">Bulk Upload</span>
+            </button>
+          )}
+          {/* Add Transaction button */}
+          {onAddTx && (
+            <button onClick={onAddTx}
+              className="flex-1 sm:flex-none bg-slate-900 text-white px-4 py-2 rounded-xl font-bold text-xs hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-all">
+              <Plus size={14} /> Add Transaction
+            </button>
+          )}
         </div>
       </div>
 
@@ -101,7 +131,23 @@ export default function LedgerView({ transactions, onAddTx, onEditTx, onDeleteTx
         transactions={filteredTransactions} 
         onEditTx={onEditTx} 
         onDeleteTx={onDeleteTx}
-        formatMoney={formatMoney} 
+        formatMoney={formatMoney}
+        categoryLabels={categoryLabels}
+        categoryColors={categoryColors}
+      />
+
+      {/* ── BULK UPLOAD MODAL ── */}
+      <BulkUploadLedgerModal
+        show={showBulkUpload}
+        onClose={() => setShowBulkUpload(false)}
+        onComplete={() => setShowBulkUpload(false)}
+        players={players || []}
+        categoryLabels={categoryLabels || {}}
+        categoryColors={categoryColors || {}}
+        selectedSeason={selectedSeason}
+        teamSeasonId={teamSeasonId}
+        onBulkSave={onBulkUpload}
+        showToast={showToast}
       />
     </div>
   );

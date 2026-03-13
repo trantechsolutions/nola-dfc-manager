@@ -25,12 +25,14 @@ import TeamOnboarding from './views/club/TeamOnboarding';
 import DocumentManager from './views/team/DocumentManager';
 import UserManagement from './views/club/UserManagement';
 import TeamUserManagement from './views/team/TeamUserManagement';
+import RosterManagement from './views/team/RosterManagement';
 
 // Components
 import TransactionModal from './components/TransactionModal';
 import PlayerFormModal from './components/PlayerFormModal';
 import PlayerModal from './components/PlayerModal';
 import ConfirmModal from './components/ConfirmModal';
+import CategoryManager from './components/CategoryManager';
 
 // Services & Hooks
 import { supabaseService } from './services/supabaseService';
@@ -41,6 +43,7 @@ import { usePlayerManager } from './hooks/usePlayerManager';
 import { useLedgerManager } from './hooks/useLedgerManager';
 import { useTeamContext } from './hooks/useTeamContext';
 import { PERMISSIONS } from './utils/roles';
+import { useCategoryManager } from './hooks/useCategoryManager';
 
 const NAV_ICON_MAP = {
   dashboard: LayoutDashboard,
@@ -49,6 +52,7 @@ const NAV_ICON_MAP = {
   sponsors: Wallet,
   insights: Sparkles,
   schedule: Calendar,
+  roster: Users, 
   'club-overview': Building2,
   'club-teams': ListTree,
   'club-calendar': CalendarRange,
@@ -66,6 +70,7 @@ function App() {
 
   const [user, setUser] = useState(null);
   const [showTeamPicker, setShowTeamPicker] = useState(false);
+  const [isBulkUploading, setIsBulkUploading] = useState(false);
 
   // Data State
   const [players, setPlayers] = useState([]);
@@ -73,6 +78,7 @@ function App() {
   const [playerFinancials, setPlayerFinancials] = useState({});
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   // Modal States
   const [showPlayerForm, setShowPlayerForm] = useState(false);
@@ -119,11 +125,20 @@ function App() {
   const { seasons, selectedSeason, setSelectedSeason, currentSeasonData, currentTeamSeason, refreshSeasons } = useSoccerYear(user, effectiveTeamId);
 
   // ── SCHEDULE ──
-  const { events, blackoutDates, toggleBlackout } = useSchedule(user, selectedTeam);
+  // For parents, derive the team object from their player's teamId
+  // so useSchedule gets the correct iCal URL
+  const parentTeam = useMemo(() => {
+    if (isStaff || !parentTeamId || teams.length === 0) return null;
+    return teams.find(t => t.id === parentTeamId) || null;
+  }, [isStaff, parentTeamId, teams]);
+
+  const effectiveTeam = selectedTeam || parentTeam;
+  const { events, blackoutDates, toggleBlackout } = useSchedule(user, effectiveTeam);
 
   // ── DATA FETCHING ──
   const fetchData = async () => {
     try {
+      console.log("Fetching data for teamId:", selectedTeamId, "season:", selectedSeason);
       const pData = selectedTeamId
         ? await supabaseService.getPlayersByTeam(selectedTeamId)
         : await supabaseService.getAllPlayers();
@@ -196,24 +211,43 @@ function App() {
     fetchData, club?.id || null, selectedTeamId
   );
 
-  const { handleSaveTransaction, handleDeleteTransaction } = useLedgerManager(
+  const { handleSaveTransaction, handleDeleteTransaction, handleBulkUpload } = useLedgerManager(
     fetchData, selectedSeason, teamSeasonId
   );
+
+  // ── Custom Categories (club-scoped) ──
+  const {
+    customCategories,
+    categoryLabels,
+    categoryColors,
+    categoryOptions,
+    saveCategory,
+    deleteCategory,
+    isSaving: isCategorySaving,
+  } = useCategoryManager(club?.id);
 
   // ── AUTH LISTENER ──
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user || null;
       setUser(currentUser);
-      if (currentUser) fetchData();
-      else setLoading(false);
+      if (currentUser) {
+        supabaseService.ensureUserProfile(currentUser);
+        fetchData();
+      } else {
+        setLoading(false);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const currentUser = session?.user || null;
       setUser(currentUser);
-      if (currentUser) fetchData();
-      else setLoading(false);
+      if (currentUser) {
+        supabaseService.ensureUserProfile(currentUser);
+        fetchData();
+      } else {
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -276,7 +310,7 @@ function App() {
     { id: 'club-settings', label: 'Settings', icon: Shield, section: 'club' },
   ] : [];
 
-  const NAV_LABELS = { dashboard: 'Team Overview', 'team-users': 'Team Users', documents: 'Documents' };
+  const NAV_LABELS = { dashboard: 'Team Overview', 'team-users': 'Team Users', documents: 'Documents', roster: 'Roster' };
 
   const teamNavItems = isStaff
     ? [
@@ -286,7 +320,10 @@ function App() {
           icon: NAV_ICON_MAP[id] || LayoutDashboard,
           section: 'team',
         })),
-        ...(can(PERMISSIONS.TEAM_VIEW_ROSTER) ? [{ id: 'documents', label: 'Documents', icon: FileText, section: 'team' }] : []),
+        ...(can(PERMISSIONS.TEAM_VIEW_ROSTER) ? [
+          { id: 'roster', label: 'Roster', icon: Users, section: 'team' },
+          { id: 'documents', label: 'Documents', icon: FileText, section: 'team' },
+        ] : []),
       ]
     : [
         { id: 'dashboard', label: 'My Player', icon: Users, section: 'team' },
@@ -479,7 +516,23 @@ function App() {
                   <LedgerView transactions={seasonalTransactions} formatMoney={formatMoney} 
                     onAddTx={canEditLedger ? () => { setTxToEdit(null); setShowTxForm(true); } : null} 
                     onEditTx={canEditLedger ? (tx) => { setTxToEdit(tx); setShowTxForm(true); } : null} 
-                    onDeleteTx={canEditLedger ? async (id) => { const ok = await showConfirm("Delete this transaction?"); if (ok) { await handleDeleteTransaction(id); showToast("Transaction deleted"); } } : null} />
+                    onDeleteTx={canEditLedger ? async (id) => { const ok = await showConfirm("Delete this transaction?"); if (ok) { await handleDeleteTransaction(id); showToast("Transaction deleted"); } } : null} 
+                    categoryLabels={categoryLabels}
+                    categoryColors={categoryColors}
+                    categoryOptions={categoryOptions}
+                    players={seasonalPlayers}
+                    onBulkUpload={canEditLedger ? async (txns) => {
+                      setIsBulkUploading(true);
+                      try {
+                        const result = await handleBulkUpload(txns);
+                        if (result.success) showToast(`${txns.length} transactions imported!`);
+                        else showToast(result.error || 'Import failed', true);
+                        return result;
+                      } finally { setIsBulkUploading(false); }
+                    } : null}
+                    isBulkUploading={isBulkUploading}
+                    onManageCategories={isClubAdmin ? () => setShowCategoryManager(true) : null}
+                  />
                 } />
               )}
               {can(PERMISSIONS.TEAM_VIEW_BUDGET) && (
@@ -510,6 +563,26 @@ function App() {
                       await revertWaterfall(batchId, originalTxId); await fetchData(); showToast("Distribution Reverted."); 
                     } : null}
                     seasonalPlayers={seasonalPlayers} seasons={seasons} />
+                } />
+              )}
+              {can(PERMISSIONS.TEAM_VIEW_ROSTER) && (
+                <Route path="/roster" element={
+                  <RosterManagement
+                    players={players}
+                    seasons={seasons}
+                    selectedSeason={selectedSeason}
+                    selectedTeam={selectedTeam}
+                    club={club}
+                    currentTeamSeason={currentTeamSeason}
+                    showToast={showToast}
+                    showConfirm={showConfirm}
+                    can={can}
+                    PERMISSIONS={PERMISSIONS}
+                    onEditPlayer={(player) => { setPlayerToEdit(player); setShowPlayerForm(true); }}
+                    onAddPlayer={() => { setPlayerToEdit(null); setShowPlayerForm(true); }}
+                    onViewPlayer={(player) => { setPlayerToView(player); setShowPlayerModal(true); }}
+                    refreshData={fetchData}
+                  />
                 } />
               )}
               {can(PERMISSIONS.TEAM_VIEW_ROSTER) && (
@@ -575,8 +648,34 @@ function App() {
       
       <TransactionModal show={showTxForm} initialData={txToEdit} 
         onSubmit={async (data) => { const r = await handleSaveTransaction(data); if (r && r.success === false) { showToast(r.error, true); } else { setShowTxForm(false); showToast(txToEdit ? "Transaction Updated" : "Transaction Added"); } }} 
-        onClose={() => setShowTxForm(false)} players={seasonalPlayers} />
-
+        onClose={() => setShowTxForm(false)} players={seasonalPlayers} 
+        categoryOptions={categoryOptions} />
+      
+      {/* ── CATEGORY MANAGER MODAL ── */}
+      {showCategoryManager && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 flex justify-between items-center bg-slate-900 text-white shrink-0">
+              <h3 className="font-bold text-lg">Manage Categories</h3>
+              <button onClick={() => setShowCategoryManager(false)} className="text-white/60 hover:text-white text-xl">&times;</button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <CategoryManager
+                customCategories={customCategories}
+                onSave={async (catData) => {
+                  await saveCategory(catData);
+                  showToast(catData.id ? 'Category updated' : 'Category created');
+                }}
+                onDelete={async (catId) => {
+                  const ok = await showConfirm('Delete this custom category? Existing transactions will keep their category code but the label may not display correctly.');
+                  if (ok) { await deleteCategory(catId); showToast('Category deleted'); }
+                }}
+                isSaving={isCategorySaving}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {confirmDialog && <ConfirmModal message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={confirmDialog.onCancel} />}
 
       {toast && (

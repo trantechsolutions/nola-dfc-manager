@@ -277,6 +277,98 @@ export const supabaseService = {
     if (error) throw error;
   },
 
+  // ── CUSTOM CATEGORIES ──
+
+  getCustomCategories: async (clubId) => {
+    const { data, error } = await supabase
+      .from('custom_categories')
+      .select('*')
+      .eq('club_id', clubId)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return data.map(c => ({
+      id: c.id,
+      clubId: c.club_id,
+      code: c.code,
+      label: c.label,
+      description: c.description || '',
+      color: c.color,
+      flow: c.flow || 'expense',
+      sortOrder: c.sort_order || 0,
+    }));
+  },
+
+  addCustomCategory: async (catData) => {
+    const row = {
+      club_id: catData.clubId,
+      code: catData.code,
+      label: catData.label,
+      description: catData.description || null,
+      color: catData.color,
+      flow: catData.flow || 'expense',
+      sort_order: catData.sortOrder || 0,
+    };
+    const { data, error } = await supabase
+      .from('custom_categories')
+      .insert(row)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  updateCustomCategory: async (catId, catData) => {
+    const updates = {};
+    if ('label' in catData) updates.label = catData.label;
+    if ('description' in catData) updates.description = catData.description || null;
+    if ('color' in catData) updates.color = catData.color;
+    if ('flow' in catData) updates.flow = catData.flow;
+    if ('sortOrder' in catData) updates.sort_order = catData.sortOrder;
+    const { error } = await supabase
+      .from('custom_categories')
+      .update(updates)
+      .eq('id', catId);
+    if (error) throw error;
+  },
+
+  deleteCustomCategory: async (catId) => {
+    const { error } = await supabase
+      .from('custom_categories')
+      .delete()
+      .eq('id', catId);
+    if (error) throw error;
+  },
+
+  // ── BULK TRANSACTIONS ──
+
+  bulkAddTransactions: async (txArray, seasonId, teamSeasonId = null) => {
+    if (!txArray || txArray.length === 0) return [];
+
+    const rows = txArray.map(tx => ({
+      season_id: tx.seasonId || seasonId,
+      player_id: tx.playerId || null,
+      date: tx.date,
+      type: tx.type || null,
+      category: tx.category,
+      title: tx.title,
+      amount: tx.amount,
+      notes: tx.notes || null,
+      cleared: tx.cleared ?? false,
+      distributed: false,
+      transfer_from: tx.transferFrom || null,
+      transfer_to: tx.transferTo || null,
+      ...(teamSeasonId ? { team_season_id: teamSeasonId } : {}),
+    }));
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert(rows)
+      .select();
+    if (error) throw error;
+    return data;
+  },
+
   // ─────────────────────────────────────────
   // SEASONS (only id + name per schema)
   // ─────────────────────────────────────────
@@ -731,6 +823,26 @@ export const supabaseService = {
     return await supabaseService.assignRole(userId, role, { clubId, teamId });
   },
 
+  // Ensures a user_profiles row exists for the given auth user.
+  // Safe to call on every login — uses ignoreDuplicates so it only
+  // inserts if no row exists yet, never overwriting existing data.
+  ensureUserProfile: async (authUser) => {
+    if (!authUser?.id || !authUser?.email) return;
+    const { error } = await supabase
+      .from('user_profiles')
+      .upsert({
+        user_id: authUser.id,
+        email: authUser.email,
+        display_name: authUser.user_metadata?.full_name
+          || authUser.user_metadata?.name
+          || authUser.email.split('@')[0],
+      }, { onConflict: 'user_id', ignoreDuplicates: true });
+    if (error) {
+      // Non-fatal — log but don't block the app
+      console.warn('ensureUserProfile failed:', error.message);
+    }
+  },
+
   // ─────────────────────────────────────────
   // TEAM GUARDIANS (with account/role status)
   // ─────────────────────────────────────────
@@ -987,4 +1099,7 @@ export const supabaseService = {
     const { data } = await supabase.storage.from('player-documents').createSignedUrl(filePath, 3600);
     return data?.signedUrl || null;
   },
+  
 };
+
+export default supabaseService;
