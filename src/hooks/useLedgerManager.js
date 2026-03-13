@@ -1,5 +1,5 @@
 // src/hooks/useLedgerManager.js
-// Transaction CRUD. Now team-season aware.
+// Transaction CRUD. Now team-season aware + transfer support.
 
 import { supabaseService } from '../services/supabaseService';
 
@@ -19,6 +19,9 @@ export const useLedgerManager = (refreshData, selectedSeason, teamSeasonId = nul
         seasonId: txData.seasonId || selectedSeason,
         // Attach team_season_id if available (new transactions get scoped)
         ...(teamSeasonId && !txData.teamSeasonId ? { teamSeasonId } : {}),
+        // Transfer fields — pass through if present, clear if not a transfer
+        transferFrom: txData.category === 'TRF' ? (txData.transferFrom || null) : null,
+        transferTo: txData.category === 'TRF' ? (txData.transferTo || null) : null,
       };
 
       if (formattedData.id) {

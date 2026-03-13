@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { 
   TrendingDown, Users, DollarSign, Activity, Archive, Edit,
-  Search, Shield, ShieldCheck, ShieldX, ChevronRight, Wallet, AlertCircle
+  Search, Shield, ShieldCheck, ShieldX, ChevronRight, Wallet, AlertCircle,
+  Landmark, Banknote, SmartphoneNfc, ArrowRightLeft
 } from 'lucide-react';
 
 // ── Jersey SVG Component ──
@@ -29,6 +30,21 @@ const JerseyBadge = ({ number, size = 40, className = '', color = 'slate' }) => 
     </div>
   );
 };
+
+// ── Account icon/color helpers ──
+const ACCOUNT_ICONS = {
+  Venmo: SmartphoneNfc, Cash: Banknote, Bank: Landmark, Zeffy: Wallet,
+};
+const ACCOUNT_COLORS = {
+  Venmo:  { bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200',    icon: 'text-blue-500' },
+  Cash:   { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', icon: 'text-emerald-500' },
+  Bank:   { bg: 'bg-slate-50',   text: 'text-slate-700',   border: 'border-slate-200',   icon: 'text-slate-500' },
+  Zeffy:  { bg: 'bg-rose-50',    text: 'text-rose-700',    border: 'border-rose-200',    icon: 'text-rose-500' },
+};
+
+// ACH, Zelle, and Check all roll up into "Bank" in the holdings display
+const BANK_METHODS = new Set(['ACH', 'Zelle', 'Check']);
+const toHolding = (method) => BANK_METHODS.has(method) ? 'Bank' : method;
 
 export default function Dashboard({ 
   players, 
@@ -79,6 +95,27 @@ export default function Dashboard({
     return { total, medical, reeplayer, waived, fullyCompliant: players.filter(p => p.medicalRelease && p.reePlayerWaiver).length };
   }, [players, selectedSeasonData]);
 
+  // ── ACCOUNT BALANCES BREAKDOWN ──
+  const accountBalances = useMemo(() => {
+    const balances = {};
+    transactions.forEach(tx => {
+      if (!tx.cleared || tx.waterfallBatchId) return;
+      if (tx.category === 'TRF') {
+        const from = toHolding(tx.transferFrom);
+        const to = toHolding(tx.transferTo);
+        const amt = Math.abs(tx.amount);
+        if (from) balances[from] = (balances[from] || 0) - amt;
+        if (to) balances[to] = (balances[to] || 0) + amt;
+      } else {
+        const method = toHolding(tx.type || 'Other');
+        balances[method] = (balances[method] || 0) + tx.amount;
+      }
+    });
+    return Object.entries(balances)
+      .filter(([_, amount]) => Math.abs(amount) >= 0.01)
+      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+  }, [transactions]);
+
   const displayedPlayers = viewArchived ? archivedPlayers : players;
   const filteredPlayers = useMemo(() => {
     if (!searchTerm) return displayedPlayers;
@@ -89,7 +126,7 @@ export default function Dashboard({
   return (
     <div className="space-y-6 pb-20 md:pb-6">
 
-      {/* ── DRAFT BUDGET NOTICE (dynamic — updates on every saved draft) ── */}
+      {/* ── DRAFT BUDGET NOTICE ── */}
       {!isFinalized && baseFee > 0 && (() => {
         const projExpenses = selectedSeasonData?.totalProjectedExpenses || 0;
         const projIncome = selectedSeasonData?.totalProjectedIncome || 0;
@@ -111,22 +148,14 @@ export default function Dashboard({
                 </div>
                 <p className="text-xs text-amber-700 mt-1.5 leading-relaxed">
                   Estimated season fee: <span className="font-black text-amber-900">{formatMoney(baseFee)}</span>
-                  {rosterCount > 0 && (
-                    <span className="text-amber-600"> · {rosterCount} player{rosterCount !== 1 && 's'}</span>
-                  )}
-                  {buffer > 0 && (
-                    <span className="text-amber-600"> · {buffer}% buffer</span>
-                  )}
+                  {rosterCount > 0 && <span className="text-amber-600"> · {rosterCount} player{rosterCount !== 1 && 's'}</span>}
+                  {buffer > 0 && <span className="text-amber-600"> · {buffer}% buffer</span>}
                 </p>
                 {projExpenses > 0 && (
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[10px] font-bold">
                     <span className="text-red-600">Projected Spend: {formatMoney(projExpenses)}</span>
-                    {projIncome > 0 && (
-                      <span className="text-emerald-600">Projected Income: {formatMoney(projIncome)}</span>
-                    )}
-                    {gap > 0 && (
-                      <span className="text-amber-700">Gap: {formatMoney(gap)}</span>
-                    )}
+                    {projIncome > 0 && <span className="text-emerald-600">Projected Income: {formatMoney(projIncome)}</span>}
+                    {gap > 0 && <span className="text-amber-700">Gap: {formatMoney(gap)}</span>}
                   </div>
                 )}
                 <p className="text-[10px] text-amber-500 mt-2">
@@ -140,7 +169,6 @@ export default function Dashboard({
 
       {/* ── STAT CARDS ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        {/* Available Cash */}
         <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white p-4 md:p-5 rounded-2xl shadow-lg shadow-emerald-200/50">
           <div className="flex items-center justify-between mb-3">
             <DollarSign size={18} className="opacity-70" />
@@ -150,7 +178,6 @@ export default function Dashboard({
           <p className="text-[10px] font-bold text-emerald-200 uppercase tracking-widest mt-1">Available Cash</p>
         </div>
 
-        {/* Remaining Budget */}
         <div className={`p-4 md:p-5 rounded-2xl shadow-lg ${!isFinalized ? 'border-dashed ' : ''}${remainingBudget < 0 ? 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-red-200/50' : 'bg-white border border-slate-200 shadow-slate-100'}`}>
           <div className="flex items-center justify-between mb-3">
             <TrendingDown size={18} className={remainingBudget < 0 ? 'text-white/70' : 'text-slate-400'} />
@@ -160,14 +187,12 @@ export default function Dashboard({
           <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${remainingBudget < 0 ? 'text-red-200' : 'text-slate-400'}`}>Remaining Budget{!isFinalized ? ' (Est.)' : ''}</p>
         </div>
 
-        {/* Active Players */}
         <div className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-lg shadow-slate-100">
           <div className="flex items-center justify-between mb-3"><Users size={18} className="text-slate-400" /></div>
           <p className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">{players.length}</p>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Active Players</p>
         </div>
 
-        {/* Season Fee */}
         <div className={`bg-white p-4 md:p-5 rounded-2xl border shadow-lg shadow-slate-100 ${!isFinalized && baseFee > 0 ? 'border-dashed border-amber-200' : 'border-slate-200'}`}>
           <div className="flex items-center justify-between mb-3">
             <Wallet size={18} className="text-slate-400" />
@@ -181,6 +206,49 @@ export default function Dashboard({
           )}
         </div>
       </div>
+
+      {/* ── ACCOUNT BALANCES BREAKDOWN ── */}
+      {accountBalances.length > 0 && (
+        <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-black text-slate-800 text-sm flex items-center gap-2">
+              <Landmark size={16} className="text-indigo-600" /> Money Holdings
+            </h3>
+            <span className="text-xs font-bold text-slate-400">
+              {accountBalances.length} account{accountBalances.length !== 1 && 's'}
+            </span>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {accountBalances.map(([account, amount]) => {
+              const colors = ACCOUNT_COLORS[account] || { bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200', icon: 'text-slate-500' };
+              const IconComp = ACCOUNT_ICONS[account] || Wallet;
+              const isNegative = amount < 0;
+              
+              return (
+                <div key={account} className={`${colors.bg} border ${colors.border} rounded-xl p-4 flex items-center gap-3`}>
+                  <div className={`p-2 rounded-lg ${colors.bg} ${colors.icon}`}>
+                    <IconComp size={18} />
+                  </div>
+                  <div className="flex-grow min-w-0">
+                    <p className="text-xs font-black text-slate-700 truncate">{account}</p>
+                    <p className={`text-lg font-black tracking-tight ${isNegative ? 'text-red-600' : colors.text}`}>
+                      {formatMoney(amount)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Across All Holdings</span>
+            <span className={`text-sm font-black ${teamBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+              {formatMoney(accountBalances.reduce((sum, [_, amt]) => sum + amt, 0))}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* ── OUTSTANDING FEES CALLOUT ── */}
       {outstandingPlayers.length > 0 && (

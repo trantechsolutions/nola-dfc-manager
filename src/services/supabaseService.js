@@ -218,6 +218,8 @@ export const supabaseService = {
       distributed: tx.distributed,
       waterfallBatchId: tx.waterfall_batch_id,
       originalTxId: tx.original_tx_id,
+      transferFrom: tx.transfer_from || '',
+      transferTo: tx.transfer_to || '',
     }));
   },
 
@@ -237,6 +239,8 @@ export const supabaseService = {
       waterfall_batch_id: txData.waterfallBatchId || null,
       original_tx_id: txData.originalTxId || null,
       ...(txData.teamSeasonId ? { team_season_id: txData.teamSeasonId } : {}),
+      transfer_from: txData.transferFrom || null,
+      transfer_to: txData.transferTo || null,
     };
     const { data, error } = await supabase.from('transactions').insert(row).select().single();
     if (error) throw error;
@@ -254,6 +258,8 @@ export const supabaseService = {
     if ('cleared' in txData) updates.cleared = txData.cleared;
     if ('distributed' in txData) updates.distributed = txData.distributed;
     if ('notes' in txData) updates.notes = txData.notes;
+    if ('transferFrom' in txData) updates.transfer_from = txData.transferFrom || null;
+    if ('transferTo' in txData) updates.transfer_to = txData.transferTo || null;
     const { error } = await supabase.from('transactions').update(updates).eq('id', txId);
     if (error) throw error;
   },

@@ -56,7 +56,7 @@ export default function InsightsView({
   // ─── FINANCIAL ANALYTICS ───
   const analytics = useMemo(() => {
     const isCleared = (tx) => tx.cleared === true || String(tx.cleared).toLowerCase() === 'true';
-    const seasonTx = transactions.filter(tx => !tx.waterfallBatchId);
+    const seasonTx = transactions.filter(tx => !tx.waterfallBatchId && tx.category !== 'TRF');
     const s = scheduleAnalytics;
 
     const categoryActuals = {};
