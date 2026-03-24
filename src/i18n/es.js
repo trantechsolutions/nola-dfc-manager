@@ -74,7 +74,7 @@ export default {
     emailPlaceholder: 'padre@ejemplo.com',
     passwordPlaceholder: '••••••••',
     createAccount: 'Crear Cuenta de Padre',
-    managerPortal: 'Portal del Director Técnico',
+    managerPortal: 'Portal del Administrador del Equipo',
     hasAccount: '¿Ya tienes cuenta? Inicia Sesión',
     noAccount: '¿No tienes cuenta? Crea una',
     continueGoogle: 'Continuar con Google',
@@ -253,7 +253,7 @@ export default {
   playerModal: {
     feeWaived: 'Cuota Exenta',
     playerSetup: 'Configuración del Jugador',
-    medicalRelease: 'Alta Médica',
+    medicalRelease: 'Autorización Médica',
     medicalAuto: 'Se marca automáticamente al completar el formulario',
     onFile: 'En Archivo',
     fillOut: 'Llenar',
@@ -275,10 +275,10 @@ export default {
   parent: {
     noPlayers: 'No se Encontraron Jugadores',
     noPlayersMsg:
-      'No encontramos jugadores asociados con tu correo electrónico. Contacta al director técnico para ser vinculado.',
-    medicalForm: 'Formulario de Alta Médica',
+      'No encontramos jugadores asociados con tu correo electrónico. Contacta al administrador del equipo para ser vinculado.',
+    medicalForm: 'Formulario de Autorización Médica',
     completedOnFile: 'Completado — en archivo',
-    requiredNotSubmitted: 'Requerido — no enviado',
+    requiredNotSubmitted: 'Requerido — aún no enviado',
     completeForm: 'Completar Formulario Médico',
     viewUpdateForm: 'Ver / Actualizar Formulario',
     playerInfo: 'Info del Jugador',
@@ -464,7 +464,7 @@ export default {
     clubManager: 'Director del Club',
     teamManager: 'Director del Equipo',
     teamAdmin: 'Admin del Equipo',
-    scheduler: 'Programador',
+    scheduler: 'Coordinador de Calendario',
     treasurer: 'Tesorero',
     headCoach: 'Entrenador Principal',
     assistantCoach: 'Entrenador Asistente',
@@ -500,8 +500,8 @@ export default {
 
   // ── Formulario Médico ──────────────────────────────────
   medical: {
-    title: 'Formulario de Alta Médica',
-    medicalRelease: 'Alta Médica',
+    title: 'Formulario de Autorización Médica',
+    medicalRelease: 'Autorización Médica',
     reeplayerWaiver: 'Exención ReePlayer',
   },
 
