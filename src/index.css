@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-slate-50 text-slate-900;
+  }
+  html.dark {
+    @apply bg-slate-950 text-slate-100;
+  }
+}
+
+/* Dark mode overrides — outside @layer so they beat utility classes */
+html.dark .bg-white {
+  background-color: theme('colors.slate.900');
+}
+html.dark .bg-slate-50:not(.dark\:bg-slate-950) {
+  background-color: theme('colors.slate.800');
+}
+html.dark .bg-slate-100 {
+  background-color: theme('colors.slate.800');
+}
+html.dark .border-slate-200 {
+  border-color: theme('colors.slate.700');
+}
+html.dark .border-slate-100 {
+  border-color: theme('colors.slate.700');
+}
+html.dark .text-slate-900:not(.dark\:text-slate-100):not([class*='dark:']) {
+  color: theme('colors.slate.100');
+}
+html.dark .text-slate-800 {
+  color: theme('colors.slate.200');
+}
+html.dark .text-slate-700 {
+  color: theme('colors.slate.300');
+}
+html.dark .text-slate-600 {
+  color: theme('colors.slate.400');
+}
+html.dark .text-slate-500 {
+  color: theme('colors.slate.400');
+}
+html.dark .shadow-sm {
+  --tw-shadow-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark mode form inputs */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: theme('colors.slate.800');
+  border-color: theme('colors.slate.600');
+  color: theme('colors.slate.100');
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: theme('colors.slate.500');
+}
