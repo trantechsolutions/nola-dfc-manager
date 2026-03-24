@@ -7,6 +7,7 @@ on:
     branches: [main]
 
 permissions:
+<<<<<<< HEAD
   contents: read
   pages: write
   id-token: write
@@ -14,6 +15,9 @@ permissions:
 concurrency:
   group: pages
   cancel-in-progress: true
+=======
+  contents: write
+>>>>>>> 651af246f83ff9572207adb7caf32bb2006fcf42
 
 jobs:
   lint-and-build:
