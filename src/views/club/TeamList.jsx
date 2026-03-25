@@ -35,9 +35,10 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
     colorPrimary: '#1e293b',
   });
 
-  // Inline team name editing
+  // Inline team editing
   const [editingTeamId, setEditingTeamId] = useState(null);
   const [editingName, setEditingName] = useState('');
+  const [editingTier, setEditingTier] = useState('competitive');
 
   // Invite form
   const [showInvite, setShowInvite] = useState(null); // teamId or null
@@ -88,14 +89,15 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
     }
   };
 
-  const handleSaveTeamName = async (teamId) => {
+  const handleSaveTeam = async (teamId) => {
     if (!editingName.trim()) return;
     setIsSaving(true);
     try {
-      await supabaseService.updateTeam(teamId, { name: editingName.trim() });
+      await supabaseService.updateTeam(teamId, { name: editingName.trim(), tier: editingTier });
       await refreshContext();
       setEditingTeamId(null);
       setEditingName('');
+      setEditingTier('competitive');
       if (showToast) showToast(t('clubTeams.nameUpdated'));
     } catch (e) {
       if (showToast) showToast(t('clubTeams.nameUpdateFailed'), true);
@@ -173,23 +175,34 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                 {/* Info */}
                 <div className="flex-grow min-w-0">
                   {isEditingThis ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <input
                         autoFocus
                         type="text"
                         value={editingName}
                         onChange={(e) => setEditingName(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSaveTeamName(team.id);
+                          if (e.key === 'Enter') handleSaveTeam(team.id);
                           if (e.key === 'Escape') {
                             setEditingTeamId(null);
                             setEditingName('');
+                            setEditingTier('competitive');
                           }
                         }}
-                        className="font-black text-slate-900 text-sm border border-blue-300 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500 flex-grow"
+                        className="font-black text-slate-900 dark:text-white text-sm border border-blue-300 dark:border-blue-700 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-500 flex-grow bg-white dark:bg-slate-800"
                       />
+                      <select
+                        value={editingTier}
+                        onChange={(e) => setEditingTier(e.target.value)}
+                        className="text-[11px] font-bold border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="competitive">Competitive</option>
+                        <option value="recreational">Recreational</option>
+                        <option value="academy">Academy</option>
+                        <option value="select">Select</option>
+                      </select>
                       <button
-                        onClick={() => handleSaveTeamName(team.id)}
+                        onClick={() => handleSaveTeam(team.id)}
                         disabled={isSaving}
                         className="text-emerald-600 hover:text-emerald-700 disabled:opacity-50"
                       >
@@ -199,6 +212,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                         onClick={() => {
                           setEditingTeamId(null);
                           setEditingName('');
+                          setEditingTier('competitive');
                         }}
                         className="text-slate-400 hover:text-slate-600"
                       >
@@ -228,6 +242,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                       e.stopPropagation();
                       setEditingTeamId(team.id);
                       setEditingName(team.name);
+                      setEditingTier(team.tier || 'competitive');
                     }}
                     className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                     title="Edit team name"
