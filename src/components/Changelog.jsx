@@ -1,14 +1,42 @@
-import { useState } from 'react';
-import { changelog, buildNumber, buildDate } from 'virtual:changelog';
-import { GitCommit, Calendar, ChevronDown, Package } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { buildNumber, commitHash, buildDate } from 'virtual:git-info';
+import { supabase } from '../supabase';
+import { GitCommit, Calendar, ChevronDown, ChevronRight, Package, Sparkles, Loader2 } from 'lucide-react';
 
-const ITEMS_PER_PAGE = 15;
+const CATEGORY_LABELS = {
+  feature: '✨ New Features',
+  improvement: '🔧 Improvements',
+  bugfix: '🐛 Bug Fixes',
+  ui: '🎨 UI/UX Changes',
+};
 
-// Group commits by date (YYYY-MM-DD)
+const CATEGORY_STYLES = {
+  feature: {
+    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+    border: 'border-emerald-200 dark:border-emerald-800',
+    dot: 'bg-emerald-500',
+  },
+  improvement: {
+    bg: 'bg-blue-50 dark:bg-blue-900/20',
+    border: 'border-blue-200 dark:border-blue-800',
+    dot: 'bg-blue-500',
+  },
+  bugfix: {
+    bg: 'bg-amber-50 dark:bg-amber-900/20',
+    border: 'border-amber-200 dark:border-amber-800',
+    dot: 'bg-amber-500',
+  },
+  ui: {
+    bg: 'bg-violet-50 dark:bg-violet-900/20',
+    border: 'border-violet-200 dark:border-violet-800',
+    dot: 'bg-violet-500',
+  },
+};
+
 function groupByDate(entries) {
   const groups = {};
   for (const entry of entries) {
-    const day = entry.date.split('T')[0];
+    const day = entry.commit_date.split('T')[0];
     if (!groups[day]) groups[day] = [];
     groups[day].push(entry);
   }
@@ -25,12 +53,52 @@ function formatDate(iso) {
 }
 
 export default function Changelog() {
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showRawLog, setShowRawLog] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const visible = showAll ? changelog : changelog.slice(0, ITEMS_PER_PAGE);
+
+  useEffect(() => {
+    async function load() {
+      const { data, error } = await supabase
+        .from('changelogs')
+        .select('*')
+        .order('commit_date', { ascending: false })
+        .limit(50);
+      if (!error && data) setEntries(data);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  // Collect all AI summaries into one flat list grouped by category
+  const allSummaryItems = entries
+    .filter((e) => e.ai_summary && Array.isArray(e.ai_summary))
+    .flatMap((e) => e.ai_summary);
+
+  const categorized = {};
+  for (const item of allSummaryItems) {
+    const cat = item.category || 'improvement';
+    if (!categorized[cat]) categorized[cat] = [];
+    // Deduplicate by description
+    if (!categorized[cat].some((existing) => existing.description === item.description)) {
+      categorized[cat].push(item);
+    }
+  }
+
+  const visible = showAll ? entries : entries.slice(0, 15);
   const grouped = groupByDate(visible);
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 size={24} className="animate-spin text-slate-400" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -42,62 +110,108 @@ export default function Changelog() {
         </div>
         <div className="text-right">
           <p className="text-xs font-bold text-blue-600 dark:text-blue-400">Build #{buildNumber}</p>
+          <p className="text-[10px] text-slate-400 font-mono">{commitHash}</p>
           <p className="text-[10px] text-slate-400">
             {new Date(buildDate).toLocaleDateString('en-US', {
               month: 'short',
               day: 'numeric',
               year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
             })}
           </p>
         </div>
       </div>
 
-      {/* Timeline */}
-      <div className="space-y-6">
-        {grouped.map(([date, entries]) => (
-          <div key={date}>
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar size={12} className="text-slate-400 dark:text-slate-500" />
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                {formatDate(date)}
-              </p>
-              <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
-            </div>
-            <div className="space-y-1 ml-1">
-              {entries.map((entry) => (
-                <div
-                  key={entry.hash}
-                  className="flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group"
-                >
-                  <GitCommit size={14} className="text-slate-300 dark:text-slate-600 mt-0.5 flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-slate-800 dark:text-slate-200 leading-snug">{entry.message}</p>
-                  </div>
-                  <code className="text-[10px] font-mono text-slate-400 dark:text-slate-500 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {entry.short}
-                  </code>
-                </div>
-              ))}
-            </div>
+      {/* AI Summary Cards */}
+      {Object.keys(categorized).length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles size={14} className="text-amber-500" />
+            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              What&apos;s Changed
+            </p>
+            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
           </div>
-        ))}
-      </div>
 
-      {/* Show more */}
-      {!showAll && changelog.length > ITEMS_PER_PAGE && (
-        <button
-          onClick={() => setShowAll(true)}
-          className="w-full flex items-center justify-center gap-1 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-        >
-          <ChevronDown size={14} />
-          Show {changelog.length - ITEMS_PER_PAGE} more updates
-        </button>
+          {Object.entries(categorized).map(([category, items]) => {
+            const style = CATEGORY_STYLES[category] || CATEGORY_STYLES.improvement;
+            const label = CATEGORY_LABELS[category] || category;
+            return (
+              <div key={category} className={`rounded-xl border p-4 ${style.bg} ${style.border}`}>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">{label}</h3>
+                <ul className="space-y-1.5">
+                  {items.map((item, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className={`w-1.5 h-1.5 rounded-full ${style.dot} mt-1.5 flex-shrink-0`} />
+                      <span className="text-sm text-slate-700 dark:text-slate-300">{item.description}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
       )}
 
-      {changelog.length === 0 && (
-        <p className="text-center text-sm text-slate-400 py-8">No changelog data available.</p>
+      {/* Raw commit log toggle */}
+      <button
+        onClick={() => setShowRawLog(!showRawLog)}
+        className="flex items-center gap-1.5 text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+      >
+        {showRawLog ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        <GitCommit size={12} />
+        Commit History ({entries.length})
+      </button>
+
+      {/* Timeline */}
+      {showRawLog && (
+        <div className="space-y-6">
+          {grouped.map(([date, dayEntries]) => (
+            <div key={date}>
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar size={12} className="text-slate-400 dark:text-slate-500" />
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  {formatDate(date)}
+                </p>
+                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+              </div>
+              <div className="space-y-1 ml-1">
+                {dayEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group"
+                  >
+                    <GitCommit size={14} className="text-slate-300 dark:text-slate-600 mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-slate-800 dark:text-slate-200 leading-snug">{entry.commit_message}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">#{entry.build_number}</span>
+                      <code className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                        {entry.commit_short}
+                      </code>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {!showAll && entries.length > 15 && (
+            <button
+              onClick={() => setShowAll(true)}
+              className="w-full flex items-center justify-center gap-1 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+            >
+              <ChevronDown size={14} />
+              Show {entries.length - 15} more
+            </button>
+          )}
+        </div>
+      )}
+
+      {entries.length === 0 && !loading && (
+        <p className="text-center text-sm text-slate-400 py-8">
+          No changelog entries yet. They will appear after your next commit.
+        </p>
       )}
     </div>
   );

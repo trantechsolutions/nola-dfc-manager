@@ -3,32 +3,25 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { execSync } from 'child_process';
 
-function gitChangelogPlugin() {
-  const virtualId = 'virtual:changelog';
+function gitInfoPlugin() {
+  const virtualId = 'virtual:git-info';
   const resolvedId = '\0' + virtualId;
   return {
-    name: 'git-changelog',
+    name: 'git-info',
     resolveId(id) {
       if (id === virtualId) return resolvedId;
     },
     load(id) {
       if (id !== resolvedId) return;
       try {
-        const log = execSync('git log --pretty=format:"%H||%h||%s||%an||%aI" -50', { encoding: 'utf-8' });
         const buildNumber = execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim();
-        const entries = log
-          .trim()
-          .split('\n')
-          .map((line) => {
-            const [hash, short, message, author, date] = line.split('||');
-            return { hash, short, message, author, date };
-          });
-        return `export const changelog = ${JSON.stringify(entries)};
-export const buildNumber = ${JSON.stringify(buildNumber)};
+        const commitHash = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim();
+        return `export const buildNumber = ${JSON.stringify(buildNumber)};
+export const commitHash = ${JSON.stringify(commitHash)};
 export const buildDate = ${JSON.stringify(new Date().toISOString())};`;
       } catch {
-        return `export const changelog = [];
-export const buildNumber = "0";
+        return `export const buildNumber = "0";
+export const commitHash = "unknown";
 export const buildDate = ${JSON.stringify(new Date().toISOString())};`;
       }
     },
@@ -37,7 +30,7 @@ export const buildDate = ${JSON.stringify(new Date().toISOString())};`;
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), gitChangelogPlugin()],
+  plugins: [react(), gitInfoPlugin()],
   build: {
     rollupOptions: {
       output: {

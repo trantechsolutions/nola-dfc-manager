@@ -49,6 +49,15 @@ export default defineConfig([
     },
   }, // E2E test files and config (node env)
   {
+    files: ['scripts/**/*.js', 'vite.config.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
     files: ['tests/**/*.{js,jsx}', 'playwright.config.js'],
     languageOptions: {
       globals: {
