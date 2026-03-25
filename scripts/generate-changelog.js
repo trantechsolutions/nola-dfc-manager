@@ -2,10 +2,10 @@
 /**
  * Post-commit changelog generator.
  * Runs after git commit (via Husky hook), before push.
- * Reads recent commits, sends to Gemini for summarization,
+ * Reads recent commits, sends to Groq (Llama 3.1) for summarization,
  * and writes the result to Supabase changelogs table.
  *
- * Required env vars: GEMINI_API_KEY, VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ * Required env vars: GROQ_API_KEY, VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *
  * Supabase table DDL:
  *   CREATE TABLE changelogs (
@@ -28,7 +28,7 @@ config({ path: resolve(process.cwd(), '.env') });
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const GEMINI_KEY = process.env.GEMINI_API_KEY;
+const GROQ_KEY = process.env.GROQ_API_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.log('⏭ Changelog: Missing Supabase credentials, skipping.');
@@ -44,8 +44,8 @@ async function getExistingHashes() {
   return new Set(data.map((r) => r.commit_hash));
 }
 
-async function summarizeWithGemini(commits) {
-  if (!GEMINI_KEY || commits.length === 0) return null;
+async function summarizeWithGroq(commits) {
+  if (!GROQ_KEY || commits.length === 0) return null;
 
   const prompt = `You are a changelog writer for a youth soccer team management web app called "NOLA DFC Manager".
 The app manages team rosters, budgets, schedules, payments, medical forms, and documents.
@@ -66,29 +66,31 @@ Commits:
 ${commits.map((c) => `- ${c.message}`).join('\n')}`;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
-        }),
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${GROQ_KEY}`,
       },
-    );
+      body: JSON.stringify({
+        model: 'llama-3.1-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 1024,
+      }),
+    });
 
     if (!response.ok) {
-      console.warn(`⚠ Gemini API error: ${response.status}`);
+      console.warn(`⚠ Groq API error: ${response.status}`);
       return null;
     }
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = data.choices?.[0]?.message?.content || '';
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (jsonMatch) return JSON.parse(jsonMatch[0]);
   } catch (err) {
-    console.warn('⚠ Gemini summarization failed:', err.message);
+    console.warn('⚠ Groq summarization failed:', err.message);
   }
   return null;
 }
@@ -121,7 +123,7 @@ async function main() {
   console.log(`📝 Changelog: Processing ${newCommits.length} new commit(s)...`);
 
   // Get AI summary for the batch of new commits
-  const aiSummary = await summarizeWithGemini(newCommits);
+  const aiSummary = await summarizeWithGroq(newCommits);
 
   // Get build number
   const buildNumber = parseInt(execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim(), 10);
