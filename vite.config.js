@@ -2,6 +2,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { execSync } from 'child_process';
+import { resolve } from 'path';
 
 function gitInfoPlugin() {
   const virtualId = 'virtual:git-info';
@@ -31,6 +32,11 @@ export const buildDate = ${JSON.stringify(new Date().toISOString())};`;
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), gitInfoPlugin()],
+  resolve: {
+    alias: {
+      '@': resolve(process.cwd(), 'src'),
+    },
+  },
   build: {
     rollupOptions: {
       output: {
