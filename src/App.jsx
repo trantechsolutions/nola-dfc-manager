@@ -25,6 +25,7 @@ import {
   Monitor,
   Menu,
   X,
+  GitCommit,
 } from 'lucide-react';
 import { useT } from './i18n/I18nContext';
 import { useTheme } from './theme/ThemeContext';
@@ -43,6 +44,7 @@ import FinanceView from './views/team/FinanceView';
 import PeopleView from './views/team/PeopleView';
 import ClubAdminHub from './views/club/ClubAdminHub';
 import TeamSettingsView from './views/team/TeamSettingsView';
+import Changelog from './components/Changelog';
 
 // Components
 import TransactionModal from './components/TransactionModal';
@@ -711,6 +713,18 @@ function App() {
                   <span className="text-sm capitalize">{theme}</span>
                 </button>
                 <button
+                  onClick={() => {
+                    navigate('/changelog');
+                    setSidebarSettingsOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold transition-all ${
+                    currentView === 'changelog' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-800'
+                  }`}
+                >
+                  <GitCommit size={16} />
+                  <span className="text-sm">Update Log</span>
+                </button>
+                <button
                   onClick={() => supabase.auth.signOut()}
                   className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-red-400 hover:bg-red-900/20 transition-all"
                 >
@@ -857,11 +871,23 @@ function App() {
               </div>
 
               {/* Footer */}
-              <div className="border-t border-slate-800 mt-4 pt-3">
+              <div className="border-t border-slate-800 mt-4 pt-3 space-y-1">
                 <p className="text-[10px] font-bold text-slate-500 truncate px-4">{user.email}</p>
                 <p className="text-[9px] font-bold text-blue-400 uppercase px-4 mb-2">
                   {effectiveRole.replace('_', ' ')}
                 </p>
+                <button
+                  onClick={() => {
+                    navigate('/changelog');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-sm transition-all ${
+                    currentView === 'changelog' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-800'
+                  }`}
+                >
+                  <GitCommit size={16} />
+                  <span>Update Log</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1041,6 +1067,8 @@ function App() {
                 }
               />
             )}
+
+            <Route path="/changelog" element={<Changelog />} />
 
             {effectiveIsStaff && (
               <>
