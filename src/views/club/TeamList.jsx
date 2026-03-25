@@ -143,7 +143,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-black text-slate-900">{t('clubTeams.title')}</h2>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white">{t('clubTeams.title')}</h2>
           <p className="text-xs text-slate-400 font-bold">
             {club?.name} · {teams.length} team{teams.length !== 1 && 's'}
           </p>
@@ -164,7 +164,10 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
           const isEditingThis = editingTeamId === team.id;
 
           return (
-            <div key={team.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div
+              key={team.id}
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden"
+            >
               <div className="flex items-center gap-4 p-5">
                 {/* Color dot */}
                 <div
@@ -221,12 +224,12 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                     </div>
                   ) : (
                     <div className="cursor-pointer" onClick={() => onSelectTeam(team.id)}>
-                      <h3 className="font-black text-slate-900 text-sm">{team.name}</h3>
+                      <h3 className="font-black text-slate-900 dark:text-white text-sm">{team.name}</h3>
                       <div className="flex items-center gap-3 text-[11px] text-slate-400 font-medium mt-0.5">
                         <span>{team.ageGroup}</span>
                         <span>{team.gender}</span>
                         <span
-                          className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${team.tier === 'competitive' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}
+                          className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${team.tier === 'competitive' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300'}`}
                         >
                           {team.tier}
                         </span>
@@ -244,7 +247,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                       setEditingName(team.name);
                       setEditingTier(team.tier || 'competitive');
                     }}
-                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all"
                     title="Edit team name"
                   >
                     <Edit size={14} />
@@ -254,7 +257,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                       e.stopPropagation();
                       setExpandedTeam(isExpanded ? null : team.id);
                     }}
-                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all"
+                    className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all"
                     title="Manage roles"
                   >
                     <Settings size={14} />
@@ -269,7 +272,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                       e.stopPropagation();
                       handleDeleteTeam(team);
                     }}
-                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all"
                     title="Archive team"
                   >
                     <Trash2 size={14} />
@@ -279,7 +282,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
 
               {/* Expanded: Role Management */}
               {isExpanded && (
-                <div className="border-t border-slate-100 p-5 bg-slate-50/50">
+                <div className="border-t border-slate-100 dark:border-slate-700 p-5 bg-slate-50/50 dark:bg-slate-800">
                   <div className="space-y-3">
                     {/* Header with assign button */}
                     <div className="flex items-center justify-between">
@@ -301,31 +304,31 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                         {roles.map((r) => (
                           <div
                             key={r.id}
-                            className={`flex items-center justify-between p-2.5 rounded-lg border ${r.isClubLevel ? 'bg-violet-50/50 border-violet-100' : 'bg-white border-slate-100'}`}
+                            className={`flex items-center justify-between p-2.5 rounded-lg border ${r.isClubLevel ? 'bg-violet-50/50 dark:bg-violet-900/20 border-violet-100 dark:border-violet-800' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-700'}`}
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <span
                                 className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded shrink-0 ${
                                   r.role === 'club_admin'
-                                    ? 'bg-red-100 text-red-700'
+                                    ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
                                     : r.role === 'club_manager'
-                                      ? 'bg-violet-100 text-violet-700'
+                                      ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
                                       : r.role === 'team_manager'
-                                        ? 'bg-blue-100 text-blue-700'
+                                        ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
                                         : r.role === 'team_admin'
-                                          ? 'bg-indigo-100 text-indigo-700'
+                                          ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'
                                           : r.role === 'treasurer'
-                                            ? 'bg-emerald-100 text-emerald-700'
+                                            ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
                                             : r.role === 'scheduler'
-                                              ? 'bg-violet-100 text-violet-700'
+                                              ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
                                               : r.role === 'head_coach'
-                                                ? 'bg-amber-100 text-amber-700'
-                                                : 'bg-slate-100 text-slate-600'
+                                                ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                                 }`}
                               >
                                 {ALL_ROLES[r.role]?.label || r.role}
                               </span>
-                              <span className="text-[10px] text-slate-500 truncate">
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                                 {r.displayName || r.email || r.userId.slice(0, 8) + '...'}
                               </span>
                               {r.isClubLevel && (
@@ -354,8 +357,8 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
 
                     {/* Invite form — only CLUB_ASSIGNABLE_ROLES (coach, assist coach, team manager) */}
                     {showInvite === team.id && (
-                      <div className="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-200 space-y-2">
-                        <p className="text-[10px] font-bold text-blue-700">
+                      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-800 space-y-2">
+                        <p className="text-[10px] font-bold text-blue-700 dark:text-blue-300">
                           Assign a coach or team manager by their login email
                         </p>
                         <div className="flex gap-2">
@@ -364,12 +367,12 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                             placeholder="coach@example.com"
                             value={inviteEmail}
                             onChange={(e) => setInviteEmail(e.target.value)}
-                            className="flex-grow bg-white border border-blue-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                            className="flex-grow bg-white dark:bg-slate-800 dark:text-white border border-blue-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
                           />
                           <select
                             value={inviteRole}
                             onChange={(e) => setInviteRole(e.target.value)}
-                            className="bg-white border border-blue-200 rounded-lg px-2 py-1.5 text-xs font-bold outline-none"
+                            className="bg-white dark:bg-slate-800 dark:text-white border border-blue-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-bold outline-none"
                           >
                             {CLUB_ASSIGNABLE_ROLES.map((key) => (
                               <option key={key} value={key}>
@@ -385,7 +388,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                         <div className="flex gap-2">
                           <button
                             onClick={() => setShowInvite(null)}
-                            className="text-xs font-bold text-slate-500 px-3 py-1.5"
+                            className="text-xs font-bold text-slate-500 dark:text-slate-400 px-3 py-1.5"
                           >
                             Cancel
                           </button>
@@ -410,8 +413,8 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
       {/* Create Team Modal */}
       {showCreateForm && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-black text-slate-800 mb-4">Create Team</h3>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-black text-slate-800 dark:text-white mb-4">Create Team</h3>
             <form onSubmit={handleCreateTeam} className="space-y-4">
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Team Name</label>
@@ -422,7 +425,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                   placeholder="e.g. 2014 Boys White"
                   value={newTeam.name}
                   onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
-                  className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 mt-1"
+                  className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 mt-1 bg-white dark:bg-slate-800 dark:text-white"
                 />
               </div>
               <div className="grid grid-cols-3 gap-3">
@@ -433,7 +436,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                     placeholder="U11"
                     value={newTeam.ageGroup}
                     onChange={(e) => setNewTeam({ ...newTeam, ageGroup: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1"
+                    className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none mt-1 bg-white dark:bg-slate-800 dark:text-white"
                   />
                 </div>
                 <div>
@@ -441,7 +444,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                   <select
                     value={newTeam.gender}
                     onChange={(e) => setNewTeam({ ...newTeam, gender: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1"
+                    className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none mt-1 bg-white dark:bg-slate-800 dark:text-white"
                   >
                     <option value="boys">Boys</option>
                     <option value="girls">Girls</option>
@@ -453,7 +456,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                   <select
                     value={newTeam.tier}
                     onChange={(e) => setNewTeam({ ...newTeam, tier: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1"
+                    className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none mt-1 bg-white dark:bg-slate-800 dark:text-white"
                   >
                     <option value="competitive">Competitive</option>
                     <option value="recreational">Recreational</option>
@@ -483,14 +486,14 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                   placeholder="https://..."
                   value={newTeam.icalUrl}
                   onChange={(e) => setNewTeam({ ...newTeam, icalUrl: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1"
+                  className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none mt-1 bg-white dark:bg-slate-800 dark:text-white"
                 />
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowCreateForm(false)}
-                  className="text-sm font-bold text-slate-500 px-4 py-2"
+                  className="text-sm font-bold text-slate-500 dark:text-slate-400 px-4 py-2"
                 >
                   Cancel
                 </button>

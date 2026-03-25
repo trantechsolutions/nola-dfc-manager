@@ -20,21 +20,21 @@ import { supabaseService } from '../../services/supabaseService';
 import { ALL_ROLES, CLUB_ROLES, TEAM_ROLES, CLUB_ASSIGNABLE_ROLES } from '../../utils/roles';
 
 const ROLE_COLORS = {
-  club_admin: 'bg-red-100 text-red-700',
-  club_manager: 'bg-violet-100 text-violet-700',
-  team_manager: 'bg-blue-100 text-blue-700',
-  team_admin: 'bg-indigo-100 text-indigo-700',
-  scheduler: 'bg-violet-100 text-violet-700',
-  treasurer: 'bg-emerald-100 text-emerald-700',
-  head_coach: 'bg-amber-100 text-amber-700',
-  assistant_coach: 'bg-slate-100 text-slate-600',
-  parent: 'bg-cyan-100 text-cyan-700',
+  club_admin: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  club_manager: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+  team_manager: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  team_admin: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+  scheduler: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+  treasurer: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  head_coach: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  assistant_coach: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  parent: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
 };
 const INV_STATUS_COLORS = {
-  pending: 'bg-blue-100 text-blue-700',
-  accepted: 'bg-emerald-100 text-emerald-700',
-  expired: 'bg-amber-100 text-amber-700',
-  revoked: 'bg-red-100 text-red-700',
+  pending: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  accepted: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  expired: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  revoked: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
 };
 
 export default function UserManagement({ club, teams, showToast, showConfirm, refreshContext }) {
@@ -134,7 +134,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
     <div className="space-y-5 pb-24 md:pb-6">
       <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-black text-slate-900">User Management</h2>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white">User Management</h2>
           <p className="text-xs text-slate-400 font-bold">
             {club?.name} · {users.length} staff · {pendingInvites.length} pending invites
           </p>
@@ -148,7 +148,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
         {[
           { id: 'directory', label: `Staff Directory (${users.length})` },
           { id: 'invitations', label: `Invitations (${pendingInvites.length})` },
@@ -156,7 +156,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+            className={`flex-1 py-2 rounded-lg font-bold text-xs transition-all ${activeTab === tab.id ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm dark:shadow-none' : 'text-slate-500 dark:text-slate-400'}`}
           >
             {tab.label}
           </button>
@@ -173,29 +173,29 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
               placeholder="Search by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {filteredUsers.length === 0 ? (
-            <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center text-slate-400 font-bold text-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-10 text-center text-slate-400 dark:text-slate-500 font-bold text-sm">
               {searchTerm ? 'No users match your search.' : 'No staff members yet. Send an invitation to get started.'}
             </div>
           ) : (
             filteredUsers.map((user) => (
               <div
                 key={user.userId}
-                className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${user.isActive ? 'border-slate-200' : 'border-red-200 opacity-60'}`}
+                className={`bg-white dark:bg-slate-900 rounded-2xl border shadow-sm dark:shadow-none overflow-hidden ${user.isActive ? 'border-slate-200 dark:border-slate-700' : 'border-red-200 dark:border-red-800 opacity-60'}`}
               >
                 <div className="flex items-center gap-3 p-4">
                   {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-sm font-black text-slate-500 shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-sm font-black text-slate-500 dark:text-slate-400 shrink-0">
                     {user.displayName.charAt(0).toUpperCase()}
                   </div>
 
                   <div className="flex-grow min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-black text-slate-800 truncate">{user.displayName}</p>
+                      <p className="text-sm font-black text-slate-800 dark:text-white truncate">{user.displayName}</p>
                       {!user.isActive && (
                         <span className="text-[9px] font-black bg-red-100 text-red-600 px-1.5 py-0.5 rounded">
                           INACTIVE
@@ -222,7 +222,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
                   {user.roles.map((r, i) => (
                     <div
                       key={i}
-                      className="inline-flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 group"
+                      className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg px-2 py-1 group"
                     >
                       {r.teamName && <span className="text-[9px] text-slate-400">{r.teamName} ·</span>}
                       <span
@@ -249,14 +249,14 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
       {activeTab === 'invitations' && (
         <div className="space-y-2">
           {invitations.length === 0 ? (
-            <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center text-slate-400 font-bold text-sm">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-10 text-center text-slate-400 dark:text-slate-500 font-bold text-sm">
               No invitations sent yet.
             </div>
           ) : (
             invitations.map((inv) => (
               <div
                 key={inv.id}
-                className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-3"
+                className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none p-4 flex items-center gap-3"
               >
                 <div className={`p-2 rounded-lg ${INV_STATUS_COLORS[inv.status]}`}>
                   {inv.status === 'pending' ? (
@@ -269,7 +269,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
                 </div>
                 <div className="flex-grow min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold text-slate-800 truncate">{inv.email}</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{inv.email}</p>
                     <span
                       className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${ROLE_COLORS[inv.role] || 'bg-slate-100'}`}
                     >
@@ -309,9 +309,9 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
       {/* ── INVITE MODAL ── */}
       {showInviteForm && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-700">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+              <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
                 <Mail size={20} className="text-blue-600" /> Invite User
               </h3>
               <button onClick={() => setShowInviteForm(false)} className="text-slate-400 hover:text-slate-600">
@@ -331,7 +331,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
                   placeholder="coach@example.com"
                   value={invForm.email}
                   onChange={(e) => setInvForm({ ...invForm, email: e.target.value })}
-                  className="w-full border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 mt-1"
+                  className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 mt-1 dark:bg-slate-800 dark:text-white"
                 />
               </div>
               <div>
@@ -343,7 +343,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
                   placeholder="First Last"
                   value={invForm.name}
                   onChange={(e) => setInvForm({ ...invForm, name: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1"
+                  className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none mt-1 dark:bg-slate-800 dark:text-white"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -352,7 +352,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
                   <select
                     value={invForm.role}
                     onChange={(e) => setInvForm({ ...invForm, role: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-sm font-bold outline-none mt-1"
+                    className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm font-bold outline-none mt-1 dark:bg-slate-800 dark:text-white"
                   >
                     {/* Only club-assignable roles: Coach, Assistant Coach, Team Manager */}
                     {CLUB_ASSIGNABLE_ROLES.map((key) => (
@@ -367,7 +367,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
                   <select
                     value={invForm.teamId}
                     onChange={(e) => setInvForm({ ...invForm, teamId: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1"
+                    className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none mt-1 dark:bg-slate-800 dark:text-white"
                   >
                     <option value="">Select team...</option>
                     {teams.map((t) => (
@@ -380,9 +380,11 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
               </div>
 
               {/* Role description */}
-              <div className="bg-slate-50 p-3 rounded-xl">
-                <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">What this role can do:</p>
-                <p className="text-xs text-slate-600">
+              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl">
+                <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
+                  What this role can do:
+                </p>
+                <p className="text-xs text-slate-600 dark:text-slate-300">
                   {ALL_ROLES[invForm.role]?.description || "View access to their child's team data."}
                 </p>
               </div>

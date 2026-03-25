@@ -244,7 +244,7 @@ export default function PublicCalendarView({ onBack }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-800">
       {/* ── HEADER ── */}
       <header className="bg-slate-900 text-white">
         <div className="max-w-5xl mx-auto px-4 py-6 md:py-8">
@@ -351,13 +351,15 @@ export default function PublicCalendarView({ onBack }) {
 
       {/* ── TOOLBAR ── */}
       <div className="max-w-5xl mx-auto px-4 py-4">
-        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none flex flex-wrap items-center justify-between gap-3">
           {/* View Toggle */}
-          <div className="flex bg-slate-100 rounded-lg p-0.5">
+          <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
             <button
               onClick={() => setView('calendar')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-bold text-xs transition-all ${
-                view === 'calendar' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                view === 'calendar'
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm dark:shadow-none'
+                  : 'text-slate-500 dark:text-slate-400'
               }`}
             >
               <CalendarDays size={14} /> Calendar
@@ -365,7 +367,9 @@ export default function PublicCalendarView({ onBack }) {
             <button
               onClick={() => setView('list')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-bold text-xs transition-all ${
-                view === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                view === 'list'
+                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm dark:shadow-none'
+                  : 'text-slate-500 dark:text-slate-400'
               }`}
             >
               <List size={14} /> List
@@ -375,11 +379,13 @@ export default function PublicCalendarView({ onBack }) {
           {/* Type Filter */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <Filter size={13} className="text-slate-400" />
-            <div className="flex flex-wrap gap-1 bg-slate-100 rounded-lg p-0.5">
+            <div className="flex flex-wrap gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
               <button
                 onClick={() => setTypeFilter('all')}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
-                  typeFilter === 'all' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'
+                  typeFilter === 'all'
+                    ? 'bg-white dark:bg-slate-700 shadow-sm dark:shadow-none text-slate-900 dark:text-white'
+                    : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
                 All
@@ -389,7 +395,9 @@ export default function PublicCalendarView({ onBack }) {
                   key={key}
                   onClick={() => setTypeFilter(key)}
                   className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 ${
-                    typeFilter === key ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'
+                    typeFilter === key
+                      ? 'bg-white dark:bg-slate-700 shadow-sm dark:shadow-none text-slate-900 dark:text-white'
+                      : 'text-slate-500 dark:text-slate-400'
                   }`}
                 >
                   <span className={`w-2 h-2 rounded-full ${type.dot}`} />
@@ -408,9 +416,9 @@ export default function PublicCalendarView({ onBack }) {
           </div>
 
           {/* Share URL (desktop) */}
-          <div className="hidden md:flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-1.5 border border-slate-200 max-w-xs">
+          <div className="hidden md:flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-lg px-3 py-1.5 border border-slate-200 dark:border-slate-700 max-w-xs">
             <Link2 size={12} className="text-slate-400 shrink-0" />
-            <span className="text-[10px] text-slate-500 font-mono truncate">{shareUrl}</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">{shareUrl}</span>
             <button
               onClick={handleCopyLink}
               className="text-[10px] font-bold text-blue-600 hover:text-blue-800 shrink-0"
@@ -429,9 +437,9 @@ export default function PublicCalendarView({ onBack }) {
           </div>
         ) : view === 'calendar' ? (
           /* ── CALENDAR VIEW ── */
-          <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="bg-white dark:bg-slate-900 p-4 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
             {/* Legend */}
-            <div className="flex flex-wrap gap-3 mb-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            <div className="flex flex-wrap gap-3 mb-4 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               {selectedTeamId === 'all'
                 ? // Team color legend for all-teams view
                   teams
@@ -484,7 +492,7 @@ export default function PublicCalendarView({ onBack }) {
           /* ── LIST VIEW ── */
           <div className="space-y-2">
             {filteredEvents.length === 0 ? (
-              <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center text-slate-400 font-bold text-sm">
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-12 text-center text-slate-400 dark:text-slate-500 font-bold text-sm">
                 {typeFilter !== 'all' ? 'No events match your filter.' : 'No upcoming events scheduled.'}
               </div>
             ) : (
@@ -493,7 +501,7 @@ export default function PublicCalendarView({ onBack }) {
                 return (
                   <div
                     key={event.id}
-                    className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex hover:shadow-md transition-shadow"
+                    className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden flex hover:shadow-md dark:hover:shadow-none transition-shadow"
                   >
                     <div className="w-1.5 shrink-0" style={{ backgroundColor: event.teamColor }} />
                     <div className="p-4 flex-grow">
@@ -506,14 +514,14 @@ export default function PublicCalendarView({ onBack }) {
                         )}
                         <span className="text-[10px] text-slate-400 ml-auto">{event.displayDate}</span>
                       </div>
-                      <h4 className="font-black text-slate-900 text-sm mb-2">{event.title}</h4>
+                      <h4 className="font-black text-slate-900 dark:text-white text-sm mb-2">{event.title}</h4>
                       <div className="flex flex-wrap gap-3">
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                          <Clock size={12} className="text-slate-400" />
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                          <Clock size={12} className="text-slate-400 dark:text-slate-500" />
                           <span className="font-medium">{event.displayTime}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                          <MapPin size={12} className="text-slate-400" />
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                          <MapPin size={12} className="text-slate-400 dark:text-slate-500" />
                           <span className="font-medium">{event.location}</span>
                         </div>
                       </div>

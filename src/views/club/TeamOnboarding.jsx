@@ -109,7 +109,7 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-black text-slate-900">New Team Setup</h2>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white">New Team Setup</h2>
           <p className="text-xs text-slate-400 font-bold">
             {club?.name} · Step {step + 1} of {STEPS.length}
           </p>
@@ -128,26 +128,28 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
                 i === step
                   ? 'bg-blue-600 text-white'
                   : i < step
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-slate-100 text-slate-400'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                    : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
               }`}
             >
               {i < step ? <CheckCircle2 size={13} /> : <s.icon size={13} />}
               <span className="hidden sm:inline">{s.label}</span>
             </div>
             {i < STEPS.length - 1 && (
-              <div className={`h-0.5 flex-grow rounded ${i < step ? 'bg-emerald-300' : 'bg-slate-200'}`} />
+              <div
+                className={`h-0.5 flex-grow rounded ${i < step ? 'bg-emerald-300 dark:bg-emerald-700' : 'bg-slate-200 dark:bg-slate-700'}`}
+              />
             )}
           </React.Fragment>
         ))}
       </div>
 
       {/* Step Content */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
         {/* Step 1: Team Info */}
         {step === 0 && (
           <div className="space-y-4">
-            <h3 className="font-black text-slate-800 text-lg">Team Information</h3>
+            <h3 className="font-black text-slate-800 dark:text-white text-lg">Team Information</h3>
             <div>
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Team Name *</label>
               <input
@@ -156,7 +158,7 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
                 placeholder="e.g. 2014 Boys White"
                 value={teamForm.name}
                 onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })}
-                className="w-full border border-slate-200 rounded-xl p-3 font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 mt-1"
+                className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 mt-1 dark:bg-slate-800 dark:text-white"
               />
             </div>
             <div className="grid grid-cols-3 gap-3">
@@ -167,7 +169,7 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
                   placeholder="U11"
                   value={teamForm.ageGroup}
                   onChange={(e) => setTeamForm({ ...teamForm, ageGroup: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1"
+                  className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none mt-1 dark:bg-slate-800 dark:text-white"
                 />
               </div>
               <div>
@@ -175,7 +177,7 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
                 <select
                   value={teamForm.gender}
                   onChange={(e) => setTeamForm({ ...teamForm, gender: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1"
+                  className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none mt-1 dark:bg-slate-800 dark:text-white"
                 >
                   <option value="boys">Boys</option>
                   <option value="girls">Girls</option>
@@ -187,7 +189,7 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
                 <select
                   value={teamForm.tier}
                   onChange={(e) => setTeamForm({ ...teamForm, tier: e.target.value })}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm outline-none mt-1"
+                  className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none mt-1 dark:bg-slate-800 dark:text-white"
                 >
                   <option value="competitive">Competitive</option>
                   <option value="recreational">Recreational</option>
@@ -221,8 +223,8 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
         {/* Step 2: Calendar */}
         {step === 1 && (
           <div className="space-y-4">
-            <h3 className="font-black text-slate-800 text-lg">Calendar Setup</h3>
-            <p className="text-xs text-slate-500">
+            <h3 className="font-black text-slate-800 dark:text-white text-lg">Calendar Setup</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Connect an iCal feed from Ollie Sports (or any .ics URL) to sync the team's schedule automatically.
             </p>
             <div>
@@ -236,11 +238,11 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
                     setIcalUrl(e.target.value);
                     setIcalValid(null);
                   }}
-                  className="flex-grow border border-slate-200 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-grow border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-white"
                 />
                 <button
                   onClick={handleTestIcal}
-                  className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
                 >
                   Test
                 </button>
@@ -259,7 +261,7 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
             <div className="flex gap-2">
               <button
                 onClick={() => setStep(0)}
-                className="flex-1 py-3 text-slate-500 font-bold rounded-xl hover:bg-slate-50 flex items-center justify-center gap-1"
+                className="flex-1 py-3 text-slate-500 dark:text-slate-400 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center gap-1"
               >
                 <ChevronLeft size={16} /> Back
               </button>
@@ -277,8 +279,8 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
         {/* Step 3: Season */}
         {step === 2 && (
           <div className="space-y-4">
-            <h3 className="font-black text-slate-800 text-lg">Season Setup</h3>
-            <p className="text-xs text-slate-500">
+            <h3 className="font-black text-slate-800 dark:text-white text-lg">Season Setup</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Create the team's first season with a base fee. You can adjust the budget and roster from the Budget view
               afterward.
             </p>
@@ -288,7 +290,7 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
                 <select
                   value={selectedSeason}
                   onChange={(e) => setSelectedSeason(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2.5 text-sm font-bold outline-none mt-1"
+                  className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm font-bold outline-none mt-1 dark:bg-slate-800 dark:text-white"
                 >
                   {seasons.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -305,7 +307,7 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
                     type="number"
                     value={baseFee}
                     onChange={(e) => setBaseFee(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2.5 pl-7 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 pl-7 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-white"
                   />
                 </div>
               </div>
@@ -313,7 +315,7 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
             <div className="flex gap-2">
               <button
                 onClick={() => setStep(1)}
-                className="flex-1 py-3 text-slate-500 font-bold rounded-xl hover:bg-slate-50 flex items-center justify-center gap-1"
+                className="flex-1 py-3 text-slate-500 dark:text-slate-400 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center gap-1"
               >
                 <ChevronLeft size={16} /> Back
               </button>
@@ -337,8 +339,8 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
             >
               <CheckCircle2 size={32} className="text-white" />
             </div>
-            <h3 className="font-black text-slate-800 text-xl">{teamForm.name} is ready!</h3>
-            <p className="text-sm text-slate-500 max-w-xs mx-auto">
+            <h3 className="font-black text-slate-800 dark:text-white text-xl">{teamForm.name} is ready!</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
               Team created with {selectedSeason} season and ${baseFee} base fee.
               {icalUrl ? ' Calendar is connected.' : ''} Next steps: import players and build the budget.
             </p>

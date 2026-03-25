@@ -97,7 +97,7 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
           <Building2 size={20} className="text-white" />
         </div>
         <div>
-          <h2 className="text-2xl font-black text-slate-900">Club Settings</h2>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white">Club Settings</h2>
           <p className="text-xs text-slate-400 font-bold">
             {club?.name} · {teams.length} teams
           </p>
@@ -105,8 +105,8 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
       </div>
 
       {/* Club Info */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <h3 className="font-black text-slate-800 text-sm mb-4 flex items-center gap-2">
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
+        <h3 className="font-black text-slate-800 dark:text-white text-sm mb-4 flex items-center gap-2">
           <Building2 size={16} className="text-blue-600" /> Club Information
         </h3>
         <div className="space-y-3">
@@ -116,17 +116,17 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
               type="text"
               value={clubName}
               onChange={(e) => setClubName(e.target.value)}
-              className="w-full border border-slate-200 rounded-xl p-3 font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 mt-1"
+              className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 font-bold text-sm outline-none focus:ring-2 focus:ring-blue-500 mt-1 dark:bg-slate-800 dark:text-white"
             />
           </div>
           <div className="flex gap-3">
             <div className="flex-grow">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Slug</label>
-              <p className="text-sm font-mono text-slate-500 mt-1">{club?.slug}</p>
+              <p className="text-sm font-mono text-slate-500 dark:text-slate-400 mt-1">{club?.slug}</p>
             </div>
             <div className="flex-grow">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Teams</label>
-              <p className="text-sm font-black text-slate-800 mt-1">{teams.length}</p>
+              <p className="text-sm font-black text-slate-800 dark:text-white mt-1">{teams.length}</p>
             </div>
           </div>
           <button
@@ -140,9 +140,9 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
       </div>
 
       {/* Club-Level Roles */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="font-black text-slate-800 text-sm flex items-center gap-2">
+          <h3 className="font-black text-slate-800 dark:text-white text-sm flex items-center gap-2">
             <Shield size={16} className="text-blue-600" /> Club Administrators
           </h3>
           <button
@@ -154,20 +154,22 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
         </div>
 
         {showInvite && (
-          <div className="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-200 space-y-2">
-            <p className="text-[10px] font-bold text-blue-700">Assign a club-level role by email address</p>
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 space-y-2">
+            <p className="text-[10px] font-bold text-blue-700 dark:text-blue-300">
+              Assign a club-level role by email address
+            </p>
             <div className="flex gap-2">
               <input
                 type="email"
                 placeholder="admin@example.com"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                className="flex-grow bg-white border border-blue-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                className="flex-grow bg-white dark:bg-slate-800 dark:text-white border border-blue-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
               />
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value)}
-                className="bg-white border border-blue-200 rounded-lg px-2 py-1.5 text-xs font-bold outline-none"
+                className="bg-white dark:bg-slate-800 dark:text-white border border-blue-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs font-bold outline-none"
               >
                 {Object.entries(CLUB_ROLES).map(([key, def]) => (
                   <option key={key} value={key}>
@@ -205,15 +207,15 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
               const firstWithEmail = roles.find((r) => r.email || r.displayName);
               const displayLabel = firstWithEmail?.displayName || firstWithEmail?.email || userId.slice(0, 12) + '...';
               return (
-                <div key={userId} className="bg-slate-50 p-3 rounded-xl">
+                <div key={userId} className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-bold text-slate-600">{displayLabel}</span>
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{displayLabel}</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {roles.map((r) => (
                       <div
                         key={r.id}
-                        className="inline-flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2 py-1 group"
+                        className="inline-flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 group"
                       >
                         {r.scope === 'team' && (
                           <span
@@ -258,31 +260,31 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
       </div>
 
       {/* Role Legend */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <h3 className="font-black text-slate-800 text-sm mb-3">Role Permissions</h3>
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
+        <h3 className="font-black text-slate-800 dark:text-white text-sm mb-3">Role Permissions</h3>
         <div className="space-y-2">
           {Object.entries(ALL_ROLES).map(([key, def]) => (
-            <div key={key} className="flex items-start gap-3 p-2.5 bg-slate-50 rounded-lg">
+            <div key={key} className="flex items-start gap-3 p-2.5 bg-slate-50 dark:bg-slate-800 rounded-lg">
               <span
                 className={`text-[9px] font-black uppercase px-2 py-0.5 rounded shrink-0 mt-0.5 ${
                   key === 'club_admin'
-                    ? 'bg-red-100 text-red-700'
+                    ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
                     : key === 'club_manager'
-                      ? 'bg-violet-100 text-violet-700'
+                      ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300'
                       : key === 'team_manager'
-                        ? 'bg-blue-100 text-blue-700'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
                         : key === 'treasurer'
-                          ? 'bg-emerald-100 text-emerald-700'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
                           : key === 'scheduler'
-                            ? 'bg-violet-100 text-violet-700'
+                            ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300'
                             : key === 'head_coach'
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-slate-100 text-slate-600'
+                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                              : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                 }`}
               >
                 {def.label}
               </span>
-              <p className="text-[11px] text-slate-500 leading-relaxed">{def.description}</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">{def.description}</p>
             </div>
           ))}
         </div>
