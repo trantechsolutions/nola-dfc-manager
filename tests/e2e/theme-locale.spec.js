@@ -4,7 +4,7 @@ import { loginViaUI } from './helpers/auth.js';
 test.describe('Theme & Locale', () => {
   test.beforeEach(async ({ page }) => {
     await loginViaUI(page);
-    await page.goto('/#/dashboard');
+    await page.goto('/dashboard');
     await page.waitForTimeout(2000);
   });
 

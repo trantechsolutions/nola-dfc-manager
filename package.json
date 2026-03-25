@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "homepage": "https://apps.trantech.solutions/nola-dfc-manager/",
+  "homepage": "https://nola-dfc-manager.vercel.app",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -19,8 +19,6 @@
     "test:e2e:headed": "npx playwright test --headed",
     "test:e2e:chromium": "npx playwright test --project=chromium",
     "test:e2e:mobile": "npx playwright test --project=mobile",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist",
     "prepare": "husky"
   },
   "dependencies": {

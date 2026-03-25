@@ -9,7 +9,7 @@ test.describe('People / Roster', () => {
     if ((await peopleBtn.count()) > 0) {
       await peopleBtn.first().click();
     } else {
-      await page.goto('/#/people');
+      await page.goto('/people');
     }
     await page.waitForTimeout(2000);
   });

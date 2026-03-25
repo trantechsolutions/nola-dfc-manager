@@ -9,7 +9,7 @@ import { TEST_USER } from './seed.js';
  * Login via the app's login page UI.
  */
 export async function loginViaUI(page) {
-  await page.goto('/#/');
+  await page.goto('/');
   await page.waitForSelector('input[type="email"]', { timeout: 10_000 });
   await page.fill('input[type="email"]', TEST_USER.email);
   await page.fill('input[type="password"]', TEST_USER.password);
@@ -52,7 +52,7 @@ export async function loginDirect(page) {
   const session = await response.json();
 
   // Navigate to the app and inject session into localStorage
-  await page.goto('/#/');
+  await page.goto('/');
   await page.evaluate((sessionData) => {
     const storageKey = Object.keys(sessionData).length
       ? `sb-${new URL(sessionData.url).hostname.split('.')[0]}-auth-token`

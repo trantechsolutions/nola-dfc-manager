@@ -5,7 +5,7 @@ import { getCreated } from './helpers/seed.js';
 test.describe('Parent View', () => {
   test.beforeEach(async ({ page }) => {
     await loginViaUI(page);
-    await page.goto('/#/dashboard');
+    await page.goto('/dashboard');
     await page.waitForTimeout(2000);
   });
 
@@ -17,7 +17,7 @@ test.describe('Parent View', () => {
 
     if (!hasBalance) {
       // Try navigating to people view and impersonating
-      await page.goto('/#/people');
+      await page.goto('/people');
       await page.waitForTimeout(2000);
 
       // Look for "View as Parent" button on a player row

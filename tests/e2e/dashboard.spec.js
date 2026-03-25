@@ -8,7 +8,7 @@ test.describe('Dashboard / Overview', () => {
 
   test('displays the dashboard after login', async ({ page }) => {
     // Should be on dashboard or club overview
-    await expect(page).toHaveURL(/\/#\/(dashboard|club)/);
+    await expect(page).toHaveURL(/\/(dashboard|club)/);
   });
 
   test('shows navigation items', async ({ page }) => {
@@ -21,7 +21,7 @@ test.describe('Dashboard / Overview', () => {
 
   test('overview cards do not have shadow/glow effects', async ({ page }) => {
     // Navigate to dashboard
-    await page.goto('/#/dashboard');
+    await page.goto('/dashboard');
     await page.waitForTimeout(2000);
 
     // Check that cards exist but don't have glow classes
@@ -38,7 +38,7 @@ test.describe('Dashboard / Overview', () => {
   });
 
   test('theme toggle cycles through light/dark/system', async ({ page }) => {
-    await page.goto('/#/dashboard');
+    await page.goto('/dashboard');
     await page.waitForTimeout(2000);
 
     // Desktop sidebar has a theme button with text "system"/"light"/"dark"

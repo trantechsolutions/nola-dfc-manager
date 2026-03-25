@@ -116,7 +116,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
   };
 
   const copyInviteLink = (token) => {
-    const url = `${window.location.origin}/#/invite/${token}`;
+    const url = `${window.location.origin}/invite/${token}`;
     navigator.clipboard.writeText(url).then(() => showToast('Invite link copied!'));
   };
 

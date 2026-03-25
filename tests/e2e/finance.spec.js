@@ -9,7 +9,7 @@ test.describe('Finance', () => {
     if ((await financeBtn.count()) > 0) {
       await financeBtn.first().click();
     } else {
-      await page.goto('/#/finance');
+      await page.goto('/finance');
     }
     await page.waitForTimeout(2000);
   });
@@ -41,7 +41,7 @@ test.describe('Finance', () => {
 
   test('remaining budget displays correctly (non-negative when expected)', async ({ page }) => {
     // Check overview first for remaining budget
-    await page.goto('/#/dashboard');
+    await page.goto('/dashboard');
     await page.waitForTimeout(2000);
 
     // Look for remaining budget amount
