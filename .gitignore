@@ -33,5 +33,8 @@ supabase*.json
 supabase*.md
 
 .claude/*
-*storybook.log
-storybook-static
+
+# Test artifacts
+test-results/
+playwright-report/
+.e2e-seed-state.json

@@ -3,8 +3,11 @@
  * so it can be reliably cleaned up without affecting real data.
  */
 import { adminClient } from './supabaseAdmin.js';
+import { writeFileSync, readFileSync, existsSync, unlinkSync } from 'fs';
+import { resolve } from 'path';
 
 const PREFIX = 'TEST_E2E_';
+const STATE_FILE = resolve(process.cwd(), 'test-results', '.e2e-seed-state.json');
 
 // ── Test user credentials ──
 export const TEST_USER = {
@@ -13,7 +16,7 @@ export const TEST_USER = {
 };
 
 // ── Stored IDs for cleanup ──
-const created = {
+let created = {
   userId: null,
   clubId: null,
   teamId: null,
@@ -23,7 +26,34 @@ const created = {
   transactionIds: [],
 };
 
+function saveState() {
+  try {
+    writeFileSync(STATE_FILE, JSON.stringify(created, null, 2));
+  } catch {
+    /* noop */
+  }
+}
+
+function loadState() {
+  try {
+    if (existsSync(STATE_FILE)) {
+      created = JSON.parse(readFileSync(STATE_FILE, 'utf-8'));
+    }
+  } catch {
+    /* noop */
+  }
+}
+
+function clearState() {
+  try {
+    if (existsSync(STATE_FILE)) unlinkSync(STATE_FILE);
+  } catch {
+    /* noop */
+  }
+}
+
 export function getCreated() {
+  loadState();
   return { ...created };
 }
 
@@ -211,6 +241,8 @@ export async function seedAll() {
     created.transactionIds.push(data.id);
   }
 
+  saveState();
+
   console.log('✓ Test data seeded:', {
     userId,
     clubId: club.id,
@@ -226,6 +258,7 @@ export async function seedAll() {
 
 // ── Cleanup all test data (reverse order of creation) ──
 export async function cleanupAll() {
+  loadState();
   try {
     // Transactions
     if (created.transactionIds.length) {
@@ -278,6 +311,7 @@ export async function cleanupAll() {
       await adminClient.auth.admin.deleteUser(created.userId);
     }
 
+    clearState();
     console.log('✓ Test data cleaned up');
   } catch (err) {
     console.error('⚠ Cleanup error (non-fatal):', err.message);
