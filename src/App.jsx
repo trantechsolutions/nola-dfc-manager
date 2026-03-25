@@ -91,6 +91,7 @@ function App() {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [impersonatingAs, setImpersonatingAs] = useState(null); // player object when admin is viewing as parent
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarSettingsOpen, setSidebarSettingsOpen] = useState(false);
 
   // ── TEAM CONTEXT ──
   const {
@@ -679,32 +680,45 @@ function App() {
             ))}
           </nav>
 
-          <div className="p-4 border-t border-slate-800 space-y-1">
-            <div className="px-4 py-2">
-              <p className="text-[10px] font-bold text-slate-500 truncate">{user.email}</p>
-              <p className="text-[9px] font-bold text-blue-400 uppercase">{effectiveRole.replace('_', ' ')}</p>
-            </div>
+          <div className="border-t border-slate-800">
             <button
-              onClick={toggleLocale}
-              className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-slate-400 hover:bg-slate-800 transition-all"
+              onClick={() => setSidebarSettingsOpen(!sidebarSettingsOpen)}
+              className="w-full flex items-center justify-between px-4 py-3 text-slate-400 hover:bg-slate-800 transition-all"
             >
-              <Globe size={18} />
-              <span className="text-sm">{locale === 'en' ? 'Español' : 'English'}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <Settings size={14} />
+                <p className="text-[10px] font-bold text-slate-500 truncate">{user.email}</p>
+              </div>
+              <ChevronDown
+                size={14}
+                className={`transition-transform duration-200 flex-shrink-0 ${sidebarSettingsOpen ? 'rotate-180' : ''}`}
+              />
             </button>
-            <button
-              onClick={cycleTheme}
-              className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-slate-400 hover:bg-slate-800 transition-all"
-            >
-              <ThemeIcon size={18} />
-              <span className="text-sm capitalize">{theme}</span>
-            </button>
-            <button
-              onClick={() => supabase.auth.signOut()}
-              className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-red-400 hover:bg-red-900/20 transition-all"
-            >
-              <LogOut size={18} />
-              <span className="text-sm">{t('common.logout')}</span>
-            </button>
+            {sidebarSettingsOpen && (
+              <div className="px-4 pb-3 space-y-1">
+                <button
+                  onClick={toggleLocale}
+                  className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-slate-400 hover:bg-slate-800 transition-all"
+                >
+                  <Globe size={16} />
+                  <span className="text-sm">{locale === 'en' ? 'Español' : 'English'}</span>
+                </button>
+                <button
+                  onClick={cycleTheme}
+                  className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-slate-400 hover:bg-slate-800 transition-all"
+                >
+                  <ThemeIcon size={16} />
+                  <span className="text-sm capitalize">{theme}</span>
+                </button>
+                <button
+                  onClick={() => supabase.auth.signOut()}
+                  className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-red-400 hover:bg-red-900/20 transition-all"
+                >
+                  <LogOut size={16} />
+                  <span className="text-sm">{t('common.logout')}</span>
+                </button>
+              </div>
+            )}
           </div>
         </aside>
 
