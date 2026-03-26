@@ -405,7 +405,7 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
           setShowEditModal(false);
           setEditingPlayer(null);
         }}
-        onSave={handleSavePlayer}
+        onSubmit={handleSavePlayer}
         initialData={editingPlayer}
         selectedSeason={selectedSeason}
       />
