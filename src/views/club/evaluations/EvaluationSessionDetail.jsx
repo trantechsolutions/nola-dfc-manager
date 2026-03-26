@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useT } from '../../../i18n/I18nContext';
 import { useEvaluationManager } from '../../../hooks/useEvaluationManager';
+import { supabaseService } from '../../../services/supabaseService';
+import { getUSAgeGroup } from '../../../utils/ageGroup';
 
 const TABS = [
   { key: 'setup', icon: Settings, labelKey: 'evaluations.tabs.setup', fallback: 'Setup' },
@@ -88,6 +90,10 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
   // ---- Roster state ----
   const [csvPreview, setCsvPreview] = useState(null);
   const fileInputRef = useRef(null);
+  const [showClubPicker, setShowClubPicker] = useState(false);
+  const [clubPlayers, setClubPlayers] = useState([]);
+  const [clubPickerSearch, setClubPickerSearch] = useState('');
+  const [selectedClubPlayerIds, setSelectedClubPlayerIds] = useState(new Set());
 
   // ---- Scoring state ----
   const [localScores, setLocalScores] = useState({});
@@ -243,6 +249,52 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
     } catch {
       showToast?.(t('evaluations.importFailed', 'Import failed.'), true);
     }
+  };
+
+  const handleOpenClubPicker = async () => {
+    try {
+      const players = await supabaseService.getPlayersByClub(club.id);
+      // Filter out players already added as candidates
+      const existingPlayerIds = new Set(candidates.filter((c) => c.playerId).map((c) => c.playerId));
+      setClubPlayers(players.filter((p) => !existingPlayerIds.has(p.id)));
+      setSelectedClubPlayerIds(new Set());
+      setClubPickerSearch('');
+      setShowClubPicker(true);
+    } catch (e) {
+      showToast?.('Failed to load club players', true);
+    }
+  };
+
+  const handleAddClubPlayers = async () => {
+    if (selectedClubPlayerIds.size === 0) return;
+    const toAdd = clubPlayers
+      .filter((p) => selectedClubPlayerIds.has(p.id))
+      .map((p) => ({
+        playerId: p.id,
+        firstName: p.firstName,
+        lastName: p.lastName,
+        birthdate: p.birthdate || '',
+        ageGroup: p.birthdate && session?.seasonId ? getUSAgeGroup(p.birthdate, session.seasonId) : '',
+        position: '',
+        notes: '',
+        bibNumber: null,
+      }));
+    try {
+      await importCandidates(toAdd);
+      setShowClubPicker(false);
+      showToast?.(`${toAdd.length} player(s) added from club roster`);
+    } catch {
+      showToast?.('Failed to add players', true);
+    }
+  };
+
+  const toggleClubPlayer = (id) => {
+    setSelectedClubPlayerIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleDeleteCandidate = async (id) => {
@@ -636,6 +688,13 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                 <Download size={14} />
                 {t('evaluations.downloadTemplate', 'Download Template')}
               </button>
+              <button
+                onClick={handleOpenClubPicker}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors"
+              >
+                <Users size={14} />
+                {t('evaluations.addFromClub', 'Add from Club')}
+              </button>
               <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleCsvUpload} />
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -788,6 +847,99 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
             </div>
           )}
         </div>
+
+        {/* Club Player Picker Modal */}
+        {showClubPicker && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50" onClick={() => setShowClubPicker(false)} />
+            <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-[80vh] flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Users size={16} className="text-blue-500" />
+                  {t('evaluations.addFromClub', 'Add from Club Roster')}
+                  {selectedClubPlayerIds.size > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold">
+                      {selectedClubPlayerIds.size} selected
+                    </span>
+                  )}
+                </h3>
+                <button
+                  onClick={() => setShowClubPicker(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="p-3 border-b border-slate-100 dark:border-slate-800">
+                <input
+                  type="text"
+                  placeholder="Search players..."
+                  value={clubPickerSearch}
+                  onChange={(e) => setClubPickerSearch(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-2">
+                {clubPlayers
+                  .filter((p) => {
+                    if (!clubPickerSearch) return true;
+                    const q = clubPickerSearch.toLowerCase();
+                    return `${p.firstName} ${p.lastName}`.toLowerCase().includes(q);
+                  })
+                  .map((p) => (
+                    <label
+                      key={p.id}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                        selectedClubPlayerIds.has(p.id)
+                          ? 'bg-blue-50 dark:bg-blue-900/20'
+                          : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedClubPlayerIds.has(p.id)}
+                        onChange={() => toggleClubPlayer(p.id)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                          {p.firstName} {p.lastName}
+                          {p.jerseyNumber && (
+                            <span className="ml-1.5 text-[10px] text-slate-400">#{p.jerseyNumber}</span>
+                          )}
+                        </p>
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                          {p.teamName || 'Unassigned'}
+                          {p.status === 'prospect' && ' · Prospect'}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                {clubPlayers.length === 0 && (
+                  <p className="text-center py-8 text-sm text-slate-400">No club players available to add.</p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 p-4 border-t border-slate-200 dark:border-slate-700">
+                <button
+                  onClick={() => setShowClubPicker(false)}
+                  className="px-4 py-2 rounded-xl text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddClubPlayers}
+                  disabled={selectedClubPlayerIds.size === 0}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-bold transition-colors"
+                >
+                  Add {selectedClubPlayerIds.size || ''} Player{selectedClubPlayerIds.size !== 1 ? 's' : ''}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
