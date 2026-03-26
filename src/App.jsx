@@ -459,12 +459,14 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Re-fetch when team changes, parent team resolves, or season changes
+  // Re-fetch when team, season, or team-season context changes
+  // currentTeamSeason?.id is critical — for parents, it resolves AFTER
+  // useSoccerYear re-fetches with the parentTeamId
   useEffect(() => {
-    if (user && (selectedTeamId || parentTeamId || selectedSeason)) {
+    if (user && (selectedTeamId || parentTeamId)) {
       fetchData();
     }
-  }, [selectedTeamId, parentTeamId, selectedSeason]);
+  }, [selectedTeamId, parentTeamId, selectedSeason, currentTeamSeason?.id]);
 
   // Re-fetch financials when team season resolves or season changes
   useEffect(() => {
