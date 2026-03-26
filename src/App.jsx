@@ -444,13 +444,12 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Re-fetch when team changes (staff) or parent team resolves
+  // Re-fetch when team changes, parent team resolves, or season changes
   useEffect(() => {
-    if (user && (selectedTeamId || parentTeamId)) {
-      setLoading(true);
+    if (user && (selectedTeamId || parentTeamId || selectedSeason)) {
       fetchData();
     }
-  }, [selectedTeamId, parentTeamId]);
+  }, [selectedTeamId, parentTeamId, selectedSeason]);
 
   // Re-fetch financials when team season resolves or season changes
   useEffect(() => {
