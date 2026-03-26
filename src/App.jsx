@@ -228,14 +228,14 @@ function App() {
   }, [teamEvents]);
 
   // ── DATA FETCHING ──
-  const fetchData = async () => {
+  const fetchData = async (seasonOverride) => {
     try {
       let fetchTeamId = selectedTeamId || parentTeamId;
 
       // ── Step 1: Resolve players ──
       // For parents (no team context), start by matching email → guardian → player
       let pData = [];
-      let resolvedSeason = selectedSeason;
+      let resolvedSeason = seasonOverride || selectedSeason;
 
       if (!fetchTeamId && user?.email) {
         try {
@@ -249,7 +249,9 @@ function App() {
             const enrolledSeasons = Object.keys(profiles).sort((a, b) => b.localeCompare(a));
             if (enrolledSeasons.length > 0) {
               resolvedSeason = enrolledSeasons[0];
+              // Set the React state for subsequent renders
               setSelectedSeason(resolvedSeason);
+              // Continue using resolvedSeason in this fetch cycle
             }
           }
         } catch (e) {
@@ -360,6 +362,7 @@ function App() {
 
   // ── FILTERED DATA ──
   const seasonalPlayers = useMemo(() => {
+    if (!selectedSeason) return players.filter((p) => p.status !== 'archived');
     let filtered = players.filter((p) => p.seasonProfiles?.[selectedSeason] && p.status !== 'archived');
     if (selectedTeamId) {
       filtered = filtered.filter((p) => p.teamId === selectedTeamId);
@@ -370,6 +373,7 @@ function App() {
   const archivedPlayers = useMemo(() => players.filter((p) => p.status === 'archived'), [players]);
 
   const seasonalTransactions = useMemo(() => {
+    if (!selectedSeason) return transactions;
     let filtered = transactions.filter((tx) => tx.seasonId === selectedSeason);
     if (currentTeamSeason?.id) {
       filtered = filtered.filter((tx) => tx.teamSeasonId === currentTeamSeason.id || !tx.teamSeasonId);
