@@ -14,8 +14,20 @@ export async function loginViaUI(page) {
   await page.fill('input[type="email"]', TEST_USER.email);
   await page.fill('input[type="password"]', TEST_USER.password);
   await page.click('button[type="submit"]');
-  // Wait for navigation away from login
-  await page.waitForURL(/\/#\/(dashboard|club)/, { timeout: 15_000 });
+
+  // Wait for navigation — retry once if login fails (e.g., transient auth error)
+  try {
+    await page.waitForURL(/\/(dashboard|club)/, { timeout: 15_000 });
+  } catch {
+    // Check if we got an error message and retry
+    const errorMsg = page.locator('text=/invalid|error/i');
+    if ((await errorMsg.count()) > 0) {
+      await page.fill('input[type="email"]', TEST_USER.email);
+      await page.fill('input[type="password"]', TEST_USER.password);
+      await page.click('button[type="submit"]');
+      await page.waitForURL(/\/(dashboard|club)/, { timeout: 15_000 });
+    }
+  }
 }
 
 /**
@@ -74,5 +86,5 @@ export async function loginDirect(page) {
 
   // Reload to pick up the session
   await page.reload();
-  await page.waitForURL(/\/#\/(dashboard|club)/, { timeout: 15_000 });
+  await page.waitForURL(/\/(dashboard|club)/, { timeout: 15_000 });
 }

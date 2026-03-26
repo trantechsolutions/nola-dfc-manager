@@ -20,10 +20,13 @@ let created = {
   userId: null,
   clubId: null,
   teamId: null,
+  teamId2: null,
   seasonId: null,
   teamSeasonId: null,
   playerIds: [],
   transactionIds: [],
+  budgetItemIds: [],
+  teamEventIds: [],
 };
 
 function saveState() {
@@ -89,9 +92,10 @@ export async function seedAll() {
   );
 
   // 2. Create test club
+  const slug = `${PREFIX.toLowerCase()}club_${Date.now()}`;
   const { data: club, error: clubErr } = await adminClient
     .from('clubs')
-    .insert({ name: `${PREFIX}Club`, slug: `${PREFIX.toLowerCase()}club` })
+    .insert({ name: `${PREFIX}Club`, slug })
     .select()
     .single();
   if (clubErr) throw new Error(`Failed to create club: ${clubErr.message}`);
@@ -241,16 +245,135 @@ export async function seedAll() {
     created.transactionIds.push(data.id);
   }
 
+  // 9. Create budget items
+  const budgetRows = [
+    {
+      season_id: seasonId,
+      team_season_id: ts.id,
+      category: 'TOU',
+      label: `${PREFIX}Tournaments`,
+      income: 0,
+      expenses_fall: 2000,
+      expenses_spring: 3000,
+    },
+    {
+      season_id: seasonId,
+      team_season_id: ts.id,
+      category: 'OPE',
+      label: `${PREFIX}Operations`,
+      income: 0,
+      expenses_fall: 500,
+      expenses_spring: 500,
+    },
+    {
+      season_id: seasonId,
+      team_season_id: ts.id,
+      category: 'LEA',
+      label: `${PREFIX}League Fees`,
+      income: 0,
+      expenses_fall: 1000,
+      expenses_spring: 1000,
+    },
+  ];
+  for (const bi of budgetRows) {
+    const { data, error } = await adminClient.from('budget_items').insert(bi).select().single();
+    if (error) throw new Error(`Failed to create budget item: ${error.message}`);
+    created.budgetItemIds.push(data.id);
+  }
+
+  // 10. Create a second team (for multi-team tests)
+  const { data: team2, error: t2Err } = await adminClient
+    .from('teams')
+    .insert({
+      club_id: club.id,
+      name: `${PREFIX}Team U12`,
+      age_group: 'U12',
+      gender: 'Girls',
+      tier: 'recreational',
+      color_primary: '#059669',
+      color_secondary: '#ffffff',
+    })
+    .select()
+    .single();
+  if (t2Err) throw new Error(`Failed to create team 2: ${t2Err.message}`);
+  created.teamId2 = team2.id;
+
+  // 11. Create team events
+  const eventRows = [
+    {
+      team_id: team.id,
+      uid: `${PREFIX}event-1`,
+      title: `${PREFIX}Fall Tournament`,
+      event_date: '2025-10-15T10:00:00Z',
+      event_type: 'tournament',
+      location: 'City Park Fields',
+    },
+    {
+      team_id: team.id,
+      uid: `${PREFIX}event-2`,
+      title: `${PREFIX}League Match vs Rival`,
+      event_date: '2025-11-01T14:00:00Z',
+      event_type: 'league',
+      location: 'Home Field',
+    },
+  ];
+  for (const ev of eventRows) {
+    const { data, error } = await adminClient.from('team_events').insert(ev).select().single();
+    if (error) throw new Error(`Failed to create team event: ${error.message}`);
+    created.teamEventIds.push(data.id);
+  }
+
+  // 12. Add more transaction types (expense categories)
+  const expenseRows = [
+    {
+      season_id: seasonId,
+      team_season_id: ts.id,
+      date: '2025-10-10',
+      category: 'TOU',
+      title: `${PREFIX}Tournament Registration`,
+      amount: -350,
+      cleared: true,
+      event_id: created.teamEventIds[0],
+    },
+    {
+      season_id: seasonId,
+      team_season_id: ts.id,
+      date: '2025-10-20',
+      category: 'OPE',
+      title: `${PREFIX}Team Jerseys`,
+      amount: -500,
+      cleared: true,
+    },
+    {
+      season_id: seasonId,
+      team_season_id: ts.id,
+      player_id: created.playerIds[2],
+      date: '2025-11-01',
+      category: 'SPO',
+      title: `${PREFIX}Sponsorship Credit`,
+      amount: 250,
+      cleared: true,
+    },
+  ];
+  for (const tx of expenseRows) {
+    const { data, error } = await adminClient.from('transactions').insert(tx).select().single();
+    if (error) throw new Error(`Failed to create expense transaction: ${error.message}`);
+    created.transactionIds.push(tx);
+  }
+
   saveState();
 
   console.log('✓ Test data seeded:', {
     userId,
     clubId: club.id,
     teamId: team.id,
+    teamId2: team2.id,
     seasonId,
     teamSeasonId: ts.id,
     players: created.playerIds.length,
     transactions: created.transactionIds.length,
+    budgetItems: created.budgetItemIds.length,
+    teamEvents: created.teamEventIds.length,
   });
 
   return created;
@@ -282,6 +405,15 @@ export async function cleanupAll() {
       await adminClient.from('players').delete().in('id', created.playerIds);
     }
 
+    // Team events
+    if (created.teamEventIds?.length) {
+      await adminClient.from('team_events').delete().in('id', created.teamEventIds);
+    }
+    // Also clean stray events
+    if (created.teamId) {
+      await adminClient.from('team_events').delete().eq('team_id', created.teamId);
+    }
+
     // Team season
     if (created.teamSeasonId) {
       await adminClient.from('budget_items').delete().eq('team_season_id', created.teamSeasonId);
@@ -291,6 +423,12 @@ export async function cleanupAll() {
     // Season
     if (created.seasonId) {
       await adminClient.from('seasons').delete().eq('id', created.seasonId);
+    }
+
+    // Second team
+    if (created.teamId2) {
+      await adminClient.from('user_roles').delete().eq('team_id', created.teamId2);
+      await adminClient.from('teams').delete().eq('id', created.teamId2);
     }
 
     // Team roles

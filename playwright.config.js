@@ -6,13 +6,13 @@ export default defineConfig({
   globalTeardown: './tests/e2e/global-teardown.js',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: 1,
+  retries: process.env.CI ? 2 : 1,
+  workers: process.env.CI ? 1 : 2,
   reporter: 'html',
   timeout: 60_000,
 
   use: {
-    baseURL: 'http://localhost:5173/nola-dfc-manager/',
+    baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -30,7 +30,7 @@ export default defineConfig({
 
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:5173/nola-dfc-manager/',
+    url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },

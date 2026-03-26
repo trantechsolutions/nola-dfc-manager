@@ -24,7 +24,7 @@ test.describe('Authentication', () => {
     await page.fill('input[type="password"]', TEST_USER.password);
     await page.click('button[type="submit"]');
     // Should navigate away from login
-    await page.waitForURL(/\/#\/(dashboard|club)/, { timeout: 15_000 });
+    await page.waitForURL(/\/(dashboard|club)/, { timeout: 15_000 });
     // Should see some navigation or dashboard content
     await expect(page.locator('body')).not.toContainText('Sign In', { timeout: 5000 });
   });
