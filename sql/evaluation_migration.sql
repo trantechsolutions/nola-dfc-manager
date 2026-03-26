@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS evaluation_candidates (
   player_id        uuid REFERENCES players(id),
   first_name       text NOT NULL,
   last_name        text NOT NULL,
+  bib_number       int,                         -- visible identifier during evaluations
   birthdate        date,
   age_group        text,
   position         text,

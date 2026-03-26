@@ -220,6 +220,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
           return {
             firstName: row['first name'] || row['firstname'] || '',
             lastName: row['last name'] || row['lastname'] || '',
+            bibNumber: parseInt(row['bib'] || row['bib number'] || row['bib#'] || '', 10) || null,
             birthdate: row['birthdate'] || row['dob'] || '',
             ageGroup: row['age group'] || row['agegroup'] || '',
             position: row['position'] || '',
@@ -718,6 +719,11 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                       className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
                     >
                       <td className="px-3 py-2 text-slate-800 dark:text-slate-200 font-medium">
+                        {c.bibNumber && (
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-black mr-2">
+                            {c.bibNumber}
+                          </span>
+                        )}
                         {c.firstName} {c.lastName}
                       </td>
                       <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{c.ageGroup || '—'}</td>
@@ -786,10 +792,17 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
         <div className="space-y-4">
           {candidates.map((c) => (
             <div key={c.id} className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-3">
-              <h5 className="font-semibold text-slate-800 dark:text-slate-200">
-                {c.firstName} {c.lastName}
+              <h5 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                {c.bibNumber && (
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-sm font-black">
+                    {c.bibNumber}
+                  </span>
+                )}
+                <span>
+                  {c.firstName} {c.lastName}
+                </span>
                 {c.ageGroup && (
-                  <span className="ml-2 text-xs font-normal text-slate-500 dark:text-slate-400">({c.ageGroup})</span>
+                  <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({c.ageGroup})</span>
                 )}
               </h5>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -877,6 +890,11 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                   >
                     <td className="px-3 py-2 text-slate-400 dark:text-slate-500">{idx + 1}</td>
                     <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">
+                      {c.bibNumber && (
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[10px] font-black mr-1.5">
+                          {c.bibNumber}
+                        </span>
+                      )}
                       {c.firstName} {c.lastName}
                     </td>
                     {categories.map((cat) => {
@@ -994,6 +1012,11 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                     className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
                   >
                     <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">
+                      {c.bibNumber && (
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[10px] font-black mr-1.5">
+                          {c.bibNumber}
+                        </span>
+                      )}
                       {c.firstName} {c.lastName}
                     </td>
                     <td className="px-3 py-2 text-center">

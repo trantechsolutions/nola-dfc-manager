@@ -133,6 +133,7 @@ export const evaluationService = {
       playerId: c.player_id,
       firstName: c.first_name,
       lastName: c.last_name,
+      bibNumber: c.bib_number,
       birthdate: c.birthdate,
       ageGroup: c.age_group,
       position: c.position,
@@ -150,6 +151,7 @@ export const evaluationService = {
       player_id: c.playerId || null,
       first_name: c.firstName,
       last_name: c.lastName,
+      bib_number: c.bibNumber || null,
       birthdate: c.birthdate || null,
       age_group: c.ageGroup || null,
       position: c.position || null,
@@ -167,6 +169,7 @@ export const evaluationService = {
     if ('placementStatus' in updates) row.placement_status = updates.placementStatus;
     if ('notes' in updates) row.notes = updates.notes;
     if ('position' in updates) row.position = updates.position;
+    if ('bibNumber' in updates) row.bib_number = updates.bibNumber;
     const { error } = await supabase.from('evaluation_candidates').update(row).eq('id', candidateId);
     if (error) throw error;
   },
