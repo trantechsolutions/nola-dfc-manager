@@ -612,30 +612,62 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
   function renderRosterTab() {
     return (
       <div className="space-y-6">
-        {/* Actions */}
-        <div className="flex flex-wrap gap-2">
-          <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleCsvUpload} />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-sm font-medium transition-colors"
-          >
-            <Upload size={16} />
-            {t('evaluations.importCsv', 'Import CSV')}
-          </button>
-          <button
-            onClick={async () => {
-              try {
-                const result = await matchToPlayers();
-                showToast?.(t('evaluations.matched', 'Matching complete.'));
-              } catch {
-                showToast?.(t('evaluations.matchFailed', 'Match failed.'), true);
-              }
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
-          >
-            <RefreshCw size={16} />
-            {t('evaluations.matchToPlayers', 'Match to Players')}
-          </button>
+        {/* Template + Import Actions */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-bold text-slate-800 dark:text-white">
+              {t('evaluations.importRoster', 'Import Roster')}
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  const template =
+                    'First Name,Last Name,Bib,Birthdate,Age Group,Position,Notes\nJohn,Doe,1,2012-05-15,U14,Forward,\nJane,Smith,2,2013-01-20,U13,Midfielder,';
+                  const blob = new Blob([template], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'evaluation_roster_template.csv';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition-colors"
+              >
+                <Download size={14} />
+                {t('evaluations.downloadTemplate', 'Download Template')}
+              </button>
+              <input type="file" accept=".csv" ref={fileInputRef} className="hidden" onChange={handleCsvUpload} />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium transition-colors"
+              >
+                <Upload size={14} />
+                {t('evaluations.importCsv', 'Import CSV')}
+              </button>
+            </div>
+          </div>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500">
+            {t(
+              'evaluations.importHint',
+              'CSV columns: First Name, Last Name, Bib, Birthdate (YYYY-MM-DD), Age Group, Position, Notes. Players are imported to the club and assigned to teams during placement.',
+            )}
+          </p>
+          {candidates.length > 0 && (
+            <button
+              onClick={async () => {
+                try {
+                  const result = await matchToPlayers();
+                  showToast?.(t('evaluations.matchComplete', `Matched ${result} candidate(s) to existing players.`));
+                } catch {
+                  showToast?.(t('evaluations.matchFailed', 'Match failed.'), true);
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-800/30 text-xs font-medium transition-colors"
+            >
+              <RefreshCw size={14} />
+              {t('evaluations.matchToPlayers', 'Match to Existing Players')}
+            </button>
+          )}
         </div>
 
         {/* CSV Preview */}
@@ -650,6 +682,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                   <tr className="text-left text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase">
                     <th className="px-3 py-2">{t('evaluations.firstName', 'First Name')}</th>
                     <th className="px-3 py-2">{t('evaluations.lastName', 'Last Name')}</th>
+                    <th className="px-3 py-2">Bib</th>
                     <th className="px-3 py-2">{t('evaluations.birthdate', 'Birthdate')}</th>
                     <th className="px-3 py-2">{t('evaluations.ageGroup', 'Age Group')}</th>
                     <th className="px-3 py-2">{t('evaluations.position', 'Position')}</th>
@@ -661,6 +694,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                     <tr key={idx} className="border-t border-amber-200 dark:border-amber-700/50">
                       <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{row.firstName}</td>
                       <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{row.lastName}</td>
+                      <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{row.bibNumber || '—'}</td>
                       <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{row.birthdate}</td>
                       <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{row.ageGroup}</td>
                       <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{row.position}</td>
