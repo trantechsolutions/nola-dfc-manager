@@ -13,13 +13,127 @@ const RATING_LABELS = {
   4: { label: 'Below Expectations', color: 'bg-red-500 text-white' },
 };
 
-const DEFAULT_CATEGORIES = [
-  { key: 'technical', label: 'Technical Skills' },
-  { key: 'tactical', label: 'Tactical Awareness' },
-  { key: 'physical', label: 'Physical Fitness' },
-  { key: 'attitude', label: 'Attitude & Effort' },
-  { key: 'teamwork', label: 'Teamwork' },
-  { key: 'coachability', label: 'Coachability' },
+const EVAL_SECTIONS = [
+  {
+    key: 'technical',
+    label: 'Technical',
+    groups: [
+      {
+        key: 'passing',
+        label: 'Passing',
+        skills: [
+          { key: 'passing_pace', label: 'Proper Pace' },
+          { key: 'passing_accuracy', label: 'Accuracy' },
+          { key: 'passing_types', label: 'Ability to utilize different types of passes' },
+          { key: 'passing_driven', label: 'Ability to hit a driven ball' },
+          { key: 'passing_bothfeet', label: 'Can use both feet' },
+        ],
+      },
+      {
+        key: 'receiving',
+        label: 'Receiving',
+        skills: [
+          { key: 'receiving_feet', label: 'Good 1st touch with feet, with & w/out pressure' },
+          { key: 'receiving_body', label: 'Good 1st touch with body, with & w/out pressure' },
+          { key: 'receiving_awaypressure', label: 'First touch is taken away from pressure' },
+        ],
+      },
+      {
+        key: 'dribbling',
+        label: 'Dribbling',
+        skills: [
+          { key: 'dribble_comfortable', label: 'Comfortable on the ball' },
+          { key: 'dribble_takeon', label: 'Can take players on' },
+          { key: 'dribble_moves', label: 'Has moves that buy time and space' },
+          { key: 'dribble_shield', label: 'Can hold a player off with the ball (shield)' },
+          { key: 'dribble_bothfeet', label: 'Can use both feet' },
+        ],
+      },
+      {
+        key: 'finishing',
+        label: 'Finishing',
+        skills: [
+          { key: 'finish_accuracy', label: 'Accuracy' },
+          { key: 'finish_power', label: 'Power' },
+          { key: 'finish_mentality', label: 'Mentality to finish' },
+          { key: 'finish_opportunities', label: 'Finishes opportunities' },
+          { key: 'finish_bothfeet', label: 'Can use both feet' },
+        ],
+      },
+      {
+        key: 'heading',
+        label: 'Heading',
+        skills: [
+          { key: 'head_defensive', label: 'Defensive headers (high and far)' },
+          { key: 'head_attacking', label: 'Attacking headers (low and accurate)' },
+          { key: 'head_accuracy', label: 'Accuracy' },
+        ],
+      },
+    ],
+  },
+  {
+    key: 'tactical',
+    label: 'Tactical',
+    groups: [
+      {
+        key: 'attacking',
+        label: 'Attacking Decisions',
+        skills: [
+          { key: 'atk_creativity', label: 'Creativity' },
+          { key: 'atk_combination', label: 'Sees and executes combination play' },
+          { key: 'atk_dynamic', label: 'Is dynamic with the ball' },
+          { key: 'atk_supporting', label: 'Takes up supporting positions' },
+          { key: 'atk_readgame', label: 'Has ability to read game' },
+          { key: 'atk_movement', label: 'Has smart movement off the ball' },
+          { key: 'atk_speedofplay', label: 'Speed of play' },
+        ],
+      },
+      {
+        key: 'defending',
+        label: 'Defending Decisions',
+        skills: [
+          { key: 'def_chase', label: 'Immediate chase if you lose the ball' },
+          { key: 'def_patience', label: 'Patience in 1v1 situations' },
+          { key: 'def_cover', label: 'Provides good distance/angle for cover' },
+          { key: 'def_balance', label: 'Provides balance away from ball' },
+        ],
+      },
+    ],
+  },
+  {
+    key: 'physical',
+    label: 'Physical',
+    groups: [
+      {
+        key: 'speed',
+        label: 'Speed',
+        skills: [
+          { key: 'phys_techspeed', label: 'Technical speed (manipulate ball at speed & maintain control)' },
+          { key: 'phys_actionspeed', label: 'Speed of Action (processing info & choosing response)' },
+          { key: 'phys_mentalspeed', label: 'Mental Speed (awareness of all factors/options)' },
+          { key: 'phys_purespeed', label: 'Pure Speed (overcoming distance in shortest time)' },
+        ],
+      },
+    ],
+  },
+  {
+    key: 'psychological',
+    label: 'Psychological',
+    groups: [
+      {
+        key: 'mental',
+        label: 'Mental Approach',
+        skills: [
+          { key: 'psych_instructions', label: 'Is willing to take instructions' },
+          { key: 'psych_courageous', label: 'Is courageous & takes chances' },
+          { key: 'psych_passion', label: 'Shows a passion for the game' },
+          { key: 'psych_recover', label: 'Can recover after a mistake' },
+          { key: 'psych_workrate', label: 'Has exemplary work rate' },
+          { key: 'psych_trynew', label: 'Is willing to try new things' },
+        ],
+      },
+    ],
+  },
 ];
 
 export default function SeasonEvaluationView({
@@ -176,11 +290,18 @@ export default function SeasonEvaluationView({
     // Build a text summary and save as a document
     let content = `Season Evaluation: ${selectedSeason}\n`;
     content += `Player: ${player.firstName} ${player.lastName} (#${player.jerseyNumber || '?'})\n\n`;
-    for (const cat of DEFAULT_CATEGORIES) {
-      const rating = ev.ratings[cat.key];
-      content += `${cat.label}: ${rating ? `${rating}/4 - ${RATING_LABELS[rating]?.label}` : 'Not rated'}\n`;
+    for (const section of EVAL_SECTIONS) {
+      content += `=== ${section.label} ===\n`;
+      for (const group of section.groups) {
+        content += `  ${group.label}:\n`;
+        for (const skill of group.skills) {
+          const rating = ev.ratings[skill.key];
+          content += `    ${skill.label}: ${rating ? `${rating}/4 - ${RATING_LABELS[rating]?.label}` : 'Not rated'}\n`;
+        }
+      }
+      content += '\n';
     }
-    content += `\nOverall: ${ev.overallRating || 'N/A'}/4\n`;
+    content += `Overall: ${ev.overallRating || 'N/A'}/4\n`;
     if (ev.notes) content += `\nCoach Notes:\n${ev.notes}\n`;
 
     try {
@@ -293,7 +414,7 @@ export default function SeasonEvaluationView({
                     )}
                   </div>
                   <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                    {ratedCount}/{DEFAULT_CATEGORIES.length} rated
+                    {ratedCount}/42 rated
                     {ev.overallRating && ` · Overall: ${ev.overallRating}/4`}
                   </p>
                 </div>
@@ -315,39 +436,73 @@ export default function SeasonEvaluationView({
 
               {/* Expanded Evaluation Form */}
               {isExpanded && (
-                <div className="px-4 pb-4 space-y-4 border-t border-slate-100 dark:border-slate-800 pt-4">
-                  {/* Category Ratings */}
-                  {DEFAULT_CATEGORIES.map((cat) => (
-                    <div key={cat.key}>
-                      <p className="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">{cat.label}</p>
-                      <div className="flex gap-1.5">
-                        {[1, 2, 3, 4].map((val) => (
-                          <button
-                            key={val}
-                            onClick={() => setRating(player.id, cat.key, val)}
-                            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                              ev.ratings[cat.key] === val
-                                ? RATING_LABELS[val].color + ' shadow-md'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                            }`}
-                          >
-                            {val}
-                          </button>
-                        ))}
-                      </div>
+                <div className="px-4 pb-4 space-y-5 border-t border-slate-100 dark:border-slate-800 pt-4">
+                  {/* Sections: Technical, Tactical, Physical, Psychological */}
+                  {EVAL_SECTIONS.map((section) => (
+                    <div key={section.key} className="space-y-3">
+                      <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 pb-1">
+                        {section.label}
+                      </h4>
+                      {section.groups.map((group) => {
+                        // Compute group average
+                        const groupScores = group.skills.map((s) => ev.ratings[s.key]).filter((v) => v > 0);
+                        const groupAvg =
+                          groupScores.length > 0
+                            ? Math.round((groupScores.reduce((a, b) => a + b, 0) / groupScores.length) * 10) / 10
+                            : null;
+                        return (
+                          <div key={group.key} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{group.label}</p>
+                              {groupAvg && (
+                                <span
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-black ${RATING_LABELS[Math.round(groupAvg)]?.color || 'bg-slate-200 text-slate-600'}`}
+                                >
+                                  {groupAvg}
+                                </span>
+                              )}
+                            </div>
+                            {group.skills.map((skill) => (
+                              <div key={skill.key} className="flex items-center gap-2">
+                                <p className="flex-1 text-[11px] text-slate-600 dark:text-slate-400 leading-tight min-w-0">
+                                  {skill.label}
+                                </p>
+                                <div className="flex gap-1 shrink-0">
+                                  {[1, 2, 3, 4].map((val) => (
+                                    <button
+                                      key={val}
+                                      onClick={() => setRating(player.id, skill.key, val)}
+                                      className={`w-7 h-7 rounded-lg text-[10px] font-bold transition-all ${
+                                        ev.ratings[skill.key] === val
+                                          ? RATING_LABELS[val].color
+                                          : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                      }`}
+                                    >
+                                      {val}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
                     </div>
                   ))}
 
-                  {/* Notes */}
+                  {/* Coach's Comments */}
                   <div>
                     <p className="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">
-                      {t('seasonEval.coachNotes', 'Coach Notes')}
+                      {t('seasonEval.coachNotes', "Coach's Comments")}
                     </p>
                     <textarea
                       value={ev.notes}
                       onChange={(e) => setNotes(player.id, e.target.value)}
-                      rows={3}
-                      placeholder={t('seasonEval.notesPlaceholder', 'Strengths, areas for improvement, comments...')}
+                      rows={4}
+                      placeholder={t(
+                        'seasonEval.notesPlaceholder',
+                        'Strengths, areas for improvement, overall assessment...',
+                      )}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                     />
                   </div>

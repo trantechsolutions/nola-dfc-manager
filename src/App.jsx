@@ -566,10 +566,9 @@ function App() {
           ? [{ id: 'people', label: t('nav.players'), icon: Users }]
           : []),
         ...(can(PERMISSIONS.TEAM_VIEW_INSIGHTS) ? [{ id: 'insights', label: t('nav.insights'), icon: Sparkles }] : []),
-        // TODO: Re-enable when evaluations are ready for production
-        // ...(can(PERMISSIONS.TEAM_VIEW_ROSTER)
-        //   ? [{ id: 'season-evaluations', label: t('nav.evaluations', 'Evaluations'), icon: ClipboardCheck }]
-        //   : []),
+        ...(can(PERMISSIONS.TEAM_VIEW_ROSTER)
+          ? [{ id: 'season-evaluations', label: t('nav.evaluations', 'Evaluations'), icon: ClipboardCheck }]
+          : []),
         ...(can(PERMISSIONS.TEAM_EDIT_SCHEDULE)
           ? [{ id: 'team-admin', label: t('nav.settings'), icon: SlidersHorizontal }]
           : []),
@@ -1203,7 +1202,6 @@ function App() {
               />
             )}
 
-            {/* TODO: Re-enable when evaluations are ready for production
             {effectiveIsStaff && (
               <Route
                 path="/season-evaluations"
@@ -1219,6 +1217,7 @@ function App() {
                 }
               />
             )}
+            {/* Club evaluations (tryouts) - disabled for now
             <Route path="/evaluate/:sessionId" element={<EvaluatorScoringView user={user} showToast={showToast} />} />
             */}
 
