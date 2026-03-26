@@ -149,18 +149,21 @@ export default function SeasonEvaluationView({
   const [expandedPlayer, setExpandedPlayer] = useState(null);
   const [saving, setSaving] = useState(false);
   const [savedPlayers, setSavedPlayers] = useState(new Set());
+  const [evalCounts, setEvalCounts] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // Load existing evaluations from DB
+  // Load current user's evaluations from DB
   const loadEvaluations = useCallback(async () => {
-    if (!selectedTeamId || !selectedSeason) return;
+    if (!selectedTeamId || !selectedSeason || !user?.id) return;
     setLoading(true);
     try {
+      // Load MY evaluations
       const { data, error } = await supabase
         .from('season_evaluations')
         .select('*')
         .eq('team_id', selectedTeamId)
-        .eq('season_id', selectedSeason);
+        .eq('season_id', selectedSeason)
+        .eq('evaluator_id', user.id);
       if (error) throw error;
 
       const evalMap = {};
@@ -175,6 +178,18 @@ export default function SeasonEvaluationView({
       }
       setEvaluations(evalMap);
       setSavedPlayers(saved);
+
+      // Load ALL evaluations to show how many coaches have evaluated each player
+      const { data: allEvals } = await supabase
+        .from('season_evaluations')
+        .select('player_id, evaluator_id')
+        .eq('team_id', selectedTeamId)
+        .eq('season_id', selectedSeason);
+      const countMap = {};
+      for (const ev of allEvals || []) {
+        countMap[ev.player_id] = (countMap[ev.player_id] || 0) + 1;
+      }
+      setEvalCounts(countMap);
     } catch (e) {
       console.error('Failed to load evaluations:', e);
     } finally {
@@ -227,7 +242,7 @@ export default function SeasonEvaluationView({
           overall_rating: ev.overallRating,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: 'player_id,team_id,season_id' },
+        { onConflict: 'player_id,team_id,season_id,evaluator_id' },
       );
       setSavedPlayers((prev) => new Set([...prev, playerId]));
       showToast?.('Evaluation saved');
@@ -257,7 +272,7 @@ export default function SeasonEvaluationView({
               overall_rating: ev.overallRating,
               updated_at: new Date().toISOString(),
             },
-            { onConflict: 'player_id,team_id,season_id' },
+            { onConflict: 'player_id,team_id,season_id,evaluator_id' },
           );
           count++;
         }
@@ -382,6 +397,7 @@ export default function SeasonEvaluationView({
           const isExpanded = expandedPlayer === player.id;
           const isSaved = savedPlayers.has(player.id);
           const ratedCount = Object.values(ev.ratings).filter((v) => v > 0).length;
+          const coachCount = evalCounts[player.id] || 0;
           const ageGroup = player.birthdate && selectedSeason ? getUSAgeGroup(player.birthdate, selectedSeason) : null;
 
           return (
@@ -416,6 +432,7 @@ export default function SeasonEvaluationView({
                   <p className="text-[11px] text-slate-400 dark:text-slate-500">
                     {ratedCount}/42 rated
                     {ev.overallRating && ` · Overall: ${ev.overallRating}/4`}
+                    {coachCount > 0 && ` · ${coachCount} eval${coachCount > 1 ? 's' : ''}`}
                   </p>
                 </div>
                 {ev.overallRating && (

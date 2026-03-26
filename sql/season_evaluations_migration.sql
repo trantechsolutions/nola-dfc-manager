@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS season_evaluations (
   overall_rating  numeric,                       -- computed average (1-4 scale, 1=best)
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(player_id, team_id, season_id)
+  UNIQUE(player_id, team_id, season_id, evaluator_id)
 );
 
 -- RLS
