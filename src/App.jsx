@@ -48,6 +48,7 @@ import TeamSettingsView from './views/team/TeamSettingsView';
 import Changelog from './components/Changelog';
 import SuperAdminView from './views/admin/SuperAdminView';
 import EvaluationHub from './views/club/evaluations/EvaluationHub';
+import ClubPlayersView from './views/club/ClubPlayersView';
 
 // Components
 import TransactionModal from './components/TransactionModal';
@@ -481,6 +482,7 @@ function App() {
       ? [
           { id: 'club-overview', label: t('nav.overview'), icon: Building2, section: 'club' },
           { id: 'club-teams', label: t('nav.teams'), icon: ListTree, section: 'club' },
+          { id: 'club-players', label: t('nav.players', 'Players'), icon: Users, section: 'club' },
           { id: 'club-admin', label: t('nav.settings'), icon: Shield, section: 'club' },
           ...(can(PERMISSIONS.CLUB_VIEW_EVALUATIONS)
             ? [{ id: 'club-evaluations', label: 'Evaluations', icon: ClipboardCheck, section: 'club' }]
@@ -1026,6 +1028,19 @@ function App() {
                         }
                       }}
                       onCancel={() => navigate('/club-teams')}
+                    />
+                  }
+                />
+                <Route
+                  path="/club-players"
+                  element={
+                    <ClubPlayersView
+                      club={club}
+                      teams={teams}
+                      seasons={seasons}
+                      selectedSeason={selectedSeason}
+                      showToast={showToast}
+                      showConfirm={showConfirm}
                     />
                   }
                 />

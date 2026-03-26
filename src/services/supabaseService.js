@@ -934,6 +934,34 @@ export const supabaseService = {
     }));
   },
 
+  getPlayersByClub: async (clubId) => {
+    const { data, error } = await supabase
+      .from('players')
+      .select('*, guardians(*), player_seasons(*), teams(name, age_group)')
+      .eq('club_id', clubId)
+      .order('last_name');
+    if (error) throw error;
+    return data.map((p) => ({
+      id: p.id,
+      firstName: p.first_name,
+      lastName: p.last_name,
+      jerseyNumber: p.jersey_number,
+      birthdate: p.birthdate,
+      status: p.status,
+      medicalRelease: p.medical_release,
+      clubId: p.club_id,
+      teamId: p.team_id,
+      teamName: p.teams?.name || null,
+      teamAgeGroup: p.teams?.age_group || null,
+      guardians: (p.guardians || []).map((g) => ({ id: g.id, name: g.name, email: g.email, phone: g.phone })),
+    }));
+  },
+
+  transferPlayer: async (playerId, newTeamId) => {
+    const { error } = await supabase.from('players').update({ team_id: newTeamId }).eq('id', playerId);
+    if (error) throw error;
+  },
+
   getPlayersByTeam: async (teamId) => {
     const { data, error } = await supabase
       .from('players')
