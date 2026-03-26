@@ -29,7 +29,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
   const [newTeam, setNewTeam] = useState({
     name: '',
     ageGroup: '',
-    gender: 'boys',
+    gender: 'M',
     tier: 'competitive',
     icalUrl: '',
     colorPrimary: '#1e293b',
@@ -64,7 +64,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
     try {
       await supabaseService.createTeam({ ...newTeam, clubId: club.id });
       setShowCreateForm(false);
-      setNewTeam({ name: '', ageGroup: '', gender: 'boys', tier: 'competitive', icalUrl: '', colorPrimary: '#1e293b' });
+      setNewTeam({ name: '', ageGroup: '', gender: 'M', tier: 'competitive', icalUrl: '', colorPrimary: '#1e293b' });
       await refreshContext();
       if (showToast) showToast(t('clubTeams.teamCreated', { name: newTeam.name }));
     } catch (e) {
@@ -229,7 +229,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                       <h3 className="font-black text-slate-900 dark:text-white text-sm">{team.name}</h3>
                       <div className="flex items-center gap-3 text-[11px] text-slate-400 font-medium mt-0.5">
                         <span>{team.ageGroup}</span>
-                        <span>{team.gender}</span>
+                        <span>{team.gender === 'M' ? 'Boys' : team.gender === 'F' ? 'Girls' : team.gender}</span>
                         <span
                           className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${team.tier === 'competitive' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300'}`}
                         >
@@ -448,9 +448,9 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                     onChange={(e) => setNewTeam({ ...newTeam, gender: e.target.value })}
                     className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none mt-1 bg-white dark:bg-slate-800 dark:text-white"
                   >
-                    <option value="boys">Boys</option>
-                    <option value="girls">Girls</option>
-                    <option value="coed">Coed</option>
+                    <option value="M">Boys</option>
+                    <option value="F">Girls</option>
+                    <option value="Coed">Coed</option>
                   </select>
                 </div>
                 <div>

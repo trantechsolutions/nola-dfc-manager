@@ -18,6 +18,7 @@ export default function PlayerFormModal({
     lastName: '',
     jerseyNumber: '',
     birthdate: '',
+    gender: '',
     status: 'active',
     guardians: [{ name: '', email: '', phone: '' }],
   });
@@ -30,6 +31,7 @@ export default function PlayerFormModal({
       setFormData({
         ...initialData,
         birthdate: bd,
+        gender: initialData.gender || '',
         guardians: initialData.guardians?.length ? initialData.guardians : [{ name: '', email: '', phone: '' }],
         status: initialData.status || 'active',
       });
@@ -39,6 +41,7 @@ export default function PlayerFormModal({
         lastName: '',
         jerseyNumber: '',
         birthdate: '',
+        gender: '',
         status: 'active',
         guardians: [{ name: '', email: '', phone: '' }],
       });
@@ -175,6 +178,22 @@ export default function PlayerFormModal({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Gender */}
+          <div>
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">
+              {t('playerForm.gender', 'Gender')}
+            </label>
+            <select
+              value={formData.gender || ''}
+              onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+              className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-800 dark:text-white"
+            >
+              <option value="">{t('playerForm.selectGender', '— Select —')}</option>
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
           </div>
 
           <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">

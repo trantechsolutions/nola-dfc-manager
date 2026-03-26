@@ -26,6 +26,7 @@ import {
   Menu,
   X,
   GitCommit,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useT } from './i18n/I18nContext';
 import { useTheme } from './theme/ThemeContext';
@@ -46,6 +47,10 @@ import ClubAdminHub from './views/club/ClubAdminHub';
 import TeamSettingsView from './views/team/TeamSettingsView';
 import Changelog from './components/Changelog';
 import SuperAdminView from './views/admin/SuperAdminView';
+import EvaluationHub from './views/club/evaluations/EvaluationHub';
+import ClubPlayersView from './views/club/ClubPlayersView';
+import EvaluatorScoringView from './views/club/evaluations/EvaluatorScoringView';
+import SeasonEvaluationView from './views/team/SeasonEvaluationView';
 
 // Components
 import TransactionModal from './components/TransactionModal';
@@ -224,23 +229,69 @@ function App() {
   }, [teamEvents]);
 
   // ── DATA FETCHING ──
-  const fetchData = async () => {
+  const fetchData = async (seasonOverride) => {
     try {
-      console.log('Fetching data for teamId:', selectedTeamId, 'season:', selectedSeason);
-      const effectiveTeamId = selectedTeamId || parentTeamId;
-      const pData = effectiveTeamId ? await supabaseService.getPlayersByTeam(effectiveTeamId) : [];
+      let fetchTeamId = selectedTeamId || parentTeamId;
 
-      const tsId = currentTeamSeason?.id || null;
+      // ── Step 1: Resolve players ──
+      // For parents (no team context), start by matching email → guardian → player
+      let pData = [];
+      let resolvedSeason = seasonOverride || selectedSeason;
+
+      if (!fetchTeamId && user?.email) {
+        try {
+          pData = await supabaseService.getPlayersByGuardianEmail(user.email);
+          if (pData.length > 0 && pData[0].teamId) {
+            fetchTeamId = pData[0].teamId;
+          }
+          // Auto-select the latest season from the player's enrollments
+          if (pData.length > 0 && !resolvedSeason) {
+            const profiles = pData[0].seasonProfiles || {};
+            const enrolledSeasons = Object.keys(profiles).sort((a, b) => b.localeCompare(a));
+            if (enrolledSeasons.length > 0) {
+              resolvedSeason = enrolledSeasons[0];
+              // Set the React state for subsequent renders
+              setSelectedSeason(resolvedSeason);
+              // Continue using resolvedSeason in this fetch cycle
+            }
+          }
+        } catch (e) {
+          console.warn('Guardian email lookup failed:', e.message);
+        }
+      }
+      // For staff (or after parent resolved team), fetch full team roster
+      if (fetchTeamId && pData.length === 0) {
+        pData = await supabaseService.getPlayersByTeam(fetchTeamId);
+      }
+
+      console.log('Fetched', pData.length, 'players for teamId:', fetchTeamId, 'season:', resolvedSeason);
+
+      // ── Step 2: Resolve teamSeasonId ──
+      let tsId = currentTeamSeason?.id || null;
+      if (!tsId && fetchTeamId && resolvedSeason) {
+        const match = teamSeasons?.find((ts) => ts.seasonId === resolvedSeason);
+        tsId = match?.id || null;
+      }
+      if (!tsId && fetchTeamId && resolvedSeason) {
+        try {
+          const ts = await supabaseService.getTeamSeason(fetchTeamId, resolvedSeason);
+          tsId = ts?.id || null;
+        } catch {
+          /* noop */
+        }
+      }
+
+      // ── Step 3: Fetch transactions ──
       const tData = tsId ? await supabaseService.getTransactionsByTeamSeason(tsId) : [];
 
       let fData = {};
       try {
-        fData = await supabaseService.getPlayerFinancials(selectedSeason, tsId);
+        fData = await supabaseService.getPlayerFinancials(resolvedSeason, tsId);
       } catch (e) {
         console.warn('Could not fetch player_financials view:', e.message);
       }
 
-      const evId = selectedTeamId || parentTeamId;
+      const evId = fetchTeamId || selectedTeamId || parentTeamId;
       if (evId) {
         try {
           const evData = await supabaseService.getTeamEvents(evId);
@@ -312,6 +363,7 @@ function App() {
 
   // ── FILTERED DATA ──
   const seasonalPlayers = useMemo(() => {
+    if (!selectedSeason) return players.filter((p) => p.status !== 'archived');
     let filtered = players.filter((p) => p.seasonProfiles?.[selectedSeason] && p.status !== 'archived');
     if (selectedTeamId) {
       filtered = filtered.filter((p) => p.teamId === selectedTeamId);
@@ -322,6 +374,7 @@ function App() {
   const archivedPlayers = useMemo(() => players.filter((p) => p.status === 'archived'), [players]);
 
   const seasonalTransactions = useMemo(() => {
+    if (!selectedSeason) return transactions;
     let filtered = transactions.filter((tx) => tx.seasonId === selectedSeason);
     if (currentTeamSeason?.id) {
       filtered = filtered.filter((tx) => tx.teamSeasonId === currentTeamSeason.id || !tx.teamSeasonId);
@@ -407,13 +460,14 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Re-fetch when team changes
+  // Re-fetch when team, season, or team-season context changes
+  // currentTeamSeason?.id is critical — for parents, it resolves AFTER
+  // useSoccerYear re-fetches with the parentTeamId
   useEffect(() => {
-    if (user && selectedTeamId) {
-      setLoading(true);
+    if (user && (selectedTeamId || parentTeamId)) {
       fetchData();
     }
-  }, [selectedTeamId]);
+  }, [selectedTeamId, parentTeamId, selectedSeason, currentTeamSeason?.id]);
 
   // Re-fetch financials when team season resolves or season changes
   useEffect(() => {
@@ -479,7 +533,12 @@ function App() {
       ? [
           { id: 'club-overview', label: t('nav.overview'), icon: Building2, section: 'club' },
           { id: 'club-teams', label: t('nav.teams'), icon: ListTree, section: 'club' },
+          { id: 'club-players', label: t('nav.players', 'Players'), icon: Users, section: 'club' },
           { id: 'club-admin', label: t('nav.settings'), icon: Shield, section: 'club' },
+          // TODO: Re-enable when evaluations are ready for production
+          // ...(can(PERMISSIONS.CLUB_VIEW_EVALUATIONS)
+          //   ? [{ id: 'club-evaluations', label: 'Evaluations', icon: ClipboardCheck, section: 'club' }]
+          //   : []),
         ]
       : [];
 
@@ -507,6 +566,10 @@ function App() {
           ? [{ id: 'people', label: t('nav.players'), icon: Users }]
           : []),
         ...(can(PERMISSIONS.TEAM_VIEW_INSIGHTS) ? [{ id: 'insights', label: t('nav.insights'), icon: Sparkles }] : []),
+        // TODO: Re-enable when evaluations are ready for production
+        // ...(can(PERMISSIONS.TEAM_VIEW_ROSTER)
+        //   ? [{ id: 'season-evaluations', label: t('nav.evaluations', 'Evaluations'), icon: ClipboardCheck }]
+        //   : []),
         ...(can(PERMISSIONS.TEAM_EDIT_SCHEDULE)
           ? [{ id: 'team-admin', label: t('nav.settings'), icon: SlidersHorizontal }]
           : []),
@@ -1024,6 +1087,36 @@ function App() {
                     />
                   }
                 />
+                <Route
+                  path="/club-players"
+                  element={
+                    <ClubPlayersView
+                      club={club}
+                      teams={teams}
+                      seasons={seasons}
+                      selectedSeason={selectedSeason}
+                      showToast={showToast}
+                      showConfirm={showConfirm}
+                    />
+                  }
+                />
+                {/* TODO: Re-enable when evaluations are ready for production
+                {can(PERMISSIONS.CLUB_VIEW_EVALUATIONS) && (
+                  <Route
+                    path="/club-evaluations"
+                    element={
+                      <EvaluationHub
+                        club={club}
+                        teams={teams}
+                        seasons={seasons}
+                        selectedSeason={selectedSeason}
+                        showToast={showToast}
+                        showConfirm={showConfirm}
+                        user={user}
+                      />
+                    }
+                  />
+                )} */}
               </>
             )}
 
@@ -1073,6 +1166,7 @@ function App() {
                     onRefresh={fetchData}
                     showToast={showToast}
                     showConfirm={showConfirm}
+                    user={user}
                   />
                 )
               }
@@ -1108,6 +1202,25 @@ function App() {
                 }
               />
             )}
+
+            {/* TODO: Re-enable when evaluations are ready for production
+            {effectiveIsStaff && (
+              <Route
+                path="/season-evaluations"
+                element={
+                  <SeasonEvaluationView
+                    players={seasonalPlayers}
+                    selectedSeason={selectedSeason}
+                    selectedTeamId={selectedTeamId}
+                    teamSeasonId={teamSeasonId}
+                    showToast={showToast}
+                    user={user}
+                  />
+                }
+              />
+            )}
+            <Route path="/evaluate/:sessionId" element={<EvaluatorScoringView user={user} showToast={showToast} />} />
+            */}
 
             <Route path="/changelog" element={<Changelog />} />
 

@@ -65,6 +65,7 @@ export const supabaseService = {
         last_name: playerData.lastName,
         jersey_number: playerData.jerseyNumber || null,
         birthdate: playerData.birthdate || null,
+        gender: playerData.gender || null,
         status: playerData.status || 'active',
         medical_release: playerData.medicalRelease || false,
         reeplayer_waiver: playerData.reePlayerWaiver || false,
@@ -106,16 +107,15 @@ export const supabaseService = {
 
   updatePlayer: async (playerId, playerData) => {
     // 1. Update core player fields
-    const { error: pErr } = await supabase
-      .from('players')
-      .update({
-        first_name: playerData.firstName,
-        last_name: playerData.lastName,
-        jersey_number: playerData.jerseyNumber || null,
-        birthdate: playerData.birthdate || null,
-        status: playerData.status || 'active',
-      })
-      .eq('id', playerId);
+    const row = {
+      first_name: playerData.firstName,
+      last_name: playerData.lastName,
+      jersey_number: playerData.jerseyNumber || null,
+      birthdate: playerData.birthdate || null,
+      status: playerData.status || 'active',
+    };
+    if ('gender' in playerData) row.gender = playerData.gender || null;
+    const { error: pErr } = await supabase.from('players').update(row).eq('id', playerId);
     if (pErr) throw pErr;
 
     // 2. Replace guardians (delete all, re-insert)
@@ -934,6 +934,81 @@ export const supabaseService = {
     }));
   },
 
+  addGuardian: async ({ playerId, name, email, phone }) => {
+    const { error } = await supabase.from('guardians').insert({
+      player_id: playerId,
+      name,
+      email: email || null,
+      phone: phone || null,
+    });
+    if (error) throw error;
+  },
+
+  getPlayersByGuardianEmail: async (email) => {
+    const { data, error } = await supabase
+      .from('guardians')
+      .select('player_id, players(*, guardians(*), player_seasons(*))')
+      .ilike('email', email);
+    if (error) throw error;
+    return (data || [])
+      .filter((g) => g.players)
+      .map((g) => {
+        const p = g.players;
+        return {
+          id: p.id,
+          firstName: p.first_name,
+          lastName: p.last_name,
+          jerseyNumber: p.jersey_number,
+          birthdate: p.birthdate,
+          gender: p.gender,
+          status: p.status,
+          medicalRelease: p.medical_release,
+          reePlayerWaiver: p.reeplayer_waiver,
+          clubId: p.club_id,
+          teamId: p.team_id,
+          guardians: (p.guardians || []).map((gu) => ({ id: gu.id, name: gu.name, email: gu.email, phone: gu.phone })),
+          seasonProfiles: (p.player_seasons || []).reduce((acc, ps) => {
+            acc[ps.season_id] = {
+              feeWaived: ps.fee_waived,
+              status: ps.status,
+              teamSeasonId: ps.team_season_id,
+              fundraiserBuyIn: ps.fundraiser_buyin ?? false,
+            };
+            return acc;
+          }, {}),
+        };
+      });
+  },
+
+  getPlayersByClub: async (clubId) => {
+    const { data, error } = await supabase
+      .from('players')
+      .select('*, guardians(*), player_seasons(*), teams(name, age_group)')
+      .eq('club_id', clubId)
+      .order('last_name');
+    if (error) throw error;
+    return data.map((p) => ({
+      id: p.id,
+      firstName: p.first_name,
+      lastName: p.last_name,
+      jerseyNumber: p.jersey_number,
+      birthdate: p.birthdate,
+      gender: p.gender,
+      status: p.status,
+      medicalRelease: p.medical_release,
+      clubId: p.club_id,
+      teamId: p.team_id,
+      teamName: p.teams?.name || null,
+      teamAgeGroup: p.teams?.age_group || null,
+      guardians: (p.guardians || []).map((g) => ({ id: g.id, name: g.name, email: g.email, phone: g.phone })),
+    }));
+  },
+
+  transferPlayer: async (playerId, newTeamId) => {
+    const { error } = await supabase.from('players').update({ team_id: newTeamId }).eq('id', playerId);
+    if (error) throw error;
+  },
+
   getPlayersByTeam: async (teamId) => {
     const { data, error } = await supabase
       .from('players')
@@ -946,6 +1021,8 @@ export const supabaseService = {
       firstName: p.first_name,
       lastName: p.last_name,
       jerseyNumber: p.jersey_number,
+      birthdate: p.birthdate,
+      gender: p.gender,
       status: p.status,
       medicalRelease: p.medical_release,
       reePlayerWaiver: p.reeplayer_waiver,
@@ -1430,6 +1507,25 @@ export const supabaseService = {
       expiresAt: d.expires_at,
       createdAt: d.created_at,
     }));
+  },
+
+  uploadDocumentRecord: async (docData) => {
+    const { error } = await supabase.from('documents').insert({
+      player_id: docData.playerId,
+      team_id: docData.teamId,
+      club_id: docData.clubId,
+      season_id: docData.seasonId,
+      doc_type: docData.docType,
+      title: docData.title,
+      file_name: docData.fileName || null,
+      file_path: docData.filePath || null,
+      mime_type: docData.mimeType || 'text/plain',
+      file_size: docData.fileSize || 0,
+      status: docData.status || 'uploaded',
+      verified_by: docData.verifiedBy || null,
+      verified_at: docData.status === 'verified' ? new Date().toISOString() : null,
+    });
+    if (error) throw error;
   },
 
   uploadDocument: async (file, playerId, docMeta) => {
