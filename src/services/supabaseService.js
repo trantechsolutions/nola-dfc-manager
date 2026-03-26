@@ -640,6 +640,47 @@ export const supabaseService = {
   // CLUBS
   // ─────────────────────────────────────────
 
+  getAllClubs: async () => {
+    const { data, error } = await supabase.from('clubs').select('*').order('name');
+    if (error) throw error;
+    return (data || []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      logoUrl: c.logo_url,
+      settings: c.settings,
+    }));
+  },
+
+  createClub: async ({ name, slug }) => {
+    const { data, error } = await supabase.from('clubs').insert({ name, slug }).select().single();
+    if (error) throw error;
+    return { id: data.id, name: data.name, slug: data.slug };
+  },
+
+  deleteClub: async (clubId) => {
+    // Delete all related data first
+    const { data: teams } = await supabase.from('teams').select('id').eq('club_id', clubId);
+    for (const t of teams || []) {
+      await supabase.from('team_events').delete().eq('team_id', t.id);
+      await supabase.from('user_roles').delete().eq('team_id', t.id);
+    }
+    await supabase.from('teams').delete().eq('club_id', clubId);
+    await supabase.from('user_roles').delete().eq('club_id', clubId);
+    const { error } = await supabase.from('clubs').delete().eq('id', clubId);
+    if (error) throw error;
+  },
+
+  updateClub: async (clubId, updates) => {
+    const row = {};
+    if ('name' in updates) row.name = updates.name;
+    if ('slug' in updates) row.slug = updates.slug;
+    if ('logoUrl' in updates) row.logo_url = updates.logoUrl;
+    if ('settings' in updates) row.settings = updates.settings;
+    const { error } = await supabase.from('clubs').update(row).eq('id', clubId);
+    if (error) throw error;
+  },
+
   getClub: async (clubId) => {
     const { data, error } = await supabase.from('clubs').select('*').eq('id', clubId).single();
     if (error) throw error;

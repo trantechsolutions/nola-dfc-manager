@@ -44,7 +44,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
       <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-2xl dark:shadow-none w-full max-w-md">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">NOLA DFC</h2>
+          <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Team Manager</h2>
           <p className="text-slate-500 dark:text-slate-400 font-medium">
             {isRegistering ? t('auth.createAccount') : t('auth.managerPortal')}
           </p>

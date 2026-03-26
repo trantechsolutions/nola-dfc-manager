@@ -204,7 +204,7 @@ export default function InsightsView({
       })
       .join('\n');
 
-    return `You are a financial advisor for NOLA DFC, a youth soccer team (U11 boys, 2015 birth year).
+    return `You are a financial advisor for a youth soccer team.
 Season: ${selectedSeason} (${seasonRange.start.toLocaleDateString()} to ${seasonRange.end.toLocaleDateString()}).
 Be concise, practical, specific with dollar amounts. No markdown headers. Under 300 words.
 

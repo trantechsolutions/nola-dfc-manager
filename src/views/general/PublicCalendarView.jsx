@@ -254,7 +254,7 @@ export default function PublicCalendarView({ onBack }) {
                 <Calendar size={20} className="text-blue-400" />
                 <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Public Schedule</span>
               </div>
-              <h1 className="text-2xl md:text-3xl font-black tracking-tight">NOLA DFC</h1>
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight">Team Schedule</h1>
               <p className="text-slate-400 text-sm font-medium mt-1">
                 {selectedTeamId === 'all'
                   ? `${teams.length} teams · ${upcomingEvents.length} upcoming events`

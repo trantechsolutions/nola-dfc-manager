@@ -2,6 +2,18 @@
 // Centralized role definitions, permission matrix, and helper functions.
 
 /**
+ * APP-LEVEL ROLES
+ * Global admin — can manage all clubs in the system.
+ */
+export const APP_ROLES = {
+  super_admin: {
+    label: 'Super Admin',
+    level: 'app',
+    description: 'Global administrator. Can create, edit, and delete clubs. Has all permissions everywhere.',
+  },
+};
+
+/**
  * CLUB-LEVEL ROLES
  * These apply across the entire club.
  */
@@ -56,7 +68,7 @@ export const TEAM_ROLES = {
   },
 };
 
-export const ALL_ROLES = { ...CLUB_ROLES, ...TEAM_ROLES };
+export const ALL_ROLES = { ...APP_ROLES, ...CLUB_ROLES, ...TEAM_ROLES };
 
 /**
  * CLUB-ASSIGNABLE ROLES
@@ -77,6 +89,10 @@ export const TEAM_ASSIGNABLE_ROLES = ['team_admin', 'treasurer', 'scheduler'];
  * Granular actions that can be performed in the app.
  */
 export const PERMISSIONS = {
+  // App-level
+  APP_MANAGE_CLUBS: 'app:manage_clubs', // Create, edit, delete clubs
+  APP_VIEW_ALL: 'app:view_all', // View all clubs and their data
+
   // Club-level
   CLUB_SETTINGS: 'club:settings', // Edit club name, logo, settings
   CLUB_MANAGE_TEAMS: 'club:manage_teams', // Create/archive teams
@@ -105,6 +121,32 @@ export const PERMISSIONS = {
  * Maps each role to its granted permissions.
  */
 export const ROLE_PERMISSIONS = {
+  // ── App Roles ──
+  super_admin: [
+    PERMISSIONS.APP_MANAGE_CLUBS,
+    PERMISSIONS.APP_VIEW_ALL,
+    // All club permissions
+    PERMISSIONS.CLUB_SETTINGS,
+    PERMISSIONS.CLUB_MANAGE_TEAMS,
+    PERMISSIONS.CLUB_MANAGE_ROLES,
+    PERMISSIONS.CLUB_VIEW_FINANCIALS,
+    PERMISSIONS.CLUB_VIEW_ANY_TEAM,
+    // All team permissions
+    PERMISSIONS.TEAM_VIEW_ROSTER,
+    PERMISSIONS.TEAM_EDIT_ROSTER,
+    PERMISSIONS.TEAM_VIEW_SCHEDULE,
+    PERMISSIONS.TEAM_EDIT_SCHEDULE,
+    PERMISSIONS.TEAM_VIEW_BUDGET,
+    PERMISSIONS.TEAM_EDIT_BUDGET,
+    PERMISSIONS.TEAM_VIEW_LEDGER,
+    PERMISSIONS.TEAM_EDIT_LEDGER,
+    PERMISSIONS.TEAM_VIEW_SPONSORS,
+    PERMISSIONS.TEAM_EDIT_SPONSORS,
+    PERMISSIONS.TEAM_VIEW_INSIGHTS,
+    PERMISSIONS.TEAM_MANAGE_WAIVERS,
+    PERMISSIONS.TEAM_MANAGE_USERS,
+  ],
+
   // ── Club Roles ──
   club_admin: [
     // All club permissions
@@ -205,7 +247,10 @@ export function hasPermission(userRoles, permission, teamId = null) {
     const perms = ROLE_PERMISSIONS[ur.role] || [];
     if (!perms.includes(permission)) continue;
 
-    // Club-level roles apply to all teams
+    // App-level roles (super_admin) apply to everything
+    if (APP_ROLES[ur.role]) return true;
+
+    // Club-level roles apply to all teams within their club
     if (CLUB_ROLES[ur.role]) return true;
 
     // Team-level roles only apply to the assigned team

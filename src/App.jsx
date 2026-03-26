@@ -45,6 +45,7 @@ import PeopleView from './views/team/PeopleView';
 import ClubAdminHub from './views/club/ClubAdminHub';
 import TeamSettingsView from './views/team/TeamSettingsView';
 import Changelog from './components/Changelog';
+import SuperAdminView from './views/admin/SuperAdminView';
 
 // Components
 import TransactionModal from './components/TransactionModal';
@@ -106,6 +107,7 @@ function App() {
     effectiveRole,
     isStaff,
     isClubAdmin,
+    isSuperAdmin,
     navItems: roleNavItems,
     can,
     loading: contextLoading,
@@ -470,13 +472,16 @@ function App() {
   }
 
   // ── NAV ──
-  const clubNavItems = isClubAdmin
-    ? [
-        { id: 'club-overview', label: t('nav.overview'), icon: Building2, section: 'club' },
-        { id: 'club-teams', label: t('nav.teams'), icon: ListTree, section: 'club' },
-        { id: 'club-admin', label: t('nav.settings'), icon: Shield, section: 'club' },
-      ]
-    : [];
+  const appNavItems = isSuperAdmin ? [{ id: 'app-admin', label: 'App Admin', icon: Shield, section: 'app' }] : [];
+
+  const clubNavItems =
+    isClubAdmin || isSuperAdmin
+      ? [
+          { id: 'club-overview', label: t('nav.overview'), icon: Building2, section: 'club' },
+          { id: 'club-teams', label: t('nav.teams'), icon: ListTree, section: 'club' },
+          { id: 'club-admin', label: t('nav.settings'), icon: Shield, section: 'club' },
+        ]
+      : [];
 
   // Season-scoped nav items (budget, ledger, fundraising)
   const seasonNavItems = effectiveIsStaff
@@ -544,7 +549,7 @@ function App() {
         {/* ═══ DESKTOP SIDEBAR ═══ */}
         <aside className="hidden md:flex w-64 bg-slate-900 text-white flex-col sticky top-0 h-screen">
           <div className="p-6">
-            <h1 className="text-xl font-black tracking-tighter uppercase">{club?.name || 'NOLA DFC'}</h1>
+            <h1 className="text-xl font-black tracking-tighter uppercase">{club?.name || 'Team Manager'}</h1>
 
             {teams.length > 1 && (
               <div className="mt-3 relative">
@@ -598,6 +603,26 @@ function App() {
           </div>
 
           <nav className="flex-grow px-4 space-y-1 overflow-y-auto">
+            {appNavItems.length > 0 && (
+              <>
+                <p className="text-[9px] font-bold text-violet-400 uppercase tracking-widest px-4 pt-2 pb-1">APP</p>
+                {appNavItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => navigate(`/${item.id}`)}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold transition-all text-sm ${
+                      currentView === item.id
+                        ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/20'
+                        : 'text-slate-400 hover:bg-slate-800'
+                    }`}
+                  >
+                    <item.icon size={18} />
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+                <div className="border-t border-slate-800 my-2" />
+              </>
+            )}
             {clubNavItems.length > 0 && (
               <>
                 <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-4 pt-2 pb-1">
@@ -748,7 +773,7 @@ function App() {
                 <Menu size={20} />
               </button>
               <div>
-                <h1 className="font-black text-slate-900 dark:text-white text-sm">{club?.name || 'NOLA DFC'}</h1>
+                <h1 className="font-black text-slate-900 dark:text-white text-sm">{club?.name || 'Team Manager'}</h1>
                 {selectedTeam && <p className="text-[10px] font-bold text-blue-600">{selectedTeam.name}</p>}
               </div>
             </div>
@@ -798,7 +823,7 @@ function App() {
             <div className="absolute inset-0 bg-black/40" onClick={() => setMobileMenuOpen(false)} />
             <div className="absolute left-0 top-0 bottom-0 w-72 bg-slate-900 p-5 overflow-y-auto animate-in slide-in-from-left duration-200">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="font-black text-white text-sm">{club?.name || 'NOLA DFC'}</h2>
+                <h2 className="font-black text-white text-sm">{club?.name || 'Team Manager'}</h2>
                 <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400">
                   <X size={20} />
                 </button>
@@ -898,7 +923,23 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-            {isClubAdmin && (
+            {isSuperAdmin && (
+              <Route
+                path="/app-admin"
+                element={
+                  <SuperAdminView
+                    onSelectClub={(club) => {
+                      refreshContext();
+                      navigate('/club-overview');
+                    }}
+                    showToast={showToast}
+                    showConfirm={showConfirm}
+                  />
+                }
+              />
+            )}
+
+            {(isClubAdmin || isSuperAdmin) && (
               <>
                 <Route
                   path="/club-overview"

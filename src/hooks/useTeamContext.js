@@ -15,6 +15,7 @@ import {
   getNavItemsForRole,
   PERMISSIONS,
   CLUB_ROLES,
+  APP_ROLES,
 } from '../utils/roles';
 
 export const useTeamContext = (user) => {
@@ -49,10 +50,17 @@ export const useTeamContext = (user) => {
       }
 
       // 2. Determine club
-      const clubId = roles.find((r) => r.clubId)?.clubId || roles.find((r) => r.teamId)?.teamId; // fallback: derive from team
+      const isSuperRole = roles.some((r) => r.role === 'super_admin');
 
       let clubData = null;
-      if (roles.find((r) => r.clubId)) {
+      let allClubs = null;
+
+      if (isSuperRole) {
+        // Super admin: load all clubs, pick the first (or stored) one
+        allClubs = await supabaseService.getAllClubs();
+        const storedClubId = localStorage.getItem('nola_selected_club');
+        clubData = allClubs.find((c) => c.id === storedClubId) || allClubs[0] || null;
+      } else if (roles.find((r) => r.clubId)) {
         clubData = await supabaseService.getClub(roles.find((r) => r.clubId).clubId);
       } else {
         clubData = await supabaseService.getClubForUser();
@@ -105,6 +113,7 @@ export const useTeamContext = (user) => {
   // Determine the user's effective role level
   const effectiveRole = useMemo(() => {
     if (!user || userRoles.length === 0) return 'parent'; // default fallback
+    if (userRoles.some((r) => r.role === 'super_admin')) return 'super_admin';
     if (userRoles.some((r) => r.role === 'club_admin')) return 'club_admin';
     if (userRoles.some((r) => r.role === 'club_manager')) return 'club_manager';
     if (selectedTeamId) return getHighestTeamRole(userRoles, selectedTeamId) || 'parent';
@@ -130,6 +139,8 @@ export const useTeamContext = (user) => {
 
   // Is club admin?
   const isClubAdmin = useMemo(() => userRoles.some((r) => CLUB_ROLES[r.role]), [userRoles]);
+  // Is super admin (app-level)?
+  const isSuperAdmin = useMemo(() => userRoles.some((r) => APP_ROLES[r.role]), [userRoles]);
 
   return {
     // Data
@@ -142,6 +153,7 @@ export const useTeamContext = (user) => {
     effectiveRole,
     isStaff,
     isClubAdmin,
+    isSuperAdmin,
     navItems,
     loading,
 

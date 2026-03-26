@@ -45,7 +45,8 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
     if (!clubName.trim()) return;
     setIsSaving(true);
     try {
-      // Update club name through a direct query (add to service if needed)
+      await supabaseService.updateClub(club.id, { name: clubName.trim() });
+      if (refreshContext) await refreshContext();
       if (showToast) showToast('Club settings saved.');
     } catch (e) {
       if (showToast) showToast('Save failed.', true);
