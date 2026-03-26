@@ -235,11 +235,22 @@ function App() {
       // ── Step 1: Resolve players ──
       // For parents (no team context), start by matching email → guardian → player
       let pData = [];
+      let resolvedSeason = selectedSeason;
+
       if (!fetchTeamId && user?.email) {
         try {
           pData = await supabaseService.getPlayersByGuardianEmail(user.email);
           if (pData.length > 0 && pData[0].teamId) {
             fetchTeamId = pData[0].teamId;
+          }
+          // Auto-select the latest season from the player's enrollments
+          if (pData.length > 0 && !resolvedSeason) {
+            const profiles = pData[0].seasonProfiles || {};
+            const enrolledSeasons = Object.keys(profiles).sort((a, b) => b.localeCompare(a));
+            if (enrolledSeasons.length > 0) {
+              resolvedSeason = enrolledSeasons[0];
+              setSelectedSeason(resolvedSeason);
+            }
           }
         } catch (e) {
           console.warn('Guardian email lookup failed:', e.message);
@@ -250,17 +261,17 @@ function App() {
         pData = await supabaseService.getPlayersByTeam(fetchTeamId);
       }
 
-      console.log('Fetched', pData.length, 'players for teamId:', fetchTeamId, 'season:', selectedSeason);
+      console.log('Fetched', pData.length, 'players for teamId:', fetchTeamId, 'season:', resolvedSeason);
 
       // ── Step 2: Resolve teamSeasonId ──
       let tsId = currentTeamSeason?.id || null;
-      if (!tsId && fetchTeamId && selectedSeason) {
-        const match = teamSeasons?.find((ts) => ts.seasonId === selectedSeason);
+      if (!tsId && fetchTeamId && resolvedSeason) {
+        const match = teamSeasons?.find((ts) => ts.seasonId === resolvedSeason);
         tsId = match?.id || null;
       }
-      if (!tsId && fetchTeamId && selectedSeason) {
+      if (!tsId && fetchTeamId && resolvedSeason) {
         try {
-          const ts = await supabaseService.getTeamSeason(fetchTeamId, selectedSeason);
+          const ts = await supabaseService.getTeamSeason(fetchTeamId, resolvedSeason);
           tsId = ts?.id || null;
         } catch {
           /* noop */
@@ -272,7 +283,7 @@ function App() {
 
       let fData = {};
       try {
-        fData = await supabaseService.getPlayerFinancials(selectedSeason, tsId);
+        fData = await supabaseService.getPlayerFinancials(resolvedSeason, tsId);
       } catch (e) {
         console.warn('Could not fetch player_financials view:', e.message);
       }
