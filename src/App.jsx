@@ -230,16 +230,37 @@ function App() {
   // ── DATA FETCHING ──
   const fetchData = async () => {
     try {
-      const fetchTeamId = selectedTeamId || parentTeamId;
+      let fetchTeamId = selectedTeamId || parentTeamId;
       console.log('Fetching data for teamId:', fetchTeamId, 'season:', selectedSeason);
-      const pData = fetchTeamId ? await supabaseService.getPlayersByTeam(fetchTeamId) : [];
+
+      let pData;
+      if (fetchTeamId) {
+        pData = await supabaseService.getPlayersByTeam(fetchTeamId);
+      } else if (!effectiveIsStaff && user?.email) {
+        // Parent bootstrap: find players by guardian email match
+        pData = await supabaseService.getPlayersByGuardianEmail(user.email);
+        // Derive team from first matched player
+        if (pData.length > 0 && pData[0].teamId && !fetchTeamId) {
+          fetchTeamId = pData[0].teamId;
+        }
+      } else {
+        pData = [];
+      }
 
       // Resolve teamSeasonId — for parents, currentTeamSeason may not be set yet
       let tsId = currentTeamSeason?.id || null;
       if (!tsId && fetchTeamId && selectedSeason) {
-        // Look it up directly from teamSeasons array
         const match = teamSeasons?.find((ts) => ts.seasonId === selectedSeason);
         tsId = match?.id || null;
+      }
+      // If still no tsId, try fetching team seasons directly
+      if (!tsId && fetchTeamId && selectedSeason) {
+        try {
+          const ts = await supabaseService.getTeamSeason(fetchTeamId, selectedSeason);
+          tsId = ts?.id || null;
+        } catch {
+          /* noop */
+        }
       }
       const tData = tsId ? await supabaseService.getTransactionsByTeamSeason(tsId) : [];
 
@@ -250,7 +271,7 @@ function App() {
         console.warn('Could not fetch player_financials view:', e.message);
       }
 
-      const evId = selectedTeamId || parentTeamId;
+      const evId = fetchTeamId || selectedTeamId || parentTeamId;
       if (evId) {
         try {
           const evData = await supabaseService.getTeamEvents(evId);
@@ -417,13 +438,13 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Re-fetch when team changes
+  // Re-fetch when team changes (staff) or parent team resolves
   useEffect(() => {
-    if (user && selectedTeamId) {
+    if (user && (selectedTeamId || parentTeamId)) {
       setLoading(true);
       fetchData();
     }
-  }, [selectedTeamId]);
+  }, [selectedTeamId, parentTeamId]);
 
   // Re-fetch financials when team season resolves or season changes
   useEffect(() => {

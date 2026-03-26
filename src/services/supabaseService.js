@@ -944,6 +944,42 @@ export const supabaseService = {
     if (error) throw error;
   },
 
+  getPlayersByGuardianEmail: async (email) => {
+    const { data, error } = await supabase
+      .from('guardians')
+      .select('player_id, players(*, guardians(*), player_seasons(*))')
+      .ilike('email', email);
+    if (error) throw error;
+    return (data || [])
+      .filter((g) => g.players)
+      .map((g) => {
+        const p = g.players;
+        return {
+          id: p.id,
+          firstName: p.first_name,
+          lastName: p.last_name,
+          jerseyNumber: p.jersey_number,
+          birthdate: p.birthdate,
+          gender: p.gender,
+          status: p.status,
+          medicalRelease: p.medical_release,
+          reePlayerWaiver: p.reeplayer_waiver,
+          clubId: p.club_id,
+          teamId: p.team_id,
+          guardians: (p.guardians || []).map((gu) => ({ id: gu.id, name: gu.name, email: gu.email, phone: gu.phone })),
+          seasonProfiles: (p.player_seasons || []).reduce((acc, ps) => {
+            acc[ps.season_id] = {
+              feeWaived: ps.fee_waived,
+              status: ps.status,
+              teamSeasonId: ps.team_season_id,
+              fundraiserBuyIn: ps.fundraiser_buyin ?? false,
+            };
+            return acc;
+          }, {}),
+        };
+      });
+  },
+
   getPlayersByClub: async (clubId) => {
     const { data, error } = await supabase
       .from('players')
