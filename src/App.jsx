@@ -1159,6 +1159,7 @@ function App() {
                     onRefresh={fetchData}
                     showToast={showToast}
                     showConfirm={showConfirm}
+                    user={user}
                   />
                 )
               }

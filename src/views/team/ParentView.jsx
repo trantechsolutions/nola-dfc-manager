@@ -35,8 +35,8 @@ function getProgressColor(pct) {
 }
 
 export default function ParentView({
-  players,
-  transactions,
+  players: propPlayers,
+  transactions: propTransactions,
   calculatePlayerFinancials,
   formatMoney,
   teams = [],
@@ -48,12 +48,64 @@ export default function ParentView({
   onRefresh,
   showToast,
   showConfirm,
+  user,
 }) {
   const { t } = useT();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showMedicalForm, setShowMedicalForm] = useState(false);
   const [playerDocs, setPlayerDocs] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
+
+  // ── SELF-SUFFICIENT DATA FETCH for parents ──
+  // If props come in empty (timing issue), fetch directly
+  const [selfPlayers, setSelfPlayers] = useState([]);
+  const [selfTransactions, setSelfTransactions] = useState([]);
+  const [selfFinancials, setSelfFinancials] = useState({});
+  const [bootstrapped, setBootstrapped] = useState(false);
+
+  useEffect(() => {
+    const email = user?.email;
+    if (!email || (propPlayers && propPlayers.length > 0)) return;
+    if (bootstrapped) return;
+
+    const bootstrap = async () => {
+      try {
+        const pData = await supabaseService.getPlayersByGuardianEmail(email);
+        if (pData.length === 0) return;
+        setSelfPlayers(pData);
+
+        const teamId = pData[0].teamId;
+        const profiles = pData[0].seasonProfiles || {};
+        const latestSeason = Object.keys(profiles).sort((a, b) => b.localeCompare(a))[0];
+
+        if (latestSeason && setSelectedSeason) {
+          setSelectedSeason(latestSeason);
+        }
+
+        if (teamId && latestSeason) {
+          const ts = await supabaseService.getTeamSeason(teamId, latestSeason);
+          if (ts?.id) {
+            const txs = await supabaseService.getTransactionsByTeamSeason(ts.id);
+            setSelfTransactions(txs);
+            try {
+              const fin = await supabaseService.getPlayerFinancials(latestSeason, ts.id);
+              setSelfFinancials(fin);
+            } catch {
+              /* noop */
+            }
+          }
+        }
+        setBootstrapped(true);
+      } catch (e) {
+        console.warn('ParentView bootstrap failed:', e.message);
+      }
+    };
+    bootstrap();
+  }, [user?.email, propPlayers, bootstrapped, setSelectedSeason]);
+
+  // Use prop data if available, otherwise use self-fetched data
+  const players = propPlayers && propPlayers.length > 0 ? propPlayers : selfPlayers;
+  const transactions = propTransactions && propTransactions.length > 0 ? propTransactions : selfTransactions;
 
   // ── ACTIVE PLAYER ──
   const activePlayer = players && players.length > 0 ? players[selectedIndex] : null;
