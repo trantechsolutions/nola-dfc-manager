@@ -535,9 +535,10 @@ function App() {
           { id: 'club-teams', label: t('nav.teams'), icon: ListTree, section: 'club' },
           { id: 'club-players', label: t('nav.players', 'Players'), icon: Users, section: 'club' },
           { id: 'club-admin', label: t('nav.settings'), icon: Shield, section: 'club' },
-          ...(can(PERMISSIONS.CLUB_VIEW_EVALUATIONS)
-            ? [{ id: 'club-evaluations', label: 'Evaluations', icon: ClipboardCheck, section: 'club' }]
-            : []),
+          // TODO: Re-enable when evaluations are ready for production
+          // ...(can(PERMISSIONS.CLUB_VIEW_EVALUATIONS)
+          //   ? [{ id: 'club-evaluations', label: 'Evaluations', icon: ClipboardCheck, section: 'club' }]
+          //   : []),
         ]
       : [];
 
@@ -565,9 +566,10 @@ function App() {
           ? [{ id: 'people', label: t('nav.players'), icon: Users }]
           : []),
         ...(can(PERMISSIONS.TEAM_VIEW_INSIGHTS) ? [{ id: 'insights', label: t('nav.insights'), icon: Sparkles }] : []),
-        ...(can(PERMISSIONS.TEAM_VIEW_ROSTER)
-          ? [{ id: 'season-evaluations', label: t('nav.evaluations', 'Evaluations'), icon: ClipboardCheck }]
-          : []),
+        // TODO: Re-enable when evaluations are ready for production
+        // ...(can(PERMISSIONS.TEAM_VIEW_ROSTER)
+        //   ? [{ id: 'season-evaluations', label: t('nav.evaluations', 'Evaluations'), icon: ClipboardCheck }]
+        //   : []),
         ...(can(PERMISSIONS.TEAM_EDIT_SCHEDULE)
           ? [{ id: 'team-admin', label: t('nav.settings'), icon: SlidersHorizontal }]
           : []),
@@ -1098,6 +1100,7 @@ function App() {
                     />
                   }
                 />
+                {/* TODO: Re-enable when evaluations are ready for production
                 {can(PERMISSIONS.CLUB_VIEW_EVALUATIONS) && (
                   <Route
                     path="/club-evaluations"
@@ -1113,7 +1116,7 @@ function App() {
                       />
                     }
                   />
-                )}
+                )} */}
               </>
             )}
 
@@ -1200,6 +1203,7 @@ function App() {
               />
             )}
 
+            {/* TODO: Re-enable when evaluations are ready for production
             {effectiveIsStaff && (
               <Route
                 path="/season-evaluations"
@@ -1215,9 +1219,10 @@ function App() {
                 }
               />
             )}
+            <Route path="/evaluate/:sessionId" element={<EvaluatorScoringView user={user} showToast={showToast} />} />
+            */}
 
             <Route path="/changelog" element={<Changelog />} />
-            <Route path="/evaluate/:sessionId" element={<EvaluatorScoringView user={user} showToast={showToast} />} />
 
             {effectiveIsStaff && (
               <>
