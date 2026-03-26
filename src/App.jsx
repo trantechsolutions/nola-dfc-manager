@@ -227,12 +227,12 @@ function App() {
   const fetchData = async () => {
     try {
       console.log('Fetching data for teamId:', selectedTeamId, 'season:', selectedSeason);
-      const pData = selectedTeamId
-        ? await supabaseService.getPlayersByTeam(selectedTeamId)
-        : await supabaseService.getAllPlayers();
-      const tData = await supabaseService.getAllTransactions();
+      const effectiveTeamId = selectedTeamId || parentTeamId;
+      const pData = effectiveTeamId ? await supabaseService.getPlayersByTeam(effectiveTeamId) : [];
 
       const tsId = currentTeamSeason?.id || null;
+      const tData = tsId ? await supabaseService.getTransactionsByTeamSeason(tsId) : [];
+
       let fData = {};
       try {
         fData = await supabaseService.getPlayerFinancials(selectedSeason, tsId);
