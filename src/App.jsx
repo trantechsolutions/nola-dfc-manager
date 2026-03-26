@@ -50,6 +50,7 @@ import SuperAdminView from './views/admin/SuperAdminView';
 import EvaluationHub from './views/club/evaluations/EvaluationHub';
 import ClubPlayersView from './views/club/ClubPlayersView';
 import EvaluatorScoringView from './views/club/evaluations/EvaluatorScoringView';
+import SeasonEvaluationView from './views/team/SeasonEvaluationView';
 
 // Components
 import TransactionModal from './components/TransactionModal';
@@ -564,6 +565,9 @@ function App() {
           ? [{ id: 'people', label: t('nav.players'), icon: Users }]
           : []),
         ...(can(PERMISSIONS.TEAM_VIEW_INSIGHTS) ? [{ id: 'insights', label: t('nav.insights'), icon: Sparkles }] : []),
+        ...(can(PERMISSIONS.TEAM_VIEW_ROSTER)
+          ? [{ id: 'season-evaluations', label: t('nav.evaluations', 'Evaluations'), icon: ClipboardCheck }]
+          : []),
         ...(can(PERMISSIONS.TEAM_EDIT_SCHEDULE)
           ? [{ id: 'team-admin', label: t('nav.settings'), icon: SlidersHorizontal }]
           : []),
@@ -1192,6 +1196,22 @@ function App() {
                 path="/team-admin"
                 element={
                   <TeamSettingsView selectedTeam={selectedTeam} refreshContext={refreshContext} showToast={showToast} />
+                }
+              />
+            )}
+
+            {effectiveIsStaff && (
+              <Route
+                path="/season-evaluations"
+                element={
+                  <SeasonEvaluationView
+                    players={seasonalPlayers}
+                    selectedSeason={selectedSeason}
+                    selectedTeamId={selectedTeamId}
+                    teamSeasonId={teamSeasonId}
+                    showToast={showToast}
+                    user={user}
+                  />
                 }
               />
             )}

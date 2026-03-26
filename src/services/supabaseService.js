@@ -1509,6 +1509,25 @@ export const supabaseService = {
     }));
   },
 
+  uploadDocumentRecord: async (docData) => {
+    const { error } = await supabase.from('documents').insert({
+      player_id: docData.playerId,
+      team_id: docData.teamId,
+      club_id: docData.clubId,
+      season_id: docData.seasonId,
+      doc_type: docData.docType,
+      title: docData.title,
+      file_name: docData.fileName || null,
+      file_path: docData.filePath || null,
+      mime_type: docData.mimeType || 'text/plain',
+      file_size: docData.fileSize || 0,
+      status: docData.status || 'uploaded',
+      verified_by: docData.verifiedBy || null,
+      verified_at: docData.status === 'verified' ? new Date().toISOString() : null,
+    });
+    if (error) throw error;
+  },
+
   uploadDocument: async (file, playerId, docMeta) => {
     const ext = file.name.split('.').pop();
     const storagePath = `${docMeta.clubId}/${playerId}/${Date.now()}_${docMeta.docType}.${ext}`;
