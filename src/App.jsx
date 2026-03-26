@@ -231,36 +231,33 @@ function App() {
   const fetchData = async () => {
     try {
       let fetchTeamId = selectedTeamId || parentTeamId;
-      console.log('Fetching data for teamId:', fetchTeamId, 'season:', selectedSeason);
 
+      // ── Step 1: Resolve players ──
+      // For parents (no team context), start by matching email → guardian → player
       let pData = [];
-      if (fetchTeamId) {
-        pData = await supabaseService.getPlayersByTeam(fetchTeamId);
-      }
-
-      // Parent bootstrap: if no players found, try guardian email match
-      // This handles the case where parentTeamId hasn't resolved yet
-      if (pData.length === 0 && user?.email) {
+      if (!fetchTeamId && user?.email) {
         try {
-          const guardianPlayers = await supabaseService.getPlayersByGuardianEmail(user.email);
-          if (guardianPlayers.length > 0) {
-            pData = guardianPlayers;
-            if (!fetchTeamId && guardianPlayers[0].teamId) {
-              fetchTeamId = guardianPlayers[0].teamId;
-            }
+          pData = await supabaseService.getPlayersByGuardianEmail(user.email);
+          if (pData.length > 0 && pData[0].teamId) {
+            fetchTeamId = pData[0].teamId;
           }
         } catch (e) {
           console.warn('Guardian email lookup failed:', e.message);
         }
       }
+      // For staff (or after parent resolved team), fetch full team roster
+      if (fetchTeamId && pData.length === 0) {
+        pData = await supabaseService.getPlayersByTeam(fetchTeamId);
+      }
 
-      // Resolve teamSeasonId — for parents, currentTeamSeason may not be set yet
+      console.log('Fetched', pData.length, 'players for teamId:', fetchTeamId, 'season:', selectedSeason);
+
+      // ── Step 2: Resolve teamSeasonId ──
       let tsId = currentTeamSeason?.id || null;
       if (!tsId && fetchTeamId && selectedSeason) {
         const match = teamSeasons?.find((ts) => ts.seasonId === selectedSeason);
         tsId = match?.id || null;
       }
-      // If still no tsId, try fetching team seasons directly
       if (!tsId && fetchTeamId && selectedSeason) {
         try {
           const ts = await supabaseService.getTeamSeason(fetchTeamId, selectedSeason);
@@ -269,6 +266,8 @@ function App() {
           /* noop */
         }
       }
+
+      // ── Step 3: Fetch transactions ──
       const tData = tsId ? await supabaseService.getTransactionsByTeamSeason(tsId) : [];
 
       let fData = {};
