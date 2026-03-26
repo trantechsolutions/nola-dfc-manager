@@ -12,7 +12,7 @@ export default function EvaluationHub({ club, teams, seasons, selectedSeason, sh
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
-        {activeSessionId && (
+        {!!activeSessionId && (
           <button
             onClick={() => setActiveSessionId(null)}
             className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
@@ -29,7 +29,7 @@ export default function EvaluationHub({ club, teams, seasons, selectedSeason, sh
       </div>
 
       {/* Content */}
-      {activeSessionId === null ? (
+      {!activeSessionId ? (
         <EvaluationSessionList
           club={club}
           seasons={seasons}
