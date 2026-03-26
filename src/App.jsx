@@ -26,6 +26,7 @@ import {
   Menu,
   X,
   GitCommit,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useT } from './i18n/I18nContext';
 import { useTheme } from './theme/ThemeContext';
@@ -46,6 +47,7 @@ import ClubAdminHub from './views/club/ClubAdminHub';
 import TeamSettingsView from './views/team/TeamSettingsView';
 import Changelog from './components/Changelog';
 import SuperAdminView from './views/admin/SuperAdminView';
+import EvaluationHub from './views/club/evaluations/EvaluationHub';
 
 // Components
 import TransactionModal from './components/TransactionModal';
@@ -480,6 +482,9 @@ function App() {
           { id: 'club-overview', label: t('nav.overview'), icon: Building2, section: 'club' },
           { id: 'club-teams', label: t('nav.teams'), icon: ListTree, section: 'club' },
           { id: 'club-admin', label: t('nav.settings'), icon: Shield, section: 'club' },
+          ...(can(PERMISSIONS.CLUB_VIEW_EVALUATIONS)
+            ? [{ id: 'club-evaluations', label: 'Evaluations', icon: ClipboardCheck, section: 'club' }]
+            : []),
         ]
       : [];
 
@@ -1024,6 +1029,22 @@ function App() {
                     />
                   }
                 />
+                {can(PERMISSIONS.CLUB_VIEW_EVALUATIONS) && (
+                  <Route
+                    path="/club-evaluations"
+                    element={
+                      <EvaluationHub
+                        club={club}
+                        teams={teams}
+                        seasons={seasons}
+                        selectedSeason={selectedSeason}
+                        showToast={showToast}
+                        showConfirm={showConfirm}
+                        user={user}
+                      />
+                    }
+                  />
+                )}
               </>
             )}
 
