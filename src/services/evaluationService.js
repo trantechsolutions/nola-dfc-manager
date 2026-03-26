@@ -102,18 +102,43 @@ export const evaluationService = {
   },
 
   saveCategories: async (sessionId, categories) => {
-    // Delete existing and re-insert (simpler than diff)
-    await supabase.from('evaluation_categories').delete().eq('session_id', sessionId);
-    if (categories.length === 0) return;
-    const rows = categories.map((c, i) => ({
-      session_id: sessionId,
-      name: c.name,
-      description: c.description || null,
-      weight: c.weight || 1,
-      sort_order: i,
-    }));
-    const { error } = await supabase.from('evaluation_categories').insert(rows);
-    if (error) throw error;
+    // Get existing categories to preserve IDs (scores reference category IDs)
+    const { data: existing } = await supabase.from('evaluation_categories').select('id').eq('session_id', sessionId);
+    const existingIds = new Set((existing || []).map((c) => c.id));
+
+    // Separate updates vs inserts
+    const toUpdate = categories.filter((c) => c.id && existingIds.has(c.id));
+    const toInsert = categories.filter((c) => !c.id || !existingIds.has(c.id));
+    const keepIds = new Set(categories.filter((c) => c.id).map((c) => c.id));
+
+    // Delete categories that were removed (not in the new list)
+    const toDelete = [...existingIds].filter((id) => !keepIds.has(id));
+    if (toDelete.length > 0) {
+      await supabase.from('evaluation_scores').delete().in('category_id', toDelete);
+      await supabase.from('evaluation_categories').delete().in('id', toDelete);
+    }
+
+    // Update existing
+    for (let i = 0; i < toUpdate.length; i++) {
+      const c = toUpdate[i];
+      await supabase
+        .from('evaluation_categories')
+        .update({ name: c.name, description: c.description || null, weight: c.weight || 1, sort_order: i })
+        .eq('id', c.id);
+    }
+
+    // Insert new
+    if (toInsert.length > 0) {
+      const rows = toInsert.map((c, i) => ({
+        session_id: sessionId,
+        name: c.name,
+        description: c.description || null,
+        weight: c.weight || 1,
+        sort_order: toUpdate.length + i,
+      }));
+      const { error } = await supabase.from('evaluation_categories').insert(rows);
+      if (error) throw error;
+    }
   },
 
   // ─────────────────────────────────────────
@@ -147,18 +172,32 @@ export const evaluationService = {
   },
 
   importCandidates: async (sessionId, candidates) => {
-    const rows = candidates.map((c) => ({
-      session_id: sessionId,
-      player_id: c.playerId || null,
-      first_name: c.firstName,
-      last_name: c.lastName,
-      bib_number: c.bibNumber || null,
-      birthdate: c.birthdate || null,
-      gender: c.gender || null,
-      age_group: c.ageGroup || null,
-      position: c.position || null,
-      notes: c.notes || null,
-    }));
+    // Auto-assign bib numbers for candidates that don't have one
+    // Get the current max bib number in this session
+    const { data: existingCands } = await supabase
+      .from('evaluation_candidates')
+      .select('bib_number')
+      .eq('session_id', sessionId)
+      .not('bib_number', 'is', null)
+      .order('bib_number', { ascending: false })
+      .limit(1);
+    let nextBib = (existingCands?.[0]?.bib_number || 0) + 1;
+
+    const rows = candidates.map((c) => {
+      const bib = c.bibNumber || nextBib++;
+      return {
+        session_id: sessionId,
+        player_id: c.playerId || null,
+        first_name: c.firstName,
+        last_name: c.lastName,
+        bib_number: bib,
+        birthdate: c.birthdate || null,
+        gender: c.gender || null,
+        age_group: c.ageGroup || null,
+        position: c.position || null,
+        notes: c.notes || null,
+      };
+    });
     const { data, error } = await supabase.from('evaluation_candidates').insert(rows).select();
     if (error) throw error;
     return data;

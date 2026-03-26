@@ -49,6 +49,7 @@ import Changelog from './components/Changelog';
 import SuperAdminView from './views/admin/SuperAdminView';
 import EvaluationHub from './views/club/evaluations/EvaluationHub';
 import ClubPlayersView from './views/club/ClubPlayersView';
+import EvaluatorScoringView from './views/club/evaluations/EvaluatorScoringView';
 
 // Components
 import TransactionModal from './components/TransactionModal';
@@ -1146,6 +1147,7 @@ function App() {
             )}
 
             <Route path="/changelog" element={<Changelog />} />
+            <Route path="/evaluate/:sessionId" element={<EvaluatorScoringView user={user} showToast={showToast} />} />
 
             {effectiveIsStaff && (
               <>

@@ -597,6 +597,34 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
               {t('common.add', 'Add')}
             </button>
           </div>
+          {/* Evaluator Link */}
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl p-3">
+            <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-1">
+              {t('evaluations.evaluatorLink', 'Evaluator Scoring Link')}
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                readOnly
+                value={`${window.location.origin}/evaluate/${sessionId}`}
+                className="flex-1 text-xs font-mono bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 rounded-lg px-3 py-1.5 text-slate-600 dark:text-slate-300"
+              />
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/evaluate/${sessionId}`);
+                  showToast?.('Link copied!');
+                }}
+                className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors"
+              >
+                Copy
+              </button>
+            </div>
+            <p className="text-[10px] text-indigo-500 dark:text-indigo-400 mt-1">
+              {t(
+                'evaluations.evaluatorLinkHint',
+                'Share this link with evaluators. They will see bib numbers only — no player names.',
+              )}
+            </p>
+          </div>
         </section>
 
         {/* Team Thresholds */}
