@@ -230,11 +230,17 @@ function App() {
   // ── DATA FETCHING ──
   const fetchData = async () => {
     try {
-      console.log('Fetching data for teamId:', selectedTeamId, 'season:', selectedSeason);
-      const effectiveTeamId = selectedTeamId || parentTeamId;
-      const pData = effectiveTeamId ? await supabaseService.getPlayersByTeam(effectiveTeamId) : [];
+      const fetchTeamId = selectedTeamId || parentTeamId;
+      console.log('Fetching data for teamId:', fetchTeamId, 'season:', selectedSeason);
+      const pData = fetchTeamId ? await supabaseService.getPlayersByTeam(fetchTeamId) : [];
 
-      const tsId = currentTeamSeason?.id || null;
+      // Resolve teamSeasonId — for parents, currentTeamSeason may not be set yet
+      let tsId = currentTeamSeason?.id || null;
+      if (!tsId && fetchTeamId && selectedSeason) {
+        // Look it up directly from teamSeasons array
+        const match = teamSeasons?.find((ts) => ts.seasonId === selectedSeason);
+        tsId = match?.id || null;
+      }
       const tData = tsId ? await supabaseService.getTransactionsByTeamSeason(tsId) : [];
 
       let fData = {};
