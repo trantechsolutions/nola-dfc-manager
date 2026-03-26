@@ -65,6 +65,7 @@ export const supabaseService = {
         last_name: playerData.lastName,
         jersey_number: playerData.jerseyNumber || null,
         birthdate: playerData.birthdate || null,
+        gender: playerData.gender || null,
         status: playerData.status || 'active',
         medical_release: playerData.medicalRelease || false,
         reeplayer_waiver: playerData.reePlayerWaiver || false,
@@ -106,16 +107,15 @@ export const supabaseService = {
 
   updatePlayer: async (playerId, playerData) => {
     // 1. Update core player fields
-    const { error: pErr } = await supabase
-      .from('players')
-      .update({
-        first_name: playerData.firstName,
-        last_name: playerData.lastName,
-        jersey_number: playerData.jerseyNumber || null,
-        birthdate: playerData.birthdate || null,
-        status: playerData.status || 'active',
-      })
-      .eq('id', playerId);
+    const row = {
+      first_name: playerData.firstName,
+      last_name: playerData.lastName,
+      jersey_number: playerData.jerseyNumber || null,
+      birthdate: playerData.birthdate || null,
+      status: playerData.status || 'active',
+    };
+    if ('gender' in playerData) row.gender = playerData.gender || null;
+    const { error: pErr } = await supabase.from('players').update(row).eq('id', playerId);
     if (pErr) throw pErr;
 
     // 2. Replace guardians (delete all, re-insert)
@@ -957,6 +957,7 @@ export const supabaseService = {
       lastName: p.last_name,
       jerseyNumber: p.jersey_number,
       birthdate: p.birthdate,
+      gender: p.gender,
       status: p.status,
       medicalRelease: p.medical_release,
       clubId: p.club_id,
@@ -984,6 +985,8 @@ export const supabaseService = {
       firstName: p.first_name,
       lastName: p.last_name,
       jerseyNumber: p.jersey_number,
+      birthdate: p.birthdate,
+      gender: p.gender,
       status: p.status,
       medicalRelease: p.medical_release,
       reePlayerWaiver: p.reeplayer_waiver,

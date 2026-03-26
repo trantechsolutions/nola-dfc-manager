@@ -8,6 +8,7 @@ const EMPTY_PLAYER = {
   firstName: '',
   lastName: '',
   birthdate: '',
+  gender: '',
   position: '',
   teamId: '',
   jerseyNumber: '',
@@ -111,6 +112,7 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
         firstName: addForm.firstName.trim(),
         lastName: addForm.lastName.trim(),
         birthdate: addForm.birthdate || null,
+        gender: addForm.gender || null,
         jerseyNumber: addForm.jerseyNumber || null,
         status: addForm.playerType === 'prospect' ? 'prospect' : 'active',
         clubId: club.id,
@@ -463,6 +465,22 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+              </div>
+
+              {/* Gender */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
+                  Gender
+                </label>
+                <select
+                  value={addForm.gender || ''}
+                  onChange={(e) => setAddForm((f) => ({ ...f, gender: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">— Select —</option>
+                  <option value="Boys">Boys</option>
+                  <option value="Girls">Girls</option>
+                </select>
               </div>
 
               {/* Team Assignment */}
