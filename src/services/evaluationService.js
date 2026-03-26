@@ -135,6 +135,7 @@ export const evaluationService = {
       lastName: c.last_name,
       bibNumber: c.bib_number,
       birthdate: c.birthdate,
+      gender: c.gender,
       ageGroup: c.age_group,
       position: c.position,
       notes: c.notes,
@@ -153,6 +154,7 @@ export const evaluationService = {
       last_name: c.lastName,
       bib_number: c.bibNumber || null,
       birthdate: c.birthdate || null,
+      gender: c.gender || null,
       age_group: c.ageGroup || null,
       position: c.position || null,
       notes: c.notes || null,
@@ -170,6 +172,7 @@ export const evaluationService = {
     if ('notes' in updates) row.notes = updates.notes;
     if ('position' in updates) row.position = updates.position;
     if ('bibNumber' in updates) row.bib_number = updates.bibNumber;
+    if ('gender' in updates) row.gender = updates.gender;
     const { error } = await supabase.from('evaluation_candidates').update(row).eq('id', candidateId);
     if (error) throw error;
   },
@@ -307,7 +310,7 @@ export const evaluationService = {
   getThresholds: async (sessionId) => {
     const { data, error } = await supabase
       .from('evaluation_team_thresholds')
-      .select('*, teams(name, age_group, tier)')
+      .select('*, teams(name, age_group, tier, gender)')
       .eq('session_id', sessionId)
       .order('sort_order');
     if (error) throw error;
@@ -317,6 +320,7 @@ export const evaluationService = {
       teamId: t.team_id,
       teamName: t.teams?.name || '',
       teamAgeGroup: t.teams?.age_group || '',
+      teamGender: t.teams?.gender || '',
       teamTier: t.teams?.tier || '',
       minScore: Number(t.min_score),
       maxRoster: t.max_roster,
@@ -390,11 +394,27 @@ export const evaluationService = {
 
     const placements = [];
 
+    // Gender matching helper: boys→boys team, girls→girls team, coed accepts both
+    const genderMatch = (candidateGender, teamGender) => {
+      if (!teamGender || !candidateGender) return true; // no gender info = allow
+      const tg = teamGender.toLowerCase();
+      if (tg === 'coed' || tg === 'co-ed') return true; // coed teams accept anyone
+      const cg = candidateGender.toLowerCase();
+      return (
+        ((cg === 'boys' || cg === 'boy' || cg === 'male' || cg === 'm') &&
+          (tg === 'boys' || tg === 'boy' || tg === 'male')) ||
+        ((cg === 'girls' || cg === 'girl' || cg === 'female' || cg === 'f') &&
+          (tg === 'girls' || tg === 'girl' || tg === 'female'))
+      );
+    };
+
     for (const candidate of sorted) {
       let placed = false;
       for (const tier of tiers) {
         if (candidate.overallScore >= tier.minScore) {
           if (tier.maxRoster && rosterCounts[tier.teamId] >= tier.maxRoster) continue;
+          // Enforce gender rules
+          if (!genderMatch(candidate.gender, tier.teamGender)) continue;
           placements.push({
             candidateId: candidate.id,
             teamId: tier.teamId,

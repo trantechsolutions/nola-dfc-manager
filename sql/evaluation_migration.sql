@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS evaluation_candidates (
   last_name        text NOT NULL,
   bib_number       int,                         -- visible identifier during evaluations
   birthdate        date,
+  gender           text,                         -- boys / girls
   age_group        text,
   position         text,
   notes            text,

@@ -228,6 +228,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
             lastName: row['last name'] || row['lastname'] || '',
             bibNumber: parseInt(row['bib'] || row['bib number'] || row['bib#'] || '', 10) || null,
             birthdate: row['birthdate'] || row['dob'] || '',
+            gender: row['gender'] || row['sex'] || '',
             ageGroup: row['age group'] || row['agegroup'] || '',
             position: row['position'] || '',
             notes: row['notes'] || '',
@@ -269,16 +270,22 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
     if (selectedClubPlayerIds.size === 0) return;
     const toAdd = clubPlayers
       .filter((p) => selectedClubPlayerIds.has(p.id))
-      .map((p) => ({
-        playerId: p.id,
-        firstName: p.firstName,
-        lastName: p.lastName,
-        birthdate: p.birthdate || '',
-        ageGroup: p.birthdate && session?.seasonId ? getUSAgeGroup(p.birthdate, session.seasonId) : '',
-        position: '',
-        notes: '',
-        bibNumber: null,
-      }));
+      .map((p) => {
+        // Derive gender from the player's team if available
+        const playerTeam = teams.find((t) => t.id === p.teamId);
+        const gender = playerTeam?.gender || '';
+        return {
+          playerId: p.id,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          birthdate: p.birthdate || '',
+          gender,
+          ageGroup: p.birthdate && session?.seasonId ? getUSAgeGroup(p.birthdate, session.seasonId) : '',
+          position: '',
+          notes: '',
+          bibNumber: null,
+        };
+      });
     try {
       await importCandidates(toAdd);
       setShowClubPicker(false);
@@ -674,7 +681,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
               <button
                 onClick={() => {
                   const template =
-                    'First Name,Last Name,Bib,Birthdate,Age Group,Position,Notes\nJohn,Doe,1,2012-05-15,U14,Forward,\nJane,Smith,2,2013-01-20,U13,Midfielder,';
+                    'First Name,Last Name,Bib,Birthdate,Gender,Age Group,Position,Notes\nJohn,Doe,1,2012-05-15,Boys,U14,Forward,\nJane,Smith,2,2013-01-20,Girls,U13,Midfielder,';
                   const blob = new Blob([template], { type: 'text/csv' });
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
@@ -708,7 +715,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
           <p className="text-[11px] text-slate-400 dark:text-slate-500">
             {t(
               'evaluations.importHint',
-              'CSV columns: First Name, Last Name, Bib, Birthdate (YYYY-MM-DD), Age Group, Position, Notes. Players are imported to the club and assigned to teams during placement.',
+              'CSV columns: First Name, Last Name, Bib, Birthdate (YYYY-MM-DD), Gender (Boys/Girls), Age Group, Position, Notes. Gender enforces team placement rules — boys can only be placed on boys teams, girls on girls teams, coed teams accept both.',
             )}
           </p>
           {candidates.length > 0 && (
