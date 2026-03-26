@@ -83,6 +83,18 @@ export default function ParentView({
     return available.length > 0 ? available : seasons;
   }, [activePlayer, seasons]);
 
+  // Auto-default to the latest season the player is enrolled in
+  useEffect(() => {
+    if (playerSeasons.length > 0 && setSelectedSeason) {
+      const currentlySelected = playerSeasons.find((s) => s.id === selectedSeason);
+      if (!currentlySelected) {
+        // Pick the latest season (sorted descending by ID e.g. "2025-2026" > "2024-2025")
+        const sorted = [...playerSeasons].sort((a, b) => b.id.localeCompare(a.id));
+        setSelectedSeason(sorted[0].id);
+      }
+    }
+  }, [playerSeasons, selectedSeason, setSelectedSeason]);
+
   // ── SIBLING CHECK ──
   const multipleTeams = useMemo(() => {
     const teamIds = new Set(players.map((p) => p.teamId).filter(Boolean));
@@ -199,6 +211,26 @@ export default function ParentView({
               </button>
             );
           })}
+        </div>
+      )}
+
+      {/* ── SEASON SELECTOR ── */}
+      {playerSeasons.length > 1 && (
+        <div className="flex items-center justify-between bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 mb-5">
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            {t('common.season', 'Season')}
+          </span>
+          <select
+            value={selectedSeason || ''}
+            onChange={(e) => setSelectedSeason(e.target.value)}
+            className="bg-transparent border-none text-sm font-bold text-blue-600 dark:text-blue-400 focus:ring-0 cursor-pointer text-right"
+          >
+            {playerSeasons.map((s) => (
+              <option key={s.id} value={s.id} className="text-slate-900 dark:text-white">
+                {s.name || s.id}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
