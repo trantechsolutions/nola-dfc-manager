@@ -6,10 +6,13 @@ const COLORS = {
   red: { fill: '#dc2626', stroke: '#b91c1c', text: '#ffffff' },
 };
 
-export default function JerseyBadge({ number, size = 36, className = '', color = 'slate' }) {
+const SIZES = { xs: 20, sm: 24, md: 36, lg: 48 };
+
+export default function JerseyBadge({ number, size = 'md', className = '', color = 'slate' }) {
   const c = COLORS[color] || COLORS.slate;
+  const px = typeof size === 'number' ? size : SIZES[size] || SIZES.md;
   return (
-    <div className={`shrink-0 ${className}`} style={{ width: size, height: size }}>
+    <div className={`shrink-0 ${className}`} style={{ width: px, height: px }}>
       <svg viewBox="0 0 40 44" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
         <path
           d="M8 12L4 8L10 4L15 2H25L30 4L36 8L32 12V40H8V12Z"
