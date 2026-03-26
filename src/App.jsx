@@ -233,18 +233,25 @@ function App() {
       let fetchTeamId = selectedTeamId || parentTeamId;
       console.log('Fetching data for teamId:', fetchTeamId, 'season:', selectedSeason);
 
-      let pData;
+      let pData = [];
       if (fetchTeamId) {
         pData = await supabaseService.getPlayersByTeam(fetchTeamId);
-      } else if (!effectiveIsStaff && user?.email) {
-        // Parent bootstrap: find players by guardian email match
-        pData = await supabaseService.getPlayersByGuardianEmail(user.email);
-        // Derive team from first matched player
-        if (pData.length > 0 && pData[0].teamId && !fetchTeamId) {
-          fetchTeamId = pData[0].teamId;
+      }
+
+      // Parent bootstrap: if no players found, try guardian email match
+      // This handles the case where parentTeamId hasn't resolved yet
+      if (pData.length === 0 && user?.email) {
+        try {
+          const guardianPlayers = await supabaseService.getPlayersByGuardianEmail(user.email);
+          if (guardianPlayers.length > 0) {
+            pData = guardianPlayers;
+            if (!fetchTeamId && guardianPlayers[0].teamId) {
+              fetchTeamId = guardianPlayers[0].teamId;
+            }
+          }
+        } catch (e) {
+          console.warn('Guardian email lookup failed:', e.message);
         }
-      } else {
-        pData = [];
       }
 
       // Resolve teamSeasonId — for parents, currentTeamSeason may not be set yet
