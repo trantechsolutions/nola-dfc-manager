@@ -453,8 +453,12 @@ export const supabaseService = {
   },
 
   deleteSeason: async (seasonId) => {
-    // transactions FK is not CASCADE — delete manually
+    // Delete all child records (no CASCADE on FKs)
     await supabase.from('transactions').delete().eq('season_id', seasonId);
+    await supabase.from('budget_items').delete().eq('season_id', seasonId);
+    await supabase.from('player_seasons').delete().eq('season_id', seasonId);
+    await supabase.from('documents').delete().eq('season_id', seasonId);
+    await supabase.from('team_seasons').delete().eq('season_id', seasonId);
     const { error } = await supabase.from('seasons').delete().eq('id', seasonId);
     if (error) throw error;
   },
@@ -658,15 +662,73 @@ export const supabaseService = {
     return { id: data.id, name: data.name, slug: data.slug };
   },
 
+  deleteTeam: async (teamId) => {
+    // Get all team_seasons for this team
+    const { data: tss } = await supabase.from('team_seasons').select('id').eq('team_id', teamId);
+    for (const ts of tss || []) {
+      await supabase.from('transactions').delete().eq('team_season_id', ts.id);
+      await supabase.from('budget_items').delete().eq('team_season_id', ts.id);
+      await supabase.from('player_seasons').delete().eq('team_season_id', ts.id);
+    }
+    await supabase.from('team_seasons').delete().eq('team_id', teamId);
+    await supabase.from('team_events').delete().eq('team_id', teamId);
+    await supabase.from('blackouts').delete().eq('team_id', teamId);
+    await supabase.from('user_roles').delete().eq('team_id', teamId);
+    // Delete players and their children
+    const { data: players } = await supabase.from('players').select('id').eq('team_id', teamId);
+    for (const p of players || []) {
+      await supabase.from('guardians').delete().eq('player_id', p.id);
+      await supabase.from('documents').delete().eq('player_id', p.id);
+      await supabase.from('medical_forms').delete().eq('player_id', p.id);
+    }
+    if (players?.length) {
+      await supabase
+        .from('players')
+        .delete()
+        .in(
+          'id',
+          players.map((p) => p.id),
+        );
+    }
+    const { error } = await supabase.from('teams').delete().eq('id', teamId);
+    if (error) throw error;
+  },
+
   deleteClub: async (clubId) => {
-    // Delete all related data first
+    // Get all teams and cascade-delete each one
     const { data: teams } = await supabase.from('teams').select('id').eq('club_id', clubId);
     for (const t of teams || []) {
+      // Inline team cascade delete
+      const { data: tss } = await supabase.from('team_seasons').select('id').eq('team_id', t.id);
+      for (const ts of tss || []) {
+        await supabase.from('transactions').delete().eq('team_season_id', ts.id);
+        await supabase.from('budget_items').delete().eq('team_season_id', ts.id);
+        await supabase.from('player_seasons').delete().eq('team_season_id', ts.id);
+      }
+      await supabase.from('team_seasons').delete().eq('team_id', t.id);
       await supabase.from('team_events').delete().eq('team_id', t.id);
+      await supabase.from('blackouts').delete().eq('team_id', t.id);
       await supabase.from('user_roles').delete().eq('team_id', t.id);
+      const { data: players } = await supabase.from('players').select('id').eq('team_id', t.id);
+      for (const p of players || []) {
+        await supabase.from('guardians').delete().eq('player_id', p.id);
+        await supabase.from('documents').delete().eq('player_id', p.id);
+        await supabase.from('medical_forms').delete().eq('player_id', p.id);
+      }
+      if (players?.length)
+        await supabase
+          .from('players')
+          .delete()
+          .in(
+            'id',
+            players.map((p) => p.id),
+          );
+      await supabase.from('teams').delete().eq('id', t.id);
     }
-    await supabase.from('teams').delete().eq('club_id', clubId);
+    // Delete club-level records
     await supabase.from('user_roles').delete().eq('club_id', clubId);
+    await supabase.from('custom_categories').delete().eq('club_id', clubId);
+    await supabase.from('documents').delete().eq('club_id', clubId);
     const { error } = await supabase.from('clubs').delete().eq('id', clubId);
     if (error) throw error;
   },

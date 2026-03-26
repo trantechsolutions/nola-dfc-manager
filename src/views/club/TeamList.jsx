@@ -75,15 +75,17 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
   };
 
   const handleDeleteTeam = async (team) => {
-    const ok = await showConfirm(t('clubTeams.deleteConfirm', { name: team.name }));
+    const ok = await showConfirm(
+      `Permanently delete "${team.name}" and all its players, transactions, budget, and events? This cannot be undone.`,
+    );
     if (!ok) return;
     setIsSaving(true);
     try {
-      await supabaseService.updateTeam(team.id, { status: 'archived' });
+      await supabaseService.deleteTeam(team.id);
       await refreshContext();
-      if (showToast) showToast(t('clubTeams.teamArchived', { name: team.name }));
+      if (showToast) showToast(`Team "${team.name}" deleted`);
     } catch (e) {
-      if (showToast) showToast(t('clubTeams.createFailed'), true);
+      if (showToast) showToast(`Delete failed: ${e.message}`, true);
     } finally {
       setIsSaving(false);
     }
