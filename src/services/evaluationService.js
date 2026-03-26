@@ -380,6 +380,22 @@ export const evaluationService = {
     const candidates = await evaluationService.getCandidates(sessionId);
     const thresholds = await evaluationService.getThresholds(sessionId);
 
+    // Backfill missing gender from linked player records
+    const candidatesWithoutGender = candidates.filter((c) => !c.gender && c.playerId);
+    if (candidatesWithoutGender.length > 0) {
+      const playerIds = candidatesWithoutGender.map((c) => c.playerId);
+      const { data: playerData } = await supabase.from('players').select('id, gender').in('id', playerIds);
+      const playerGenderMap = {};
+      for (const p of playerData || []) playerGenderMap[p.id] = p.gender;
+      for (const c of candidates) {
+        if (!c.gender && c.playerId && playerGenderMap[c.playerId]) {
+          c.gender = playerGenderMap[c.playerId];
+          // Also persist to DB
+          await supabase.from('evaluation_candidates').update({ gender: c.gender }).eq('id', c.id);
+        }
+      }
+    }
+
     // Sort candidates by score descending
     const sorted = candidates
       .filter((c) => c.overallScore !== null)
@@ -395,10 +411,12 @@ export const evaluationService = {
     const placements = [];
 
     // Gender matching: M→M teams, F→F teams, Coed accepts both
+    // If team has a gender set (M or F), candidate MUST have matching gender
     const genderMatch = (candidateGender, teamGender) => {
-      if (!teamGender || !candidateGender) return true;
+      if (!teamGender) return true; // team has no gender restriction
       const tg = teamGender.toUpperCase();
       if (tg === 'COED' || tg === 'CO-ED') return true;
+      if (!candidateGender) return false; // team is gendered but candidate has no gender — block
       const cg = candidateGender.toUpperCase();
       return cg === tg; // M===M or F===F
     };
