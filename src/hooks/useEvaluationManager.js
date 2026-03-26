@@ -32,14 +32,17 @@ export const useEvaluationManager = (clubId, sessionId = null) => {
     if (!sessionId) return;
     setLoading(true);
     try {
-      const [sess, cats, cands, evals, thresh] = await Promise.all([
-        evaluationService.getSession(sessionId),
-        evaluationService.getCategories(sessionId),
-        evaluationService.getCandidates(sessionId),
-        evaluationService.getEvaluators(sessionId),
-        evaluationService.getThresholds(sessionId),
-      ]);
+      // Fetch session first — if this fails, nothing else matters
+      const sess = await evaluationService.getSession(sessionId);
       setSession(sess);
+
+      // Fetch remaining data independently so one failure doesn't block all
+      const [cats, cands, evals, thresh] = await Promise.all([
+        evaluationService.getCategories(sessionId).catch(() => []),
+        evaluationService.getCandidates(sessionId).catch(() => []),
+        evaluationService.getEvaluators(sessionId).catch(() => []),
+        evaluationService.getThresholds(sessionId).catch(() => []),
+      ]);
       setCategories(cats);
       setCandidates(cands);
       setEvaluators(evals);

@@ -272,16 +272,13 @@ export const evaluationService = {
   // ─────────────────────────────────────────
 
   getEvaluators: async (sessionId) => {
-    const { data, error } = await supabase
-      .from('evaluation_evaluators')
-      .select('*, user_profiles(display_name, email)')
-      .eq('session_id', sessionId);
+    const { data, error } = await supabase.from('evaluation_evaluators').select('*').eq('session_id', sessionId);
     if (error) throw error;
     return (data || []).map((e) => ({
       id: e.id,
       sessionId: e.session_id,
       userId: e.user_id,
-      displayName: e.display_name || e.user_profiles?.display_name || e.user_profiles?.email || 'Unknown',
+      displayName: e.display_name || 'Evaluator',
     }));
   },
 
