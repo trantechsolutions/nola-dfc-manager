@@ -69,27 +69,40 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
     if (club?.id) fetchData();
   }, [club?.id]);
 
+  const isClubRole = (role) => !!CLUB_ROLES[role];
+
   const handleSendInvite = async (e) => {
     e.preventDefault();
     if (!invForm.email.trim()) return;
     setIsSending(true);
     try {
-      await supabaseService.createInvitation({
-        clubId: club.id,
-        teamId: invForm.teamId || null,
-        email: invForm.email,
-        role: invForm.role,
-        name: invForm.name,
-      });
-      showToast(`Invitation sent to ${invForm.email}`);
+      // Try direct assignment first (if user already has an account)
+      const assignOpts = isClubRole(invForm.role) ? { clubId: club.id } : { teamId: invForm.teamId || null };
+      await supabaseService.assignRoleByEmail(invForm.email.trim(), invForm.role, assignOpts);
+      showToast(`${ALL_ROLES[invForm.role]?.label} role assigned to ${invForm.email}`);
       setShowInviteForm(false);
       setInvForm({ email: '', name: '', role: 'team_manager', teamId: '' });
       fetchData();
-    } catch (err) {
-      showToast(`Failed: ${err.message}`, true);
-    } finally {
-      setIsSending(false);
+      refreshContext();
+    } catch {
+      // User doesn't exist — create invitation
+      try {
+        await supabaseService.createInvitation({
+          clubId: club.id,
+          teamId: isClubRole(invForm.role) ? null : invForm.teamId || null,
+          email: invForm.email.trim(),
+          role: invForm.role,
+          name: invForm.name.trim(),
+        });
+        showToast(`Invitation created for ${invForm.email}`);
+        setShowInviteForm(false);
+        setInvForm({ email: '', name: '', role: 'team_manager', teamId: '' });
+        fetchData();
+      } catch (err) {
+        showToast(`Failed: ${err.message}`, true);
+      }
     }
+    setIsSending(false);
   };
 
   const handleRevokeInvite = async (inv) => {
@@ -351,32 +364,55 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Role *</label>
                   <select
                     value={invForm.role}
-                    onChange={(e) => setInvForm({ ...invForm, role: e.target.value })}
+                    onChange={(e) =>
+                      setInvForm({
+                        ...invForm,
+                        role: e.target.value,
+                        teamId: isClubRole(e.target.value) ? '' : invForm.teamId,
+                      })
+                    }
                     className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm font-bold outline-none mt-1 dark:bg-slate-800 dark:text-white"
                   >
-                    {/* Only club-assignable roles: Coach, Assistant Coach, Team Manager */}
-                    {CLUB_ASSIGNABLE_ROLES.map((key) => (
-                      <option key={key} value={key}>
-                        {TEAM_ROLES[key]?.label || ALL_ROLES[key]?.label || key}
-                      </option>
-                    ))}
+                    <optgroup label="Club Roles">
+                      {Object.entries(CLUB_ROLES).map(([key, role]) => (
+                        <option key={key} value={key}>
+                          {role.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Team Roles">
+                      {Object.entries(TEAM_ROLES).map(([key, role]) => (
+                        <option key={key} value={key}>
+                          {role.label}
+                        </option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Team</label>
-                  <select
-                    value={invForm.teamId}
-                    onChange={(e) => setInvForm({ ...invForm, teamId: e.target.value })}
-                    className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none mt-1 dark:bg-slate-800 dark:text-white"
-                  >
-                    <option value="">Select team...</option>
-                    {teams.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {!isClubRole(invForm.role) && (
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Team *</label>
+                    <select
+                      value={invForm.teamId}
+                      onChange={(e) => setInvForm({ ...invForm, teamId: e.target.value })}
+                      className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none mt-1 dark:bg-slate-800 dark:text-white"
+                    >
+                      <option value="">Select team...</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {isClubRole(invForm.role) && (
+                  <div className="flex items-end pb-1">
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 italic">
+                      Club roles apply to all teams
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Role description */}
@@ -390,8 +426,8 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
               </div>
 
               <p className="text-[10px] text-slate-400">
-                Team-level roles like Treasurer, Scheduler, and Team Admin are managed by the Team Manager from within
-                the team's Team Users tab.
+                If the user already has an account, the role will be assigned immediately. Otherwise, an invitation will
+                be created.
               </p>
 
               <div className="flex justify-end gap-3 pt-2">
