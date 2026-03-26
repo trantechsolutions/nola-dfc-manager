@@ -33,6 +33,10 @@ export default function TeamUserManagement({ selectedTeam, showToast, showConfir
   const [assigningFor, setAssigningFor] = useState(null); // guardian email
   const [assignRole, setAssignRole] = useState(TEAM_ASSIGNABLE_ROLES[0]); // default to first assignable
   const [isSaving, setIsSaving] = useState(false);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [inviteRole, setInviteRole] = useState('head_coach');
 
   const fetchGuardians = async () => {
     if (!selectedTeam?.id) return;
@@ -81,6 +85,39 @@ export default function TeamUserManagement({ selectedTeam, showToast, showConfir
     }
   };
 
+  const handleInviteByEmail = async (e) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setIsSaving(true);
+    try {
+      // Try to assign role directly if user already exists
+      await supabaseService.assignRoleByEmail(inviteEmail.trim(), inviteRole, { teamId: selectedTeam.id });
+      showToast(`${ALL_ROLES[inviteRole]?.label || inviteRole} role assigned to ${inviteEmail}`);
+      setShowInviteForm(false);
+      setInviteEmail('');
+      setInviteName('');
+      fetchGuardians();
+    } catch {
+      // User doesn't exist yet — create an invitation
+      try {
+        await supabaseService.createInvitation({
+          email: inviteEmail.trim(),
+          role: inviteRole,
+          teamId: selectedTeam.id,
+          clubId: selectedTeam.clubId,
+          name: inviteName.trim() || null,
+        });
+        showToast(`Invitation sent to ${inviteEmail}`);
+        setShowInviteForm(false);
+        setInviteEmail('');
+        setInviteName('');
+      } catch (err) {
+        showToast(`Failed: ${err.message}`, true);
+      }
+    }
+    setIsSaving(false);
+  };
+
   const filtered = useMemo(() => {
     let result = guardians;
     if (searchTerm) {
@@ -102,12 +139,81 @@ export default function TeamUserManagement({ selectedTeam, showToast, showConfir
   return (
     <div className="space-y-5 pb-24 md:pb-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-black text-slate-900 dark:text-white">Team Users</h2>
-        <p className="text-xs text-slate-400 font-bold">
-          {selectedTeam?.name} · {guardians.length} guardians · {withAccount} with accounts · {withRoles} with roles
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white">Team Users</h2>
+          <p className="text-xs text-slate-400 font-bold">
+            {selectedTeam?.name} · {guardians.length} guardians · {withAccount} with accounts · {withRoles} with roles
+          </p>
+        </div>
+        <button
+          onClick={() => setShowInviteForm(!showInviteForm)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-xs font-black rounded-xl hover:bg-blue-700 transition-colors"
+        >
+          <UserPlus size={14} /> Add User
+        </button>
       </div>
+
+      {/* Invite by Email Form */}
+      {showInviteForm && (
+        <form
+          onSubmit={handleInviteByEmail}
+          className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 space-y-3"
+        >
+          <h4 className="text-sm font-bold text-blue-800 dark:text-blue-300">Add User by Email</h4>
+          <p className="text-[11px] text-blue-600 dark:text-blue-400">
+            If the user has an account, the role will be assigned immediately. Otherwise, an invitation will be created.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <input
+              type="email"
+              required
+              placeholder="Email address"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              type="text"
+              placeholder="Name (optional)"
+              value={inviteName}
+              onChange={(e) => setInviteName(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <select
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-blue-200 dark:border-blue-700 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {Object.entries(TEAM_ROLES).map(([key, role]) => (
+                <option key={key} value={key}>
+                  {role.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={isSaving || !inviteEmail.trim()}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold disabled:opacity-50 transition-colors"
+            >
+              {isSaving ? 'Adding...' : 'Add User'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowInviteForm(false);
+                setInviteEmail('');
+                setInviteName('');
+              }}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3">

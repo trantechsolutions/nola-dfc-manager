@@ -151,19 +151,54 @@ export default function SeasonEvaluationView({
   const [savedPlayers, setSavedPlayers] = useState(new Set());
   const [evalCounts, setEvalCounts] = useState({});
   const [loading, setLoading] = useState(true);
+  const [teamStaff, setTeamStaff] = useState([]);
+  const [selectedEvaluatorId, setSelectedEvaluatorId] = useState(user?.id || null);
 
-  // Load current user's evaluations from DB
+  // Load team staff for coach selector
+  useEffect(() => {
+    if (!selectedTeamId) return;
+    const fetchStaff = async () => {
+      try {
+        const { data } = await supabase
+          .from('user_roles')
+          .select('user_id, role, user_profiles(display_name, email)')
+          .eq('team_id', selectedTeamId);
+        // Also get club-level roles
+        const { data: clubData } = await supabase
+          .from('user_roles')
+          .select('user_id, role, club_id, user_profiles(display_name, email)')
+          .not('club_id', 'is', null);
+        const combined = [...(data || []), ...(clubData || [])];
+        const unique = {};
+        for (const r of combined) {
+          if (!unique[r.user_id]) {
+            unique[r.user_id] = {
+              userId: r.user_id,
+              displayName: r.user_profiles?.display_name || r.user_profiles?.email || r.user_id,
+              role: r.role,
+            };
+          }
+        }
+        setTeamStaff(Object.values(unique));
+      } catch {
+        /* noop */
+      }
+    };
+    fetchStaff();
+  }, [selectedTeamId]);
+
+  // Load evaluations for the selected evaluator
   const loadEvaluations = useCallback(async () => {
-    if (!selectedTeamId || !selectedSeason || !user?.id) return;
+    if (!selectedTeamId || !selectedSeason || !selectedEvaluatorId) return;
     setLoading(true);
     try {
-      // Load MY evaluations
+      // Load evaluations for the selected evaluator
       const { data, error } = await supabase
         .from('season_evaluations')
         .select('*')
         .eq('team_id', selectedTeamId)
         .eq('season_id', selectedSeason)
-        .eq('evaluator_id', user.id);
+        .eq('evaluator_id', selectedEvaluatorId);
       if (error) throw error;
 
       const evalMap = {};
@@ -195,7 +230,7 @@ export default function SeasonEvaluationView({
     } finally {
       setLoading(false);
     }
-  }, [selectedTeamId, selectedSeason]);
+  }, [selectedTeamId, selectedSeason, selectedEvaluatorId]);
 
   useEffect(() => {
     loadEvaluations();
@@ -236,7 +271,7 @@ export default function SeasonEvaluationView({
           team_id: selectedTeamId,
           season_id: selectedSeason,
           team_season_id: teamSeasonId || null,
-          evaluator_id: user?.id,
+          evaluator_id: selectedEvaluatorId,
           ratings: ev.ratings,
           notes: ev.notes,
           overall_rating: ev.overallRating,
@@ -266,7 +301,7 @@ export default function SeasonEvaluationView({
               team_id: selectedTeamId,
               season_id: selectedSeason,
               team_season_id: teamSeasonId || null,
-              evaluator_id: user?.id,
+              evaluator_id: selectedEvaluatorId,
               ratings: ev.ratings,
               notes: ev.notes,
               overall_rating: ev.overallRating,
@@ -380,6 +415,26 @@ export default function SeasonEvaluationView({
           style={{ width: `${activePlayers.length > 0 ? (completedCount / activePlayers.length) * 100 : 0}%` }}
         />
       </div>
+
+      {/* Coach Selector */}
+      {teamStaff.length > 0 && (
+        <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5">
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest shrink-0">
+            {t('seasonEval.evaluatingAs', 'Evaluating as')}
+          </span>
+          <select
+            value={selectedEvaluatorId || ''}
+            onChange={(e) => setSelectedEvaluatorId(e.target.value)}
+            className="flex-1 bg-transparent border-none text-sm font-bold text-blue-600 dark:text-blue-400 focus:ring-0 cursor-pointer"
+          >
+            {teamStaff.map((s) => (
+              <option key={s.userId} value={s.userId} className="text-slate-900 dark:text-white">
+                {s.displayName} ({s.role.replace('_', ' ')})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Rating Legend */}
       <div className="flex flex-wrap gap-2">
