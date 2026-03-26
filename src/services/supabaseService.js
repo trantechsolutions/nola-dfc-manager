@@ -934,6 +934,16 @@ export const supabaseService = {
     }));
   },
 
+  addGuardian: async ({ playerId, name, email, phone }) => {
+    const { error } = await supabase.from('guardians').insert({
+      player_id: playerId,
+      name,
+      email: email || null,
+      phone: phone || null,
+    });
+    if (error) throw error;
+  },
+
   getPlayersByClub: async (clubId) => {
     const { data, error } = await supabase
       .from('players')
