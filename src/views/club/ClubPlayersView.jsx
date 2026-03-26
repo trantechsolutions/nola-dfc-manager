@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Users, Search, ArrowRightLeft, UserPlus, Archive, RotateCcw, X, Plus } from 'lucide-react';
+import { Users, Search, ArrowRightLeft, UserPlus, Archive, RotateCcw, X, Plus, Edit } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { getUSAgeGroup } from '../../utils/ageGroup';
 import { useT } from '../../i18n/I18nContext';
+import PlayerFormModal from '../../components/PlayerFormModal';
 
 const EMPTY_PLAYER = {
   firstName: '',
@@ -30,6 +31,8 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ ...EMPTY_PLAYER });
   const [saving, setSaving] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const fetchPlayers = async () => {
     if (!club?.id) return;
@@ -138,6 +141,27 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
       showToast?.(`Failed to add player: ${e.message}`, true);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleEditPlayer = (player) => {
+    setEditingPlayer(player);
+    setShowEditModal(true);
+  };
+
+  const handleSavePlayer = async (playerData) => {
+    try {
+      if (playerData.id) {
+        await supabaseService.updatePlayer(playerData.id, playerData);
+      } else {
+        await supabaseService.addPlayer({ ...playerData, clubId: club.id });
+      }
+      setShowEditModal(false);
+      setEditingPlayer(null);
+      await fetchPlayers();
+      showToast?.('Player saved');
+    } catch (e) {
+      showToast?.(`Save failed: ${e.message}`, true);
     }
   };
 
@@ -256,9 +280,9 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                 >
                   <div className="flex items-center gap-3">
                     {/* Player info */}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handleEditPlayer(player)}>
                       <div className="flex items-center gap-2">
-                        <p className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                        <p className="font-bold text-sm text-slate-900 dark:text-white truncate hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                           {player.firstName} {player.lastName}
                         </p>
                         {player.jerseyNumber && (
@@ -303,6 +327,13 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
 
                     {/* Actions */}
                     <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => handleEditPlayer(player)}
+                        className="p-2 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-emerald-900/30 transition-colors"
+                        title="Edit player"
+                      >
+                        <Edit size={14} />
+                      </button>
                       <button
                         onClick={() => {
                           setTransferringId(isTransferring ? null : player.id);
@@ -366,6 +397,18 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
       <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center">
         {t('clubPlayers.showing', 'Showing {{n}} of {{total}} players', { n: filtered.length, total: players.length })}
       </p>
+
+      {/* Edit Player Modal */}
+      <PlayerFormModal
+        show={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingPlayer(null);
+        }}
+        onSave={handleSavePlayer}
+        initialData={editingPlayer}
+        selectedSeason={selectedSeason}
+      />
 
       {/* Add Player Modal */}
       {showAddModal && (
