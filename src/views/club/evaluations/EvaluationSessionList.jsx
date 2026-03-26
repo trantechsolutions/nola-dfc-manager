@@ -33,11 +33,11 @@ export default function EvaluationSessionList({
   const { sessions, loading, createSession, deleteSession } = useEvaluationManager(club?.id);
 
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ ...EMPTY_FORM, seasonId: selectedSeason?.id || '' });
+  const [form, setForm] = useState({ ...EMPTY_FORM, seasonId: selectedSeason || '' });
   const [saving, setSaving] = useState(false);
 
   const openModal = () => {
-    setForm({ ...EMPTY_FORM, seasonId: selectedSeason?.id || '' });
+    setForm({ ...EMPTY_FORM, seasonId: selectedSeason || '' });
     setShowModal(true);
   };
 
@@ -147,15 +147,15 @@ export default function EvaluationSessionList({
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
-                        {session.created_at && (
+                        {session.createdAt && (
                           <span className="flex items-center gap-1">
                             <Calendar size={12} />
-                            {formatDate(session.created_at)}
+                            {formatDate(session.createdAt)}
                           </span>
                         )}
                         <span className="flex items-center gap-1">
                           <Users size={12} />
-                          {session.candidate_count ?? 0} {t('evaluations.candidates', 'candidates')}
+                          {session.candidateCount ?? 0} {t('evaluations.candidates', 'candidates')}
                         </span>
                       </div>
                     </div>

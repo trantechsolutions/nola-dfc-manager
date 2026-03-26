@@ -47,7 +47,12 @@ export function I18nProvider({ children }) {
    */
   const t = useCallback(
     (key, vars) => {
-      const str = resolve(LOCALES[locale], key) ?? resolve(LOCALES.en, key) ?? key;
+      const resolved = resolve(LOCALES[locale], key) ?? resolve(LOCALES.en, key);
+      // If vars is a string, treat it as a fallback for missing keys
+      if (typeof vars === 'string') {
+        return resolved ?? vars;
+      }
+      const str = resolved ?? key;
       if (!vars || typeof str !== 'string') return str;
       return str.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? '');
     },
