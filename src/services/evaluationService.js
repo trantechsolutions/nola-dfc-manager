@@ -394,18 +394,13 @@ export const evaluationService = {
 
     const placements = [];
 
-    // Gender matching helper: boys→boys team, girls→girls team, coed accepts both
+    // Gender matching: M→M teams, F→F teams, Coed accepts both
     const genderMatch = (candidateGender, teamGender) => {
-      if (!teamGender || !candidateGender) return true; // no gender info = allow
-      const tg = teamGender.toLowerCase();
-      if (tg === 'coed' || tg === 'co-ed') return true; // coed teams accept anyone
-      const cg = candidateGender.toLowerCase();
-      return (
-        ((cg === 'boys' || cg === 'boy' || cg === 'male' || cg === 'm') &&
-          (tg === 'boys' || tg === 'boy' || tg === 'male')) ||
-        ((cg === 'girls' || cg === 'girl' || cg === 'female' || cg === 'f') &&
-          (tg === 'girls' || tg === 'girl' || tg === 'female'))
-      );
+      if (!teamGender || !candidateGender) return true;
+      const tg = teamGender.toUpperCase();
+      if (tg === 'COED' || tg === 'CO-ED') return true;
+      const cg = candidateGender.toUpperCase();
+      return cg === tg; // M===M or F===F
     };
 
     for (const candidate of sorted) {

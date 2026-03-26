@@ -521,8 +521,8 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">— Select —</option>
-                  <option value="Boys">Boys</option>
-                  <option value="Girls">Girls</option>
+                  <option value="M">Male</option>
+                  <option value="F">Female</option>
                 </select>
               </div>
 

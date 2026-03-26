@@ -191,8 +191,8 @@ export default function PlayerFormModal({
               className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-800 dark:text-white"
             >
               <option value="">{t('playerForm.selectGender', '— Select —')}</option>
-              <option value="Boys">Boys</option>
-              <option value="Girls">Girls</option>
+              <option value="M">Male</option>
+              <option value="F">Female</option>
             </select>
           </div>
 

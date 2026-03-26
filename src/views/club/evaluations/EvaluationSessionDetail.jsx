@@ -681,7 +681,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
               <button
                 onClick={() => {
                   const template =
-                    'First Name,Last Name,Bib,Birthdate,Gender,Age Group,Position,Notes\nJohn,Doe,1,2012-05-15,Boys,U14,Forward,\nJane,Smith,2,2013-01-20,Girls,U13,Midfielder,';
+                    'First Name,Last Name,Bib,Birthdate,Gender,Age Group,Position,Notes\nJohn,Doe,1,2012-05-15,M,U14,Forward,\nJane,Smith,2,2013-01-20,F,U13,Midfielder,';
                   const blob = new Blob([template], { type: 'text/csv' });
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');

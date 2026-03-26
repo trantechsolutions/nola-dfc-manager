@@ -21,7 +21,7 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
   const [teamForm, setTeamForm] = useState({
     name: '',
     ageGroup: '',
-    gender: 'boys',
+    gender: 'M',
     tier: 'competitive',
     colorPrimary: '#1e293b',
   });
@@ -179,9 +179,9 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
                   onChange={(e) => setTeamForm({ ...teamForm, gender: e.target.value })}
                   className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none mt-1 dark:bg-slate-800 dark:text-white"
                 >
-                  <option value="boys">Boys</option>
-                  <option value="girls">Girls</option>
-                  <option value="coed">Coed</option>
+                  <option value="M">Boys</option>
+                  <option value="F">Girls</option>
+                  <option value="Coed">Coed</option>
                 </select>
               </div>
               <div>
