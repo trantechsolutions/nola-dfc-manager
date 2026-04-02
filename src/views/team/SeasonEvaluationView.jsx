@@ -159,22 +159,31 @@ export default function SeasonEvaluationView({
     if (!selectedTeamId) return;
     const fetchStaff = async () => {
       try {
-        const { data } = await supabase
+        const { data: teamRoles } = await supabase
           .from('user_roles')
-          .select('user_id, role, user_profiles(display_name, email)')
+          .select('user_id, role')
           .eq('team_id', selectedTeamId);
-        // Also get club-level roles
-        const { data: clubData } = await supabase
+        const { data: clubRoles } = await supabase
           .from('user_roles')
-          .select('user_id, role, club_id, user_profiles(display_name, email)')
+          .select('user_id, role')
           .not('club_id', 'is', null);
-        const combined = [...(data || []), ...(clubData || [])];
+        const combined = [...(teamRoles || []), ...(clubRoles || [])];
+        const uniqueIds = [...new Set(combined.map((r) => r.user_id))];
+        let profileMap = {};
+        if (uniqueIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('user_profiles')
+            .select('user_id, display_name, email')
+            .in('user_id', uniqueIds);
+          for (const p of profiles || []) profileMap[p.user_id] = p;
+        }
         const unique = {};
         for (const r of combined) {
           if (!unique[r.user_id]) {
+            const profile = profileMap[r.user_id];
             unique[r.user_id] = {
               userId: r.user_id,
-              displayName: r.user_profiles?.display_name || r.user_profiles?.email || r.user_id,
+              displayName: profile?.display_name || profile?.email || r.user_id.slice(0, 8),
               role: r.role,
             };
           }
