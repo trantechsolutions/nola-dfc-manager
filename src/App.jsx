@@ -1136,6 +1136,7 @@ function App() {
                     seasons={seasons}
                     selectedSeason={selectedSeason}
                     setSelectedSeason={setSelectedSeason}
+                    canViewFinancials={can(PERMISSIONS.TEAM_VIEW_BUDGET) || can(PERMISSIONS.TEAM_VIEW_LEDGER)}
                     onAddPlayer={() => {
                       setPlayerToEdit(null);
                       setShowPlayerForm(true);

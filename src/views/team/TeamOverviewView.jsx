@@ -73,6 +73,7 @@ export default function TeamOverviewView({
   seasons = [],
   selectedSeason,
   setSelectedSeason,
+  canViewFinancials = true,
 }) {
   const { t } = useT();
   const [tab, setTab] = useState('overview');
@@ -263,93 +264,97 @@ export default function TeamOverviewView({
       {/* ════════════════ OVERVIEW TAB ════════════════ */}
       {tab === 'overview' && (
         <div className="space-y-5">
-          {/* ── Primary stat cards ── */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            {/* Available Cash */}
-            <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white p-4 md:p-5 rounded-2xl">
-              <div className="flex items-center justify-between mb-3">
-                <DollarSign size={18} className="opacity-70" />
-                {!isFinalized && <span className="text-[9px] font-bold bg-white/20 px-1.5 py-0.5 rounded">Draft</span>}
+          {/* ── Primary stat cards (financial — hidden for coaches) ── */}
+          {canViewFinancials && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+              {/* Available Cash */}
+              <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white p-4 md:p-5 rounded-2xl">
+                <div className="flex items-center justify-between mb-3">
+                  <DollarSign size={18} className="opacity-70" />
+                  {!isFinalized && (
+                    <span className="text-[9px] font-bold bg-white/20 px-1.5 py-0.5 rounded">Draft</span>
+                  )}
+                </div>
+                <p className="text-xl md:text-2xl font-black tracking-tight">{formatMoney(teamBalance)}</p>
+                <p className="text-[10px] font-bold text-emerald-200 uppercase tracking-widest mt-1">
+                  {t('overview.availableCash')}
+                </p>
               </div>
-              <p className="text-xl md:text-2xl font-black tracking-tight">{formatMoney(teamBalance)}</p>
-              <p className="text-[10px] font-bold text-emerald-200 uppercase tracking-widest mt-1">
-                {t('overview.availableCash')}
-              </p>
-            </div>
 
-            {/* Remaining Budget */}
-            <div
-              className={`p-4 md:p-5 rounded-2xl ${!isFinalized ? 'border-dashed ' : ''}${
-                remainingBudget < 0
-                  ? 'bg-gradient-to-br from-red-500 to-red-600 text-white'
-                  : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <TrendingDown
-                  size={18}
-                  className={remainingBudget < 0 ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}
-                />
-                {!isFinalized && (
-                  <span
-                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${remainingBudget < 0 ? 'bg-white/20' : 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400'}`}
-                  >
-                    Draft
-                  </span>
-                )}
-              </div>
-              <p
-                className={`text-xl md:text-2xl font-black tracking-tight ${remainingBudget < 0 ? '' : 'text-slate-900 dark:text-white'}`}
+              {/* Remaining Budget */}
+              <div
+                className={`p-4 md:p-5 rounded-2xl ${!isFinalized ? 'border-dashed ' : ''}${
+                  remainingBudget < 0
+                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white'
+                    : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700'
+                }`}
               >
-                {formatMoney(remainingBudget)}
-              </p>
-              <p
-                className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${remainingBudget < 0 ? 'text-red-200' : 'text-slate-400 dark:text-slate-500'}`}
+                <div className="flex items-center justify-between mb-3">
+                  <TrendingDown
+                    size={18}
+                    className={remainingBudget < 0 ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}
+                  />
+                  {!isFinalized && (
+                    <span
+                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${remainingBudget < 0 ? 'bg-white/20' : 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400'}`}
+                    >
+                      Draft
+                    </span>
+                  )}
+                </div>
+                <p
+                  className={`text-xl md:text-2xl font-black tracking-tight ${remainingBudget < 0 ? '' : 'text-slate-900 dark:text-white'}`}
+                >
+                  {formatMoney(remainingBudget)}
+                </p>
+                <p
+                  className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${remainingBudget < 0 ? 'text-red-200' : 'text-slate-400 dark:text-slate-500'}`}
+                >
+                  {t('overview.remainingBudget')}
+                  {!isFinalized ? ' (Est.)' : ''}
+                </p>
+              </div>
+
+              {/* Season Fee */}
+              <div
+                className={`bg-white dark:bg-slate-900 p-4 md:p-5 rounded-2xl border ${!isFinalized && baseFee > 0 ? 'border-dashed border-amber-200 dark:border-amber-700' : 'border-slate-200 dark:border-slate-700'}`}
               >
-                {t('overview.remainingBudget')}
-                {!isFinalized ? ' (Est.)' : ''}
-              </p>
-            </div>
-
-            {/* Season Fee */}
-            <div
-              className={`bg-white dark:bg-slate-900 p-4 md:p-5 rounded-2xl border ${!isFinalized && baseFee > 0 ? 'border-dashed border-amber-200 dark:border-amber-700' : 'border-slate-200 dark:border-slate-700'}`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <Wallet size={18} className="text-slate-400 dark:text-slate-500" />
-                {!isFinalized && baseFee > 0 && (
-                  <span className="text-[8px] font-black bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded uppercase">
-                    Est.
-                  </span>
-                )}
-                {isFinalized && (
-                  <span className="text-[8px] font-black bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded uppercase">
-                    Locked
-                  </span>
-                )}
+                <div className="flex items-center justify-between mb-3">
+                  <Wallet size={18} className="text-slate-400 dark:text-slate-500" />
+                  {!isFinalized && baseFee > 0 && (
+                    <span className="text-[8px] font-black bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded uppercase">
+                      Est.
+                    </span>
+                  )}
+                  {isFinalized && (
+                    <span className="text-[8px] font-black bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded uppercase">
+                      Locked
+                    </span>
+                  )}
+                </div>
+                <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                  {formatMoney(baseFee)}
+                </p>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
+                  {t('overview.seasonFeePlayer')}
+                </p>
               </div>
-              <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                {formatMoney(baseFee)}
-              </p>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
-                {t('overview.seasonFeePlayer')}
-              </p>
-            </div>
 
-            {/* Collection Rate */}
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-4 md:p-5 rounded-2xl">
-              <div className="flex items-center justify-between mb-3">
-                <Percent size={18} className="opacity-70" />
+              {/* Collection Rate */}
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-4 md:p-5 rounded-2xl">
+                <div className="flex items-center justify-between mb-3">
+                  <Percent size={18} className="opacity-70" />
+                </div>
+                <p className="text-xl md:text-2xl font-black tracking-tight">{paymentStats.collectionRate}%</p>
+                <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-1">
+                  {t('overview.collectionRate')}
+                </p>
               </div>
-              <p className="text-xl md:text-2xl font-black tracking-tight">{paymentStats.collectionRate}%</p>
-              <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-1">
-                {t('overview.collectionRate')}
-              </p>
             </div>
-          </div>
+          )}
 
           {/* ── Payment status bar ── */}
-          {baseFee > 0 && players.length > 0 && (
+          {canViewFinancials && baseFee > 0 && players.length > 0 && (
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
@@ -424,7 +429,7 @@ export default function TeamOverviewView({
           )}
 
           {/* ── Account holdings ── */}
-          {accountBalances.length > 0 && (
+          {canViewFinancials && accountBalances.length > 0 && (
             <div className="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
@@ -474,48 +479,50 @@ export default function TeamOverviewView({
           )}
 
           {/* ── Budget burn + Compliance ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
-                  <Activity size={16} className="text-blue-600" /> {t('overview.budgetBurnRate')}
-                </h3>
-                <div className="flex items-center gap-1">
-                  <span
-                    className={`text-xs font-black px-2 py-1 rounded-lg ${
-                      spendPercentage > 90
-                        ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                        : spendPercentage > 60
-                          ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
-                          : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                    }`}
-                  >
-                    {Math.round(spendPercentage)}%
-                  </span>
-                  {!isFinalized && (
-                    <span className="text-[8px] font-bold bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded ml-1">
-                      DRAFT
+          <div className={`grid grid-cols-1 ${canViewFinancials ? 'lg:grid-cols-2' : ''} gap-4`}>
+            {canViewFinancials && (
+              <div className="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
+                    <Activity size={16} className="text-blue-600" /> {t('overview.budgetBurnRate')}
+                  </h3>
+                  <div className="flex items-center gap-1">
+                    <span
+                      className={`text-xs font-black px-2 py-1 rounded-lg ${
+                        spendPercentage > 90
+                          ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                          : spendPercentage > 60
+                            ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+                            : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+                      }`}
+                    >
+                      {Math.round(spendPercentage)}%
                     </span>
-                  )}
+                    {!isFinalized && (
+                      <span className="text-[8px] font-bold bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded ml-1">
+                        DRAFT
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${
+                      spendPercentage > 90 ? 'bg-red-500' : spendPercentage > 60 ? 'bg-amber-500' : 'bg-emerald-500'
+                    }`}
+                    style={{ width: `${Math.min(100, spendPercentage)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between mt-2 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                  <span>
+                    {t('overview.spent')} {formatMoney(totalExpenses)}
+                  </span>
+                  <span>
+                    {t('overview.budgetLabel')} {formatMoney(projectedSpend)}
+                  </span>
                 </div>
               </div>
-              <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-700 ${
-                    spendPercentage > 90 ? 'bg-red-500' : spendPercentage > 60 ? 'bg-amber-500' : 'bg-emerald-500'
-                  }`}
-                  style={{ width: `${Math.min(100, spendPercentage)}%` }}
-                />
-              </div>
-              <div className="flex justify-between mt-2 text-[10px] font-bold text-slate-400 dark:text-slate-500">
-                <span>
-                  {t('overview.spent')} {formatMoney(totalExpenses)}
-                </span>
-                <span>
-                  {t('overview.budgetLabel')} {formatMoney(projectedSpend)}
-                </span>
-              </div>
-            </div>
+            )}
 
             <div className="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
               <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2 mb-4">
@@ -560,7 +567,7 @@ export default function TeamOverviewView({
       {tab === 'roster' && (
         <div className="space-y-5">
           {/* Outstanding fees callout */}
-          {outstandingPlayers.length > 0 && (
+          {canViewFinancials && outstandingPlayers.length > 0 && (
             <div className="bg-gradient-to-r from-red-50 to-amber-50 dark:from-red-900/30 dark:to-amber-900/30 border border-red-200 dark:border-red-700 rounded-2xl p-5 shadow-sm dark:shadow-none">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-black text-red-800 dark:text-red-200 text-sm flex items-center gap-2">
@@ -660,7 +667,7 @@ export default function TeamOverviewView({
                   const hasMedical = player.medicalRelease;
                   const hasReeplayer = player.reePlayerWaiver;
                   const fin = playerFinancials[player.id];
-                  const hasBalance = fin && fin.remainingBalance > 0 && !isWaived;
+                  const hasBalance = canViewFinancials && fin && fin.remainingBalance > 0 && !isWaived;
                   const paidPct =
                     fin && fin.baseFee > 0
                       ? Math.round(((fin.baseFee - fin.remainingBalance) / fin.baseFee) * 100)
