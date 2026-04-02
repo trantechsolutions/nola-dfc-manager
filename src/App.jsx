@@ -1511,7 +1511,7 @@ function App() {
               </button>
             );
           })}
-          {canEditLedger && (
+          {canEditLedger && effectiveIsStaff && (
             <button
               onClick={() => {
                 setTxToEdit(null);
