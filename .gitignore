@@ -32,7 +32,9 @@ serviceAccountKey.json
 supabase*.json
 supabase*.md
 
-.claude/*
+# Claude Code
+.claude/
+CLAUDE.md
 
 # Test artifacts
 test-results/
