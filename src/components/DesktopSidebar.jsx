@@ -150,12 +150,7 @@ export default function DesktopSidebar({
           </div>
         )}
         {seasonNavItems.map((item) => {
-          const navId = item.id.split('?')[0];
-          const itemTab = item.id.includes('?tab=') ? item.id.split('?tab=')[1] : null;
-          const currentTab = currentSearch.includes('tab=') ? new URLSearchParams(currentSearch).get('tab') : null;
-          const isActive = item.id.includes('?')
-            ? currentView === 'finance' && currentTab === itemTab
-            : currentView === navId;
+          const isActive = currentView === item.id;
           return (
             <button
               key={item.id}

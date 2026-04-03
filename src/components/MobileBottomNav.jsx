@@ -51,7 +51,7 @@ export default function MobileBottomNav({
         {(effectiveIsStaff
           ? [
               { id: 'dashboard', label: t('nav.seasonOverview'), icon: LayoutDashboard },
-              { id: 'finance?tab=ledger', label: t('nav.ledger'), icon: ReceiptText },
+              { id: 'finance/ledger', label: t('nav.ledger'), icon: ReceiptText },
               // Plus button goes here (rendered separately below)
               { id: 'people', label: t('nav.players'), icon: Users },
               { id: 'schedule', label: t('nav.schedule'), icon: Calendar },
@@ -61,14 +61,7 @@ export default function MobileBottomNav({
               { id: 'schedule', label: t('nav.schedule'), icon: Calendar },
             ]
         ).map((item) => {
-          const navId = item.id.split('?')[0];
-          const itemTab = item.id.includes('?tab=') ? item.id.split('?tab=')[1] : null;
-          const mobileCurrentTab = currentSearch.includes('tab=')
-            ? new URLSearchParams(currentSearch).get('tab')
-            : null;
-          const isActive = item.id.includes('?')
-            ? currentView === 'finance' && mobileCurrentTab === itemTab
-            : currentView === navId;
+          const isActive = currentView === item.id;
           return (
             <button
               key={item.id}

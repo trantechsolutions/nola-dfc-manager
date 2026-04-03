@@ -550,13 +550,13 @@ function App() {
     ? [
         { id: 'dashboard', label: t('nav.seasonOverview'), icon: LayoutDashboard },
         ...(can(PERMISSIONS.TEAM_VIEW_BUDGET)
-          ? [{ id: 'finance?tab=budget', label: t('nav.budget'), icon: FileSpreadsheet }]
+          ? [{ id: 'finance/budget', label: t('nav.budget'), icon: FileSpreadsheet }]
           : []),
         ...(can(PERMISSIONS.TEAM_VIEW_LEDGER)
-          ? [{ id: 'finance?tab=ledger', label: t('nav.ledger'), icon: ReceiptText }]
+          ? [{ id: 'finance/ledger', label: t('nav.ledger'), icon: ReceiptText }]
           : []),
         ...(can(PERMISSIONS.TEAM_VIEW_SPONSORS)
-          ? [{ id: 'finance?tab=fundraising', label: t('nav.fundraising'), icon: Handshake }]
+          ? [{ id: 'finance/fundraising', label: t('nav.fundraising'), icon: Handshake }]
           : []),
       ]
     : [{ id: 'dashboard', label: t('nav.myPlayer'), icon: Users }];
@@ -926,7 +926,7 @@ function App() {
                   can(PERMISSIONS.TEAM_VIEW_BUDGET) ||
                   can(PERMISSIONS.TEAM_VIEW_SPONSORS)) && (
                   <Route
-                    path="/finance"
+                    path="/finance/*"
                     element={
                       <FinanceView
                         visibleTabs={[
@@ -1128,9 +1128,10 @@ function App() {
                 )}
 
                 {/* Legacy redirects */}
-                <Route path="/ledger" element={<Navigate to="/finance" replace />} />
-                <Route path="/budget" element={<Navigate to="/finance" replace />} />
-                <Route path="/sponsors" element={<Navigate to="/finance" replace />} />
+                <Route path="/ledger" element={<Navigate to="/finance/ledger" replace />} />
+                <Route path="/budget" element={<Navigate to="/finance/budget" replace />} />
+                <Route path="/sponsors" element={<Navigate to="/finance/fundraising" replace />} />
+                <Route path="/finance" element={<Navigate to="/finance/ledger" replace />} />
                 <Route path="/roster" element={<Navigate to="/people" replace />} />
                 <Route path="/documents" element={<Navigate to="/people" replace />} />
                 <Route path="/team-users" element={<Navigate to="/people" replace />} />

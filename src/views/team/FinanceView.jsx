@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import LedgerView from './LedgerView';
 import BudgetView from './BudgetView';
 import SponsorsView from './SponsorsView';
@@ -10,8 +10,10 @@ export default function FinanceView({
   fundraisingProps,
   visibleTabs,
 }) {
-  const [searchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || defaultTab;
+  const { pathname } = useLocation();
+  // Extract tab from path: /finance/budget → "budget"
+  const pathTab = pathname.split('/finance/')[1] || '';
+  const activeTab = pathTab || defaultTab;
 
   return (
     <>
