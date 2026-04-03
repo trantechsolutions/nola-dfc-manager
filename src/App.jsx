@@ -5,17 +5,12 @@ import {
   LayoutDashboard,
   Users,
   Eye,
-  Globe,
   Calendar,
-  Plus,
   Settings,
-  LogOut,
   Sparkles,
-  ChevronDown,
   Building2,
   Shield,
   ListTree,
-  DollarSign,
   SlidersHorizontal,
   FileSpreadsheet,
   ReceiptText,
@@ -23,9 +18,6 @@ import {
   Sun,
   Moon,
   Monitor,
-  Menu,
-  X,
-  GitCommit,
   ClipboardCheck,
 } from 'lucide-react';
 import { useT } from './i18n/I18nContext';
@@ -57,6 +49,10 @@ import TransactionModal from './components/TransactionModal';
 import PlayerFormModal from './components/PlayerFormModal';
 import PlayerModal from './components/PlayerModal';
 import ConfirmModal from './components/ConfirmModal';
+import DesktopSidebar from './components/DesktopSidebar';
+import MobileHeader from './components/MobileHeader';
+import MobileMenu from './components/MobileMenu';
+import MobileBottomNav from './components/MobileBottomNav';
 
 // Services & Hooks
 import { supabaseService } from './services/supabaseService';
@@ -79,7 +75,6 @@ function App() {
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
 
   const [user, setUser] = useState(null);
-  const [showTeamPicker, setShowTeamPicker] = useState(false);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
 
   // Data State
@@ -617,376 +612,68 @@ function App() {
 
       <div className="flex flex-1 md:flex-row flex-col">
         {/* ═══ DESKTOP SIDEBAR ═══ */}
-        <aside className="hidden md:flex w-64 bg-slate-900 text-white flex-col sticky top-0 h-screen">
-          <div className="p-6">
-            <h1 className="text-xl font-black tracking-tighter uppercase">{club?.name || 'Team Manager'}</h1>
-
-            {teams.length > 1 && (
-              <div className="mt-3 relative">
-                <button
-                  onClick={() => setShowTeamPicker(!showTeamPicker)}
-                  className="w-full p-2.5 bg-slate-800 rounded-xl text-left flex items-center justify-between hover:bg-slate-700 transition-colors"
-                >
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('common.team')}</p>
-                    <p className="text-sm font-bold text-blue-400 truncate">{selectedTeam?.name || t('common.team')}</p>
-                  </div>
-                  <ChevronDown
-                    size={14}
-                    className={`text-slate-400 transition-transform ${showTeamPicker ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                {showTeamPicker && (
-                  <div className="absolute left-0 right-0 top-full mt-1 bg-slate-800 rounded-xl border border-slate-700 shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto">
-                    {teams.map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => {
-                          setSelectedTeamId(t.id);
-                          setShowTeamPicker(false);
-                        }}
-                        className={`w-full text-left px-3 py-2.5 flex items-center gap-2 hover:bg-slate-700 transition-colors ${t.id === selectedTeamId ? 'bg-slate-700' : ''}`}
-                      >
-                        <div
-                          className="w-2 h-2 rounded-full shrink-0"
-                          style={{ backgroundColor: t.colorPrimary || '#3b82f6' }}
-                        />
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-white truncate">{t.name}</p>
-                          <p className="text-[9px] text-slate-400">
-                            {t.ageGroup} · {t.gender} · {t.tier}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {teams.length === 1 && (
-              <div className="mt-3 p-2.5 bg-slate-800 rounded-xl">
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('common.team')}</p>
-                <p className="text-sm font-bold text-blue-400">{selectedTeam?.name}</p>
-              </div>
-            )}
-          </div>
-
-          <nav className="flex-grow px-4 space-y-1 overflow-y-auto">
-            {appNavItems.length > 0 && (
-              <>
-                <p className="text-[9px] font-bold text-violet-400 uppercase tracking-widest px-4 pt-2 pb-1">APP</p>
-                {appNavItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => navigate(`/${item.id}`)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold transition-all text-sm ${
-                      currentView === item.id
-                        ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/20'
-                        : 'text-slate-400 hover:bg-slate-800'
-                    }`}
-                  >
-                    <item.icon size={18} />
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-                <div className="border-t border-slate-800 my-2" />
-              </>
-            )}
-            {clubNavItems.length > 0 && (
-              <>
-                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-4 pt-2 pb-1">
-                  {t('common.club')}
-                </p>
-                {clubNavItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => navigate(`/${item.id}`)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold transition-all text-sm ${
-                      currentView === item.id
-                        ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/20'
-                        : 'text-slate-400 hover:bg-slate-800'
-                    }`}
-                  >
-                    <item.icon size={18} />
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-                <div className="border-t border-slate-800 my-2" />
-              </>
-            )}
-
-            {/* SEASON section */}
-            {selectedTeam && (
-              <div className="flex items-center justify-between px-4 pt-1 pb-1">
-                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{t('common.season')}</p>
-                <select
-                  value={selectedSeason}
-                  onChange={(e) => setSelectedSeason(e.target.value)}
-                  className="bg-transparent border-none text-blue-400 font-bold text-[10px] p-0 focus:ring-0 cursor-pointer text-right"
-                >
-                  {seasons.map((s) => (
-                    <option key={s.id} value={s.id} className="text-slate-900">
-                      {s.id}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {seasonNavItems.map((item) => {
-              const navId = item.id.split('?')[0];
-              const itemTab = item.id.includes('?tab=') ? item.id.split('?tab=')[1] : null;
-              const currentTab = currentSearch.includes('tab=') ? new URLSearchParams(currentSearch).get('tab') : null;
-              const isActive = item.id.includes('?')
-                ? currentView === 'finance' && currentTab === itemTab
-                : currentView === navId;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => navigate(`/${item.id}`)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold transition-all text-sm ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                      : 'text-slate-400 hover:bg-slate-800'
-                  }`}
-                >
-                  <item.icon size={18} />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-
-            {/* TEAM section */}
-            <div className="border-t border-slate-800 my-2" />
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-4 pt-1 pb-1">
-              {selectedTeam?.name || t('common.team')}
-            </p>
-            {teamNavItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => navigate(`/${item.id}`)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold transition-all text-sm ${
-                  currentView === item.id
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                    : 'text-slate-400 hover:bg-slate-800'
-                }`}
-              >
-                <item.icon size={18} />
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </nav>
-
-          <div className="border-t border-slate-800">
-            <button
-              onClick={() => setSidebarSettingsOpen(!sidebarSettingsOpen)}
-              className="w-full flex items-center justify-between px-4 py-3 text-slate-400 hover:bg-slate-800 transition-all"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <Settings size={14} />
-                <p className="text-[10px] font-bold text-slate-500 truncate">{user.email}</p>
-              </div>
-              <ChevronDown
-                size={14}
-                className={`transition-transform duration-200 flex-shrink-0 ${sidebarSettingsOpen ? 'rotate-180' : ''}`}
-              />
-            </button>
-            {sidebarSettingsOpen && (
-              <div className="px-4 pb-3 space-y-1">
-                <button
-                  onClick={toggleLocale}
-                  className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-slate-400 hover:bg-slate-800 transition-all"
-                >
-                  <Globe size={16} />
-                  <span className="text-sm">{locale === 'en' ? 'Español' : 'English'}</span>
-                </button>
-                <button
-                  onClick={cycleTheme}
-                  className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-slate-400 hover:bg-slate-800 transition-all"
-                >
-                  <ThemeIcon size={16} />
-                  <span className="text-sm capitalize">{theme}</span>
-                </button>
-                <button
-                  onClick={() => {
-                    navigate('/changelog');
-                    setSidebarSettingsOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold transition-all ${
-                    currentView === 'changelog' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-800'
-                  }`}
-                >
-                  <GitCommit size={16} />
-                  <span className="text-sm">Update Log</span>
-                </button>
-                <button
-                  onClick={() => supabase.auth.signOut()}
-                  className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-red-400 hover:bg-red-900/20 transition-all"
-                >
-                  <LogOut size={16} />
-                  <span className="text-sm">{t('common.logout')}</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </aside>
+        <DesktopSidebar
+          club={club}
+          teams={teams}
+          selectedTeamId={selectedTeamId}
+          setSelectedTeamId={setSelectedTeamId}
+          appNavItems={appNavItems}
+          clubNavItems={clubNavItems}
+          seasonNavItems={seasonNavItems}
+          teamNavItems={teamNavItems}
+          selectedSeason={selectedSeason}
+          setSelectedSeason={setSelectedSeason}
+          seasons={seasons}
+          currentView={currentView}
+          navigate={navigate}
+          user={user}
+          effectiveRole={effectiveRole}
+          toggleLocale={toggleLocale}
+          locale={locale}
+          cycleTheme={cycleTheme}
+          theme={theme}
+          ThemeIcon={ThemeIcon}
+          sidebarSettingsOpen={sidebarSettingsOpen}
+          setSidebarSettingsOpen={setSidebarSettingsOpen}
+          supabase={supabase}
+        />
 
         {/* ═══ MOBILE HEADER ═══ */}
-        <header className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 p-4 sticky top-0 z-40">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setMobileMenuOpen(true)}
-                className="text-slate-600 dark:text-slate-300"
-                aria-label="Open menu"
-              >
-                <Menu size={20} />
-              </button>
-              <div>
-                <h1 className="font-black text-slate-900 dark:text-white text-sm">{club?.name || 'Team Manager'}</h1>
-                {selectedTeam && <p className="text-[10px] font-bold text-blue-600">{selectedTeam.name}</p>}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {teams.length > 1 && (
-                <select
-                  value={selectedTeamId || ''}
-                  onChange={(e) => setSelectedTeamId(e.target.value)}
-                  className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 rounded-lg border-none px-2 py-1 max-w-[120px]"
-                >
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <button
-                onClick={toggleLocale}
-                className="relative text-slate-500 dark:text-slate-400"
-                title={locale === 'en' ? 'Español' : 'English'}
-                aria-label="Toggle language"
-              >
-                <Globe size={16} />
-                <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[7px] font-black rounded-full w-3.5 h-3.5 flex items-center justify-center uppercase">
-                  {locale}
-                </span>
-              </button>
-              <button
-                onClick={cycleTheme}
-                className="text-slate-500 dark:text-slate-400"
-                title={`Theme: ${theme}`}
-                aria-label="Toggle theme"
-              >
-                <ThemeIcon size={16} />
-              </button>
-              <button onClick={() => supabase.auth.signOut()} className="text-red-500" aria-label="Sign out">
-                <LogOut size={16} />
-              </button>
-            </div>
-          </div>
-        </header>
+        <MobileHeader
+          club={club}
+          selectedTeam={selectedTeam}
+          teams={teams}
+          selectedTeamId={selectedTeamId}
+          setSelectedTeamId={setSelectedTeamId}
+          toggleLocale={toggleLocale}
+          locale={locale}
+          cycleTheme={cycleTheme}
+          theme={theme}
+          ThemeIcon={ThemeIcon}
+          mobileMenuOpen={mobileMenuOpen}
+          setMobileMenuOpen={setMobileMenuOpen}
+          supabase={supabase}
+        />
 
         {/* ═══ MOBILE SLIDE-OUT MENU ═══ */}
-        {mobileMenuOpen && (
-          <div className="md:hidden fixed inset-0 z-50">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setMobileMenuOpen(false)} />
-            <div className="absolute left-0 top-0 bottom-0 w-72 bg-slate-900 p-5 overflow-y-auto animate-in slide-in-from-left duration-200">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="font-black text-white text-sm">{club?.name || 'Team Manager'}</h2>
-                <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400">
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Season section */}
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{t('common.season')}</p>
-                <select
-                  value={selectedSeason}
-                  onChange={(e) => setSelectedSeason(e.target.value)}
-                  className="bg-transparent border-none text-blue-400 font-bold text-[10px] p-0 focus:ring-0 cursor-pointer text-right"
-                >
-                  {seasons.map((s) => (
-                    <option key={s.id} value={s.id} className="text-slate-900">
-                      {s.id}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1 mb-4">
-                {seasonNavItems.map((item) => {
-                  const navId = item.id.split('?')[0];
-                  const itemTab = item.id.includes('?tab=') ? item.id.split('?tab=')[1] : null;
-                  const currentTab = currentSearch.includes('tab=')
-                    ? new URLSearchParams(currentSearch).get('tab')
-                    : null;
-                  const isActive = item.id.includes('?')
-                    ? currentView === 'finance' && currentTab === itemTab
-                    : currentView === navId;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        navigate(`/${item.id}`);
-                        setMobileMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-sm transition-all ${
-                        isActive ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'
-                      }`}
-                    >
-                      <item.icon size={18} />
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Team section */}
-              <div className="border-t border-slate-800 my-3" />
-              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-4 mb-2">
-                {selectedTeam?.name || t('common.team')}
-              </p>
-              <div className="space-y-1">
-                {teamNavItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      navigate(`/${item.id}`);
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-sm transition-all ${
-                      currentView === item.id ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'
-                    }`}
-                  >
-                    <item.icon size={18} />
-                    <span>{item.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Footer */}
-              <div className="border-t border-slate-800 mt-4 pt-3 space-y-1">
-                <p className="text-[10px] font-bold text-slate-500 truncate px-4">{user.email}</p>
-                <p className="text-[9px] font-bold text-blue-400 uppercase px-4 mb-2">
-                  {effectiveRole.replace('_', ' ')}
-                </p>
-                <button
-                  onClick={() => {
-                    navigate('/changelog');
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-sm transition-all ${
-                    currentView === 'changelog' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-800'
-                  }`}
-                >
-                  <GitCommit size={16} />
-                  <span>Update Log</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <MobileMenu
+          club={club}
+          selectedTeam={selectedTeam}
+          appNavItems={appNavItems}
+          clubNavItems={clubNavItems}
+          seasonNavItems={seasonNavItems}
+          teamNavItems={teamNavItems}
+          selectedSeason={selectedSeason}
+          setSelectedSeason={setSelectedSeason}
+          seasons={seasons}
+          currentView={currentView}
+          currentSearch={currentSearch}
+          navigate={navigate}
+          user={user}
+          effectiveRole={effectiveRole}
+          mobileMenuOpen={mobileMenuOpen}
+          setMobileMenuOpen={setMobileMenuOpen}
+        />
 
         {/* ═══ CONTENT ═══ */}
         <main className="flex-grow p-4 md:p-8 pb-32 md:pb-8 max-w-6xl mx-auto w-full dark:text-slate-100">
@@ -1455,84 +1142,19 @@ function App() {
         </main>
 
         {/* ═══ MOBILE BOTTOM NAV ═══ */}
-
-        {/* Club strip — only visible to club admins, sits above the team bar */}
-        {isClubAdmin && clubNavItems.length > 0 && (
-          <div className="md:hidden fixed bottom-20 left-0 right-0 bg-violet-950 border-t border-violet-800 h-11 flex items-center z-40">
-            <span className="text-[8px] font-black text-violet-600 uppercase tracking-widest px-3 shrink-0">
-              {t('common.club')}
-            </span>
-            <div className="flex items-center flex-1 justify-around pr-2">
-              {clubNavItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => navigate(`/${item.id}`)}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition-colors ${
-                    currentView === item.id
-                      ? 'text-violet-200 bg-violet-800/60'
-                      : 'text-violet-500 hover:text-violet-300'
-                  }`}
-                >
-                  <item.icon size={13} strokeWidth={currentView === item.id ? 2.5 : 2} />
-                  <span className="text-[9px] font-bold">{item.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Team bar */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 h-20 flex items-center justify-around px-2 z-50">
-          {isClubAdmin && clubNavItems.length > 0 && (
-            <span className="absolute top-1 left-1/2 -translate-x-1/2 text-[8px] font-black text-slate-300 uppercase tracking-widest pointer-events-none">
-              Team
-            </span>
-          )}
-          {(effectiveIsStaff
-            ? [
-                { id: 'dashboard', label: t('nav.seasonOverview'), icon: LayoutDashboard },
-                { id: 'finance?tab=ledger', label: t('nav.ledger'), icon: ReceiptText },
-                // Plus button goes here (rendered separately below)
-                { id: 'people', label: t('nav.players'), icon: Users },
-                { id: 'schedule', label: t('nav.schedule'), icon: Calendar },
-              ]
-            : [
-                { id: 'dashboard', label: t('nav.myPlayer'), icon: Users },
-                { id: 'schedule', label: t('nav.schedule'), icon: Calendar },
-              ]
-          ).map((item) => {
-            const navId = item.id.split('?')[0];
-            const itemTab = item.id.includes('?tab=') ? item.id.split('?tab=')[1] : null;
-            const mobileCurrentTab = currentSearch.includes('tab=')
-              ? new URLSearchParams(currentSearch).get('tab')
-              : null;
-            const isActive = item.id.includes('?')
-              ? currentView === 'finance' && mobileCurrentTab === itemTab
-              : currentView === navId;
-            return (
-              <button
-                key={item.id}
-                onClick={() => navigate(`/${item.id}`)}
-                className={`flex flex-col items-center gap-1 flex-1 ${isActive ? 'text-blue-600' : 'text-slate-400'}`}
-              >
-                <item.icon size={20} strokeWidth={isActive ? 3 : 2} />
-                <span className="text-[9px] font-bold">{item.label}</span>
-              </button>
-            );
-          })}
-          {canEditLedger && effectiveIsStaff && (
-            <button
-              onClick={() => {
-                setTxToEdit(null);
-                setShowTxForm(true);
-              }}
-              className="mb-10 bg-slate-900 text-white p-4 rounded-full shadow-xl border-4 border-white active:scale-90 transition-transform"
-              aria-label="Add transaction"
-            >
-              <Plus size={24} strokeWidth={3} />
-            </button>
-          )}
-        </nav>
+        <MobileBottomNav
+          seasonNavItems={seasonNavItems}
+          teamNavItems={teamNavItems}
+          effectiveIsStaff={effectiveIsStaff}
+          currentView={currentView}
+          currentSearch={currentSearch}
+          navigate={navigate}
+          canEditLedger={canEditLedger}
+          setTxToEdit={setTxToEdit}
+          setShowTxForm={setShowTxForm}
+          isClubAdmin={isClubAdmin}
+          clubNavItems={clubNavItems}
+        />
 
         {/* ═══ MODALS ═══ */}
         {showPlayerModal && playerToView && (
