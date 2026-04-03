@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { logAuditEvent } from './auditService';
 
 export const financeService = {
   getAllTransactions: async () => {
@@ -55,6 +56,21 @@ export const financeService = {
     };
     const { data, error } = await supabase.from('transactions').insert(row).select().single();
     if (error) throw error;
+
+    // Fire-and-forget audit log
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        logAuditEvent({
+          tableName: 'transactions',
+          recordId: data.id,
+          action: 'insert',
+          changedBy: user.id,
+          newData: data,
+          metadata: { season_id: txData.seasonId, team_season_id: txData.teamSeasonId || null },
+        });
+      }
+    });
+
     return data;
   },
 
@@ -74,12 +90,39 @@ export const financeService = {
     if ('eventId' in txData) updates.event_id = txData.eventId || null;
     const { error } = await supabase.from('transactions').update(updates).eq('id', txId);
     if (error) throw error;
+
+    // Fire-and-forget audit log
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        logAuditEvent({
+          tableName: 'transactions',
+          recordId: txId,
+          action: 'update',
+          changedBy: user.id,
+          newData: updates,
+          metadata: { updated_fields: Object.keys(updates) },
+        });
+      }
+    });
   },
 
   deleteTransaction: async (txId) => {
     await supabase.from('transactions').delete().eq('original_tx_id', txId);
     const { error } = await supabase.from('transactions').delete().eq('id', txId);
     if (error) throw error;
+
+    // Fire-and-forget audit log
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        logAuditEvent({
+          tableName: 'transactions',
+          recordId: txId,
+          action: 'delete',
+          changedBy: user.id,
+          oldData: { id: txId },
+        });
+      }
+    });
   },
 
   deleteBatch: async (field, value) => {

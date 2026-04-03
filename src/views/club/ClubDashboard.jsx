@@ -26,69 +26,66 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
     const fetchAll = async () => {
       setLoading(true);
       const data = {};
-      for (const team of teams) {
-        try {
-          const players = await supabaseService.getPlayersByTeam(team.id);
-          const seasonPlayers = players.filter((p) => p.seasonProfiles?.[selectedSeason]);
-
-          const medical = seasonPlayers.filter((p) => p.medicalRelease).length;
-          const reeplayer = seasonPlayers.filter((p) => p.reePlayerWaiver).length;
-          const fullyCompliant = seasonPlayers.filter((p) => p.medicalRelease && p.reePlayerWaiver).length;
-
-          // Fetch documents for compliance tracking
-          let docs = [];
+      // Fetch all teams in parallel instead of sequentially (N+1 → 1+N parallel)
+      await Promise.all(
+        teams.map(async (team) => {
           try {
-            docs = await supabaseService.getTeamDocuments(team.id);
-          } catch {}
-          const docsUploaded = docs.length;
-          const docsVerified = docs.filter((d) => d.status === 'verified').length;
-          const docsPending = docs.filter((d) => d.status === 'uploaded').length;
+            const [players, docs, staffRoles] = await Promise.all([
+              supabaseService.getPlayersByTeam(team.id),
+              supabaseService.getTeamDocuments(team.id).catch(() => []),
+              supabaseService.getTeamRoles(team.id).catch(() => []),
+            ]);
+            const seasonPlayers = players.filter((p) => p.seasonProfiles?.[selectedSeason]);
 
-          // Staff count
-          let staffRoles = [];
-          try {
-            staffRoles = await supabaseService.getTeamRoles(team.id);
-          } catch {}
+            const medical = seasonPlayers.filter((p) => p.medicalRelease).length;
+            const reeplayer = seasonPlayers.filter((p) => p.reePlayerWaiver).length;
+            const fullyCompliant = seasonPlayers.filter((p) => p.medicalRelease && p.reePlayerWaiver).length;
 
-          const missingCompliance = seasonPlayers
-            .filter((p) => !p.medicalRelease || !p.reePlayerWaiver)
-            .map((p) => ({
-              name: `${p.firstName} ${p.lastName}`,
-              jersey: p.jerseyNumber,
-              missingMedical: !p.medicalRelease,
-              missingReeplayer: !p.reePlayerWaiver,
-            }));
+            const docsUploaded = docs.length;
+            const docsVerified = docs.filter((d) => d.status === 'verified').length;
+            const docsPending = docs.filter((d) => d.status === 'uploaded').length;
 
-          data[team.id] = {
-            playerCount: seasonPlayers.length,
-            medical,
-            reeplayer,
-            fullyCompliant,
-            complianceRate: seasonPlayers.length > 0 ? Math.round((fullyCompliant / seasonPlayers.length) * 100) : 100,
-            docsUploaded,
-            docsVerified,
-            docsPending,
-            staffCount: [...new Set(staffRoles.map((r) => r.userId))].length,
-            staffRoles,
-            missingCompliance,
-          };
-        } catch (e) {
-          console.error(`Error fetching data for ${team.name}:`, e);
-          data[team.id] = {
-            playerCount: 0,
-            medical: 0,
-            reeplayer: 0,
-            fullyCompliant: 0,
-            complianceRate: 100,
-            docsUploaded: 0,
-            docsVerified: 0,
-            docsPending: 0,
-            staffCount: 0,
-            staffRoles: [],
-            missingCompliance: [],
-          };
-        }
-      }
+            const missingCompliance = seasonPlayers
+              .filter((p) => !p.medicalRelease || !p.reePlayerWaiver)
+              .map((p) => ({
+                name: `${p.firstName} ${p.lastName}`,
+                jersey: p.jerseyNumber,
+                missingMedical: !p.medicalRelease,
+                missingReeplayer: !p.reePlayerWaiver,
+              }));
+
+            data[team.id] = {
+              playerCount: seasonPlayers.length,
+              medical,
+              reeplayer,
+              fullyCompliant,
+              complianceRate:
+                seasonPlayers.length > 0 ? Math.round((fullyCompliant / seasonPlayers.length) * 100) : 100,
+              docsUploaded,
+              docsVerified,
+              docsPending,
+              staffCount: [...new Set(staffRoles.map((r) => r.userId))].length,
+              staffRoles,
+              missingCompliance,
+            };
+          } catch (e) {
+            console.error(`Error fetching data for ${team.name}:`, e);
+            data[team.id] = {
+              playerCount: 0,
+              medical: 0,
+              reeplayer: 0,
+              fullyCompliant: 0,
+              complianceRate: 100,
+              docsUploaded: 0,
+              docsVerified: 0,
+              docsPending: 0,
+              staffCount: 0,
+              staffRoles: [],
+              missingCompliance: [],
+            };
+          }
+        }),
+      );
       setTeamData(data);
       setLoading(false);
     };

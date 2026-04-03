@@ -18,6 +18,7 @@ import {
   Eye,
   Trash2,
   FolderOpen,
+  Upload,
 } from 'lucide-react';
 import MedicalReleaseForm from '../../components/MedicalReleaseForm';
 import { supabaseService } from '../../services/supabaseService';
@@ -55,6 +56,10 @@ export default function ParentView({
   const [showMedicalForm, setShowMedicalForm] = useState(false);
   const [playerDocs, setPlayerDocs] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
+  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadDocType, setUploadDocType] = useState('medical_release');
+  const [uploading, setUploading] = useState(false);
 
   // ── SELF-SUFFICIENT DATA FETCH for parents ──
   // If props come in empty (timing issue), fetch directly
@@ -198,6 +203,30 @@ export default function ParentView({
         <p className="text-slate-500 font-medium text-sm leading-relaxed">{t('parent.noPlayersMsg')}</p>
       </div>
     );
+
+  const handleUploadDoc = async () => {
+    if (!uploadFile || !activePlayer?.id) return;
+    setUploading(true);
+    try {
+      await supabaseService.uploadDocument(uploadFile, activePlayer.id, {
+        clubId: clubId || null,
+        teamId: activePlayer.teamId || null,
+        seasonId: selectedSeason || null,
+        docType: uploadDocType,
+        title: `${DOC_TYPE_LABELS[uploadDocType] || uploadDocType} - ${uploadFile.name}`,
+      });
+      showToast?.(t('parent.docUploaded', 'Document uploaded successfully'));
+      setUploadFile(null);
+      setUploadDocType('medical_release');
+      setShowUploadForm(false);
+      fetchPlayerDocs();
+    } catch (err) {
+      console.error('Upload failed:', err);
+      showToast?.(t('parent.docUploadFail', 'Failed to upload document'), true);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleViewDoc = async (filePath) => {
     try {
@@ -561,10 +590,80 @@ export default function ParentView({
           {/* Documents */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden">
             <div className="p-5 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="font-bold text-slate-800 dark:text-white text-xs uppercase tracking-widest flex items-center gap-2">
-                <FolderOpen size={14} className="text-slate-400" /> {t('parent.documents')} ({playerDocs.length})
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-slate-800 dark:text-white text-xs uppercase tracking-widest flex items-center gap-2">
+                  <FolderOpen size={14} className="text-slate-400" /> {t('parent.documents')} ({playerDocs.length})
+                </h3>
+                <button
+                  onClick={() => setShowUploadForm((v) => !v)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                >
+                  <Upload size={13} />
+                  {t('parent.uploadDoc', 'Upload Document')}
+                </button>
+              </div>
             </div>
+
+            {/* Inline upload form */}
+            {showUploadForm && (
+              <div className="p-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 space-y-3">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                    {t('parent.selectFile', 'Select File')}
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    onChange={(e) => setUploadFile(e.target.files[0] || null)}
+                    className="block w-full text-sm text-slate-600 dark:text-slate-300
+                      file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0
+                      file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700
+                      dark:file:bg-blue-900/30 dark:file:text-blue-300
+                      hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50
+                      file:cursor-pointer file:transition-colors"
+                  />
+                </div>
+                {uploadFile && (
+                  <>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                        {t('parent.docType', 'Document Type')}
+                      </label>
+                      <select
+                        value={uploadDocType}
+                        onChange={(e) => setUploadDocType(e.target.value)}
+                        className="w-full border border-slate-200 dark:border-slate-600 rounded-lg p-2.5 text-sm font-bold text-slate-800 dark:text-white dark:bg-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="medical_release">{DOC_TYPE_LABELS.medical_release}</option>
+                        <option value="birth_certificate">{DOC_TYPE_LABELS.birth_certificate}</option>
+                        <option value="insurance_card">{DOC_TYPE_LABELS.insurance_card}</option>
+                        <option value="player_photo">{DOC_TYPE_LABELS.player_photo}</option>
+                        <option value="other">{DOC_TYPE_LABELS.other}</option>
+                      </select>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleUploadDoc}
+                        disabled={uploading}
+                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {uploading ? t('common.saving', 'Uploading...') : t('parent.submitUpload', 'Upload')}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowUploadForm(false);
+                          setUploadFile(null);
+                          setUploadDocType('medical_release');
+                        }}
+                        className="px-4 py-2.5 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        {t('common.cancel', 'Cancel')}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {docsLoading ? (
               <div className="p-10 text-center text-slate-300 font-bold text-sm animate-pulse">

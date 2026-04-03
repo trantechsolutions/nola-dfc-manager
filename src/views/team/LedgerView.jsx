@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Plus, CalendarDays, X, Upload, Tag } from 'lucide-react';
 import Ledger from '../../components/Ledger';
 import BulkUploadLedgerModal from '../../components/BulkUploadLedgerModal';
+import ExportMenu from '../../components/ExportMenu';
 import { useT } from '../../i18n/I18nContext';
 
 export default function LedgerView({
@@ -20,6 +21,8 @@ export default function LedgerView({
   selectedSeason,
   teamSeasonId,
   showToast,
+  // Export
+  calculatePlayerFinancials,
   // Category management
   onManageCategories,
 }) {
@@ -99,6 +102,14 @@ export default function LedgerView({
               <span className="hidden sm:inline">{t('ledger.bulkUpload')}</span>
             </button>
           )}
+          {/* Export menu */}
+          <ExportMenu
+            transactions={filteredTransactions}
+            players={players}
+            calculatePlayerFinancials={calculatePlayerFinancials}
+            formatMoney={formatMoney}
+            seasonInfo={{ name: selectedSeason || 'All' }}
+          />
           {/* Add Transaction button */}
           {onAddTx && (
             <button

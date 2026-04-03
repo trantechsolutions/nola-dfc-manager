@@ -981,6 +981,9 @@ function App() {
                                     }
                                   : null,
                                 isBulkUploading,
+                                selectedSeason,
+                                teamSeasonId,
+                                calculatePlayerFinancials,
                               }
                             : null
                         }
