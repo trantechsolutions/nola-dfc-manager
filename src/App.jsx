@@ -500,8 +500,11 @@ function App() {
 
   if (loading || contextLoading)
     return (
-      <div className="min-h-screen flex items-center justify-center font-black text-slate-300 animate-pulse">
-        LOADING...
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 border-4 border-blue-200 dark:border-blue-800 border-t-blue-500 rounded-full animate-spin mx-auto" />
+          <p className="text-sm font-bold text-slate-400 dark:text-slate-500">{t('common.loading')}</p>
+        </div>
       </div>
     );
 

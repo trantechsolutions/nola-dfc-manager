@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SeasonPicker from '../../components/SeasonPicker';
+import OnboardingChecklist from '../../components/OnboardingChecklist';
 import {
   TrendingDown,
   Users,
@@ -76,6 +78,7 @@ export default function TeamOverviewView({
   canViewFinancials = true,
 }) {
   const { t } = useT();
+  const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
   const [viewArchived, setViewArchived] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -264,6 +267,15 @@ export default function TeamOverviewView({
       {/* ════════════════ OVERVIEW TAB ════════════════ */}
       {tab === 'overview' && (
         <div className="space-y-5">
+          {/* ── Onboarding checklist (shows when setup is incomplete) ── */}
+          <OnboardingChecklist
+            hasSeason={!!selectedSeasonData?.teamSeasonId}
+            hasBudget={projectedSpend > 0}
+            hasPlayers={players.length > 0}
+            hasPlayersEnrolled={players.length > 0}
+            navigate={navigate}
+          />
+
           {/* ── Primary stat cards (financial — hidden for coaches) ── */}
           {canViewFinancials && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">

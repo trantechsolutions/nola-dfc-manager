@@ -91,7 +91,7 @@ export const userService = {
     const { error } = await supabase.from('user_profiles').upsert(
       {
         user_id: authUser.id,
-        email: authUser.email,
+        email: authUser.email?.toLowerCase().trim(),
         display_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email.split('@')[0],
       },
       { onConflict: 'user_id', ignoreDuplicates: true },

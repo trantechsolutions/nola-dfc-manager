@@ -62,7 +62,12 @@ export const playerService = {
     if (playerData.guardians?.length > 0) {
       const guardianRows = playerData.guardians
         .filter((g) => g.name)
-        .map((g) => ({ player_id: player.id, name: g.name, email: g.email || null, phone: g.phone || null }));
+        .map((g) => ({
+          player_id: player.id,
+          name: g.name,
+          email: g.email?.toLowerCase().trim() || null,
+          phone: g.phone || null,
+        }));
       if (guardianRows.length > 0) {
         const { error: gErr } = await supabase.from('guardians').insert(guardianRows);
         if (gErr) throw gErr;
@@ -105,7 +110,12 @@ export const playerService = {
       await supabase.from('guardians').delete().eq('player_id', playerId);
       const guardianRows = playerData.guardians
         .filter((g) => g.name)
-        .map((g) => ({ player_id: playerId, name: g.name, email: g.email || null, phone: g.phone || null }));
+        .map((g) => ({
+          player_id: playerId,
+          name: g.name,
+          email: g.email?.toLowerCase().trim() || null,
+          phone: g.phone || null,
+        }));
       if (guardianRows.length > 0) {
         const { error: gErr } = await supabase.from('guardians').insert(guardianRows);
         if (gErr) throw gErr;
@@ -281,7 +291,7 @@ export const playerService = {
     const { error } = await supabase.from('guardians').insert({
       player_id: playerId,
       name,
-      email: email || null,
+      email: email?.toLowerCase().trim() || null,
       phone: phone || null,
     });
     if (error) throw error;
