@@ -112,10 +112,10 @@ describe('hasPermission', () => {
   });
 
   describe('head_coach', () => {
-    it('can view roster, schedule, and budget', () => {
+    it('can view roster and schedule only (no financials)', () => {
       expect(hasPermission(roles.headCoach, PERMISSIONS.TEAM_VIEW_ROSTER, TEAM_A)).toBe(true);
       expect(hasPermission(roles.headCoach, PERMISSIONS.TEAM_VIEW_SCHEDULE, TEAM_A)).toBe(true);
-      expect(hasPermission(roles.headCoach, PERMISSIONS.TEAM_VIEW_BUDGET, TEAM_A)).toBe(true);
+      expect(hasPermission(roles.headCoach, PERMISSIONS.TEAM_VIEW_BUDGET, TEAM_A)).toBe(false);
     });
 
     it('cannot edit anything', () => {
