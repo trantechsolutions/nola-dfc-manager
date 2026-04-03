@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from './supabase';
 import {
@@ -229,87 +229,95 @@ function App() {
   }, [teamEvents]);
 
   // ── DATA FETCHING ──
-  const fetchData = async (seasonOverride) => {
-    try {
-      let fetchTeamId = selectedTeamId || parentTeamId;
-
-      // ── Step 1: Resolve players ──
-      // For parents (no team context), start by matching email → guardian → player
-      let pData = [];
-      let resolvedSeason = seasonOverride || selectedSeason;
-
-      if (!fetchTeamId && user?.email) {
-        try {
-          pData = await supabaseService.getPlayersByGuardianEmail(user.email);
-          if (pData.length > 0 && pData[0].teamId) {
-            fetchTeamId = pData[0].teamId;
-          }
-          // Auto-select the latest season from the player's enrollments
-          if (pData.length > 0 && !resolvedSeason) {
-            const profiles = pData[0].seasonProfiles || {};
-            const enrolledSeasons = Object.keys(profiles).sort((a, b) => b.localeCompare(a));
-            if (enrolledSeasons.length > 0) {
-              resolvedSeason = enrolledSeasons[0];
-              // Set the React state for subsequent renders
-              setSelectedSeason(resolvedSeason);
-              // Continue using resolvedSeason in this fetch cycle
-            }
-          }
-        } catch (e) {
-          console.warn('Guardian email lookup failed:', e.message);
-        }
-      }
-      // For staff (or after parent resolved team), fetch full team roster
-      if (fetchTeamId && pData.length === 0) {
-        pData = await supabaseService.getPlayersByTeam(fetchTeamId);
-      }
-
-      console.log('Fetched', pData.length, 'players for teamId:', fetchTeamId, 'season:', resolvedSeason);
-
-      // ── Step 2: Resolve teamSeasonId ──
-      let tsId = currentTeamSeason?.id || null;
-      if (!tsId && fetchTeamId && resolvedSeason) {
-        const match = teamSeasons?.find((ts) => ts.seasonId === resolvedSeason);
-        tsId = match?.id || null;
-      }
-      if (!tsId && fetchTeamId && resolvedSeason) {
-        try {
-          const ts = await supabaseService.getTeamSeason(fetchTeamId, resolvedSeason);
-          tsId = ts?.id || null;
-        } catch {
-          /* noop */
-        }
-      }
-
-      // ── Step 3: Fetch transactions ──
-      const tData = tsId ? await supabaseService.getTransactionsByTeamSeason(tsId) : [];
-
-      let fData = {};
+  const fetchIdRef = useRef(0);
+  const fetchData = useCallback(
+    async (seasonOverride) => {
+      const fetchId = ++fetchIdRef.current;
       try {
-        fData = await supabaseService.getPlayerFinancials(resolvedSeason, tsId);
-      } catch (e) {
-        console.warn('Could not fetch player_financials view:', e.message);
-      }
+        let fetchTeamId = selectedTeamId || parentTeamId;
 
-      const evId = fetchTeamId || selectedTeamId || parentTeamId;
-      if (evId) {
-        try {
-          const evData = await supabaseService.getTeamEvents(evId);
-          setTeamEvents(evData);
-        } catch (e) {
-          console.warn('Could not fetch team events:', e.message);
+        // ── Step 1: Resolve players ──
+        // For parents (no team context), start by matching email → guardian → player
+        let pData = [];
+        let resolvedSeason = seasonOverride || selectedSeason;
+
+        if (!fetchTeamId && user?.email) {
+          try {
+            pData = await supabaseService.getPlayersByGuardianEmail(user.email);
+            if (pData.length > 0 && pData[0].teamId) {
+              fetchTeamId = pData[0].teamId;
+            }
+            // Auto-select the latest season from the player's enrollments
+            if (pData.length > 0 && !resolvedSeason) {
+              const profiles = pData[0].seasonProfiles || {};
+              const enrolledSeasons = Object.keys(profiles).sort((a, b) => b.localeCompare(a));
+              if (enrolledSeasons.length > 0) {
+                resolvedSeason = enrolledSeasons[0];
+                // Set the React state for subsequent renders
+                setSelectedSeason(resolvedSeason);
+                // Continue using resolvedSeason in this fetch cycle
+              }
+            }
+          } catch (e) {
+            console.warn('Guardian email lookup failed:', e.message);
+          }
         }
-      }
+        // For staff (or after parent resolved team), fetch full team roster
+        if (fetchTeamId && pData.length === 0) {
+          pData = await supabaseService.getPlayersByTeam(fetchTeamId);
+        }
 
-      setPlayers(pData);
-      setTransactions(tData);
-      setPlayerFinancials(fData);
-    } catch (e) {
-      console.error('Data fetch error', e);
-    } finally {
-      setLoading(false);
-    }
-  };
+        console.log('Fetched', pData.length, 'players for teamId:', fetchTeamId, 'season:', resolvedSeason);
+
+        // ── Step 2: Resolve teamSeasonId ──
+        let tsId = currentTeamSeason?.id || null;
+        if (!tsId && fetchTeamId && resolvedSeason) {
+          const match = teamSeasons?.find((ts) => ts.seasonId === resolvedSeason);
+          tsId = match?.id || null;
+        }
+        if (!tsId && fetchTeamId && resolvedSeason) {
+          try {
+            const ts = await supabaseService.getTeamSeason(fetchTeamId, resolvedSeason);
+            tsId = ts?.id || null;
+          } catch {
+            /* noop */
+          }
+        }
+
+        // ── Step 3: Fetch transactions ──
+        const tData = tsId ? await supabaseService.getTransactionsByTeamSeason(tsId) : [];
+
+        let fData = {};
+        try {
+          fData = await supabaseService.getPlayerFinancials(resolvedSeason, tsId);
+        } catch (e) {
+          console.warn('Could not fetch player_financials view:', e.message);
+        }
+
+        const evId = fetchTeamId || selectedTeamId || parentTeamId;
+        if (evId) {
+          try {
+            const evData = await supabaseService.getTeamEvents(evId);
+            setTeamEvents(evData);
+          } catch (e) {
+            console.warn('Could not fetch team events:', e.message);
+          }
+        }
+
+        // Skip state update if a newer fetch has started
+        if (fetchId !== fetchIdRef.current) return;
+
+        setPlayers(pData);
+        setTransactions(tData);
+        setPlayerFinancials(fData);
+      } catch (e) {
+        console.error('Data fetch error', e);
+      } finally {
+        if (fetchId === fetchIdRef.current) setLoading(false);
+      }
+    },
+    [selectedTeamId, parentTeamId, selectedSeason, currentTeamSeason?.id, teamSeasons],
+  );
 
   const handleSyncCalendar = async () => {
     const count = await syncCalendar();
