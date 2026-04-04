@@ -26,6 +26,7 @@ import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup, getAge } from '../../utils/ageGroup';
 
 import { CATEGORY_LABELS, CATEGORY_TEXT_COLORS as CATEGORY_COLORS, DOC_TYPE_LABELS } from '../../utils/constants';
+import PaymentOptions from '../../components/PaymentOptions';
 
 function getProgressColor(pct) {
   if (pct >= 100)
@@ -465,6 +466,17 @@ export default function ParentView({
                 )}
               </div>
             </div>
+          )}
+
+          {/* Payment Options */}
+          {playerTeam?.paymentInfo && financials.remainingBalance > 0 && !financials.isWaived && (
+            <PaymentOptions
+              paymentInfo={playerTeam.paymentInfo}
+              playerName={`${activePlayer.firstName} ${activePlayer.lastName}`}
+              remainingBalance={financials.remainingBalance}
+              formatMoney={formatMoney}
+              showToast={showToast}
+            />
           )}
 
           {/* Season + Team Selector */}
