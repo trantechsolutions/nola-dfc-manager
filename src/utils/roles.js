@@ -285,8 +285,8 @@ export function hasPermission(userRoles, permission, teamId = null) {
  * Club admins/managers get access to all teams.
  */
 export function getAccessibleTeamIds(userRoles, allTeamIds = []) {
-  const hasClubRole = userRoles.some((ur) => CLUB_ROLES[ur.role]);
-  if (hasClubRole) return allTeamIds;
+  const hasAppOrClubRole = userRoles.some((ur) => APP_ROLES[ur.role] || CLUB_ROLES[ur.role]);
+  if (hasAppOrClubRole) return allTeamIds;
 
   return [...new Set(userRoles.filter((ur) => ur.teamId).map((ur) => ur.teamId))];
 }
@@ -299,7 +299,8 @@ export function getHighestTeamRole(userRoles, teamId) {
   const priority = ['team_manager', 'team_admin', 'treasurer', 'scheduler', 'head_coach', 'assistant_coach'];
   const teamRoles = userRoles.filter((ur) => ur.teamId === teamId).map((ur) => ur.role);
 
-  // Also check club-level roles
+  // App-level and club-level roles override team roles
+  if (userRoles.some((ur) => ur.role === 'super_admin')) return 'super_admin';
   if (userRoles.some((ur) => ur.role === 'club_admin')) return 'club_admin';
   if (userRoles.some((ur) => ur.role === 'club_manager')) return 'club_manager';
 
