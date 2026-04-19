@@ -1,6 +1,7 @@
 import { ChevronDown, Globe, LogOut, Settings, GitCommit } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { useState } from 'react';
+import { isSingleTeamMode } from '../utils/singleTeamMode';
 
 export default function DesktopSidebar({
   club,
@@ -31,13 +32,14 @@ export default function DesktopSidebar({
   const [showTeamPicker, setShowTeamPicker] = useState(false);
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) || teams[0] || null;
   const currentSearch = typeof window !== 'undefined' ? window.location.search : '';
+  const singleTeam = isSingleTeamMode();
 
   return (
     <aside className="hidden md:flex w-64 bg-slate-900 text-white flex-col sticky top-0 h-screen">
       <div className="p-6">
         <h1 className="text-xl font-black tracking-tighter uppercase">{club?.name || 'Team Manager'}</h1>
 
-        {teams.length > 1 && (
+        {!singleTeam && teams.length > 1 && (
           <div className="mt-3 relative">
             <button
               onClick={() => setShowTeamPicker(!showTeamPicker)}
@@ -80,7 +82,7 @@ export default function DesktopSidebar({
           </div>
         )}
 
-        {teams.length === 1 && (
+        {(singleTeam || teams.length === 1) && selectedTeam && (
           <div className="mt-3 p-2.5 bg-slate-800 rounded-xl">
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('common.team')}</p>
             <p className="text-sm font-bold text-blue-400">{selectedTeam?.name}</p>

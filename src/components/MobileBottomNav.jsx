@@ -1,5 +1,6 @@
 import { LayoutDashboard, Users, Calendar, Plus, ReceiptText } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
+import { isSingleTeamMode } from '../utils/singleTeamMode';
 
 export default function MobileBottomNav({
   seasonNavItems,
@@ -15,6 +16,7 @@ export default function MobileBottomNav({
   clubNavItems,
 }) {
   const { t } = useT();
+  const singleTeam = isSingleTeamMode();
 
   return (
     <>
@@ -43,7 +45,7 @@ export default function MobileBottomNav({
 
       {/* Team bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 h-20 flex items-center justify-around px-2 z-50">
-        {isClubAdmin && clubNavItems.length > 0 && (
+        {!singleTeam && isClubAdmin && clubNavItems.length > 0 && (
           <span className="absolute top-1 left-1/2 -translate-x-1/2 text-[8px] font-black text-slate-300 uppercase tracking-widest pointer-events-none">
             Team
           </span>
