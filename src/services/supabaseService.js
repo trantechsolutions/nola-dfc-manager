@@ -20,6 +20,7 @@ import { userService } from './userService';
 import { documentService } from './documentService';
 import { seasonService } from './seasonService';
 import { categoryService } from './categoryService';
+import { rubricService } from './rubricService';
 
 export const supabaseService = {
   ...playerService,
@@ -32,6 +33,7 @@ export const supabaseService = {
   ...documentService,
   ...seasonService,
   ...categoryService,
+  ...rubricService,
 };
 
 export default supabaseService;

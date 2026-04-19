@@ -916,6 +916,7 @@ function App() {
                     teamSeasonId={teamSeasonId}
                     showToast={showToast}
                     user={user}
+                    userRoles={userRoles}
                   />
                 }
               />
