@@ -70,11 +70,16 @@ export const useTeamContext = (user) => {
       // 3. Fetch teams the user can access
       if (clubData) {
         const allTeams = await supabaseService.getTeams(clubData.id);
-        const accessibleIds = getAccessibleTeamIds(
-          roles,
-          allTeams.map((t) => t.id),
-        );
-        const visibleTeams = allTeams.filter((t) => accessibleIds.includes(t.id));
+        // Super admins and club-level roles see ALL teams in the club
+        const visibleTeams =
+          isSuperRole || roles.some((r) => CLUB_ROLES[r.role])
+            ? allTeams
+            : allTeams.filter((t) =>
+                getAccessibleTeamIds(
+                  roles,
+                  allTeams.map((tt) => tt.id),
+                ).includes(t.id),
+              );
         setTeams(visibleTeams);
 
         // Only auto-select on first mount; subsequent refreshes keep the user's pick

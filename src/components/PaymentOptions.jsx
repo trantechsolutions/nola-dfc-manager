@@ -1,22 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Copy, Check, DollarSign, Smartphone, ExternalLink } from 'lucide-react';
+import QRCodeLib from 'qrcode';
 
 /**
- * Simple QR code generator using a public API (no dependency needed).
- * Falls back to a text display if image fails to load.
+ * QR code generated locally using the qrcode library — no external API calls.
  */
 function QRCode({ value, size = 150 }) {
-  const url = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}&margin=8`;
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    if (!canvasRef.current || !value) return;
+    QRCodeLib.toCanvas(canvasRef.current, value, {
+      width: size,
+      margin: 2,
+      color: { dark: '#000000', light: '#ffffff' },
+    }).catch(() => {});
+  }, [value, size]);
+
   return (
-    <img
-      src={url}
-      alt="QR Code"
-      width={size}
-      height={size}
-      className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white"
-      onError={(e) => {
-        e.target.style.display = 'none';
-      }}
+    <canvas
+      ref={canvasRef}
+      className="rounded-xl border border-slate-200 dark:border-slate-700"
+      style={{ width: size, height: size }}
     />
   );
 }
