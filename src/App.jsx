@@ -919,6 +919,7 @@ function App() {
                     selectedSeason={selectedSeason}
                     selectedTeamId={selectedTeamId}
                     teamSeasonId={teamSeasonId}
+                    clubId={club?.id}
                     showToast={showToast}
                     user={user}
                     userRoles={userRoles}

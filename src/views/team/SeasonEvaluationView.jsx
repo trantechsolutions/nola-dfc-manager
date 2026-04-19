@@ -1,5 +1,17 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ClipboardCheck, Save, ChevronDown, ChevronRight, Check, FileText, Settings, Lock } from 'lucide-react';
+import {
+  ClipboardCheck,
+  Save,
+  ChevronDown,
+  ChevronRight,
+  Check,
+  FileText,
+  Settings,
+  Lock,
+  UserPlus,
+  X,
+  Search,
+} from 'lucide-react';
 import { supabase } from '../../supabase';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
@@ -17,6 +29,7 @@ export default function SeasonEvaluationView({
   selectedSeason,
   selectedTeamId,
   teamSeasonId,
+  clubId,
   showToast,
   user,
   userRoles = [],
@@ -33,6 +46,11 @@ export default function SeasonEvaluationView({
   const [rubricSections, setRubricSections] = useState(DEFAULT_EVAL_SECTIONS);
   const [customRubric, setCustomRubric] = useState(null); // null = using default
   const [showRubricEditor, setShowRubricEditor] = useState(false);
+  const [guestPlayers, setGuestPlayers] = useState([]);
+  const [showGuestPicker, setShowGuestPicker] = useState(false);
+  const [clubPlayers, setClubPlayers] = useState([]);
+  const [guestPickerSearch, setGuestPickerSearch] = useState('');
+  const [loadingClubPlayers, setLoadingClubPlayers] = useState(false);
 
   const canEvaluate = useMemo(
     () => hasPermission(userRoles, PERMISSIONS.CLUB_EVALUATE_PLAYERS, selectedTeamId),
@@ -159,20 +177,71 @@ export default function SeasonEvaluationView({
         countMap[ev.player_id] = (countMap[ev.player_id] || 0) + 1;
       }
       setEvalCounts(countMap);
+
+      // Auto-load guest players: any player_id with evals for this team/season
+      // that isn't on the current team's active roster.
+      const rosterIds = new Set(players.map((p) => p.id));
+      const guestIds = [...new Set((allEvals || []).map((e) => e.player_id))].filter((id) => !rosterIds.has(id));
+      if (guestIds.length > 0 && clubId) {
+        try {
+          const all = await supabaseService.getPlayersByClub(clubId);
+          const guests = all.filter((p) => guestIds.includes(p.id));
+          setGuestPlayers((prev) => {
+            const existing = new Set(prev.map((g) => g.id));
+            const merged = [...prev];
+            for (const g of guests) if (!existing.has(g.id)) merged.push(g);
+            return merged;
+          });
+        } catch {
+          /* noop */
+        }
+      }
     } catch (e) {
       console.error('Failed to load evaluations:', e);
     } finally {
       setLoading(false);
     }
-  }, [selectedTeamId, selectedSeason, selectedEvaluatorId]);
+  }, [selectedTeamId, selectedSeason, selectedEvaluatorId, clubId, players]);
 
   useEffect(() => {
     loadEvaluations();
   }, [loadEvaluations]);
 
   const activePlayers = useMemo(() => {
-    return players.filter((p) => p.status === 'active');
-  }, [players]);
+    const roster = players.filter((p) => p.status === 'active');
+    const rosterIds = new Set(roster.map((p) => p.id));
+    const guests = guestPlayers.filter((g) => !rosterIds.has(g.id)).map((g) => ({ ...g, isGuest: true }));
+    return [...roster, ...guests];
+  }, [players, guestPlayers]);
+
+  const handleOpenGuestPicker = async () => {
+    if (!clubId) {
+      showToast?.('Club context unavailable', true);
+      return;
+    }
+    setShowGuestPicker(true);
+    setGuestPickerSearch('');
+    setLoadingClubPlayers(true);
+    try {
+      const all = await supabaseService.getPlayersByClub(clubId);
+      setClubPlayers(all);
+    } catch {
+      showToast?.('Failed to load club players', true);
+    } finally {
+      setLoadingClubPlayers(false);
+    }
+  };
+
+  const handleAddGuest = (player) => {
+    setGuestPlayers((prev) => (prev.some((g) => g.id === player.id) ? prev : [...prev, player]));
+    setShowGuestPicker(false);
+    setExpandedPlayer(player.id);
+  };
+
+  const handleRemoveGuest = (playerId) => {
+    setGuestPlayers((prev) => prev.filter((g) => g.id !== playerId));
+    if (expandedPlayer === playerId) setExpandedPlayer(null);
+  };
 
   const getEval = (playerId) => evaluations[playerId] || { ratings: {}, notes: '', overallRating: null };
 
@@ -353,6 +422,16 @@ export default function SeasonEvaluationView({
               {t('seasonEval.customizeRubric', 'Customize Rubric')}
             </button>
           )}
+          {canEvaluate && clubId && (
+            <button
+              onClick={handleOpenGuestPicker}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              title="Evaluate a player from another team in the club"
+            >
+              <UserPlus size={14} />
+              {t('seasonEval.addGuestPlayer', 'Add Guest Player')}
+            </button>
+          )}
           {canEvaluate && (
             <button
               onClick={handleSaveAll}
@@ -452,6 +531,14 @@ export default function SeasonEvaluationView({
                     {isSaved && (
                       <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 flex items-center gap-0.5">
                         <Check size={10} /> Saved
+                      </span>
+                    )}
+                    {player.isGuest && (
+                      <span
+                        className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300"
+                        title={player.teamName ? `Rostered on ${player.teamName}` : 'Guest player'}
+                      >
+                        Guest{player.teamName ? ` · ${player.teamName}` : ''}
                       </span>
                     )}
                   </div>
@@ -570,6 +657,15 @@ export default function SeasonEvaluationView({
                       <FileText size={14} />
                       {t('seasonEval.saveToDocuments', 'Save to Documents')}
                     </button>
+                    {player.isGuest && canEvaluate && !isSaved && (
+                      <button
+                        onClick={() => handleRemoveGuest(player.id)}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-xs font-bold transition-colors"
+                        title="Remove guest from list"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -581,6 +677,89 @@ export default function SeasonEvaluationView({
       {activePlayers.length === 0 && (
         <div className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
           {t('seasonEval.noPlayers', 'No active players to evaluate.')}
+        </div>
+      )}
+
+      {showGuestPicker && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                  {t('seasonEval.pickGuestTitle', 'Add Guest Player')}
+                </h3>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                  {t('seasonEval.pickGuestHint', 'Players from other teams in the club')}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowGuestPicker(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-xl px-3 py-2">
+                <Search size={14} className="text-slate-400" />
+                <input
+                  type="text"
+                  value={guestPickerSearch}
+                  onChange={(e) => setGuestPickerSearch(e.target.value)}
+                  placeholder={t('common.search', 'Search...')}
+                  className="flex-1 bg-transparent border-none text-sm text-slate-900 dark:text-white focus:ring-0 focus:outline-none"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2">
+              {loadingClubPlayers ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-6 h-6 border-4 border-blue-200 dark:border-blue-800 border-t-blue-500 rounded-full animate-spin" />
+                </div>
+              ) : (
+                (() => {
+                  const rosterIds = new Set(players.map((p) => p.id));
+                  const guestIds = new Set(guestPlayers.map((g) => g.id));
+                  const q = guestPickerSearch.trim().toLowerCase();
+                  const list = clubPlayers
+                    .filter((p) => !rosterIds.has(p.id) && !guestIds.has(p.id))
+                    .filter((p) => {
+                      if (!q) return true;
+                      const name = `${p.firstName} ${p.lastName}`.toLowerCase();
+                      const team = (p.teamName || '').toLowerCase();
+                      return name.includes(q) || team.includes(q);
+                    });
+                  if (list.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-sm text-slate-400 dark:text-slate-500">
+                        {t('seasonEval.noGuestMatches', 'No matching club players.')}
+                      </div>
+                    );
+                  }
+                  return list.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => handleAddGuest(p)}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition-colors"
+                    >
+                      <JerseyBadge number={p.jerseyNumber} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                          {p.firstName} {p.lastName}
+                        </p>
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+                          {p.teamName || t('seasonEval.noTeam', 'No team')}
+                          {p.teamAgeGroup ? ` · ${p.teamAgeGroup}` : ''}
+                        </p>
+                      </div>
+                      <UserPlus size={14} className="text-blue-500 shrink-0" />
+                    </button>
+                  ));
+                })()
+              )}
+            </div>
+          </div>
         </div>
       )}
 
