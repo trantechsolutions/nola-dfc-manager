@@ -1,140 +1,16 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ClipboardCheck, Save, ChevronDown, ChevronRight, Check, FileText } from 'lucide-react';
+import { ClipboardCheck, Save, ChevronDown, ChevronRight, Check, FileText, Settings, Lock } from 'lucide-react';
 import { supabase } from '../../supabase';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup } from '../../utils/ageGroup';
 import JerseyBadge from '../../components/JerseyBadge';
+import { DEFAULT_EVAL_SECTIONS, RATING_LABELS, countSkills } from '../../utils/defaultEvaluationRubric';
+import { hasPermission, PERMISSIONS } from '../../utils/roles';
+import RubricEditor from './RubricEditor';
 
-const RATING_LABELS = {
-  1: { label: 'Excellent', color: 'bg-emerald-500 text-white' },
-  2: { label: 'Good', color: 'bg-blue-500 text-white' },
-  3: { label: 'Needs Improvement', color: 'bg-amber-500 text-white' },
-  4: { label: 'Below Expectations', color: 'bg-red-500 text-white' },
-};
-
-const EVAL_SECTIONS = [
-  {
-    key: 'technical',
-    label: 'Technical',
-    groups: [
-      {
-        key: 'passing',
-        label: 'Passing',
-        skills: [
-          { key: 'passing_pace', label: 'Proper Pace' },
-          { key: 'passing_accuracy', label: 'Accuracy' },
-          { key: 'passing_types', label: 'Ability to utilize different types of passes' },
-          { key: 'passing_driven', label: 'Ability to hit a driven ball' },
-          { key: 'passing_bothfeet', label: 'Can use both feet' },
-        ],
-      },
-      {
-        key: 'receiving',
-        label: 'Receiving',
-        skills: [
-          { key: 'receiving_feet', label: 'Good 1st touch with feet, with & w/out pressure' },
-          { key: 'receiving_body', label: 'Good 1st touch with body, with & w/out pressure' },
-          { key: 'receiving_awaypressure', label: 'First touch is taken away from pressure' },
-        ],
-      },
-      {
-        key: 'dribbling',
-        label: 'Dribbling',
-        skills: [
-          { key: 'dribble_comfortable', label: 'Comfortable on the ball' },
-          { key: 'dribble_takeon', label: 'Can take players on' },
-          { key: 'dribble_moves', label: 'Has moves that buy time and space' },
-          { key: 'dribble_shield', label: 'Can hold a player off with the ball (shield)' },
-          { key: 'dribble_bothfeet', label: 'Can use both feet' },
-        ],
-      },
-      {
-        key: 'finishing',
-        label: 'Finishing',
-        skills: [
-          { key: 'finish_accuracy', label: 'Accuracy' },
-          { key: 'finish_power', label: 'Power' },
-          { key: 'finish_mentality', label: 'Mentality to finish' },
-          { key: 'finish_opportunities', label: 'Finishes opportunities' },
-          { key: 'finish_bothfeet', label: 'Can use both feet' },
-        ],
-      },
-      {
-        key: 'heading',
-        label: 'Heading',
-        skills: [
-          { key: 'head_defensive', label: 'Defensive headers (high and far)' },
-          { key: 'head_attacking', label: 'Attacking headers (low and accurate)' },
-          { key: 'head_accuracy', label: 'Accuracy' },
-        ],
-      },
-    ],
-  },
-  {
-    key: 'tactical',
-    label: 'Tactical',
-    groups: [
-      {
-        key: 'attacking',
-        label: 'Attacking Decisions',
-        skills: [
-          { key: 'atk_creativity', label: 'Creativity' },
-          { key: 'atk_combination', label: 'Sees and executes combination play' },
-          { key: 'atk_dynamic', label: 'Is dynamic with the ball' },
-          { key: 'atk_supporting', label: 'Takes up supporting positions' },
-          { key: 'atk_readgame', label: 'Has ability to read game' },
-          { key: 'atk_movement', label: 'Has smart movement off the ball' },
-          { key: 'atk_speedofplay', label: 'Speed of play' },
-        ],
-      },
-      {
-        key: 'defending',
-        label: 'Defending Decisions',
-        skills: [
-          { key: 'def_chase', label: 'Immediate chase if you lose the ball' },
-          { key: 'def_patience', label: 'Patience in 1v1 situations' },
-          { key: 'def_cover', label: 'Provides good distance/angle for cover' },
-          { key: 'def_balance', label: 'Provides balance away from ball' },
-        ],
-      },
-    ],
-  },
-  {
-    key: 'physical',
-    label: 'Physical',
-    groups: [
-      {
-        key: 'speed',
-        label: 'Speed',
-        skills: [
-          { key: 'phys_techspeed', label: 'Technical speed (manipulate ball at speed & maintain control)' },
-          { key: 'phys_actionspeed', label: 'Speed of Action (processing info & choosing response)' },
-          { key: 'phys_mentalspeed', label: 'Mental Speed (awareness of all factors/options)' },
-          { key: 'phys_purespeed', label: 'Pure Speed (overcoming distance in shortest time)' },
-        ],
-      },
-    ],
-  },
-  {
-    key: 'psychological',
-    label: 'Psychological',
-    groups: [
-      {
-        key: 'mental',
-        label: 'Mental Approach',
-        skills: [
-          { key: 'psych_instructions', label: 'Is willing to take instructions' },
-          { key: 'psych_courageous', label: 'Is courageous & takes chances' },
-          { key: 'psych_passion', label: 'Shows a passion for the game' },
-          { key: 'psych_recover', label: 'Can recover after a mistake' },
-          { key: 'psych_workrate', label: 'Has exemplary work rate' },
-          { key: 'psych_trynew', label: 'Is willing to try new things' },
-        ],
-      },
-    ],
-  },
-];
+// Only these roles may submit evaluations (matches CLUB_EVALUATE_PLAYERS in roles.js).
+const COACH_ROLES = new Set(['head_coach', 'assistant_coach', 'club_admin', 'super_admin']);
 
 export default function SeasonEvaluationView({
   players,
@@ -143,6 +19,7 @@ export default function SeasonEvaluationView({
   teamSeasonId,
   showToast,
   user,
+  userRoles = [],
 }) {
   const { t } = useT();
   const [evaluations, setEvaluations] = useState({});
@@ -153,8 +30,49 @@ export default function SeasonEvaluationView({
   const [loading, setLoading] = useState(true);
   const [teamStaff, setTeamStaff] = useState([]);
   const [selectedEvaluatorId, setSelectedEvaluatorId] = useState(user?.id || null);
+  const [rubricSections, setRubricSections] = useState(DEFAULT_EVAL_SECTIONS);
+  const [customRubric, setCustomRubric] = useState(null); // null = using default
+  const [showRubricEditor, setShowRubricEditor] = useState(false);
 
-  // Load team staff for coach selector
+  const canEvaluate = useMemo(
+    () => hasPermission(userRoles, PERMISSIONS.CLUB_EVALUATE_PLAYERS, selectedTeamId),
+    [userRoles, selectedTeamId],
+  );
+  const canManageRubric = useMemo(
+    () => hasPermission(userRoles, PERMISSIONS.TEAM_MANAGE_RUBRIC, selectedTeamId),
+    [userRoles, selectedTeamId],
+  );
+
+  const totalSkills = useMemo(() => countSkills(rubricSections), [rubricSections]);
+
+  // Load custom rubric for this team (falls back to default)
+  useEffect(() => {
+    if (!selectedTeamId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const custom = await supabaseService.getTeamRubric(selectedTeamId);
+        if (cancelled) return;
+        if (custom && Array.isArray(custom.sections) && custom.sections.length > 0) {
+          setCustomRubric(custom);
+          setRubricSections(custom.sections);
+        } else {
+          setCustomRubric(null);
+          setRubricSections(DEFAULT_EVAL_SECTIONS);
+        }
+      } catch {
+        if (!cancelled) {
+          setCustomRubric(null);
+          setRubricSections(DEFAULT_EVAL_SECTIONS);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTeamId]);
+
+  // Load team staff (coaches only) for evaluator selector
   useEffect(() => {
     if (!selectedTeamId) return;
     const fetchStaff = async () => {
@@ -167,7 +85,7 @@ export default function SeasonEvaluationView({
           .from('user_roles')
           .select('user_id, role')
           .not('club_id', 'is', null);
-        const combined = [...(teamRoles || []), ...(clubRoles || [])];
+        const combined = [...(teamRoles || []), ...(clubRoles || [])].filter((r) => COACH_ROLES.has(r.role));
         const uniqueIds = [...new Set(combined.map((r) => r.user_id))];
         let profileMap = {};
         if (uniqueIds.length > 0) {
@@ -188,7 +106,13 @@ export default function SeasonEvaluationView({
             };
           }
         }
-        setTeamStaff(Object.values(unique));
+        const staffList = Object.values(unique);
+        setTeamStaff(staffList);
+        // If the current evaluator isn't a coach, switch to the first coach (or null).
+        setSelectedEvaluatorId((prev) => {
+          if (prev && staffList.some((s) => s.userId === prev)) return prev;
+          return staffList[0]?.userId || null;
+        });
       } catch {
         /* noop */
       }
@@ -198,10 +122,12 @@ export default function SeasonEvaluationView({
 
   // Load evaluations for the selected evaluator
   const loadEvaluations = useCallback(async () => {
-    if (!selectedTeamId || !selectedSeason || !selectedEvaluatorId) return;
+    if (!selectedTeamId || !selectedSeason || !selectedEvaluatorId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      // Load evaluations for the selected evaluator
       const { data, error } = await supabase
         .from('season_evaluations')
         .select('*')
@@ -223,7 +149,6 @@ export default function SeasonEvaluationView({
       setEvaluations(evalMap);
       setSavedPlayers(saved);
 
-      // Load ALL evaluations to show how many coaches have evaluated each player
       const { data: allEvals } = await supabase
         .from('season_evaluations')
         .select('player_id, evaluator_id')
@@ -255,7 +180,6 @@ export default function SeasonEvaluationView({
     setEvaluations((prev) => {
       const existing = prev[playerId] || { ratings: {}, notes: '', overallRating: null };
       const newRatings = { ...existing.ratings, [category]: value };
-      // Compute overall as average
       const values = Object.values(newRatings).filter((v) => v > 0);
       const overall =
         values.length > 0 ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10 : null;
@@ -271,6 +195,10 @@ export default function SeasonEvaluationView({
   };
 
   const handleSavePlayer = async (playerId) => {
+    if (!canEvaluate) {
+      showToast?.('Only coaches can submit evaluations', true);
+      return;
+    }
     const ev = getEval(playerId);
     setSaving(true);
     try {
@@ -298,6 +226,10 @@ export default function SeasonEvaluationView({
   };
 
   const handleSaveAll = async () => {
+    if (!canEvaluate) {
+      showToast?.('Only coaches can submit evaluations', true);
+      return;
+    }
     setSaving(true);
     let count = 0;
     try {
@@ -346,10 +278,9 @@ export default function SeasonEvaluationView({
       return;
     }
 
-    // Build a text summary and save as a document
     let content = `Season Evaluation: ${selectedSeason}\n`;
     content += `Player: ${player.firstName} ${player.lastName} (#${player.jerseyNumber || '?'})\n\n`;
-    for (const section of EVAL_SECTIONS) {
+    for (const section of rubricSections) {
       content += `=== ${section.label} ===\n`;
       for (const group of section.groups) {
         content += `  ${group.label}:\n`;
@@ -364,7 +295,6 @@ export default function SeasonEvaluationView({
     if (ev.notes) content += `\nCoach Notes:\n${ev.notes}\n`;
 
     try {
-      // Save as a document record linked to the player
       await supabaseService.uploadDocumentRecord({
         playerId: player.id,
         teamId: selectedTeamId,
@@ -397,7 +327,7 @@ export default function SeasonEvaluationView({
   return (
     <div className="space-y-5 pb-24 md:pb-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
             <ClipboardCheck size={22} className="text-blue-500" />
@@ -405,17 +335,49 @@ export default function SeasonEvaluationView({
           </h2>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
             {selectedSeason} — {completedCount}/{activePlayers.length} {t('seasonEval.completed', 'completed')}
+            {customRubric && (
+              <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
+                Custom rubric
+              </span>
+            )}
           </p>
         </div>
-        <button
-          onClick={handleSaveAll}
-          disabled={saving}
-          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-xs font-black rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
-        >
-          <Save size={14} />
-          {t('seasonEval.saveAll', 'Save All')}
-        </button>
+        <div className="flex items-center gap-2">
+          {canManageRubric && (
+            <button
+              onClick={() => setShowRubricEditor(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              title="Add, remove, or rename sections/questions"
+            >
+              <Settings size={14} />
+              {t('seasonEval.customizeRubric', 'Customize Rubric')}
+            </button>
+          )}
+          {canEvaluate && (
+            <button
+              onClick={handleSaveAll}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-xs font-black rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              <Save size={14} />
+              {t('seasonEval.saveAll', 'Save All')}
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Read-only banner for non-coaches */}
+      {!canEvaluate && (
+        <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-xs text-amber-800 dark:text-amber-200">
+          <Lock size={14} className="shrink-0" />
+          <span>
+            {t(
+              'seasonEval.viewOnlyNotice',
+              'Only coaches (head coach, assistant coach) can submit evaluations. You have view-only access.',
+            )}
+          </span>
+        </div>
+      )}
 
       {/* Progress */}
       <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
@@ -426,7 +388,7 @@ export default function SeasonEvaluationView({
       </div>
 
       {/* Coach Selector */}
-      {teamStaff.length > 0 && (
+      {canEvaluate && teamStaff.length > 0 && (
         <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5">
           <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest shrink-0">
             {t('seasonEval.evaluatingAs', 'Evaluating as')}
@@ -494,7 +456,7 @@ export default function SeasonEvaluationView({
                     )}
                   </div>
                   <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                    {ratedCount}/42 rated
+                    {ratedCount}/{totalSkills} rated
                     {ev.overallRating && ` · Overall: ${ev.overallRating}/4`}
                     {coachCount > 0 && ` · ${coachCount} eval${coachCount > 1 ? 's' : ''}`}
                   </p>
@@ -518,14 +480,12 @@ export default function SeasonEvaluationView({
               {/* Expanded Evaluation Form */}
               {isExpanded && (
                 <div className="px-4 pb-4 space-y-5 border-t border-slate-100 dark:border-slate-800 pt-4">
-                  {/* Sections: Technical, Tactical, Physical, Psychological */}
-                  {EVAL_SECTIONS.map((section) => (
+                  {rubricSections.map((section) => (
                     <div key={section.key} className="space-y-3">
                       <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 pb-1">
                         {section.label}
                       </h4>
                       {section.groups.map((group) => {
-                        // Compute group average
                         const groupScores = group.skills.map((s) => ev.ratings[s.key]).filter((v) => v > 0);
                         const groupAvg =
                           groupScores.length > 0
@@ -552,12 +512,13 @@ export default function SeasonEvaluationView({
                                   {[1, 2, 3, 4].map((val) => (
                                     <button
                                       key={val}
-                                      onClick={() => setRating(player.id, skill.key, val)}
+                                      onClick={() => canEvaluate && setRating(player.id, skill.key, val)}
+                                      disabled={!canEvaluate}
                                       className={`w-7 h-7 rounded-lg text-[10px] font-bold transition-all ${
                                         ev.ratings[skill.key] === val
                                           ? RATING_LABELS[val].color
                                           : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 hover:bg-slate-300 dark:hover:bg-slate-600'
-                                      }`}
+                                      } ${!canEvaluate ? 'cursor-not-allowed opacity-60' : ''}`}
                                     >
                                       {val}
                                     </button>
@@ -579,29 +540,32 @@ export default function SeasonEvaluationView({
                     <textarea
                       value={ev.notes}
                       onChange={(e) => setNotes(player.id, e.target.value)}
+                      readOnly={!canEvaluate}
                       rows={4}
                       placeholder={t(
                         'seasonEval.notesPlaceholder',
                         'Strengths, areas for improvement, overall assessment...',
                       )}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:opacity-60"
                     />
                   </div>
 
                   {/* Actions */}
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => handleSavePlayer(player.id)}
-                      disabled={saving}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors disabled:opacity-50"
-                    >
-                      <Save size={14} />
-                      {t('seasonEval.saveEval', 'Save Evaluation')}
-                    </button>
+                    {canEvaluate && (
+                      <button
+                        onClick={() => handleSavePlayer(player.id)}
+                        disabled={saving}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors disabled:opacity-50"
+                      >
+                        <Save size={14} />
+                        {t('seasonEval.saveEval', 'Save Evaluation')}
+                      </button>
+                    )}
                     <button
                       onClick={() => handleGeneratePdf(player)}
                       disabled={saving || !ev.overallRating}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold transition-colors disabled:opacity-50"
+                      className={`${canEvaluate ? '' : 'flex-1'} flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold transition-colors disabled:opacity-50`}
                     >
                       <FileText size={14} />
                       {t('seasonEval.saveToDocuments', 'Save to Documents')}
@@ -619,6 +583,24 @@ export default function SeasonEvaluationView({
           {t('seasonEval.noPlayers', 'No active players to evaluate.')}
         </div>
       )}
+
+      <RubricEditor
+        open={showRubricEditor}
+        onClose={() => setShowRubricEditor(false)}
+        teamId={selectedTeamId}
+        user={user}
+        initialSections={customRubric ? customRubric.sections : null}
+        onSaved={(nextSections) => {
+          if (nextSections) {
+            setCustomRubric({ sections: nextSections });
+            setRubricSections(nextSections);
+          } else {
+            setCustomRubric(null);
+            setRubricSections(DEFAULT_EVAL_SECTIONS);
+          }
+        }}
+        showToast={showToast}
+      />
     </div>
   );
 }
