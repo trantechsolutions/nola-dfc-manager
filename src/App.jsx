@@ -64,6 +64,7 @@ import { useLedgerManager } from './hooks/useLedgerManager';
 import { useTeamContext } from './hooks/useTeamContext';
 import { PERMISSIONS } from './utils/roles';
 import { useCategoryManager } from './hooks/useCategoryManager';
+import { isSingleTeamMode } from './utils/singleTeamMode';
 
 function App() {
   const navigate = useNavigate();
@@ -532,10 +533,13 @@ function App() {
   }
 
   // ── NAV ──
-  const appNavItems = isSuperAdmin ? [{ id: 'app-admin', label: 'App Admin', icon: Shield, section: 'app' }] : [];
+  const singleTeam = isSingleTeamMode();
+
+  const appNavItems =
+    isSuperAdmin && !singleTeam ? [{ id: 'app-admin', label: 'App Admin', icon: Shield, section: 'app' }] : [];
 
   const clubNavItems =
-    isClubAdmin || isSuperAdmin
+    (isClubAdmin || isSuperAdmin) && !singleTeam
       ? [
           { id: 'club-overview', label: t('nav.overview'), icon: Building2, section: 'club' },
           { id: 'club-teams', label: t('nav.teams'), icon: ListTree, section: 'club' },
@@ -683,7 +687,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-            {isSuperAdmin && (
+            {!singleTeam && isSuperAdmin && (
               <Route
                 path="/app-admin"
                 element={
@@ -699,7 +703,7 @@ function App() {
               />
             )}
 
-            {(isClubAdmin || isSuperAdmin) && (
+            {!singleTeam && (isClubAdmin || isSuperAdmin) && (
               <>
                 <Route
                   path="/club-overview"

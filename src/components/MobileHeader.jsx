@@ -1,5 +1,6 @@
 import { Globe, LogOut, Menu } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
+import { isSingleTeamMode } from '../utils/singleTeamMode';
 
 export default function MobileHeader({
   club,
@@ -17,6 +18,7 @@ export default function MobileHeader({
   supabase,
 }) {
   const { t } = useT();
+  const singleTeam = isSingleTeamMode();
 
   return (
     <header className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 p-4 sticky top-0 z-40">
@@ -35,7 +37,7 @@ export default function MobileHeader({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {teams.length > 1 && (
+          {!singleTeam && teams.length > 1 && (
             <select
               value={selectedTeamId || ''}
               onChange={(e) => setSelectedTeamId(e.target.value)}
