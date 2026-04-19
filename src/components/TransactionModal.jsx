@@ -80,6 +80,11 @@ export default function TransactionModal({
       updates.transferFrom = '';
       updates.transferTo = '';
     }
+    // Credit category hides the payment-method selector; default it to Cash
+    // so the persisted type isn't an inapplicable digital method.
+    if (newCategory === 'CRE') {
+      updates.type = 'Cash';
+    }
     setFormData({ ...formData, ...updates });
   };
 
