@@ -86,6 +86,15 @@ export const userService = {
     return await userService.assignRole(userId, role, { clubId, teamId });
   },
 
+  claimMyInvitations: async () => {
+    const { data, error } = await supabase.rpc('claim_my_invitations');
+    if (error) {
+      console.warn('claimMyInvitations failed:', error.message);
+      return [];
+    }
+    return data || [];
+  },
+
   ensureUserProfile: async (authUser) => {
     if (!authUser?.id || !authUser?.email) return;
     const { error } = await supabase.from('user_profiles').upsert(

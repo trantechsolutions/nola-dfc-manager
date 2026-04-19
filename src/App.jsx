@@ -422,14 +422,23 @@ function App() {
   } = useCategoryManager(club?.id);
 
   // ── AUTH LISTENER ──
+  const lastUserIdRef = useRef(null);
   useEffect(() => {
+    const bootstrap = async (authUser) => {
+      await supabaseService.ensureUserProfile(authUser);
+      await supabaseService.claimMyInvitations();
+      // setUser AFTER claim so useTeamContext's role fetch sees claimed rows.
+      setUser(authUser);
+      fetchData();
+    };
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user || null;
-      setUser(currentUser);
       if (currentUser) {
-        supabaseService.ensureUserProfile(currentUser);
-        fetchData();
+        lastUserIdRef.current = currentUser.id;
+        bootstrap(currentUser);
       } else {
+        setUser(null);
         setLoading(false);
       }
     });
@@ -444,16 +453,12 @@ function App() {
       if (event === 'SIGNED_IN') {
         const incoming = session?.user || null;
         // Skip if it's the same user (e.g. token refresh on tab refocus)
-        setUser((prev) => {
-          if (prev?.id === incoming?.id) return prev; // same reference — no cascade
-          if (incoming) {
-            setLoading(true);
-            supabaseService.ensureUserProfile(incoming);
-            fetchData();
-          }
-          return incoming;
-        });
+        if (!incoming || incoming.id === lastUserIdRef.current) return;
+        lastUserIdRef.current = incoming.id;
+        setLoading(true);
+        bootstrap(incoming);
       } else if (event === 'SIGNED_OUT') {
+        lastUserIdRef.current = null;
         setUser(null);
         setLoading(false);
       }
