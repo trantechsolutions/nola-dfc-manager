@@ -15,6 +15,7 @@ import {
   Link2,
 } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
+import { HOLDINGS, HOLDING_LABELS } from '../utils/holdings';
 
 const DEFAULT_CATEGORY_COLORS = {
   TMF: 'bg-blue-50 text-blue-700',
@@ -35,6 +36,8 @@ export default function Ledger({
   formatMoney,
   categoryLabels: propLabels, // NEW: dynamic labels from useCategoryManager
   categoryColors: propColors, // NEW: dynamic colors from useCategoryManager
+  accounts = [],
+  accountMap = {},
 }) {
   const { t } = useT();
 
@@ -58,11 +61,37 @@ export default function Ledger({
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [accountFilter, setAccountFilter] = useState('all');
+  const [holdingFilter, setHoldingFilter] = useState('all');
   const [flowFilter, setFlowFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
+
+  // Accounts that actually appear in the current transaction list (account_id,
+  // transfer_from/to_account_id). Drives the account filter dropdown so the
+  // user only sees accounts they have activity on.
+  const accountOptions = useMemo(() => {
+    const ids = new Set();
+    transactions.forEach((tx) => {
+      if (tx.accountId) ids.add(tx.accountId);
+      if (tx.transferFromAccountId) ids.add(tx.transferFromAccountId);
+      if (tx.transferToAccountId) ids.add(tx.transferToAccountId);
+    });
+    return accounts.filter((a) => ids.has(a.id));
+  }, [accounts, transactions]);
+
+  const accountsByHolding = useMemo(() => {
+    const grouped = {};
+    HOLDINGS.forEach((h) => {
+      grouped[h] = [];
+    });
+    accountOptions.forEach((a) => {
+      if (grouped[a.holding]) grouped[a.holding].push(a);
+    });
+    return grouped;
+  }, [accountOptions]);
 
   const filteredTransactions = useMemo(() => {
     let result = [...transactions];
@@ -83,6 +112,22 @@ export default function Ledger({
       result = result.filter((tx) => tx.category === categoryFilter);
     }
 
+    if (accountFilter !== 'all') {
+      result = result.filter(
+        (tx) =>
+          tx.accountId === accountFilter ||
+          tx.transferFromAccountId === accountFilter ||
+          tx.transferToAccountId === accountFilter,
+      );
+    }
+
+    if (holdingFilter !== 'all') {
+      result = result.filter((tx) => {
+        const accIds = [tx.accountId, tx.transferFromAccountId, tx.transferToAccountId].filter(Boolean);
+        return accIds.some((id) => accountMap[id]?.holding === holdingFilter);
+      });
+    }
+
     if (flowFilter === 'income') result = result.filter((tx) => tx.amount > 0 && tx.category !== 'TRF');
     if (flowFilter === 'expense') result = result.filter((tx) => tx.amount < 0 && tx.category !== 'TRF');
     if (flowFilter === 'transfer') result = result.filter((tx) => tx.category === 'TRF');
@@ -97,7 +142,17 @@ export default function Ledger({
     });
 
     return result;
-  }, [transactions, searchTerm, categoryFilter, flowFilter, statusFilter, sortOrder]);
+  }, [
+    transactions,
+    searchTerm,
+    categoryFilter,
+    accountFilter,
+    holdingFilter,
+    accountMap,
+    flowFilter,
+    statusFilter,
+    sortOrder,
+  ]);
 
   const totalIncome = filteredTransactions
     .filter((tx) => tx.amount > 0 && tx.category !== 'TRF')
@@ -110,10 +165,18 @@ export default function Ledger({
   const safePage = Math.min(currentPage, totalPages);
   const pagedTransactions = filteredTransactions.slice((safePage - 1) * pageSize, safePage * pageSize);
 
-  const hasActiveFilters = searchTerm || categoryFilter !== 'all' || flowFilter !== 'all' || statusFilter !== 'all';
+  const hasActiveFilters =
+    searchTerm ||
+    categoryFilter !== 'all' ||
+    accountFilter !== 'all' ||
+    holdingFilter !== 'all' ||
+    flowFilter !== 'all' ||
+    statusFilter !== 'all';
   const clearAllFilters = () => {
     setSearchTerm('');
     setCategoryFilter('all');
+    setAccountFilter('all');
+    setHoldingFilter('all');
     setFlowFilter('all');
     setStatusFilter('all');
     setCurrentPage(1);
@@ -123,11 +186,15 @@ export default function Ledger({
     setCurrentPage(1);
   };
 
-  const TransferBadge = ({ tx }) => (
-    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
-      {tx.transferFrom} <ArrowRightLeft size={10} /> {tx.transferTo}
-    </span>
-  );
+  const TransferBadge = ({ tx }) => {
+    const fromName = accountMap[tx.transferFromAccountId]?.name || tx.transferFrom || '';
+    const toName = accountMap[tx.transferToAccountId]?.name || tx.transferTo || '';
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+        {fromName} <ArrowRightLeft size={10} /> {toName}
+      </span>
+    );
+  };
 
   const amountColor = (tx) => {
     if (tx.category === 'TRF') return 'text-indigo-600';
@@ -176,6 +243,43 @@ export default function Ledger({
               ))}
             </select>
           </div>
+
+          {accountOptions.length > 0 && (
+            <>
+              <div className="flex items-center gap-1">
+                <select
+                  value={accountFilter}
+                  onChange={(e) => setFilterAndReset(setAccountFilter)(e.target.value)}
+                  className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-xs font-bold rounded-lg px-2 py-1.5 focus:ring-0 cursor-pointer dark:text-white"
+                >
+                  <option value="all">{t('ledger.allAccounts')}</option>
+                  {HOLDINGS.filter((h) => accountsByHolding[h]?.length > 0).map((h) => (
+                    <optgroup key={h} label={HOLDING_LABELS[h]}>
+                      {accountsByHolding[h].map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-1">
+                <select
+                  value={holdingFilter}
+                  onChange={(e) => setFilterAndReset(setHoldingFilter)(e.target.value)}
+                  className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-xs font-bold rounded-lg px-2 py-1.5 focus:ring-0 cursor-pointer dark:text-white"
+                >
+                  <option value="all">{t('ledger.allHoldings')}</option>
+                  {HOLDINGS.filter((h) => h !== 'none').map((h) => (
+                    <option key={h} value={h}>
+                      {HOLDING_LABELS[h]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
 
           <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
             {[
@@ -397,10 +501,10 @@ export default function Ledger({
                     <span>{tx.playerName}</span>
                   </>
                 )}
-                {tx.type && (
+                {(accountMap[tx.accountId]?.name || tx.type) && (
                   <>
                     <span>·</span>
-                    <span>{tx.type}</span>
+                    <span>{accountMap[tx.accountId]?.name || tx.type}</span>
                   </>
                 )}
               </div>

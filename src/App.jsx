@@ -869,6 +869,7 @@ function App() {
                       setShowPlayerModal(true);
                     }}
                     onToggleWaive={(pId, state) => handleToggleWaiveFee(pId, selectedSeason, state)}
+                    accountMap={accountMap}
                   />
                 ) : (
                   <ParentView
@@ -909,6 +910,8 @@ function App() {
                   onDeleteExpense={canEditSchedule ? handleDeleteExpense : null}
                   seasonIds={seasons.map((s) => s.id)}
                   selectedSeason={selectedSeason}
+                  activeAccounts={activeAccounts}
+                  accountMap={accountMap}
                 />
               }
             />
@@ -1007,6 +1010,10 @@ function App() {
                                 selectedSeason,
                                 teamSeasonId,
                                 calculatePlayerFinancials,
+                                accounts,
+                                activeAccounts,
+                                accountsByHolding,
+                                accountMap,
                               }
                             : null
                         }
@@ -1249,6 +1256,7 @@ function App() {
           players={seasonalPlayers}
           categoryOptions={categoryOptions}
           teamEvents={collapsedTeamEvents}
+          activeAccounts={activeAccounts}
         />
 
         {confirmDialog && (

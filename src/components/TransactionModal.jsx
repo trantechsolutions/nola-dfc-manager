@@ -1,15 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowRightLeft, Link2 } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
-
-const PAYMENT_METHODS = [
-  { value: 'Venmo', label: 'Venmo' },
-  { value: 'Zelle', label: 'Zelle' },
-  { value: 'Cash', label: 'Cash' },
-  { value: 'Check', label: 'Check' },
-  { value: 'ACH', label: 'ACH (Bank)' },
-  { value: 'Zeffy', label: 'Zeffy' },
-];
+import { HOLDINGS, HOLDING_LABELS } from '../utils/holdings';
 
 export default function TransactionModal({
   show,
@@ -19,17 +11,19 @@ export default function TransactionModal({
   isSubmitting,
   players,
   teamEvents = [],
+  activeAccounts = [],
 }) {
+  const defaultAccountId = activeAccounts[0]?.id || '';
   const [formData, setFormData] = useState({
     title: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
     category: 'TMF',
-    type: 'Venmo',
+    accountId: defaultAccountId,
+    transferFromAccountId: '',
+    transferToAccountId: '',
     playerId: '',
     cleared: false,
-    transferFrom: '',
-    transferTo: '',
     eventId: '',
   });
 
@@ -42,8 +36,9 @@ export default function TransactionModal({
       setFormData({
         ...initialData,
         date: formattedDate,
-        transferFrom: initialData.transferFrom || '',
-        transferTo: initialData.transferTo || '',
+        accountId: initialData.accountId || '',
+        transferFromAccountId: initialData.transferFromAccountId || '',
+        transferToAccountId: initialData.transferToAccountId || '',
         eventId: initialData.eventId || '',
       });
     } else {
@@ -52,15 +47,27 @@ export default function TransactionModal({
         amount: '',
         date: new Date().toISOString().split('T')[0],
         category: 'TMF',
-        type: 'Venmo',
+        accountId: defaultAccountId,
+        transferFromAccountId: '',
+        transferToAccountId: '',
         playerId: '',
         cleared: false,
-        transferFrom: '',
-        transferTo: '',
         eventId: '',
       });
     }
-  }, [initialData, show]);
+  }, [initialData, show, defaultAccountId]);
+
+  // Group active accounts by holding for grouped <select> optgroups
+  const accountsByHolding = useMemo(() => {
+    const grouped = {};
+    HOLDINGS.forEach((h) => {
+      grouped[h] = [];
+    });
+    activeAccounts.forEach((a) => {
+      if (grouped[a.holding]) grouped[a.holding].push(a);
+    });
+    return grouped;
+  }, [activeAccounts]);
 
   const { t } = useT();
 
@@ -71,19 +78,21 @@ export default function TransactionModal({
   const handleCategoryChange = (newCategory) => {
     const updates = { category: newCategory };
     if (newCategory === 'TRF') {
-      updates.transferFrom = formData.transferFrom || 'Venmo';
-      updates.transferTo = formData.transferTo || 'Cash';
+      // Pre-fill with first two distinct active accounts so the transfer form isn't empty.
+      const firstTwo = activeAccounts.slice(0, 2);
+      updates.transferFromAccountId = formData.transferFromAccountId || firstTwo[0]?.id || '';
+      updates.transferToAccountId = formData.transferToAccountId || firstTwo[1]?.id || firstTwo[0]?.id || '';
+      updates.accountId = '';
       updates.playerId = '';
       updates.playerName = '';
       updates.cleared = true;
     } else {
-      updates.transferFrom = '';
-      updates.transferTo = '';
+      updates.transferFromAccountId = '';
+      updates.transferToAccountId = '';
     }
-    // Credit category hides the payment-method selector; default it to Cash
-    // so the persisted type isn't an inapplicable digital method.
+    // Credit category is bookkeeping only — it never touches a real account.
     if (newCategory === 'CRE') {
-      updates.type = 'Cash';
+      updates.accountId = '';
     }
     setFormData({ ...formData, ...updates });
   };
@@ -182,17 +191,22 @@ export default function TransactionModal({
             {!isTransfer && formData.category !== 'CRE' && (
               <div>
                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  {t('txModal.paymentMethod')}
+                  {t('txModal.account')}
                 </label>
                 <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  value={formData.accountId || ''}
+                  onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
                   className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-800 dark:text-white"
                 >
-                  {PAYMENT_METHODS.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
+                  <option value="">{t('txModal.noAccount')}</option>
+                  {HOLDINGS.filter((h) => h !== 'none' && accountsByHolding[h]?.length > 0).map((h) => (
+                    <optgroup key={h} label={HOLDING_LABELS[h]}>
+                      {accountsByHolding[h].map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>
@@ -211,14 +225,18 @@ export default function TransactionModal({
                     {t('txModal.fromAccount')}
                   </label>
                   <select
-                    value={formData.transferFrom}
-                    onChange={(e) => setFormData({ ...formData, transferFrom: e.target.value })}
+                    value={formData.transferFromAccountId || ''}
+                    onChange={(e) => setFormData({ ...formData, transferFromAccountId: e.target.value })}
                     className="w-full border border-indigo-200 dark:border-indigo-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-800 dark:text-white"
                   >
-                    {PAYMENT_METHODS.map((m) => (
-                      <option key={m.value} value={m.value} disabled={m.value === formData.transferTo}>
-                        {m.label}
-                      </option>
+                    {HOLDINGS.filter((h) => h !== 'none' && accountsByHolding[h]?.length > 0).map((h) => (
+                      <optgroup key={h} label={HOLDING_LABELS[h]}>
+                        {accountsByHolding[h].map((a) => (
+                          <option key={a.id} value={a.id} disabled={a.id === formData.transferToAccountId}>
+                            {a.name}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </div>
@@ -230,19 +248,23 @@ export default function TransactionModal({
                     {t('txModal.toAccount')}
                   </label>
                   <select
-                    value={formData.transferTo}
-                    onChange={(e) => setFormData({ ...formData, transferTo: e.target.value })}
+                    value={formData.transferToAccountId || ''}
+                    onChange={(e) => setFormData({ ...formData, transferToAccountId: e.target.value })}
                     className="w-full border border-indigo-200 dark:border-indigo-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-800 dark:text-white"
                   >
-                    {PAYMENT_METHODS.map((m) => (
-                      <option key={m.value} value={m.value} disabled={m.value === formData.transferFrom}>
-                        {m.label}
-                      </option>
+                    {HOLDINGS.filter((h) => h !== 'none' && accountsByHolding[h]?.length > 0).map((h) => (
+                      <optgroup key={h} label={HOLDING_LABELS[h]}>
+                        {accountsByHolding[h].map((a) => (
+                          <option key={a.id} value={a.id} disabled={a.id === formData.transferFromAccountId}>
+                            {a.name}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </div>
               </div>
-              {formData.transferFrom === formData.transferTo && formData.transferFrom && (
+              {formData.transferFromAccountId === formData.transferToAccountId && formData.transferFromAccountId && (
                 <p className="text-xs text-red-500 font-bold">{t('txModal.sameAccountError')}</p>
               )}
             </div>
@@ -328,7 +350,11 @@ export default function TransactionModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || (isTransfer && formData.transferFrom === formData.transferTo)}
+              disabled={
+                isSubmitting ||
+                (isTransfer && formData.transferFromAccountId === formData.transferToAccountId) ||
+                (isTransfer && !formData.transferFromAccountId)
+              }
               className={`font-bold py-2 px-6 rounded-lg shadow-sm dark:shadow-none transition-colors disabled:opacity-50 text-white ${
                 isTransfer ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'
               }`}

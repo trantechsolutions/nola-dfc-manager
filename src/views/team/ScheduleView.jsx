@@ -183,6 +183,8 @@ export default function ScheduleView({
   onDeleteExpense = null,
   seasonIds = [],
   selectedSeason,
+  activeAccounts = [],
+  accountMap = {},
 }) {
   const { t } = useT();
   const [tab, setTab] = useState('upcoming');
@@ -477,6 +479,8 @@ export default function ScheduleView({
         onToggleCleared={onToggleCleared}
         onDeleteExpense={onDeleteExpense}
         seasonIds={seasonIds}
+        activeAccounts={activeAccounts}
+        accountMap={accountMap}
       />
     </div>
   );

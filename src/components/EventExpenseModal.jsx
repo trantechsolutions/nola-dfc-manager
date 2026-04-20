@@ -11,7 +11,7 @@ const CATEGORY_COLORS = {
   FRI: 'bg-rose-50 text-rose-700',
 };
 
-const PAYMENT_METHODS = ['Venmo', 'Zelle', 'Cash', 'Check', 'ACH', 'Zeffy'];
+import { HOLDINGS, HOLDING_LABELS } from '../utils/holdings';
 
 function getExpenseTemplates(t) {
   return {
@@ -62,11 +62,19 @@ export default function EventExpenseModal({
   onToggleCleared,
   onDeleteExpense,
   seasonIds = [],
+  activeAccounts = [],
+  accountMap = {},
 }) {
   const { t } = useT();
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ title: '', amount: '', category: 'OPE', type: 'Venmo' });
+  const defaultAccountId = activeAccounts[0]?.id || '';
+  const [form, setForm] = useState({ title: '', amount: '', category: 'OPE', accountId: defaultAccountId });
   const [saving, setSaving] = useState(false);
+
+  const accountsByHolding = HOLDINGS.reduce((acc, h) => {
+    acc[h] = activeAccounts.filter((a) => a.holding === h);
+    return acc;
+  }, {});
 
   if (!show || !dbEvent) return null;
 
@@ -89,7 +97,7 @@ export default function EventExpenseModal({
   const remaining = totalPlanned - totalPaid;
 
   const handleQuickAdd = (template) => {
-    setForm({ title: template.title, amount: '', category: template.category, type: 'Venmo' });
+    setForm({ title: template.title, amount: '', category: template.category, accountId: defaultAccountId });
     setAdding(true);
   };
 
@@ -105,15 +113,13 @@ export default function EventExpenseModal({
         amount: amount > 0 ? -amount : amount, // expenses are negative
         date: eventDate,
         category: form.category,
-        type: form.type,
+        accountId: form.accountId || null,
         cleared: false,
         eventId: dbEvent.id,
         playerId: '',
-        transferFrom: '',
-        transferTo: '',
         ...(detectedSeason ? { seasonId: detectedSeason } : {}),
       });
-      setForm({ title: '', amount: '', category: 'OPE', type: 'Venmo' });
+      setForm({ title: '', amount: '', category: 'OPE', accountId: defaultAccountId });
       setAdding(false);
     } finally {
       setSaving(false);
@@ -217,7 +223,11 @@ export default function EventExpenseModal({
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] text-slate-400 font-medium">{txDate}</span>
-                        {tx.type && <span className="text-[10px] text-slate-400 font-medium">· {tx.type}</span>}
+                        {(accountMap[tx.accountId]?.name || tx.type) && (
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            · {accountMap[tx.accountId]?.name || tx.type}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <span className={`font-black text-sm shrink-0 ${tx.cleared ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -263,7 +273,7 @@ export default function EventExpenseModal({
                 })}
                 <button
                   onClick={() => {
-                    setForm({ title: '', amount: '', category: 'OPE', type: 'Venmo' });
+                    setForm({ title: '', amount: '', category: 'OPE', accountId: defaultAccountId });
                     setAdding(true);
                   }}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
@@ -325,17 +335,22 @@ export default function EventExpenseModal({
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
-                      {t('expenses.payMethod')}
+                      {t('txModal.account')}
                     </label>
                     <select
-                      value={form.type}
-                      onChange={(e) => setForm({ ...form, type: e.target.value })}
+                      value={form.accountId || ''}
+                      onChange={(e) => setForm({ ...form, accountId: e.target.value })}
                       className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-800 dark:text-white"
                     >
-                      {PAYMENT_METHODS.map((m) => (
-                        <option key={m} value={m}>
-                          {m}
-                        </option>
+                      <option value="">{t('txModal.noAccount')}</option>
+                      {HOLDINGS.filter((h) => h !== 'none' && accountsByHolding[h]?.length > 0).map((h) => (
+                        <optgroup key={h} label={HOLDING_LABELS[h]}>
+                          {accountsByHolding[h].map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.name}
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                   </div>

@@ -25,6 +25,11 @@ export default function LedgerView({
   calculatePlayerFinancials,
   // Category management
   onManageCategories,
+  // Accounts
+  accounts = [],
+  activeAccounts = [],
+  accountsByHolding = { digital: [], bank: [], cash: [], none: [] },
+  accountMap = {},
 }) {
   const { t } = useT();
   const [startDate, setStartDate] = useState('');
@@ -181,6 +186,8 @@ export default function LedgerView({
         formatMoney={formatMoney}
         categoryLabels={categoryLabels}
         categoryColors={categoryColors}
+        accounts={accounts}
+        accountMap={accountMap}
       />
 
       {/* ── BULK UPLOAD MODAL ── */}
@@ -195,6 +202,7 @@ export default function LedgerView({
         teamSeasonId={teamSeasonId}
         onBulkSave={onBulkUpload}
         showToast={showToast}
+        activeAccounts={activeAccounts}
       />
     </div>
   );

@@ -15,8 +15,6 @@ import {
   Wallet,
   AlertCircle,
   Landmark,
-  Banknote,
-  SmartphoneNfc,
   CheckCircle2,
   FileCheck2,
   Camera,
@@ -28,37 +26,7 @@ import {
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup } from '../../utils/ageGroup';
 import JerseyBadge from '../../components/JerseyBadge';
-
-// ── Account helpers ───────────────────────────────────────────
-const ACCOUNT_ICONS = { Venmo: SmartphoneNfc, Cash: Banknote, Bank: Landmark, Zeffy: Wallet };
-const ACCOUNT_COLORS = {
-  Venmo: {
-    bg: 'bg-blue-50 dark:bg-blue-900/30',
-    text: 'text-blue-700 dark:text-blue-300',
-    border: 'border-blue-200 dark:border-blue-700',
-    icon: 'text-blue-500 dark:text-blue-400',
-  },
-  Cash: {
-    bg: 'bg-emerald-50 dark:bg-emerald-900/30',
-    text: 'text-emerald-700 dark:text-emerald-300',
-    border: 'border-emerald-200 dark:border-emerald-700',
-    icon: 'text-emerald-500 dark:text-emerald-400',
-  },
-  Bank: {
-    bg: 'bg-slate-50 dark:bg-slate-800',
-    text: 'text-slate-700 dark:text-slate-300',
-    border: 'border-slate-200 dark:border-slate-700',
-    icon: 'text-slate-500 dark:text-slate-400',
-  },
-  Zeffy: {
-    bg: 'bg-rose-50 dark:bg-rose-900/30',
-    text: 'text-rose-700 dark:text-rose-300',
-    border: 'border-rose-200 dark:border-rose-700',
-    icon: 'text-rose-500 dark:text-rose-400',
-  },
-};
-const BANK_METHODS = new Set(['ACH', 'Zelle', 'Check']);
-const toHolding = (method) => (BANK_METHODS.has(method) ? 'Bank' : method);
+import { TRACKED_HOLDINGS, HOLDING_LABELS, HOLDING_ICONS, HOLDING_COLORS } from '../../utils/holdings';
 
 export default function TeamOverviewView({
   players,
@@ -76,6 +44,7 @@ export default function TeamOverviewView({
   selectedSeason,
   setSelectedSeason,
   canViewFinancials = true,
+  accountMap = {},
 }) {
   const { t } = useT();
   const navigate = useNavigate();
@@ -143,26 +112,48 @@ export default function TeamOverviewView({
     [players, selectedSeasonData],
   );
 
-  // Account holdings
-  const accountBalances = useMemo(() => {
-    const balances = {};
+  // Holding balances — group cleared transactions by account, then roll up
+  // to the three tracked holding buckets (digital, bank, cash). Accounts with
+  // holding='none' (e.g. the Uncategorized bucket used for credits) are
+  // excluded from money-holdings math entirely.
+  const holdingBalances = useMemo(() => {
+    const perAccount = {};
     transactions.forEach((tx) => {
       if (!tx.cleared || tx.waterfallBatchId) return;
       if (tx.category === 'TRF') {
-        const from = toHolding(tx.transferFrom);
-        const to = toHolding(tx.transferTo);
         const amt = Math.abs(tx.amount);
-        if (from) balances[from] = (balances[from] || 0) - amt;
-        if (to) balances[to] = (balances[to] || 0) + amt;
-      } else {
-        const method = toHolding(tx.type || 'Other');
-        balances[method] = (balances[method] || 0) + tx.amount;
+        if (tx.transferFromAccountId) {
+          perAccount[tx.transferFromAccountId] = (perAccount[tx.transferFromAccountId] || 0) - amt;
+        }
+        if (tx.transferToAccountId) {
+          perAccount[tx.transferToAccountId] = (perAccount[tx.transferToAccountId] || 0) + amt;
+        }
+      } else if (tx.accountId) {
+        perAccount[tx.accountId] = (perAccount[tx.accountId] || 0) + tx.amount;
       }
     });
-    return Object.entries(balances)
-      .filter(([_, amount]) => Math.abs(amount) >= 0.01)
-      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
-  }, [transactions]);
+
+    const holdingTotals = {};
+    const accountsInHolding = {};
+    TRACKED_HOLDINGS.forEach((h) => {
+      holdingTotals[h] = 0;
+      accountsInHolding[h] = [];
+    });
+    Object.entries(perAccount).forEach(([accountId, amount]) => {
+      const acc = accountMap[accountId];
+      if (!acc || !TRACKED_HOLDINGS.includes(acc.holding)) return;
+      holdingTotals[acc.holding] += amount;
+      if (Math.abs(amount) >= 0.01) {
+        accountsInHolding[acc.holding].push({ id: accountId, name: acc.name, amount });
+      }
+    });
+
+    return TRACKED_HOLDINGS.map((h) => ({
+      holding: h,
+      total: holdingTotals[h],
+      accounts: accountsInHolding[h].sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)),
+    })).filter((b) => Math.abs(b.total) >= 0.01 || b.accounts.length > 0);
+  }, [transactions, accountMap]);
 
   // Roster filtering
   const displayedPlayers = viewArchived ? archivedPlayers : players;
@@ -441,40 +432,47 @@ export default function TeamOverviewView({
           )}
 
           {/* ── Account holdings ── */}
-          {canViewFinancials && accountBalances.length > 0 && (
+          {canViewFinancials && holdingBalances.length > 0 && (
             <div className="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
                   <Landmark size={16} className="text-indigo-600" /> {t('overview.moneyHoldings')}
                 </h3>
-                <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
-                  {accountBalances.length}{' '}
-                  {accountBalances.length !== 1 ? t('overview.accounts') : t('overview.account')}
-                </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {accountBalances.map(([account, amount]) => {
-                  const colors = ACCOUNT_COLORS[account] || {
-                    bg: 'bg-slate-50 dark:bg-slate-800',
-                    text: 'text-slate-700 dark:text-slate-300',
-                    border: 'border-slate-200 dark:border-slate-700',
-                    icon: 'text-slate-500 dark:text-slate-400',
-                  };
-                  const IconComp = ACCOUNT_ICONS[account] || Wallet;
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {holdingBalances.map(({ holding, total, accounts: holdingAccounts }) => {
+                  const colors = HOLDING_COLORS[holding];
+                  const IconComp = HOLDING_ICONS[holding];
                   return (
-                    <div
-                      key={account}
-                      className={`${colors.bg} border ${colors.border} rounded-xl p-4 flex items-center gap-3`}
-                    >
-                      <div className={`p-2 rounded-lg ${colors.bg} ${colors.icon}`}>
-                        <IconComp size={18} />
+                    <div key={holding} className={`${colors.bg} border ${colors.border} rounded-xl p-4`}>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`p-2 rounded-lg ${colors.bg} ${colors.icon}`}>
+                          <IconComp size={18} />
+                        </div>
+                        <div className="flex-grow min-w-0">
+                          <p className="text-xs font-black text-slate-700 dark:text-slate-300 truncate">
+                            {HOLDING_LABELS[holding]}
+                          </p>
+                          <p
+                            className={`text-lg font-black tracking-tight ${total < 0 ? 'text-red-600' : colors.text}`}
+                          >
+                            {formatMoney(total)}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-grow min-w-0">
-                        <p className="text-xs font-black text-slate-700 dark:text-slate-300 truncate">{account}</p>
-                        <p className={`text-lg font-black tracking-tight ${amount < 0 ? 'text-red-600' : colors.text}`}>
-                          {formatMoney(amount)}
-                        </p>
-                      </div>
+                      {holdingAccounts.length > 0 && (
+                        <ul className="space-y-0.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                          {holdingAccounts.map((a) => (
+                            <li
+                              key={a.id}
+                              className="flex justify-between items-center text-[11px] font-medium text-slate-500 dark:text-slate-400"
+                            >
+                              <span className="truncate">{a.name}</span>
+                              <span className={a.amount < 0 ? 'text-red-500' : ''}>{formatMoney(a.amount)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   );
                 })}
@@ -484,7 +482,7 @@ export default function TeamOverviewView({
                   {t('overview.totalHoldings')}
                 </span>
                 <span className={`text-sm font-black ${teamBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {formatMoney(accountBalances.reduce((s, [_, a]) => s + a, 0))}
+                  {formatMoney(holdingBalances.reduce((s, b) => s + b.total, 0))}
                 </span>
               </div>
             </div>

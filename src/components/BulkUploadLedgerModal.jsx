@@ -102,9 +102,6 @@ function autoMapColumns(headers) {
   return mapping;
 }
 
-// ── Payment method options ──
-const PAYMENT_METHODS = ['Venmo', 'Zelle', 'Cash', 'Check', 'ACH', 'Zeffy'];
-
 export default function BulkUploadLedgerModal({
   show,
   onClose,
@@ -116,6 +113,7 @@ export default function BulkUploadLedgerModal({
   teamSeasonId,
   onBulkSave,
   showToast,
+  activeAccounts = [],
 }) {
   const [step, setStep] = useState('upload'); // upload | mapping | preview | importing | done
   const [rawRows, setRawRows] = useState([]);
@@ -250,13 +248,17 @@ export default function BulkUploadLedgerModal({
         const matchedPlayer = findPlayer(playerRaw);
         const playerWarning = playerRaw && !matchedPlayer ? `Player "${playerRaw}" not found on roster` : '';
 
-        // Payment method
-        let payMethod = get('paymentMethod') || 'Venmo';
-        if (!PAYMENT_METHODS.map((m) => m.toLowerCase()).includes(payMethod.toLowerCase())) {
-          payMethod = 'Venmo'; // fallback to default
-        } else {
-          payMethod = PAYMENT_METHODS.find((m) => m.toLowerCase() === payMethod.toLowerCase()) || 'Venmo';
-        }
+        // Account: match CSV payment-method column (case-insensitive) to an account name.
+        // Unmatched rows fall to the team's 'Uncategorized' account (holding='none'),
+        // or null if no Uncategorized exists — user can reassign after import.
+        const payMethodRaw = (get('paymentMethod') || '').trim();
+        const uncategorized = activeAccounts.find((a) => a.holding === 'none');
+        const matchedAccount = payMethodRaw
+          ? activeAccounts.find((a) => a.name.toLowerCase() === payMethodRaw.toLowerCase())
+          : null;
+        const resolvedAccount = matchedAccount || uncategorized || null;
+        const accountWarning =
+          payMethodRaw && !matchedAccount ? `Account "${payMethodRaw}" not found — will import to Uncategorized` : '';
 
         // Cleared
         const clearedRaw = (get('cleared') || '').toLowerCase();
@@ -266,6 +268,7 @@ export default function BulkUploadLedgerModal({
           _rowIndex: idx,
           _errors: errors,
           _playerWarning: playerWarning,
+          _accountWarning: accountWarning,
           _include: errors.length === 0,
           _hasError: errors.length > 0,
           date: dateStr,
@@ -274,7 +277,8 @@ export default function BulkUploadLedgerModal({
           category: catCode,
           player: playerRaw,
           matchedPlayer,
-          type: payMethod,
+          accountId: resolvedAccount?.id || null,
+          accountName: resolvedAccount?.name || '',
           cleared,
           notes: get('notes'),
         };
@@ -306,13 +310,11 @@ export default function BulkUploadLedgerModal({
       amount: t.amount,
       date: t.date,
       category: t.category,
-      type: t.type,
+      accountId: t.accountId || null,
       playerId: t.matchedPlayer?.id || '',
       playerName: t.matchedPlayer ? `${t.matchedPlayer.firstName} ${t.matchedPlayer.lastName}` : '',
       cleared: t.cleared,
       notes: t.notes || '',
-      transferFrom: '',
-      transferTo: '',
     }));
 
     try {
