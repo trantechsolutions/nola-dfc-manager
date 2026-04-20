@@ -29,6 +29,9 @@ export const financeService = {
       originalTxId: tx.original_tx_id,
       transferFrom: tx.transfer_from || '',
       transferTo: tx.transfer_to || '',
+      accountId: tx.account_id || null,
+      transferFromAccountId: tx.transfer_from_account_id || null,
+      transferToAccountId: tx.transfer_to_account_id || null,
       eventId: tx.event_id || null,
       eventTitle: tx.team_events?.title || null,
     }));
@@ -52,6 +55,9 @@ export const financeService = {
       ...(txData.teamSeasonId ? { team_season_id: txData.teamSeasonId } : {}),
       transfer_from: txData.transferFrom || null,
       transfer_to: txData.transferTo || null,
+      account_id: txData.accountId || null,
+      transfer_from_account_id: txData.transferFromAccountId || null,
+      transfer_to_account_id: txData.transferToAccountId || null,
       event_id: txData.eventId || null,
     };
     const { data, error } = await supabase.from('transactions').insert(row).select().single();
@@ -87,6 +93,9 @@ export const financeService = {
     if ('notes' in txData) updates.notes = txData.notes;
     if ('transferFrom' in txData) updates.transfer_from = txData.transferFrom || null;
     if ('transferTo' in txData) updates.transfer_to = txData.transferTo || null;
+    if ('accountId' in txData) updates.account_id = txData.accountId || null;
+    if ('transferFromAccountId' in txData) updates.transfer_from_account_id = txData.transferFromAccountId || null;
+    if ('transferToAccountId' in txData) updates.transfer_to_account_id = txData.transferToAccountId || null;
     if ('eventId' in txData) updates.event_id = txData.eventId || null;
     const { error } = await supabase.from('transactions').update(updates).eq('id', txId);
     if (error) throw error;
@@ -148,6 +157,9 @@ export const financeService = {
       distributed: false,
       transfer_from: tx.transferFrom || null,
       transfer_to: tx.transferTo || null,
+      account_id: tx.accountId || null,
+      transfer_from_account_id: tx.transferFromAccountId || null,
+      transfer_to_account_id: tx.transferToAccountId || null,
       ...(teamSeasonId ? { team_season_id: teamSeasonId } : {}),
     }));
 
@@ -183,6 +195,9 @@ export const financeService = {
       originalTxId: tx.original_tx_id,
       transferFrom: tx.transfer_from || '',
       transferTo: tx.transfer_to || '',
+      accountId: tx.account_id || null,
+      transferFromAccountId: tx.transfer_from_account_id || null,
+      transferToAccountId: tx.transfer_to_account_id || null,
       eventId: tx.event_id || null,
       eventTitle: tx.team_events?.title || null,
     }));

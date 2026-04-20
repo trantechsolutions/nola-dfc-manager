@@ -64,6 +64,7 @@ import { useLedgerManager } from './hooks/useLedgerManager';
 import { useTeamContext } from './hooks/useTeamContext';
 import { PERMISSIONS } from './utils/roles';
 import { useCategoryManager } from './hooks/useCategoryManager';
+import { useAccounts } from './hooks/useAccounts';
 import { isSingleTeamMode } from './utils/singleTeamMode';
 
 function App() {
@@ -420,6 +421,17 @@ function App() {
     deleteCategory,
     isSaving: isCategorySaving,
   } = useCategoryManager(club?.id);
+
+  // ── Accounts (team-scoped) ──
+  const {
+    accounts,
+    activeAccounts,
+    accountsByHolding,
+    accountMap,
+    saveAccount,
+    deleteAccount,
+    isSaving: isAccountSaving,
+  } = useAccounts(selectedTeamId);
 
   // ── AUTH LISTENER ──
   const lastUserIdRef = useRef(null);
