@@ -315,7 +315,7 @@ export default function TeamUserManagement({ selectedTeam, showToast, showConfir
                           key={p.id}
                           className="text-[9px] font-bold bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 px-1.5 py-0.5 rounded text-slate-500"
                         >
-                          #{p.jerseyNumber || '?'} {p.name}
+                          #{p.jersey || '?'} {p.name}
                         </span>
                       ))}
                     </div>
