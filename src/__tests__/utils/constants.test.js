@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DOC_TYPE_LABELS, DOC_TYPES, CATEGORY_LABELS, PAYMENT_METHODS } from '../../utils/constants';
+import { DOC_TYPE_LABELS, DOC_TYPES, CATEGORY_LABELS } from '../../utils/constants';
 
 describe('constants', () => {
   it('DOC_TYPE_LABELS has all expected types', () => {
@@ -18,11 +18,6 @@ describe('constants', () => {
     expect(CATEGORY_LABELS).toHaveProperty('LEA');
     expect(CATEGORY_LABELS).toHaveProperty('CRE');
     expect(CATEGORY_LABELS).toHaveProperty('FRI');
-  });
-
-  it('PAYMENT_METHODS is a non-empty array', () => {
-    expect(Array.isArray(PAYMENT_METHODS)).toBe(true);
-    expect(PAYMENT_METHODS.length).toBeGreaterThan(0);
   });
 
   it('DOC_TYPES is a non-empty array', () => {

@@ -102,9 +102,7 @@ export default function Ledger({
         (tx) =>
           tx.title?.toLowerCase().includes(q) ||
           tx.playerName?.toLowerCase().includes(q) ||
-          tx.notes?.toLowerCase().includes(q) ||
-          tx.transferFrom?.toLowerCase().includes(q) ||
-          tx.transferTo?.toLowerCase().includes(q),
+          tx.notes?.toLowerCase().includes(q),
       );
     }
 
@@ -187,8 +185,8 @@ export default function Ledger({
   };
 
   const TransferBadge = ({ tx }) => {
-    const fromName = accountMap[tx.transferFromAccountId]?.name || tx.transferFrom || '';
-    const toName = accountMap[tx.transferToAccountId]?.name || tx.transferTo || '';
+    const fromName = accountMap[tx.transferFromAccountId]?.name || '';
+    const toName = accountMap[tx.transferToAccountId]?.name || '';
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
         {fromName} <ArrowRightLeft size={10} /> {toName}
@@ -501,10 +499,10 @@ export default function Ledger({
                     <span>{tx.playerName}</span>
                   </>
                 )}
-                {(accountMap[tx.accountId]?.name || tx.type) && (
+                {accountMap[tx.accountId]?.name && (
                   <>
                     <span>·</span>
-                    <span>{accountMap[tx.accountId]?.name || tx.type}</span>
+                    <span>{accountMap[tx.accountId].name}</span>
                   </>
                 )}
               </div>

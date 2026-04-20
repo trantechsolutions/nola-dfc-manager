@@ -18,7 +18,6 @@ export const financeService = {
       date: tx.date ? { seconds: Math.floor(new Date(tx.date + 'T12:00:00').getTime() / 1000) } : null,
       rawDate: tx.date,
       split: tx.split,
-      type: tx.type,
       category: tx.category,
       title: tx.title,
       amount: Number(tx.amount),
@@ -27,8 +26,6 @@ export const financeService = {
       distributed: tx.distributed,
       waterfallBatchId: tx.waterfall_batch_id,
       originalTxId: tx.original_tx_id,
-      transferFrom: tx.transfer_from || '',
-      transferTo: tx.transfer_to || '',
       accountId: tx.account_id || null,
       transferFromAccountId: tx.transfer_from_account_id || null,
       transferToAccountId: tx.transfer_to_account_id || null,
@@ -43,7 +40,6 @@ export const financeService = {
       player_id: txData.playerId || null,
       date: txData.date,
       split: txData.split || null,
-      type: txData.type || null,
       category: txData.category,
       title: txData.title,
       amount: txData.amount,
@@ -53,8 +49,6 @@ export const financeService = {
       waterfall_batch_id: txData.waterfallBatchId || null,
       original_tx_id: txData.originalTxId || null,
       ...(txData.teamSeasonId ? { team_season_id: txData.teamSeasonId } : {}),
-      transfer_from: txData.transferFrom || null,
-      transfer_to: txData.transferTo || null,
       account_id: txData.accountId || null,
       transfer_from_account_id: txData.transferFromAccountId || null,
       transfer_to_account_id: txData.transferToAccountId || null,
@@ -86,13 +80,10 @@ export const financeService = {
     if ('amount' in txData) updates.amount = txData.amount;
     if ('date' in txData) updates.date = txData.date;
     if ('category' in txData) updates.category = txData.category;
-    if ('type' in txData) updates.type = txData.type;
     if ('playerId' in txData) updates.player_id = txData.playerId || null;
     if ('cleared' in txData) updates.cleared = txData.cleared;
     if ('distributed' in txData) updates.distributed = txData.distributed;
     if ('notes' in txData) updates.notes = txData.notes;
-    if ('transferFrom' in txData) updates.transfer_from = txData.transferFrom || null;
-    if ('transferTo' in txData) updates.transfer_to = txData.transferTo || null;
     if ('accountId' in txData) updates.account_id = txData.accountId || null;
     if ('transferFromAccountId' in txData) updates.transfer_from_account_id = txData.transferFromAccountId || null;
     if ('transferToAccountId' in txData) updates.transfer_to_account_id = txData.transferToAccountId || null;
@@ -148,15 +139,12 @@ export const financeService = {
       season_id: tx.seasonId || seasonId,
       player_id: tx.playerId || null,
       date: tx.date,
-      type: tx.type || null,
       category: tx.category,
       title: tx.title,
       amount: tx.amount,
       notes: tx.notes || null,
       cleared: tx.cleared ?? false,
       distributed: false,
-      transfer_from: tx.transferFrom || null,
-      transfer_to: tx.transferTo || null,
       account_id: tx.accountId || null,
       transfer_from_account_id: tx.transferFromAccountId || null,
       transfer_to_account_id: tx.transferToAccountId || null,
@@ -184,7 +172,6 @@ export const financeService = {
       date: { seconds: Math.floor(new Date(tx.date).getTime() / 1000) },
       rawDate: tx.date,
       split: tx.split,
-      type: tx.type,
       category: tx.category,
       title: tx.title,
       amount: Number(tx.amount),
@@ -193,8 +180,6 @@ export const financeService = {
       distributed: tx.distributed,
       waterfallBatchId: tx.waterfall_batch_id,
       originalTxId: tx.original_tx_id,
-      transferFrom: tx.transfer_from || '',
-      transferTo: tx.transfer_to || '',
       accountId: tx.account_id || null,
       transferFromAccountId: tx.transfer_from_account_id || null,
       transferToAccountId: tx.transfer_to_account_id || null,

@@ -19,9 +19,6 @@ export const useLedgerManager = (refreshData, selectedSeason, teamSeasonId = nul
         seasonId: txData.seasonId || selectedSeason,
         // Attach team_season_id if available (new transactions get scoped)
         ...(teamSeasonId && !txData.teamSeasonId ? { teamSeasonId } : {}),
-        // Transfer fields — pass through if present, clear if not a transfer
-        transferFrom: txData.category === 'TRF' ? txData.transferFrom || null : null,
-        transferTo: txData.category === 'TRF' ? txData.transferTo || null : null,
       };
 
       if (formattedData.id) {
@@ -63,8 +60,6 @@ export const useLedgerManager = (refreshData, selectedSeason, teamSeasonId = nul
           date: dateStr,
           seasonId: tx.seasonId || selectedSeason,
           ...(teamSeasonId && !tx.teamSeasonId ? { teamSeasonId } : {}),
-          transferFrom: tx.category === 'TRF' ? tx.transferFrom || null : null,
-          transferTo: tx.category === 'TRF' ? tx.transferTo || null : null,
         });
       }
       await refreshData();

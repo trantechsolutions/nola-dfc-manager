@@ -223,9 +223,9 @@ export default function EventExpenseModal({
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] text-slate-400 font-medium">{txDate}</span>
-                        {(accountMap[tx.accountId]?.name || tx.type) && (
+                        {accountMap[tx.accountId]?.name && (
                           <span className="text-[10px] text-slate-400 font-medium">
-                            · {accountMap[tx.accountId]?.name || tx.type}
+                            · {accountMap[tx.accountId].name}
                           </span>
                         )}
                       </div>

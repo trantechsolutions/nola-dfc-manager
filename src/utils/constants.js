@@ -52,6 +52,3 @@ export const CATEGORY_TEXT_COLORS = {
   FRI: 'text-rose-600',
   TRF: 'text-indigo-600',
 };
-
-// ── Payment Methods ─────────────────────────────────────────
-export const PAYMENT_METHODS = ['Venmo', 'Zelle', 'Cash', 'Check', 'Card', 'Bank Transfer', 'Zeffy', 'Other'];
