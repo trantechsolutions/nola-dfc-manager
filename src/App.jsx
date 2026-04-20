@@ -920,7 +920,15 @@ function App() {
               <Route
                 path="/team-admin"
                 element={
-                  <TeamSettingsView selectedTeam={selectedTeam} refreshContext={refreshContext} showToast={showToast} />
+                  <TeamSettingsView
+                    selectedTeam={selectedTeam}
+                    refreshContext={refreshContext}
+                    showToast={showToast}
+                    accounts={accounts}
+                    onSaveAccount={saveAccount}
+                    onDeleteAccount={deleteAccount}
+                    isAccountSaving={isAccountSaving}
+                  />
                 }
               />
             )}

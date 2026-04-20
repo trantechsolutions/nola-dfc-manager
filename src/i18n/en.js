@@ -528,6 +528,25 @@ export default {
     descTransfer: 'Internal fund transfers between accounts',
   },
 
+  // ── Account Manager ────────────────────────────────────
+  accountMgr: {
+    title: 'Accounts',
+    subtitle: 'Where the team holds money — digital wallets, bank accounts, and cash.',
+    addAccount: 'Add Account',
+    newAccount: 'New Account',
+    editAccount: 'Edit Account',
+    name: 'Name',
+    namePlaceholder: 'e.g. Chase Checking, Team Venmo',
+    holding: 'Holding',
+    sortOrder: 'Sort Order',
+    active: 'Active',
+    archived: 'Archived',
+    noAccounts: 'No accounts yet. Add one to start tracking holdings.',
+    errorName: 'Name is required',
+    errorDuplicate: 'An account with that name already exists',
+    confirmDelete: 'Delete account "{{name}}"? This can only be done if no transactions reference it.',
+  },
+
   // ── Bulk Upload ────────────────────────────────────────
   bulk: {
     title: 'Bulk Upload',

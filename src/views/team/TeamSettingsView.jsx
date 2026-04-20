@@ -2,8 +2,17 @@ import { useState, useEffect } from 'react';
 import { Rss, CreditCard, CheckCircle2, AlertCircle, Edit, Save, X, Loader2 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
+import AccountManager from '../../components/AccountManager';
 
-export default function TeamSettingsView({ selectedTeam, refreshContext, showToast }) {
+export default function TeamSettingsView({
+  selectedTeam,
+  refreshContext,
+  showToast,
+  accounts = [],
+  onSaveAccount,
+  onDeleteAccount,
+  isAccountSaving = false,
+}) {
   const { t } = useT();
 
   // ── iCal state ──
@@ -208,6 +217,18 @@ export default function TeamSettingsView({ selectedTeam, refreshContext, showToa
           </div>
         )}
       </div>
+
+      {/* ── Accounts ── */}
+      {onSaveAccount && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none p-5">
+          <AccountManager
+            accounts={accounts}
+            onSave={onSaveAccount}
+            onDelete={onDeleteAccount}
+            isSaving={isAccountSaving}
+          />
+        </div>
+      )}
 
       {/* ── Payment Instructions ── */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none p-5 space-y-4">

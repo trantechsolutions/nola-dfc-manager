@@ -528,6 +528,25 @@ export default {
     descTransfer: 'Transferencias internas entre cuentas',
   },
 
+  // ── Administrador de Cuentas ───────────────────────────
+  accountMgr: {
+    title: 'Cuentas',
+    subtitle: 'Dónde el equipo guarda dinero — billeteras digitales, cuentas bancarias y efectivo.',
+    addAccount: 'Agregar Cuenta',
+    newAccount: 'Nueva Cuenta',
+    editAccount: 'Editar Cuenta',
+    name: 'Nombre',
+    namePlaceholder: 'p. ej. Chase Checking, Team Venmo',
+    holding: 'Tipo de Saldo',
+    sortOrder: 'Orden',
+    active: 'Activa',
+    archived: 'Archivada',
+    noAccounts: 'Aún no hay cuentas. Agrega una para empezar a rastrear saldos.',
+    errorName: 'El nombre es obligatorio',
+    errorDuplicate: 'Ya existe una cuenta con ese nombre',
+    confirmDelete: 'Eliminar la cuenta "{{name}}"? Solo se puede si ninguna transacción la referencia.',
+  },
+
   // ── Carga Masiva ───────────────────────────────────────
   bulk: {
     title: 'Carga Masiva',
