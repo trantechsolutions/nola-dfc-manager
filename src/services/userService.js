@@ -261,6 +261,14 @@ export const userService = {
   },
 
   createInvitation: async (invData) => {
+    let invitedBy = invData.invitedBy;
+    if (!invitedBy) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error('Must be signed in to create an invitation');
+      invitedBy = user.id;
+    }
     const { data, error } = await supabase
       .from('invitations')
       .insert({
@@ -269,7 +277,7 @@ export const userService = {
         email: invData.email.toLowerCase().trim(),
         role: invData.role,
         invited_name: invData.name || null,
-        invited_by: invData.invitedBy,
+        invited_by: invitedBy,
       })
       .select()
       .single();

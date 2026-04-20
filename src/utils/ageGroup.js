@@ -1,9 +1,13 @@
 /**
  * Calculate US Soccer age group from birthdate and season.
  *
- * US Soccer uses **birth year** to determine age groups.
- * The reference year is the second year of the season
- * (e.g., for "2025-2026", the reference year is 2026).
+ * Two regimes are supported:
+ *  - Seasons through 2025-2026: legacy **birth-year** rule (age = seasonEndYear - birthYear).
+ *  - Seasons 2026-2027 and later: **school-year** rule (Aug 1 - Jul 31). Players born
+ *    Aug-Dec are shifted into the following effective year so the resulting U-number
+ *    matches the official USSF age-group chart.
+ *
+ * US Soccer announced the reversion to school-year registration effective Fall 2026.
  *
  * @param {string} birthdate – ISO date string (YYYY-MM-DD)
  * @param {string} seasonId  – season identifier like "2025-2026"
@@ -12,22 +16,52 @@
 export function getUSAgeGroup(birthdate, seasonId) {
   if (!birthdate) return null;
 
-  const birthYear = new Date(birthdate).getFullYear();
+  // Parse YYYY-MM-DD components directly to avoid timezone shifts that would
+  // move Aug-1 births back to Jul-31 in negative-UTC-offset locales.
+  const isoMatch = typeof birthdate === 'string' && birthdate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  let birthYear;
+  let birthMonth;
+  if (isoMatch) {
+    birthYear = parseInt(isoMatch[1], 10);
+    birthMonth = parseInt(isoMatch[2], 10);
+  } else {
+    const birth = new Date(birthdate);
+    if (isNaN(birth.getTime())) return null;
+    birthYear = birth.getFullYear();
+    birthMonth = birth.getMonth() + 1;
+  }
   if (isNaN(birthYear)) return null;
 
-  // Extract the second year from the season id (e.g., "2025-2026" → 2026)
-  let refYear;
+  let startYear;
+  let endYear;
   const parts = seasonId?.match(/(\d{4})\s*[-–]\s*(\d{4})/);
   if (parts) {
-    refYear = parseInt(parts[2], 10);
+    startYear = parseInt(parts[1], 10);
+    endYear = parseInt(parts[2], 10);
   } else {
-    // Fallback: use current year + 1
-    refYear = new Date().getFullYear() + 1;
+    // Fallback: derive current season on the Aug-Jul cycle.
+    const now = new Date();
+    const y = now.getFullYear();
+    if (now.getMonth() >= 7) {
+      startYear = y;
+      endYear = y + 1;
+    } else {
+      startYear = y - 1;
+      endYear = y;
+    }
   }
 
-  const age = refYear - birthYear;
-  if (age < 4 || age > 19) return null;
+  let age;
+  if (startYear >= 2026) {
+    // School-year regime: Aug-Dec births shift forward one effective year.
+    const effectiveYear = birthMonth >= 8 ? birthYear + 1 : birthYear;
+    age = endYear - effectiveYear;
+  } else {
+    // Legacy birth-year regime.
+    age = endYear - birthYear;
+  }
 
+  if (age < 4 || age > 19) return null;
   return `U${age}`;
 }
 
