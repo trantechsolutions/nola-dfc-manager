@@ -505,15 +505,16 @@ function App() {
   }, [currentTeamSeason?.id, selectedSeason]);
 
   // ── COMPUTED ──
-  const teamBalance = seasonalTransactions.reduce(
-    (acc, tx) => (tx.cleared && !tx.waterfallBatchId && tx.category !== 'TRF' ? acc + tx.amount : acc),
-    0,
-  );
-  const totalExpenses = seasonalTransactions.reduce(
-    (acc, tx) =>
-      tx.cleared && !tx.waterfallBatchId && tx.category !== 'TRF' && tx.amount < 0 ? acc + Math.abs(tx.amount) : acc,
-    0,
-  );
+  const teamBalance = seasonalTransactions.reduce((acc, tx) => {
+    if (!tx.cleared || tx.waterfallBatchId || tx.category === 'TRF') return acc;
+    if (tx.accountId && accountMap[tx.accountId]?.holding === 'none') return acc;
+    return acc + tx.amount;
+  }, 0);
+  const totalExpenses = seasonalTransactions.reduce((acc, tx) => {
+    if (!tx.cleared || tx.waterfallBatchId || tx.category === 'TRF' || tx.amount >= 0) return acc;
+    if (tx.accountId && accountMap[tx.accountId]?.holding === 'none') return acc;
+    return acc + Math.abs(tx.amount);
+  }, 0);
   const formatMoney = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
   if (loading || contextLoading)
@@ -887,6 +888,7 @@ function App() {
                     showToast={showToast}
                     showConfirm={showConfirm}
                     user={user}
+                    accounts={accounts}
                   />
                 )
               }

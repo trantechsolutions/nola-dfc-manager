@@ -22,6 +22,7 @@ import {
   UsersRound,
   TrendingUp,
   Percent,
+  Clock,
 } from 'lucide-react';
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup } from '../../utils/ageGroup';
@@ -154,6 +155,35 @@ export default function TeamOverviewView({
       accounts: accountsInHolding[h].sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)),
     })).filter((b) => Math.abs(b.total) >= 0.01 || b.accounts.length > 0);
   }, [transactions, accountMap]);
+
+  // Pending (uncleared) balances — same logic as holdingBalances but for !cleared transactions
+  const pendingBalances = useMemo(() => {
+    const perAccount = {};
+    transactions.forEach((tx) => {
+      if (tx.cleared || tx.waterfallBatchId) return;
+      if (tx.category === 'TRF') {
+        const amt = Math.abs(tx.amount);
+        if (tx.transferFromAccountId) {
+          perAccount[tx.transferFromAccountId] = (perAccount[tx.transferFromAccountId] ?? 0) - amt;
+        }
+        if (tx.transferToAccountId) {
+          perAccount[tx.transferToAccountId] = (perAccount[tx.transferToAccountId] ?? 0) + amt;
+        }
+      } else if (tx.accountId) {
+        perAccount[tx.accountId] = (perAccount[tx.accountId] ?? 0) + tx.amount;
+      }
+    });
+    const totals = { digital: 0, bank: 0, cash: 0 };
+    Object.entries(perAccount).forEach(([id, amt]) => {
+      const acc = accountMap[id];
+      if (acc && TRACKED_HOLDINGS.includes(acc.holding)) totals[acc.holding] += amt;
+    });
+    return totals;
+  }, [transactions, accountMap]);
+
+  const overallBalance = holdingBalances.reduce((s, b) => s + b.total, 0);
+  const pendingDelta = Object.values(pendingBalances).reduce((s, v) => s + v, 0);
+  const projectedBalance = overallBalance + pendingDelta;
 
   // Roster filtering
   const displayedPlayers = viewArchived ? archivedPlayers : players;
@@ -484,6 +514,43 @@ export default function TeamOverviewView({
                 <span className={`text-sm font-black ${teamBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   {formatMoney(holdingBalances.reduce((s, b) => s + b.total, 0))}
                 </span>
+              </div>
+            </div>
+          )}
+
+          {/* ── Balance Outlook (only when uncleared transactions exist) ── */}
+          {canViewFinancials && pendingDelta !== 0 && (
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-amber-200 dark:border-amber-800 shadow-sm dark:shadow-none">
+              <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2 mb-4">
+                <Clock size={16} className="text-amber-500" /> {t('overview.balanceOutlook')}
+              </h3>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3">
+                  <p className="text-lg font-black text-slate-800 dark:text-slate-100">{formatMoney(overallBalance)}</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
+                    {t('overview.currentBalance')}
+                  </p>
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-900/30 rounded-xl p-3">
+                  <p className="text-lg font-black text-amber-600 dark:text-amber-400">{formatMoney(pendingDelta)}</p>
+                  <p className="text-[10px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-widest mt-1">
+                    {t('overview.pendingOutflows')}
+                  </p>
+                </div>
+                <div
+                  className={`rounded-xl p-3 ${projectedBalance < overallBalance ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20'}`}
+                >
+                  <p
+                    className={`text-lg font-black ${projectedBalance < overallBalance ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}
+                  >
+                    {formatMoney(projectedBalance)}
+                  </p>
+                  <p
+                    className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${projectedBalance < overallBalance ? 'text-amber-500 dark:text-amber-400' : 'text-emerald-500 dark:text-emerald-400'}`}
+                  >
+                    {t('overview.projectedBalance')}
+                  </p>
+                </div>
               </div>
             </div>
           )}

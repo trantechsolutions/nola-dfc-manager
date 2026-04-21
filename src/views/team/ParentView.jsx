@@ -51,6 +51,7 @@ export default function ParentView({
   showToast,
   showConfirm,
   user,
+  accounts = [],
 }) {
   const { t } = useT();
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -469,15 +470,18 @@ export default function ParentView({
           )}
 
           {/* Payment Options */}
-          {playerTeam?.paymentInfo && financials.remainingBalance > 0 && !financials.isWaived && (
-            <PaymentOptions
-              paymentInfo={playerTeam.paymentInfo}
-              playerName={`${activePlayer.firstName} ${activePlayer.lastName}`}
-              remainingBalance={financials.remainingBalance}
-              formatMoney={formatMoney}
-              showToast={showToast}
-            />
-          )}
+          {financials.remainingBalance > 0 &&
+            !financials.isWaived &&
+            (playerTeam?.paymentInfo || accounts.length > 0) && (
+              <PaymentOptions
+                paymentInfo={playerTeam?.paymentInfo || ''}
+                accounts={accounts}
+                playerName={`${activePlayer.firstName} ${activePlayer.lastName}`}
+                remainingBalance={financials.remainingBalance}
+                formatMoney={formatMoney}
+                showToast={showToast}
+              />
+            )}
 
           {/* Season + Team Selector */}
           <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none space-y-3">

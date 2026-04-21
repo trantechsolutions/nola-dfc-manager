@@ -4,6 +4,7 @@ const rowToAccount = (a) => ({
   id: a.id,
   teamId: a.team_id,
   name: a.name,
+  handle: a.handle || '',
   holding: a.holding,
   isActive: a.is_active,
   sortOrder: a.sort_order || 0,
@@ -26,6 +27,7 @@ export const accountService = {
     const row = {
       team_id: accountData.teamId,
       name: accountData.name,
+      handle: accountData.handle ?? '',
       holding: accountData.holding,
       is_active: accountData.isActive ?? true,
       sort_order: accountData.sortOrder ?? 0,
@@ -38,6 +40,7 @@ export const accountService = {
   updateAccount: async (accountId, accountData) => {
     const updates = { updated_at: new Date().toISOString() };
     if ('name' in accountData) updates.name = accountData.name;
+    if ('handle' in accountData) updates.handle = accountData.handle;
     if ('holding' in accountData) updates.holding = accountData.holding;
     if ('isActive' in accountData) updates.is_active = accountData.isActive;
     if ('sortOrder' in accountData) updates.sort_order = accountData.sortOrder;

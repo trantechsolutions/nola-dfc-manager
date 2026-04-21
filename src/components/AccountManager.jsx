@@ -3,7 +3,7 @@ import { Plus, Trash2, Edit, X, Save, Wallet, Loader2 } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { HOLDINGS, HOLDING_LABELS, HOLDING_ICONS, HOLDING_COLORS } from '../utils/holdings';
 
-const EMPTY_FORM = { id: null, name: '', holding: 'bank', isActive: true, sortOrder: 0 };
+const EMPTY_FORM = { id: null, name: '', handle: '', holding: 'bank', isActive: true, sortOrder: 0 };
 
 export default function AccountManager({ accounts = [], onSave, onDelete, isSaving }) {
   const { t } = useT();
@@ -15,6 +15,7 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
     setFormData({
       id: acc.id,
       name: acc.name,
+      handle: acc.handle || '',
       holding: acc.holding,
       isActive: acc.isActive,
       sortOrder: acc.sortOrder || 0,
@@ -109,6 +110,18 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
               className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-900 dark:text-white"
             />
           </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+              {t('accountMgr.handle')}
+            </label>
+            <input
+              type="text"
+              value={formData.handle}
+              onChange={(e) => setFormData({ ...formData, handle: e.target.value })}
+              placeholder={t('accountMgr.handlePlaceholder')}
+              className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-900 dark:text-white"
+            />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">
@@ -194,9 +207,18 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-sm font-bold text-slate-800 dark:text-white truncate">{acc.name}</span>
+                    <div className="min-w-0">
+                      <span className="text-sm font-bold text-slate-800 dark:text-white truncate block">
+                        {acc.name}
+                      </span>
+                      {acc.handle && (
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium truncate block">
+                          {acc.handle}
+                        </span>
+                      )}
+                    </div>
                     {!acc.isActive && (
-                      <span className="text-[9px] font-black text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded uppercase">
+                      <span className="text-[9px] font-black text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded uppercase shrink-0">
                         {t('accountMgr.archived')}
                       </span>
                     )}
