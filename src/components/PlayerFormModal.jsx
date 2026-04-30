@@ -220,7 +220,6 @@ export default function PlayerFormModal({
                     <input
                       type="text"
                       placeholder={t('playerForm.fullName')}
-                      required
                       value={guardian.name}
                       onChange={(e) => handleGuardianChange(index, 'name', e.target.value)}
                       className="w-full border border-slate-200 dark:border-slate-700 rounded md p-1.5 text-sm focus:ring-1 focus:ring-blue-500 outline-none dark:bg-slate-800 dark:text-white"
@@ -228,7 +227,6 @@ export default function PlayerFormModal({
                     <input
                       type="email"
                       placeholder={t('playerForm.emailLogin')}
-                      required
                       value={guardian.email}
                       onChange={(e) => handleGuardianChange(index, 'email', e.target.value)}
                       className="w-full border border-slate-200 dark:border-slate-700 rounded md p-1.5 text-sm focus:ring-1 focus:ring-blue-500 outline-none dark:bg-slate-800 dark:text-white"
@@ -241,15 +239,13 @@ export default function PlayerFormModal({
                       className="w-full border border-slate-200 dark:border-slate-700 rounded md p-1.5 text-sm focus:ring-1 focus:ring-blue-500 outline-none dark:bg-slate-800 dark:text-white"
                     />
                   </div>
-                  {formData.guardians.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeGuardian(index)}
-                      className="text-red-400 hover:text-red-600 mt-1"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeGuardian(index)}
+                    className="text-red-400 hover:text-red-600 mt-1"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               ))}
             </div>

@@ -392,33 +392,6 @@ export default function BudgetView({
       if (currentTeamSeason?.id) teamSeasonData.id = currentTeamSeason.id;
       const savedTs = await supabaseService.saveTeamSeason(teamSeasonData);
 
-      // Also save to team_seasons (per-team budget data)
-      if (selectedTeamId && currentTeamSeason?.id) {
-        await supabaseService.saveTeamSeason({
-          id: currentTeamSeason.id,
-          teamId: selectedTeamId,
-          seasonId: selectedSeason,
-          isFinalized: finalize || isFinalized,
-          baseFee: roundedBaseFee,
-          bufferPercent: Number(bufferPercent),
-          expectedRosterSize: Number(rosterSize),
-          totalProjectedExpenses: totalExpenseAmount,
-          totalProjectedIncome: grandTotals.income,
-        });
-      } else if (selectedTeamId) {
-        // No team_season exists yet — create one
-        await supabaseService.saveTeamSeason({
-          teamId: selectedTeamId,
-          seasonId: selectedSeason,
-          isFinalized: finalize || isFinalized,
-          baseFee: roundedBaseFee,
-          bufferPercent: Number(bufferPercent),
-          expectedRosterSize: Number(rosterSize),
-          totalProjectedExpenses: totalExpenseAmount,
-          totalProjectedIncome: grandTotals.income,
-        });
-      }
-
       // Save budget items scoped to this team_season
       const tsId = savedTs?.id || currentTeamSeason?.id;
       await supabaseService.saveBudgetItems(selectedSeason, budgetItems, tsId);
@@ -440,7 +413,6 @@ export default function BudgetView({
       if (finalize) setIsFinalized(true);
 
       await refreshSeasons();
-      fetchData();
       onDataChange?.();
       if (showToast) showToast(finalize ? 'Budget Finalized & Fees Applied!' : 'Draft Saved.');
     } catch (e) {
