@@ -1,12 +1,12 @@
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { supabase } from './supabase';
 import {
   LayoutDashboard,
   Users,
   Eye,
   Calendar,
-  Settings,
   Sparkles,
   Building2,
   Shield,
@@ -25,34 +25,17 @@ import { useTheme } from './theme/ThemeContext';
 
 // Views
 import LoginView from './views/general/LoginView';
-import TeamOverviewView from './views/team/TeamOverviewView';
-import InsightsView from './views/team/InsightsView';
-import ScheduleView from './views/team/ScheduleView';
-import ParentView from './views/team/ParentView';
 import PublicCalendarView from './views/general/PublicCalendarView';
-import ClubDashboard from './views/club/ClubDashboard';
-import TeamList from './views/club/TeamList';
-import TeamOnboarding from './views/club/TeamOnboarding';
-import FinanceView from './views/team/FinanceView';
-import PeopleView from './views/team/PeopleView';
-import ClubAdminHub from './views/club/ClubAdminHub';
-import TeamSettingsView from './views/team/TeamSettingsView';
-import Changelog from './components/Changelog';
-import SuperAdminView from './views/admin/SuperAdminView';
-import EvaluationHub from './views/club/evaluations/EvaluationHub';
-import ClubPlayersView from './views/club/ClubPlayersView';
-import EvaluatorScoringView from './views/club/evaluations/EvaluatorScoringView';
-import SeasonEvaluationView from './views/team/SeasonEvaluationView';
 
 // Components
-import TransactionModal from './components/TransactionModal';
-import PlayerFormModal from './components/PlayerFormModal';
-import PlayerModal from './components/PlayerModal';
-import ConfirmModal from './components/ConfirmModal';
 import DesktopSidebar from './components/DesktopSidebar';
 import MobileHeader from './components/MobileHeader';
 import MobileMenu from './components/MobileMenu';
 import MobileBottomNav from './components/MobileBottomNav';
+import ErrorBoundary from './components/ErrorBoundary';
+import AppRoutes from './components/AppRoutes';
+import NotificationPermissionBanner from './components/NotificationPermissionBanner';
+import { NavigationContext } from './context/NavigationContext';
 
 // Services & Hooks
 import { supabaseService } from './services/supabaseService';
@@ -62,6 +45,8 @@ import { useSchedule } from './hooks/useSchedule';
 import { usePlayerManager } from './hooks/usePlayerManager';
 import { useLedgerManager } from './hooks/useLedgerManager';
 import { useTeamContext } from './hooks/useTeamContext';
+import { useAppData } from './hooks/useAppData';
+import { useModalState } from './hooks/useModalState';
 import { PERMISSIONS } from './utils/roles';
 import { useCategoryManager } from './hooks/useCategoryManager';
 import { useAccounts } from './hooks/useAccounts';
@@ -78,25 +63,7 @@ function App() {
 
   const [user, setUser] = useState(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
-
-  // Data State
-  const [players, setPlayers] = useState([]);
-  const [transactions, setTransactions] = useState([]);
-  const [playerFinancials, setPlayerFinancials] = useState({});
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState(null);
-
-  // Modal States
-  const [showPlayerForm, setShowPlayerForm] = useState(false);
-  const [playerToEdit, setPlayerToEdit] = useState(null);
-  const [showPlayerModal, setShowPlayerModal] = useState(false);
-  const [playerToView, setPlayerToView] = useState(null);
-  const [showTxForm, setShowTxForm] = useState(false);
-  const [txToEdit, setTxToEdit] = useState(null);
-  const [confirmDialog, setConfirmDialog] = useState(null);
-  const [impersonatingAs, setImpersonatingAs] = useState(null); // player object when admin is viewing as parent
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [sidebarSettingsOpen, setSidebarSettingsOpen] = useState(false);
 
   // ── TEAM CONTEXT ──
   const {
@@ -110,11 +77,36 @@ function App() {
     isStaff,
     isClubAdmin,
     isSuperAdmin,
-    navItems: roleNavItems,
     can,
     loading: contextLoading,
     refreshContext,
   } = useTeamContext(user);
+
+  const {
+    showPlayerForm,
+    setShowPlayerForm,
+    playerToEdit,
+    setPlayerToEdit,
+    showPlayerModal,
+    setShowPlayerModal,
+    playerToView,
+    setPlayerToView,
+    showTxForm,
+    setShowTxForm,
+    txToEdit,
+    setTxToEdit,
+    confirmDialog,
+    impersonatingAs,
+    setImpersonatingAs,
+    toast,
+    setToast,
+    mobileMenuOpen,
+    setMobileMenuOpen,
+    sidebarSettingsOpen,
+    setSidebarSettingsOpen,
+    showToast,
+    showConfirm,
+  } = useModalState();
 
   // When impersonating, act as parent regardless of actual role
   const viewingAsParent = !!impersonatingAs;
@@ -125,28 +117,9 @@ function App() {
   // Parents have no roles so selectedTeamId is null. We derive their team
   // from the player roster so useSoccerYear can fetch the correct team_seasons
   // (and therefore the correct isFinalized status).
-  const myPlayers = useMemo(() => {
-    if (viewingAsParent) {
-      // Show the impersonated player + any siblings sharing a guardian email
-      const guardianEmails = new Set(
-        (impersonatingAs.guardians || []).map((g) => g.email?.toLowerCase()).filter(Boolean),
-      );
-      if (guardianEmails.size === 0) return [impersonatingAs];
-      return players.filter((p) => p.guardians?.some((g) => guardianEmails.has(g.email?.toLowerCase())));
-    }
-    if (!user || role === 'manager') return [];
-    return players.filter((p) => p.guardians?.some((g) => g.email?.toLowerCase() === user.email.toLowerCase()));
-  }, [players, user, role, viewingAsParent, impersonatingAs]);
-
-  const parentTeamId = useMemo(() => {
-    if (viewingAsParent) return impersonatingAs.teamId || null;
-    if (isStaff || selectedTeamId) return null; // staff already has a team
-    // Find first player whose guardian email matches this user
-    const myPlayer = players.find(
-      (p) => p.guardians?.some((g) => g.email?.toLowerCase() === user?.email?.toLowerCase()) && p.teamId,
-    );
-    return myPlayer?.teamId || null;
-  }, [isStaff, selectedTeamId, players, user, viewingAsParent, impersonatingAs]);
+  // parentTeamId starts null, is updated after useAppData resolves players.
+  const [parentTeamId, setParentTeamId] = useState(null);
+  const [parentTeam, setParentTeam] = useState(null);
 
   // Use the staff's selected team OR the parent's derived team for season lookup
   const effectiveTeamId = selectedTeamId || parentTeamId;
@@ -162,10 +135,43 @@ function App() {
     refreshSeasons,
   } = useSoccerYear(user, effectiveTeamId);
 
-  // ── SCHEDULE ──
+  const {
+    players,
+    transactions,
+    playerFinancials,
+    teamEvents,
+    collapsedTeamEvents,
+    fetchData,
+    updateTeamEvent,
+    refreshTeamEvents,
+  } = useAppData({
+    userEmail: user?.email || null,
+    selectedTeamId,
+    parentTeamId,
+    selectedSeason,
+    setSelectedSeason,
+    currentTeamSeason,
+    teamSeasons,
+  });
+
+  // Update parentTeamId after players resolve (two-pass: null → resolved)
+  useEffect(() => {
+    if (viewingAsParent) {
+      setParentTeamId(impersonatingAs.teamId || null);
+      return;
+    }
+    if (isStaff || selectedTeamId) {
+      setParentTeamId(null);
+      return;
+    }
+    const myPlayer = players.find(
+      (p) => p.guardians?.some((g) => g.email?.toLowerCase() === user?.email?.toLowerCase()) && p.teamId,
+    );
+    setParentTeamId(myPlayer?.teamId || null);
+  }, [isStaff, selectedTeamId, players, user, viewingAsParent, impersonatingAs]);
+
   // For parents, fetch the team object directly since useTeamContext returns
   // an empty teams array for users with no roles.
-  const [parentTeam, setParentTeam] = useState(null);
   useEffect(() => {
     if (effectiveIsStaff || !parentTeamId) {
       setParentTeam(null);
@@ -180,193 +186,19 @@ function App() {
   const effectiveTeam = selectedTeam || parentTeam;
   const { events, blackoutDates, toggleBlackout, syncCalendar } = useSchedule(user, effectiveTeam);
 
-  const [teamEvents, setTeamEvents] = useState([]);
-
-  // Collapse same-title tournament entries from the DB into one dropdown option,
-  // matching the grouping logic applied during sync. Already sorted desc by DB.
-  const collapsedTeamEvents = useMemo(() => {
-    const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
-    const tournaments = teamEvents.filter((e) => e.eventType === 'tournament');
-    const others = teamEvents.filter((e) => e.eventType !== 'tournament');
-
-    // Sort ascending for grouping (DB returns desc)
-    const sorted = [...tournaments].sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
-    const used = new Set();
-    const grouped = [];
-
-    for (let i = 0; i < sorted.length; i++) {
-      if (used.has(i)) continue;
-      const anchor = sorted[i];
-      const anchorMs = new Date(anchor.eventDate).getTime();
-      const group = [anchor];
-      used.add(i);
-
-      for (let j = i + 1; j < sorted.length; j++) {
-        if (used.has(j)) continue;
-        const candidate = sorted[j];
-        if (candidate.title === anchor.title && new Date(candidate.eventDate).getTime() - anchorMs <= THREE_DAYS_MS) {
-          group.push(candidate);
-          used.add(j);
-        }
-      }
-
-      if (group.length === 1) {
-        grouped.push(anchor);
-      } else {
-        const last = group[group.length - 1];
-        grouped.push({
-          ...anchor,
-          description: `${group.length} games · ${anchor.eventDate} – ${last.eventDate}`,
-        });
-      }
-    }
-
-    // Merge back and sort descending by date
-    return [...others, ...grouped].sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate));
-  }, [teamEvents]);
-
-  // ── DATA FETCHING ──
-  const fetchIdRef = useRef(0);
-  const fetchData = useCallback(
-    async (seasonOverride) => {
-      const fetchId = ++fetchIdRef.current;
-      try {
-        let fetchTeamId = selectedTeamId || parentTeamId;
-
-        // ── Step 1: Resolve players ──
-        // For parents (no team context), start by matching email → guardian → player
-        let pData = [];
-        let resolvedSeason = seasonOverride || selectedSeason;
-
-        if (!fetchTeamId && user?.email) {
-          try {
-            pData = await supabaseService.getPlayersByGuardianEmail(user.email);
-            if (pData.length > 0 && pData[0].teamId) {
-              fetchTeamId = pData[0].teamId;
-            }
-            // Auto-select the latest season from the player's enrollments
-            if (pData.length > 0 && !resolvedSeason) {
-              const profiles = pData[0].seasonProfiles || {};
-              const enrolledSeasons = Object.keys(profiles).sort((a, b) => b.localeCompare(a));
-              if (enrolledSeasons.length > 0) {
-                resolvedSeason = enrolledSeasons[0];
-                // Set the React state for subsequent renders
-                setSelectedSeason(resolvedSeason);
-                // Continue using resolvedSeason in this fetch cycle
-              }
-            }
-          } catch (e) {
-            console.warn('Guardian email lookup failed:', e.message);
-          }
-        }
-        // For staff (or after parent resolved team), fetch full team roster
-        if (fetchTeamId && pData.length === 0) {
-          pData = await supabaseService.getPlayersByTeam(fetchTeamId);
-        }
-
-        console.log('Fetched', pData.length, 'players for teamId:', fetchTeamId, 'season:', resolvedSeason);
-
-        // ── Step 2: Resolve teamSeasonId ──
-        let tsId = currentTeamSeason?.id || null;
-        if (!tsId && fetchTeamId && resolvedSeason) {
-          const match = teamSeasons?.find((ts) => ts.seasonId === resolvedSeason);
-          tsId = match?.id || null;
-        }
-        if (!tsId && fetchTeamId && resolvedSeason) {
-          try {
-            const ts = await supabaseService.getTeamSeason(fetchTeamId, resolvedSeason);
-            tsId = ts?.id || null;
-          } catch {
-            /* noop */
-          }
-        }
-
-        // ── Step 3: Fetch transactions ──
-        const tData = tsId ? await supabaseService.getTransactionsByTeamSeason(tsId) : [];
-
-        let fData = {};
-        try {
-          fData = await supabaseService.getPlayerFinancials(resolvedSeason, tsId);
-        } catch (e) {
-          console.warn('Could not fetch player_financials view:', e.message);
-        }
-
-        const evId = fetchTeamId || selectedTeamId || parentTeamId;
-        if (evId) {
-          try {
-            const evData = await supabaseService.getTeamEvents(evId);
-            setTeamEvents(evData);
-          } catch (e) {
-            console.warn('Could not fetch team events:', e.message);
-          }
-        }
-
-        // Skip state update if a newer fetch has started
-        if (fetchId !== fetchIdRef.current) return;
-
-        setPlayers(pData);
-        setTransactions(tData);
-        setPlayerFinancials(fData);
-      } catch (e) {
-        console.error('Data fetch error', e);
-      } finally {
-        if (fetchId === fetchIdRef.current) setLoading(false);
-      }
-    },
-    [selectedTeamId, parentTeamId, selectedSeason, currentTeamSeason?.id, teamSeasons],
-  );
-
-  const handleSyncCalendar = async () => {
-    const count = await syncCalendar();
-    const evId = selectedTeamId || parentTeamId;
-    if (evId) {
-      const evData = await supabaseService.getTeamEvents(evId);
-      setTeamEvents(evData);
-    }
-    showToast(t('toast.syncedEvents', { n: count }));
-  };
-
-  const handleTeamEventTypeChange = async (dbEventId, newType) => {
-    await supabaseService.updateTeamEventType(dbEventId, newType);
-    setTeamEvents((prev) => prev.map((e) => (e.id === dbEventId ? { ...e, eventType: newType, typeLocked: true } : e)));
-  };
-
-  // ── Event expense handlers (used by ScheduleView) ──
-  const handleSaveExpense = async (txData) => {
-    await handleSaveTransaction(txData);
-  };
-
-  const handleToggleCleared = async (txId, cleared) => {
-    await supabaseService.updateTransaction(txId, { cleared });
-    fetchData();
-  };
-
-  const handleDeleteExpense = async (txId) => {
-    await handleDeleteTransaction(txId);
-  };
-
-  const showToast = (msg, isError = false, action = null) => {
-    setToast({ msg, isError, action });
-    setTimeout(() => setToast(null), 4000);
-  };
-
-  const showConfirm = (message) => {
-    return new Promise((resolve) => {
-      setConfirmDialog({
-        message,
-        onConfirm: () => {
-          resolve(true);
-          setConfirmDialog(null);
-        },
-        onCancel: () => {
-          resolve(false);
-          setConfirmDialog(null);
-        },
-      });
-    });
-  };
-
   // ── FILTERED DATA ──
+  const myPlayers = useMemo(() => {
+    if (viewingAsParent) {
+      const guardianEmails = new Set(
+        (impersonatingAs.guardians || []).map((g) => g.email?.toLowerCase()).filter(Boolean),
+      );
+      if (guardianEmails.size === 0) return [impersonatingAs];
+      return players.filter((p) => p.guardians?.some((g) => guardianEmails.has(g.email?.toLowerCase())));
+    }
+    if (!user || role === 'manager') return [];
+    return players.filter((p) => p.guardians?.some((g) => g.email?.toLowerCase() === user.email.toLowerCase()));
+  }, [players, user, role, viewingAsParent, impersonatingAs]);
+
   const seasonalPlayers = useMemo(() => {
     if (!selectedSeason) return players.filter((p) => p.status !== 'archived');
     let filtered = players.filter((p) => p.seasonProfiles?.[selectedSeason] && p.status !== 'archived');
@@ -411,7 +243,6 @@ function App() {
     teamSeasonId,
   );
 
-  // ── Custom Categories (club-scoped) ──
   const {
     customCategories,
     categoryLabels,
@@ -422,7 +253,6 @@ function App() {
     isSaving: isCategorySaving,
   } = useCategoryManager(club?.id);
 
-  // ── Accounts (team-scoped) ──
   const {
     accounts,
     activeAccounts,
@@ -441,6 +271,7 @@ function App() {
       await supabaseService.claimMyInvitations();
       // setUser AFTER claim so useTeamContext's role fetch sees claimed rows.
       setUser(authUser);
+      setLoading(false);
       fetchData();
     };
 
@@ -481,28 +312,12 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Re-fetch when team, season, or team-season context changes
-  // currentTeamSeason?.id is critical — for parents, it resolves AFTER
-  // useSoccerYear re-fetches with the parentTeamId
+  // Re-fetch when team or season context changes
   useEffect(() => {
     if (user && (selectedTeamId || parentTeamId)) {
       fetchData();
     }
   }, [selectedTeamId, parentTeamId, selectedSeason, currentTeamSeason?.id]);
-
-  // Re-fetch financials when team season resolves or season changes
-  useEffect(() => {
-    if (user && selectedSeason) {
-      const tsId = currentTeamSeason?.id || null;
-      supabaseService
-        .getPlayerFinancials(selectedSeason, tsId)
-        .then((fData) => setPlayerFinancials(fData || {}))
-        .catch((e) => {
-          console.warn('Financials refresh failed:', e.message);
-          setPlayerFinancials({});
-        });
-    }
-  }, [currentTeamSeason?.id, selectedSeason]);
 
   // ── COMPUTED ──
   const teamBalance = seasonalTransactions.reduce((acc, tx) => {
@@ -517,6 +332,32 @@ function App() {
   }, 0);
   const formatMoney = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
+  // ── SCHEDULE HANDLERS ──
+  const handleSyncCalendar = async () => {
+    const count = await syncCalendar();
+    await refreshTeamEvents(selectedTeamId || parentTeamId);
+    showToast(t('toast.syncedEvents', { n: count }));
+  };
+
+  const handleTeamEventTypeChange = async (dbEventId, newType) => {
+    await supabaseService.updateTeamEventType(dbEventId, newType);
+    updateTeamEvent(dbEventId, { eventType: newType, typeLocked: true });
+  };
+
+  const handleSaveExpense = async (txData) => {
+    await handleSaveTransaction(txData);
+  };
+
+  const handleToggleCleared = async (txId, cleared) => {
+    await supabaseService.updateTransaction(txId, { cleared });
+    fetchData();
+  };
+
+  const handleDeleteExpense = async (txId) => {
+    await handleDeleteTransaction(txId);
+  };
+
+  // ── LOADING STATES ──
   if (loading || contextLoading)
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -530,23 +371,25 @@ function App() {
   // ── PUBLIC / UNAUTHENTICATED ──
   if (!user) {
     return (
-      <Routes>
-        <Route path="/calendar/:teamId?" element={<PublicCalendarView onBack={() => navigate('/')} />} />
-        <Route
-          path="*"
-          element={
-            <div className="relative">
-              <LoginView />
-              <button
-                onClick={() => navigate('/calendar')}
-                className="absolute top-4 right-4 bg-white/20 px-4 py-2 rounded-xl text-white font-bold"
-              >
-                📅 Calendar
-              </button>
-            </div>
-          }
-        />
-      </Routes>
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/calendar/:teamId?" element={<PublicCalendarView onBack={() => navigate('/')} />} />
+          <Route
+            path="*"
+            element={
+              <div className="relative">
+                <LoginView />
+                <button
+                  onClick={() => navigate('/calendar')}
+                  className="absolute top-4 right-4 bg-white/20 px-4 py-2 rounded-xl text-white font-bold"
+                >
+                  📅 Calendar
+                </button>
+              </div>
+            }
+          />
+        </Routes>
+      </ErrorBoundary>
     );
   }
 
@@ -570,7 +413,6 @@ function App() {
         ]
       : [];
 
-  // Season-scoped nav items (budget, ledger, fundraising)
   const seasonNavItems = effectiveIsStaff
     ? [
         { id: 'dashboard', label: t('nav.seasonOverview'), icon: LayoutDashboard },
@@ -586,7 +428,6 @@ function App() {
       ]
     : [{ id: 'dashboard', label: t('nav.myPlayer'), icon: Users }];
 
-  // Team-wide nav items (no season dependency)
   const teamNavItems = effectiveIsStaff
     ? [
         { id: 'schedule', label: t('nav.schedule'), icon: Calendar },
@@ -606,698 +447,176 @@ function App() {
   const canEditSchedule = can(PERMISSIONS.TEAM_EDIT_SCHEDULE);
   const canEditLedger = can(PERMISSIONS.TEAM_EDIT_LEDGER);
 
+  const navContextValue = {
+    club,
+    teams,
+    selectedTeamId,
+    setSelectedTeamId,
+    selectedTeam,
+    appNavItems,
+    clubNavItems,
+    seasonNavItems,
+    teamNavItems,
+    selectedSeason,
+    setSelectedSeason,
+    seasons,
+    currentView,
+    currentSearch,
+    navigate,
+    user,
+    effectiveRole,
+    toggleLocale,
+    locale,
+    cycleTheme,
+    theme,
+    ThemeIcon,
+    sidebarSettingsOpen,
+    setSidebarSettingsOpen,
+    mobileMenuOpen,
+    setMobileMenuOpen,
+    supabase,
+    effectiveIsStaff,
+    isClubAdmin,
+    canEditLedger,
+    setTxToEdit,
+    setShowTxForm,
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors">
-      {/* ═══ IMPERSONATION BANNER ═══ */}
-      {viewingAsParent && (
-        <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
-          <div className="flex items-center gap-2 text-sm font-bold">
-            <Eye size={14} />
-            <span>
-              {t('impersonation.viewingAs')}{' '}
-              <span className="font-black">
-                {impersonatingAs.firstName} {impersonatingAs.lastName}
+    <NavigationContext.Provider value={navContextValue}>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors">
+        {/* ═══ IMPERSONATION BANNER ═══ */}
+        {viewingAsParent && (
+          <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
+            <div className="flex items-center gap-2 text-sm font-bold">
+              <Eye size={14} />
+              <span>
+                {t('impersonation.viewingAs')}{' '}
+                <span className="font-black">
+                  {impersonatingAs.firstName} {impersonatingAs.lastName}
+                </span>
+                {impersonatingAs.guardians?.[0]?.name && (
+                  <span className="opacity-80"> ({impersonatingAs.guardians[0].name})</span>
+                )}
               </span>
-              {impersonatingAs.guardians?.[0]?.name && (
-                <span className="opacity-80"> ({impersonatingAs.guardians[0].name})</span>
-              )}
-            </span>
+            </div>
+            <button
+              onClick={() => {
+                setImpersonatingAs(null);
+                navigate('/dashboard');
+              }}
+              className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-black transition-colors"
+            >
+              {t('common.exit')}
+            </button>
           </div>
-          <button
-            onClick={() => {
-              setImpersonatingAs(null);
-              navigate('/dashboard');
-            }}
-            className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-black transition-colors"
-          >
-            {t('common.exit')}
-          </button>
+        )}
+
+        <div className="flex flex-1 md:flex-row flex-col">
+          <DesktopSidebar />
+          <MobileHeader />
+          <MobileMenu />
+
+          <main className="flex-grow p-4 md:p-8 pb-32 md:pb-8 max-w-6xl mx-auto w-full dark:text-slate-100">
+            <AppRoutes
+              user={user}
+              club={club}
+              teams={teams}
+              selectedTeam={selectedTeam}
+              selectedTeamId={selectedTeamId}
+              setSelectedTeamId={setSelectedTeamId}
+              userRoles={userRoles}
+              effectiveRole={effectiveRole}
+              isClubAdmin={isClubAdmin}
+              isSuperAdmin={isSuperAdmin}
+              effectiveIsStaff={effectiveIsStaff}
+              can={can}
+              refreshContext={refreshContext}
+              seasons={seasons}
+              teamSeasons={teamSeasons}
+              selectedSeason={selectedSeason}
+              setSelectedSeason={setSelectedSeason}
+              currentSeasonData={currentSeasonData}
+              currentTeamSeason={currentTeamSeason}
+              teamSeasonId={teamSeasonId}
+              refreshSeasons={refreshSeasons}
+              players={players}
+              seasonalPlayers={seasonalPlayers}
+              archivedPlayers={archivedPlayers}
+              myPlayers={myPlayers}
+              transactions={transactions}
+              seasonalTransactions={seasonalTransactions}
+              playerFinancials={playerFinancials}
+              teamEvents={teamEvents}
+              collapsedTeamEvents={collapsedTeamEvents}
+              fetchData={fetchData}
+              formatMoney={formatMoney}
+              teamBalance={teamBalance}
+              totalExpenses={totalExpenses}
+              calculatePlayerFinancials={calculatePlayerFinancials}
+              handleWaterfallCredit={handleWaterfallCredit}
+              revertWaterfall={revertWaterfall}
+              customCategories={customCategories}
+              categoryLabels={categoryLabels}
+              categoryColors={categoryColors}
+              categoryOptions={categoryOptions}
+              saveCategory={saveCategory}
+              deleteCategory={deleteCategory}
+              isCategorySaving={isCategorySaving}
+              accounts={accounts}
+              activeAccounts={activeAccounts}
+              accountsByHolding={accountsByHolding}
+              accountMap={accountMap}
+              saveAccount={saveAccount}
+              deleteAccount={deleteAccount}
+              isAccountSaving={isAccountSaving}
+              effectiveTeam={effectiveTeam}
+              events={events}
+              blackoutDates={blackoutDates}
+              toggleBlackout={toggleBlackout}
+              canEditSchedule={canEditSchedule}
+              handleSyncCalendar={handleSyncCalendar}
+              handleTeamEventTypeChange={handleTeamEventTypeChange}
+              handleSaveExpense={handleSaveExpense}
+              handleToggleCleared={handleToggleCleared}
+              handleDeleteExpense={handleDeleteExpense}
+              canEditLedger={canEditLedger}
+              handleSaveTransaction={handleSaveTransaction}
+              handleDeleteTransaction={handleDeleteTransaction}
+              handleBulkUpload={handleBulkUpload}
+              isBulkUploading={isBulkUploading}
+              setIsBulkUploading={setIsBulkUploading}
+              handleSavePlayer={handleSavePlayer}
+              handleArchivePlayer={handleArchivePlayer}
+              handleToggleWaiveFee={handleToggleWaiveFee}
+              showPlayerForm={showPlayerForm}
+              setShowPlayerForm={setShowPlayerForm}
+              playerToEdit={playerToEdit}
+              setPlayerToEdit={setPlayerToEdit}
+              showPlayerModal={showPlayerModal}
+              setShowPlayerModal={setShowPlayerModal}
+              playerToView={playerToView}
+              setPlayerToView={setPlayerToView}
+              showTxForm={showTxForm}
+              setShowTxForm={setShowTxForm}
+              txToEdit={txToEdit}
+              setTxToEdit={setTxToEdit}
+              confirmDialog={confirmDialog}
+              impersonatingAs={impersonatingAs}
+              setImpersonatingAs={setImpersonatingAs}
+              toast={toast}
+              setToast={setToast}
+              showToast={showToast}
+              showConfirm={showConfirm}
+              navigate={navigate}
+            />
+          </main>
+
+          <MobileBottomNav />
         </div>
-      )}
-
-      <div className="flex flex-1 md:flex-row flex-col">
-        {/* ═══ DESKTOP SIDEBAR ═══ */}
-        <DesktopSidebar
-          club={club}
-          teams={teams}
-          selectedTeamId={selectedTeamId}
-          setSelectedTeamId={setSelectedTeamId}
-          appNavItems={appNavItems}
-          clubNavItems={clubNavItems}
-          seasonNavItems={seasonNavItems}
-          teamNavItems={teamNavItems}
-          selectedSeason={selectedSeason}
-          setSelectedSeason={setSelectedSeason}
-          seasons={seasons}
-          currentView={currentView}
-          navigate={navigate}
-          user={user}
-          effectiveRole={effectiveRole}
-          toggleLocale={toggleLocale}
-          locale={locale}
-          cycleTheme={cycleTheme}
-          theme={theme}
-          ThemeIcon={ThemeIcon}
-          sidebarSettingsOpen={sidebarSettingsOpen}
-          setSidebarSettingsOpen={setSidebarSettingsOpen}
-          supabase={supabase}
-        />
-
-        {/* ═══ MOBILE HEADER ═══ */}
-        <MobileHeader
-          club={club}
-          selectedTeam={selectedTeam}
-          teams={teams}
-          selectedTeamId={selectedTeamId}
-          setSelectedTeamId={setSelectedTeamId}
-          toggleLocale={toggleLocale}
-          locale={locale}
-          cycleTheme={cycleTheme}
-          theme={theme}
-          ThemeIcon={ThemeIcon}
-          mobileMenuOpen={mobileMenuOpen}
-          setMobileMenuOpen={setMobileMenuOpen}
-          supabase={supabase}
-        />
-
-        {/* ═══ MOBILE SLIDE-OUT MENU ═══ */}
-        <MobileMenu
-          club={club}
-          selectedTeam={selectedTeam}
-          appNavItems={appNavItems}
-          clubNavItems={clubNavItems}
-          seasonNavItems={seasonNavItems}
-          teamNavItems={teamNavItems}
-          selectedSeason={selectedSeason}
-          setSelectedSeason={setSelectedSeason}
-          seasons={seasons}
-          currentView={currentView}
-          currentSearch={currentSearch}
-          navigate={navigate}
-          user={user}
-          effectiveRole={effectiveRole}
-          mobileMenuOpen={mobileMenuOpen}
-          setMobileMenuOpen={setMobileMenuOpen}
-        />
-
-        {/* ═══ CONTENT ═══ */}
-        <main className="flex-grow p-4 md:p-8 pb-32 md:pb-8 max-w-6xl mx-auto w-full dark:text-slate-100">
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-            {!singleTeam && isSuperAdmin && (
-              <Route
-                path="/app-admin"
-                element={
-                  <SuperAdminView
-                    onSelectClub={(club) => {
-                      refreshContext();
-                      navigate('/club-overview');
-                    }}
-                    showToast={showToast}
-                    showConfirm={showConfirm}
-                  />
-                }
-              />
-            )}
-
-            {!singleTeam && (isClubAdmin || isSuperAdmin) && (
-              <>
-                <Route
-                  path="/club-overview"
-                  element={
-                    <ClubDashboard
-                      club={club}
-                      teams={teams}
-                      seasons={seasons}
-                      selectedSeason={selectedSeason}
-                      onSelectTeam={(teamId) => {
-                        setSelectedTeamId(teamId);
-                        navigate('/dashboard');
-                      }}
-                    />
-                  }
-                />
-                <Route
-                  path="/club-teams"
-                  element={
-                    <TeamList
-                      club={club}
-                      teams={teams}
-                      formatMoney={formatMoney}
-                      onSelectTeam={(teamId) => {
-                        setSelectedTeamId(teamId);
-                        navigate('/dashboard');
-                      }}
-                      showToast={showToast}
-                      showConfirm={showConfirm}
-                      refreshContext={refreshContext}
-                    />
-                  }
-                />
-                <Route
-                  path="/club-admin"
-                  element={
-                    <ClubAdminHub
-                      settingsProps={{ club, teams, userRoles, showToast, showConfirm, refreshContext }}
-                      usersProps={{ club, teams, showToast, showConfirm, refreshContext }}
-                      categoriesProps={{
-                        customCategories,
-                        onSave: async (catData) => {
-                          await saveCategory(catData);
-                          showToast(catData.id ? t('toast.categoryUpdated') : t('toast.categoryCreated'));
-                        },
-                        onDelete: async (catId) => {
-                          const ok = await showConfirm(
-                            'Delete this custom category? Existing transactions will keep their category code but the label may not display correctly.',
-                          );
-                          if (ok) {
-                            await deleteCategory(catId);
-                            showToast(t('toast.categoryDeleted'));
-                          }
-                        },
-                        isSaving: isCategorySaving,
-                      }}
-                    />
-                  }
-                />
-                {/* Legacy redirects */}
-                <Route path="/club-settings" element={<Navigate to="/club-admin" replace />} />
-                <Route path="/club-calendar" element={<Navigate to="/club-overview" replace />} />
-                <Route path="/club-users" element={<Navigate to="/club-admin" replace />} />
-                <Route path="/club-categories" element={<Navigate to="/club-admin" replace />} />
-                <Route
-                  path="/club-onboard"
-                  element={
-                    <TeamOnboarding
-                      club={club}
-                      seasons={seasons}
-                      showToast={showToast}
-                      onComplete={(teamId) => {
-                        refreshContext();
-                        if (teamId) {
-                          setSelectedTeamId(teamId);
-                          navigate('/dashboard');
-                        } else {
-                          navigate('/club-teams');
-                        }
-                      }}
-                      onCancel={() => navigate('/club-teams')}
-                    />
-                  }
-                />
-                <Route
-                  path="/club-players"
-                  element={
-                    <ClubPlayersView
-                      club={club}
-                      teams={teams}
-                      seasons={seasons}
-                      selectedSeason={selectedSeason}
-                      showToast={showToast}
-                      showConfirm={showConfirm}
-                    />
-                  }
-                />
-                {/* TODO: Re-enable when evaluations are ready for production
-                {can(PERMISSIONS.CLUB_VIEW_EVALUATIONS) && (
-                  <Route
-                    path="/club-evaluations"
-                    element={
-                      <EvaluationHub
-                        club={club}
-                        teams={teams}
-                        seasons={seasons}
-                        selectedSeason={selectedSeason}
-                        showToast={showToast}
-                        showConfirm={showConfirm}
-                        user={user}
-                      />
-                    }
-                  />
-                )} */}
-              </>
-            )}
-
-            {/* ── TEAM ROUTES ── */}
-            <Route
-              path="/dashboard"
-              element={
-                effectiveIsStaff ? (
-                  <TeamOverviewView
-                    players={seasonalPlayers}
-                    archivedPlayers={archivedPlayers}
-                    teamBalance={teamBalance}
-                    totalExpenses={totalExpenses}
-                    formatMoney={formatMoney}
-                    selectedSeasonData={currentSeasonData}
-                    transactions={seasonalTransactions}
-                    calculatePlayerFinancials={calculatePlayerFinancials}
-                    seasons={seasons}
-                    selectedSeason={selectedSeason}
-                    setSelectedSeason={setSelectedSeason}
-                    canViewFinancials={can(PERMISSIONS.TEAM_VIEW_BUDGET) || can(PERMISSIONS.TEAM_VIEW_LEDGER)}
-                    onAddPlayer={() => {
-                      setPlayerToEdit(null);
-                      setShowPlayerForm(true);
-                    }}
-                    onEditPlayer={(p) => {
-                      setPlayerToEdit(p);
-                      setShowPlayerForm(true);
-                    }}
-                    onViewPlayer={(p) => {
-                      setPlayerToView(p);
-                      setShowPlayerModal(true);
-                    }}
-                    onToggleWaive={(pId, state) => handleToggleWaiveFee(pId, selectedSeason, state)}
-                    accountMap={accountMap}
-                  />
-                ) : (
-                  <ParentView
-                    players={myPlayers}
-                    transactions={seasonalTransactions}
-                    calculatePlayerFinancials={calculatePlayerFinancials}
-                    formatMoney={formatMoney}
-                    teams={teams}
-                    seasons={seasons}
-                    selectedSeason={selectedSeason}
-                    setSelectedSeason={setSelectedSeason}
-                    currentSeasonData={currentSeasonData}
-                    clubId={club?.id}
-                    onRefresh={fetchData}
-                    showToast={showToast}
-                    showConfirm={showConfirm}
-                    user={user}
-                    accounts={accounts}
-                  />
-                )
-              }
-            />
-
-            <Route
-              path="/schedule"
-              element={
-                <ScheduleView
-                  events={events}
-                  blackoutDates={blackoutDates}
-                  onToggleBlackout={canEditSchedule ? toggleBlackout : null}
-                  selectedTeam={effectiveTeam}
-                  canEditSchedule={canEditSchedule}
-                  onSyncCalendar={canEditSchedule ? handleSyncCalendar : null}
-                  teamEvents={teamEvents}
-                  onTypeChange={canEditSchedule ? handleTeamEventTypeChange : null}
-                  transactions={seasonalTransactions}
-                  onSaveExpense={canEditSchedule ? handleSaveExpense : null}
-                  onToggleCleared={canEditSchedule ? handleToggleCleared : null}
-                  onDeleteExpense={canEditSchedule ? handleDeleteExpense : null}
-                  seasonIds={seasons.map((s) => s.id)}
-                  selectedSeason={selectedSeason}
-                  activeAccounts={activeAccounts}
-                  accountMap={accountMap}
-                />
-              }
-            />
-
-            {canEditSchedule && (
-              <Route
-                path="/team-admin"
-                element={
-                  <TeamSettingsView
-                    selectedTeam={selectedTeam}
-                    refreshContext={refreshContext}
-                    showToast={showToast}
-                    accounts={accounts}
-                    onSaveAccount={saveAccount}
-                    onDeleteAccount={deleteAccount}
-                    isAccountSaving={isAccountSaving}
-                  />
-                }
-              />
-            )}
-
-            {effectiveIsStaff && (
-              <Route
-                path="/season-evaluations"
-                element={
-                  <SeasonEvaluationView
-                    players={seasonalPlayers}
-                    selectedSeason={selectedSeason}
-                    selectedTeamId={selectedTeamId}
-                    teamSeasonId={teamSeasonId}
-                    clubId={club?.id}
-                    showToast={showToast}
-                    user={user}
-                    userRoles={userRoles}
-                  />
-                }
-              />
-            )}
-            {/* Club evaluations (tryouts) - disabled for now
-            <Route path="/evaluate/:sessionId" element={<EvaluatorScoringView user={user} showToast={showToast} />} />
-            */}
-
-            <Route path="/changelog" element={<Changelog />} />
-
-            {effectiveIsStaff && (
-              <>
-                {/* Finance hub: Ledger + Budget + Fundraising */}
-                {(can(PERMISSIONS.TEAM_VIEW_LEDGER) ||
-                  can(PERMISSIONS.TEAM_VIEW_BUDGET) ||
-                  can(PERMISSIONS.TEAM_VIEW_SPONSORS)) && (
-                  <Route
-                    path="/finance/*"
-                    element={
-                      <FinanceView
-                        visibleTabs={[
-                          ...(can(PERMISSIONS.TEAM_VIEW_LEDGER) ? ['ledger'] : []),
-                          ...(can(PERMISSIONS.TEAM_VIEW_BUDGET) ? ['budget'] : []),
-                          ...(can(PERMISSIONS.TEAM_VIEW_SPONSORS) ? ['fundraising'] : []),
-                        ]}
-                        ledgerProps={
-                          can(PERMISSIONS.TEAM_VIEW_LEDGER)
-                            ? {
-                                transactions: seasonalTransactions,
-                                formatMoney,
-                                onAddTx: canEditLedger
-                                  ? () => {
-                                      setTxToEdit(null);
-                                      setShowTxForm(true);
-                                    }
-                                  : null,
-                                onEditTx: canEditLedger
-                                  ? (tx) => {
-                                      setTxToEdit(tx);
-                                      setShowTxForm(true);
-                                    }
-                                  : null,
-                                onDeleteTx: canEditLedger
-                                  ? async (id) => {
-                                      const ok = await showConfirm(t('toast.deleteTxConfirm'));
-                                      if (ok) {
-                                        await handleDeleteTransaction(id);
-                                        showToast(t('toast.txDeleted'));
-                                      }
-                                    }
-                                  : null,
-                                categoryLabels,
-                                categoryColors,
-                                categoryOptions,
-                                players: seasonalPlayers,
-                                onBulkUpload: canEditLedger
-                                  ? async (txns) => {
-                                      setIsBulkUploading(true);
-                                      try {
-                                        const result = await handleBulkUpload(txns);
-                                        if (result.success) showToast(t('toast.importSuccess', { n: txns.length }));
-                                        else showToast(result.error || t('toast.importFailed'), true);
-                                        return result;
-                                      } finally {
-                                        setIsBulkUploading(false);
-                                      }
-                                    }
-                                  : null,
-                                isBulkUploading,
-                                selectedSeason,
-                                teamSeasonId,
-                                calculatePlayerFinancials,
-                                accounts,
-                                activeAccounts,
-                                accountsByHolding,
-                                accountMap,
-                              }
-                            : null
-                        }
-                        budgetProps={
-                          can(PERMISSIONS.TEAM_VIEW_BUDGET)
-                            ? {
-                                selectedSeason,
-                                formatMoney,
-                                seasons,
-                                setSelectedSeason,
-                                refreshSeasons,
-                                showToast,
-                                showConfirm,
-                                onDataChange: fetchData,
-                                selectedTeamId,
-                                currentTeamSeason,
-                                selectedTeam,
-                                club,
-                                teamSeasons,
-                                categoryOptions,
-                              }
-                            : null
-                        }
-                        fundraisingProps={
-                          can(PERMISSIONS.TEAM_VIEW_SPONSORS)
-                            ? {
-                                transactions: seasonalTransactions,
-                                selectedSeason,
-                                formatMoney,
-                                currentSeasonData,
-                                onDistribute:
-                                  can(PERMISSIONS.TEAM_EDIT_SPONSORS) && currentSeasonData?.isFinalized
-                                    ? async (amt, title, pId, originalId, category) => {
-                                        try {
-                                          await handleWaterfallCredit(amt, title, pId, originalId, category);
-                                          await fetchData();
-                                          showToast(t('toast.fundsDistributed'));
-                                        } catch (error) {
-                                          showToast(error.message, true);
-                                        }
-                                      }
-                                    : null,
-                                onReset:
-                                  can(PERMISSIONS.TEAM_EDIT_SPONSORS) && currentSeasonData?.isFinalized
-                                    ? async (batchId, originalTxId) => {
-                                        await revertWaterfall(batchId, originalTxId);
-                                        await fetchData();
-                                        showToast(t('toast.distributionReverted'));
-                                      }
-                                    : null,
-                                seasonalPlayers,
-                                seasons,
-                              }
-                            : null
-                        }
-                      />
-                    }
-                  />
-                )}
-
-                {/* People hub: Roster + Documents + Permissions */}
-                {(can(PERMISSIONS.TEAM_VIEW_ROSTER) || can(PERMISSIONS.TEAM_MANAGE_USERS)) && (
-                  <Route
-                    path="/people"
-                    element={
-                      <PeopleView
-                        visibleTabs={[
-                          ...(can(PERMISSIONS.TEAM_VIEW_ROSTER) ? ['roster', 'documents'] : []),
-                          ...(can(PERMISSIONS.TEAM_MANAGE_USERS) ? ['permissions'] : []),
-                        ]}
-                        rosterProps={
-                          can(PERMISSIONS.TEAM_VIEW_ROSTER)
-                            ? {
-                                players,
-                                seasons,
-                                selectedSeason,
-                                selectedTeam,
-                                club,
-                                currentTeamSeason,
-                                showToast,
-                                showConfirm,
-                                can,
-                                PERMISSIONS,
-                                onEditPlayer: (player) => {
-                                  setPlayerToEdit(player);
-                                  setShowPlayerForm(true);
-                                },
-                                onAddPlayer: () => {
-                                  setPlayerToEdit(null);
-                                  setShowPlayerForm(true);
-                                },
-                                onViewPlayer: (player) => {
-                                  setPlayerToView(player);
-                                  setShowPlayerModal(true);
-                                },
-                                onViewAsParent: (player) => {
-                                  setImpersonatingAs(player);
-                                  navigate('/dashboard');
-                                },
-                                refreshData: fetchData,
-                              }
-                            : null
-                        }
-                        documentsProps={
-                          can(PERMISSIONS.TEAM_VIEW_ROSTER)
-                            ? {
-                                players: seasonalPlayers,
-                                selectedSeason,
-                                club,
-                                selectedTeam,
-                                showToast,
-                                showConfirm,
-                                can,
-                                PERMISSIONS,
-                                onPlayerUpdate: fetchData,
-                              }
-                            : null
-                        }
-                        permissionsProps={
-                          can(PERMISSIONS.TEAM_MANAGE_USERS)
-                            ? {
-                                selectedTeam,
-                                showToast,
-                                showConfirm,
-                              }
-                            : null
-                        }
-                      />
-                    }
-                  />
-                )}
-
-                {can(PERMISSIONS.TEAM_VIEW_INSIGHTS) && (
-                  <Route
-                    path="/insights"
-                    element={
-                      <InsightsView
-                        transactions={seasonalTransactions}
-                        players={seasonalPlayers}
-                        selectedSeason={selectedSeason}
-                        currentSeasonData={currentSeasonData}
-                        calculatePlayerFinancials={calculatePlayerFinancials}
-                        formatMoney={formatMoney}
-                        events={events}
-                      />
-                    }
-                  />
-                )}
-
-                {/* Legacy redirects */}
-                <Route path="/ledger" element={<Navigate to="/finance/ledger" replace />} />
-                <Route path="/budget" element={<Navigate to="/finance/budget" replace />} />
-                <Route path="/sponsors" element={<Navigate to="/finance/fundraising" replace />} />
-                <Route path="/finance" element={<Navigate to="/finance/ledger" replace />} />
-                <Route path="/roster" element={<Navigate to="/people" replace />} />
-                <Route path="/documents" element={<Navigate to="/people" replace />} />
-                <Route path="/team-users" element={<Navigate to="/people" replace />} />
-              </>
-            )}
-
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </main>
-
-        {/* ═══ MOBILE BOTTOM NAV ═══ */}
-        <MobileBottomNav
-          seasonNavItems={seasonNavItems}
-          teamNavItems={teamNavItems}
-          effectiveIsStaff={effectiveIsStaff}
-          currentView={currentView}
-          currentSearch={currentSearch}
-          navigate={navigate}
-          canEditLedger={canEditLedger}
-          setTxToEdit={setTxToEdit}
-          setShowTxForm={setShowTxForm}
-          isClubAdmin={isClubAdmin}
-          clubNavItems={clubNavItems}
-        />
-
-        {/* ═══ MODALS ═══ */}
-        {showPlayerModal && playerToView && (
-          <PlayerModal
-            player={playerToView}
-            selectedSeason={selectedSeason}
-            stats={calculatePlayerFinancials(playerToView, seasonalTransactions)}
-            onClose={() => {
-              setShowPlayerModal(false);
-              setPlayerToView(null);
-            }}
-            onToggleCompliance={async (id, field, currentState) => {
-              setPlayerToView((prev) => ({ ...prev, [field]: !currentState }));
-              await supabaseService.updatePlayerField(id, field, !currentState);
-              fetchData();
-            }}
-            formatMoney={formatMoney}
-            clubId={club?.id}
-            onRefresh={fetchData}
-            onViewAsParent={(p) => {
-              setImpersonatingAs(p);
-              navigate('/dashboard');
-            }}
-            showToast={showToast}
-            showConfirm={showConfirm}
-          />
-        )}
-
-        <PlayerFormModal
-          show={showPlayerForm}
-          initialData={playerToEdit}
-          selectedSeason={selectedSeason}
-          onSubmit={async (data) => {
-            await handleSavePlayer(data);
-            setShowPlayerForm(false);
-            showToast(playerToEdit ? t('toast.playerUpdated') : t('toast.playerAdded'));
-          }}
-          onArchive={async (id) => {
-            const ok = await showConfirm(t('toast.archivePlayerConfirm'));
-            if (ok) {
-              await handleArchivePlayer(id);
-              setShowPlayerForm(false);
-              showToast(t('toast.playerArchived'));
-            }
-          }}
-          onClose={() => setShowPlayerForm(false)}
-        />
-
-        <TransactionModal
-          show={showTxForm}
-          initialData={txToEdit}
-          onSubmit={async (data) => {
-            const r = await handleSaveTransaction(data);
-            if (r && r.success === false) {
-              showToast(r.error, true);
-            } else {
-              setShowTxForm(false);
-              showToast(txToEdit ? t('toast.txUpdated') : t('toast.txAdded'));
-            }
-          }}
-          onClose={() => setShowTxForm(false)}
-          players={seasonalPlayers}
-          categoryOptions={categoryOptions}
-          teamEvents={collapsedTeamEvents}
-          activeAccounts={activeAccounts}
-        />
-
-        {confirmDialog && (
-          <ConfirmModal
-            message={confirmDialog.message}
-            onConfirm={confirmDialog.onConfirm}
-            onCancel={confirmDialog.onCancel}
-          />
-        )}
-
-        {toast && (
-          <div
-            className={`fixed bottom-24 left-1/2 -translate-x-1/2 text-white px-6 py-4 rounded-2xl shadow-2xl font-black z-[200] border-2 flex items-center gap-3 ${toast.isError ? 'bg-red-600 border-red-400' : 'bg-slate-900 border-slate-700'}`}
-          >
-            {toast.isError && <Settings size={20} className="animate-spin" />}
-            <span>{toast.msg}</span>
-            {toast.action && (
-              <button
-                onClick={() => {
-                  toast.action.onClick();
-                  setToast(null);
-                }}
-                className="ml-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-black uppercase tracking-wider transition-all"
-              >
-                {toast.action.label}
-              </button>
-            )}
-          </div>
-        )}
+        <NotificationPermissionBanner />
       </div>
-    </div>
+    </NavigationContext.Provider>
   );
 }
 

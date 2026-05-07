@@ -55,11 +55,19 @@ Focus on what changed from the USER's perspective, not code details.
 Skip commits about CI, formatting, linting, or internal refactoring unless they affect the user.
 
 Rules:
-- Each entry should be a JSON object with "category" and "description"
+- Each entry should be a JSON object with "category", "area", and "description"
 - Categories: "feature", "improvement", "bugfix", "ui"
+- Areas: "finance", "roster", "schedule", "compliance", "admin", "parent", "general"
+  - finance: budgets, ledger, transactions, payments, fundraising
+  - roster: players, guardians, enrollments
+  - schedule: calendar, events, iCal sync
+  - compliance: documents, medical forms, waivers
+  - admin: club settings, team settings, roles, permissions, categories
+  - parent: parent portal, parent-facing features
+  - general: app-wide, auth, changelog, UI/UX, performance
 - Each description should be 1 short sentence (max 15 words)
 - Combine related commits into single entries
-- Return ONLY a valid JSON array: [{"category": "...", "description": "..."}]
+- Return ONLY a valid JSON array: [{"category": "...", "area": "...", "description": "..."}]
 - If nothing user-facing changed, return []
 
 Commits:

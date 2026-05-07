@@ -1,38 +1,63 @@
-import { ChevronDown, Globe, LogOut, Settings, GitCommit } from 'lucide-react';
+import { ChevronDown, Globe, LogOut, Settings, GitCommit, Bell } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { useState } from 'react';
 import { isSingleTeamMode } from '../utils/singleTeamMode';
+import { useNavigation } from '../context/NavigationContext';
+import { usePushNotifications } from '../hooks/usePushNotifications';
+import { pushService } from '../services/pushService';
 
-export default function DesktopSidebar({
-  club,
-  teams,
-  selectedTeamId,
-  setSelectedTeamId,
-  appNavItems,
-  clubNavItems,
-  seasonNavItems,
-  teamNavItems,
-  selectedSeason,
-  setSelectedSeason,
-  seasons,
-  currentView,
-  navigate,
-  user,
-  effectiveRole,
-  toggleLocale,
-  locale,
-  cycleTheme,
-  theme,
-  ThemeIcon,
-  sidebarSettingsOpen,
-  setSidebarSettingsOpen,
-  supabase,
-}) {
+export default function DesktopSidebar() {
+  const {
+    club,
+    teams,
+    selectedTeamId,
+    setSelectedTeamId,
+    appNavItems,
+    clubNavItems,
+    seasonNavItems,
+    teamNavItems,
+    selectedSeason,
+    setSelectedSeason,
+    seasons,
+    currentView,
+    navigate,
+    user,
+    toggleLocale,
+    locale,
+    cycleTheme,
+    theme,
+    ThemeIcon,
+    sidebarSettingsOpen,
+    setSidebarSettingsOpen,
+    supabase,
+  } = useNavigation();
   const { t } = useT();
   const [showTeamPicker, setShowTeamPicker] = useState(false);
+  const [broadcastMsg, setBroadcastMsg] = useState('');
+  const [showBroadcast, setShowBroadcast] = useState(false);
+  const [broadcastSending, setBroadcastSending] = useState(false);
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) || teams[0] || null;
-  const currentSearch = typeof window !== 'undefined' ? window.location.search : '';
   const singleTeam = isSingleTeamMode();
+  const { isSubscribed, isSupported, subscribe } = usePushNotifications();
+
+  const handleBroadcast = async () => {
+    if (!broadcastMsg.trim()) return;
+    setBroadcastSending(true);
+    try {
+      await pushService.broadcast({
+        teamId: selectedTeamId || undefined,
+        title: selectedTeam?.name || 'Team Update',
+        body: broadcastMsg.trim(),
+        url: '/dashboard',
+      });
+      setBroadcastMsg('');
+      setShowBroadcast(false);
+    } catch (e) {
+      console.error('[broadcast]', e);
+    } finally {
+      setBroadcastSending(false);
+    }
+  };
 
   return (
     <aside className="hidden md:flex w-64 bg-slate-900 text-white flex-col sticky top-0 h-screen">
@@ -230,6 +255,63 @@ export default function DesktopSidebar({
               <GitCommit size={16} />
               <span className="text-sm">Update Log</span>
             </button>
+            {/* Push notifications toggle */}
+            {isSupported &&
+              (isSubscribed ? (
+                <div className="px-4 py-2 flex items-center gap-3">
+                  <Bell size={16} className="text-green-400 shrink-0" />
+                  <span className="text-xs text-green-400 font-bold">Notifications on</span>
+                </div>
+              ) : (
+                <button
+                  onClick={subscribe}
+                  className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-slate-400 hover:bg-slate-800 transition-all"
+                >
+                  <Bell size={16} />
+                  <span className="text-sm">Enable Notifications</span>
+                </button>
+              ))}
+
+            {/* Broadcast to team (staff only) */}
+            {selectedTeamId &&
+              (showBroadcast ? (
+                <div className="space-y-1 px-1">
+                  <textarea
+                    value={broadcastMsg}
+                    onChange={(e) => setBroadcastMsg(e.target.value)}
+                    placeholder="Message to team…"
+                    rows={2}
+                    className="w-full bg-slate-800 text-white text-xs rounded-xl px-3 py-2 resize-none border border-slate-700 focus:border-blue-500 focus:outline-none"
+                  />
+                  <div className="flex gap-1">
+                    <button
+                      onClick={handleBroadcast}
+                      disabled={broadcastSending || !broadcastMsg.trim()}
+                      className="flex-1 bg-blue-600 disabled:opacity-40 text-white text-xs font-black py-1.5 rounded-lg"
+                    >
+                      {broadcastSending ? 'Sending…' : 'Send'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowBroadcast(false);
+                        setBroadcastMsg('');
+                      }}
+                      className="flex-1 bg-slate-800 text-slate-400 text-xs font-bold py-1.5 rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowBroadcast(true)}
+                  className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-slate-400 hover:bg-slate-800 transition-all"
+                >
+                  <Bell size={16} />
+                  <span className="text-sm">Broadcast to Team</span>
+                </button>
+              ))}
+
             <button
               onClick={() => supabase.auth.signOut()}
               className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-red-400 hover:bg-red-900/20 transition-all"

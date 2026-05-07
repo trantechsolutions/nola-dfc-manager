@@ -1,20 +1,21 @@
 import { LayoutDashboard, Users, Calendar, Plus, ReceiptText } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { isSingleTeamMode } from '../utils/singleTeamMode';
+import { useNavigation } from '../context/NavigationContext';
 
-export default function MobileBottomNav({
-  seasonNavItems,
-  teamNavItems,
-  effectiveIsStaff,
-  currentView,
-  currentSearch,
-  navigate,
-  canEditLedger,
-  setTxToEdit,
-  setShowTxForm,
-  isClubAdmin,
-  clubNavItems,
-}) {
+export default function MobileBottomNav() {
+  const {
+    seasonNavItems,
+    teamNavItems,
+    effectiveIsStaff,
+    currentView,
+    navigate,
+    canEditLedger,
+    setTxToEdit,
+    setShowTxForm,
+    isClubAdmin,
+    clubNavItems,
+  } = useNavigation();
   const { t } = useT();
   const singleTeam = isSingleTeamMode();
 

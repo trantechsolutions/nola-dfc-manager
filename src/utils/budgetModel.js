@@ -9,8 +9,42 @@
  * - Per-category linear regression (trend detection)
  * - Roster-normalized projections (cost-per-player scaling)
  * - Anomaly detection (z-score based)
- * - Self-calibrating accuracy scoring
+ * - Bayesian shrinkage for single-season priors
+ * - Confidence interval bounds (±1.5σ)
+ * - Self-calibrating accuracy scoring against actuals
  */
+
+// ─── MODEL HYPERPARAMETERS ─────────────────────────────────────────────────────
+// Single tuning surface for all forecasting weights and thresholds.
+export const FORECAST_CONFIG = {
+  // Exponential decay applied to weighted moving averages (higher = more recent bias)
+  decayFactor: 0.6,
+  // Blend weights for single-season Bayesian shrinkage (must sum to 1.0)
+  singleSeasonActualWeight: 0.55,
+  singleSeasonBudgetWeight: 0.25,
+  singleSeasonPriorWeight: 0.2,
+  // Sport-wide category cost prior — fallback when no history exists ($/player)
+  categoryPriorPerPlayer: 80,
+  // Minimum R² before regression slope is trusted for trend/blend decisions
+  trendR2Threshold: 0.5,
+  // R² threshold for high-confidence regression-dominant blend (4+ seasons)
+  strongTrendR2Threshold: 0.7,
+  // Z-score threshold for anomaly detection
+  anomalyZThreshold: 2.0,
+  // Budget vs actual variance threshold before generating an insight (fraction)
+  budgetVarianceThreshold: 0.2,
+  // Confidence interval half-width multiplier (applied to stdDev of history)
+  ciMultiplier: 1.5,
+  // Single-season CI fallback as a fraction of point estimate (±30%)
+  singleSeasonCIFraction: 0.3,
+  // Minimum season completion before extrapolation is trusted
+  minCompletionForExtrapolation: 0.35,
+  // Below this completion, dampen extrapolation toward budget
+  earlySeasonDampenThreshold: 0.25,
+  // Minimum year-over-year growth applied to every category forecast.
+  // Encodes the domain rule that budgets increase annually regardless of trend.
+  minYearlyGrowthRate: 0.03,
+};
 
 // ─── MATH PRIMITIVES ───────────────────────────────────────────────────────────
 
@@ -289,26 +323,41 @@ export function generateForecast(historicalData, targetRosterSize) {
   }
 
   // Extrapolate in-progress seasons' actuals to full-season estimates
+  // TICKET-005: Dampen extrapolations when season completion is below the minimum threshold.
+  const cfg = FORECAST_CONFIG;
   const extrapolatedActuals = { ...actualsBySeasonCat };
   const extrapolatedIncome = { ...(actualIncomeByCat || {}) };
   for (const sid of seasons) {
     const status = seasonStatus?.[sid];
-    if (status && !status.isFinalized && status.completion > 0.1 && status.completion < 1) {
-      // Season is in progress — extrapolate expense actuals to full season
+    if (status && !status.isFinalized && status.completion > 0 && status.completion < 1) {
+      const c = status.completion;
+
+      // Skip extrapolation entirely when too early in the season
+      if (c < cfg.minCompletionForExtrapolation) continue;
+
       const seasonActuals = actualsBySeasonCat[sid];
       if (seasonActuals) {
         const projected = {};
         for (const [cat, amount] of Object.entries(seasonActuals)) {
-          projected[cat] = amount / status.completion;
+          const rawProjected = amount / c;
+          if (c < cfg.earlySeasonDampenThreshold) {
+            // Dampen toward budget to suppress pre-season invoice spikes
+            const budgeted =
+              (budgetBySeasonCat[sid]?.[cat]?.expensesFall || 0) + (budgetBySeasonCat[sid]?.[cat]?.expensesSpring || 0);
+            const dampFactor = c / cfg.earlySeasonDampenThreshold;
+            projected[cat] = rawProjected * dampFactor + budgeted * (1 - dampFactor);
+          } else {
+            projected[cat] = rawProjected;
+          }
         }
         extrapolatedActuals[sid] = projected;
       }
-      // Extrapolate income actuals too
+
       const seasonIncome = actualIncomeByCat?.[sid];
       if (seasonIncome) {
         const projectedIncome = {};
         for (const [cat, amount] of Object.entries(seasonIncome)) {
-          projectedIncome[cat] = amount / status.completion;
+          projectedIncome[cat] = amount / c;
         }
         extrapolatedIncome[sid] = projectedIncome;
       }
@@ -359,14 +408,11 @@ export function generateForecast(historicalData, targetRosterSize) {
         const itemExpense = (Number(item.expensesFall) || 0) + (Number(item.expensesSpring) || 0);
         const itemIncome = Number(item.income) || 0;
 
-        // Proportional scaling
         const expenseRatio = totalBudgetedExpense > 0 ? itemExpense / totalBudgetedExpense : 0;
         const incomeRatio = totalBudgetedIncome > 0 ? itemIncome / totalBudgetedIncome : 0;
 
         const forecastExpense = result.totalExpense * expenseRatio;
         const forecastIncome = result.totalIncome * incomeRatio;
-
-        // Split expense into fall/spring using historical ratio
         const fallRatio = itemExpense > 0 ? (Number(item.expensesFall) || 0) / itemExpense : 0.5;
 
         forecastItems.push({
@@ -375,18 +421,21 @@ export function generateForecast(historicalData, targetRosterSize) {
           income: Math.round(forecastIncome),
           expensesFall: Math.round(forecastExpense * fallRatio),
           expensesSpring: Math.round(forecastExpense * (1 - fallRatio)),
+          forecastLow: Math.round(result.forecastLow * expenseRatio),
+          forecastHigh: Math.round(result.forecastHigh * expenseRatio),
           confidence: result.confidence,
           trend: result.trend,
         });
       }
     } else {
-      // No template — create a single line item
       forecastItems.push({
         category: cat,
         label: '',
         income: Math.round(result.totalIncome),
         expensesFall: Math.round(result.totalExpense * 0.5),
         expensesSpring: Math.round(result.totalExpense * 0.5),
+        forecastLow: result.forecastLow,
+        forecastHigh: result.forecastHigh,
         confidence: result.confidence,
         trend: result.trend,
       });
@@ -402,8 +451,13 @@ export function generateForecast(historicalData, targetRosterSize) {
   const totalIncome = forecastItems.reduce((s, i) => s + i.income, 0);
   const totalExpenses = forecastItems.reduce((s, i) => s + i.expensesFall + i.expensesSpring, 0);
 
-  // Accuracy score from backtesting
-  const accuracy = backtestAccuracy(
+  // TICKET-006: Dynamic fee rounding based on per-player cost bracket
+  const rawPerPlayer = rosterSize > 0 ? totalExpenses / rosterSize : 0;
+  const feeIncrement = rawPerPlayer < 500 ? 10 : rawPerPlayer < 1000 ? 25 : 50;
+  const suggestedFee = Math.ceil(rawPerPlayer / feeIncrement) * feeIncrement;
+
+  // TICKET-003: Backtest against actuals; returns { score, source } | null
+  const backtestResult = backtestAccuracy(
     seasons,
     categories,
     budgetBySeasonCat,
@@ -412,11 +466,6 @@ export function generateForecast(historicalData, targetRosterSize) {
     rosterBySeason,
   );
 
-  // Overall confidence
-  const confidenceCounts = { high: 0, medium: 0, low: 0 };
-  for (const cf of Object.values(categoryForecasts)) {
-    confidenceCounts[cf.confidence] = (confidenceCounts[cf.confidence] || 0) + 1;
-  }
   const overallConfidence = seasons.length >= 4 ? 'high' : seasons.length >= 2 ? 'medium' : 'low';
 
   return {
@@ -428,10 +477,12 @@ export function generateForecast(historicalData, targetRosterSize) {
       totalIncome,
       totalExpenses,
       netBudget: totalIncome - totalExpenses,
-      suggestedFee: Math.ceil(totalExpenses / rosterSize / 50) * 50,
+      suggestedFee,
+      rawSuggestedFee: Math.round(rawPerPlayer),
     },
     confidence: overallConfidence,
-    accuracy,
+    accuracy: backtestResult?.score ?? null,
+    accuracySource: backtestResult?.source ?? null,
     insights,
     seasonsAnalyzed: seasons.length,
   };
@@ -449,6 +500,7 @@ function forecastCategory(
   rosterBySeason,
   targetRosterSize,
 ) {
+  const cfg = FORECAST_CONFIG;
   const incomeHistory = [];
   const expenseHistory = [];
   const actualExpenseHistory = [];
@@ -463,7 +515,6 @@ function forecastCategory(
     const actualIncome = actualIncomeByCat?.[sid]?.[cat] || 0;
     const roster = rosterBySeason[sid] || targetRosterSize;
 
-    // Use the best available data: actuals if they exist, otherwise budgeted
     const bestExpense = actualExpense > 0 ? actualExpense : budgetedExpense;
     const bestIncome = actualIncome > 0 ? actualIncome : budgetedIncome;
 
@@ -479,13 +530,12 @@ function forecastCategory(
   const n = seasons.length;
   const insights = [];
 
-  // Use actuals if available
   const useActuals = actualExpenseHistory.some((a) => a !== 0);
   const primaryExpenseData = useActuals ? actualExpenseHistory : expenseHistory;
 
   // --- Method 1: Weighted Moving Average ---
-  const wmaExpense = weightedAverage(primaryExpenseData, 0.6);
-  const wmaIncome = weightedAverage(incomeHistory, 0.6);
+  const wmaExpense = weightedAverage(primaryExpenseData, cfg.decayFactor);
+  const wmaIncome = weightedAverage(incomeHistory, cfg.decayFactor);
 
   // --- Method 2: Linear Regression (trend) ---
   const expensePoints = primaryExpenseData.map((v, i) => [i, v]);
@@ -497,42 +547,50 @@ function forecastCategory(
   const regIncome = incomeReg.slope * n + incomeReg.intercept;
 
   // --- Method 3: Per-player scaling ---
-  let scaledExpense = wmaExpense;
+  const sportPrior = cfg.categoryPriorPerPlayer * targetRosterSize;
+  let scaledExpense = wmaExpense || sportPrior;
   if (perPlayerExpense.length >= 1) {
-    const avgPerPlayer = weightedAverage(perPlayerExpense, 0.6);
+    const avgPerPlayer = weightedAverage(perPlayerExpense, cfg.decayFactor);
     scaledExpense = avgPerPlayer * targetRosterSize;
   }
 
   // --- Blend methods based on data quality ---
   let totalExpense, totalIncome;
 
-  if (n >= 4 && expenseReg.r2 > 0.7) {
-    // Strong trend — weight regression higher
+  if (n >= 4 && expenseReg.r2 > cfg.strongTrendR2Threshold) {
+    // Strong trend — regression-dominant
     totalExpense = Math.max(0, regExpense * 0.6 + wmaExpense * 0.3 + scaledExpense * 0.1);
     totalIncome = Math.max(0, regIncome * 0.6 + wmaIncome * 0.4);
   } else if (n >= 2) {
-    // Moderate data — blend equally
+    // Moderate data — balanced blend
     totalExpense = Math.max(0, wmaExpense * 0.5 + scaledExpense * 0.3 + regExpense * 0.2);
     totalIncome = Math.max(0, wmaIncome * 0.7 + regIncome * 0.3);
   } else {
-    // 1 season — blend budget with actuals (if available) and scale by roster
-    if (useActuals) {
-      // Actuals exist: weight actuals 60%, budget 20%, per-player scaled 20%
-      const budgetExpense = expenseHistory[0] || 0;
-      const actualExpense = actualExpenseHistory[0] || 0;
-      totalExpense = Math.max(0, actualExpense * 0.6 + budgetExpense * 0.2 + scaledExpense * 0.2);
-      totalIncome = Math.max(0, wmaIncome);
-      insights.push(`${cat}: First season — blending actual spend with budget for baseline estimate.`);
-    } else {
-      // Only budget data — use budget with per-player scaling
-      totalExpense = Math.max(0, wmaExpense * 0.7 + scaledExpense * 0.3);
-      totalIncome = Math.max(0, wmaIncome);
-    }
+    // --- TICKET-001: Bayesian shrinkage for single-season ---
+    // Blend observed value toward a sport-wide prior to avoid overfitting one data point.
+    const budgetExpense = expenseHistory[0] || 0;
+    const actualExpense = actualExpenseHistory[0] || 0;
+    const observedExpense = useActuals ? actualExpense : budgetExpense;
+
+    totalExpense = Math.max(
+      0,
+      observedExpense * cfg.singleSeasonActualWeight +
+        budgetExpense * cfg.singleSeasonBudgetWeight +
+        sportPrior * cfg.singleSeasonPriorWeight,
+    );
+    totalIncome = Math.max(0, wmaIncome);
+    insights.push(`${cat}: Single-season baseline — estimate shrunk toward sport-wide prior for stability.`);
   }
 
-  // --- Trend detection ---
+  // --- TICKET-004: Regression-slope trend detection ---
+  // Use regression slope when statistically meaningful (R² ≥ threshold), else fall back to two-point diff.
   let trend = 'stable';
-  if (n >= 2) {
+  if (n >= 3 && expenseReg.r2 >= cfg.trendR2Threshold) {
+    const meanExpense = primaryExpenseData.reduce((a, b) => a + b, 0) / n;
+    const slopePct = meanExpense > 0 ? expenseReg.slope / meanExpense : 0;
+    if (slopePct > 0.05) trend = 'rising';
+    else if (slopePct < -0.05) trend = 'declining';
+  } else if (n >= 2) {
     const pctChange =
       primaryExpenseData[n - 2] > 0
         ? (primaryExpenseData[n - 1] - primaryExpenseData[n - 2]) / primaryExpenseData[n - 2]
@@ -548,7 +606,7 @@ function forecastCategory(
     const lastValue = primaryExpenseData[n - 1];
     const z = zScore(lastValue, mean, sd);
 
-    if (Math.abs(z) > 2) {
+    if (Math.abs(z) > cfg.anomalyZThreshold) {
       const dir = z > 0 ? 'higher' : 'lower';
       insights.push(`${cat}: Last season was ${Math.abs(z).toFixed(1)}σ ${dir} than average — possible anomaly.`);
     }
@@ -561,11 +619,11 @@ function forecastCategory(
       (budgetBySeasonCat[seasons[n - 1]]?.[cat]?.expensesSpring || 0);
     const lastActual = actualExpenseHistory[n - 1];
     if (lastBudgeted > 0) {
-      const variance = ((lastActual - lastBudgeted) / lastBudgeted) * 100;
-      if (Math.abs(variance) > 20) {
+      const variance = (lastActual - lastBudgeted) / lastBudgeted;
+      if (Math.abs(variance) > cfg.budgetVarianceThreshold) {
         const dir = variance > 0 ? 'over' : 'under';
         insights.push(
-          `${cat}: Last season was ${dir}-budget by ${Math.abs(variance).toFixed(0)}%. Forecast adjusted to reflect actuals.`,
+          `${cat}: Last season was ${dir}-budget by ${Math.abs(variance * 100).toFixed(0)}%. Forecast adjusted to reflect actuals.`,
         );
       }
     }
@@ -573,8 +631,31 @@ function forecastCategory(
 
   // --- Trend insight ---
   if (trend !== 'stable' && n >= 2) {
-    const pctStr = (Math.abs(expenseReg.slope / (weightedAverage(primaryExpenseData) || 1)) * 100).toFixed(0);
+    const pctStr = (
+      Math.abs(expenseReg.slope / (weightedAverage(primaryExpenseData, cfg.decayFactor) || 1)) * 100
+    ).toFixed(0);
     insights.push(`${cat}: ${trend === 'rising' ? 'Increasing' : 'Decreasing'} trend (~${pctStr}% per season).`);
+  }
+
+  // --- Inflation floor: budgets increase every year ---
+  // If the blended estimate is below last season's value grown by minYearlyGrowthRate, bump it up.
+  const lastSeasonExpense = primaryExpenseData[n - 1] || 0;
+  const inflationFloor = lastSeasonExpense * (1 + cfg.minYearlyGrowthRate);
+  if (lastSeasonExpense > 0 && totalExpense < inflationFloor) {
+    totalExpense = inflationFloor;
+  }
+
+  // --- TICKET-002: Confidence interval bounds ---
+  let forecastLow, forecastHigh;
+  if (n >= 2) {
+    const sd = stdDev(primaryExpenseData);
+    const halfWidth = sd * cfg.ciMultiplier;
+    forecastLow = Math.max(0, Math.round(totalExpense - halfWidth));
+    forecastHigh = Math.round(totalExpense + halfWidth);
+  } else {
+    const halfWidth = totalExpense * cfg.singleSeasonCIFraction;
+    forecastLow = Math.max(0, Math.round(totalExpense - halfWidth));
+    forecastHigh = Math.round(totalExpense + halfWidth);
   }
 
   // --- Confidence ---
@@ -583,6 +664,8 @@ function forecastCategory(
   return {
     totalExpense: Math.round(totalExpense),
     totalIncome: Math.round(totalIncome),
+    forecastLow,
+    forecastHigh,
     trend,
     confidence,
     regression: { expense: expenseReg, income: incomeReg },
@@ -605,8 +688,9 @@ function findTemplateSeason(cat, seasons, budgetBySeasonCat) {
 // ─── BACKTESTING ────────────────────────────────────────────────────────────────
 
 /**
- * Backtest: for each season with a predecessor, predict it and compare to actuals
- * Returns an accuracy score (0-100)
+ * Backtest: for each season with a predecessor, predict it and compare to actuals.
+ * Prefers real transaction actuals over budgeted amounts as the truth signal.
+ * Returns { score, source } where source is "actuals" | "budget".
  */
 function backtestAccuracy(
   seasons,
@@ -620,8 +704,8 @@ function backtestAccuracy(
 
   const actuals = [];
   const predictions = [];
+  let usedActuals = false;
 
-  // For each season starting from the second, predict using prior seasons
   for (let i = 1; i < seasons.length; i++) {
     const priorSeasons = seasons.slice(0, i);
     const targetSeason = seasons[i];
@@ -638,12 +722,17 @@ function backtestAccuracy(
         roster,
       );
 
-      const actualExpense =
+      // Prefer transaction actuals; fall back to budgeted amounts
+      const txActual = actualsBySeasonCat[targetSeason]?.[cat];
+      const budgetedExpense =
         (budgetBySeasonCat[targetSeason]?.[cat]?.expensesFall || 0) +
         (budgetBySeasonCat[targetSeason]?.[cat]?.expensesSpring || 0);
+      const truthValue = txActual != null && txActual > 0 ? txActual : budgetedExpense;
 
-      if (actualExpense > 0) {
-        actuals.push(actualExpense);
+      if (txActual != null && txActual > 0) usedActuals = true;
+
+      if (truthValue > 0) {
+        actuals.push(truthValue);
         predictions.push(result.totalExpense);
       }
     }
@@ -652,7 +741,10 @@ function backtestAccuracy(
   if (actuals.length === 0) return null;
 
   const error = mape(actuals, predictions);
-  return Math.round(Math.max(0, (1 - error) * 100));
+  return {
+    score: Math.round(Math.max(0, (1 - error) * 100)),
+    source: usedActuals ? 'actuals' : 'budget',
+  };
 }
 
 // ─── COMPARISON HELPERS ─────────────────────────────────────────────────────────

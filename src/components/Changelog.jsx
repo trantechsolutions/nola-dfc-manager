@@ -1,13 +1,33 @@
 import { useState, useEffect } from 'react';
 import { buildNumber, commitHash, buildDate } from 'virtual:git-info';
 import { supabase } from '../supabase';
-import { GitCommit, Calendar, ChevronDown, ChevronRight, Package, Sparkles, Loader2 } from 'lucide-react';
+import { GitCommit, Calendar, ChevronDown, ChevronRight, Package, Sparkles, Loader2, Tag } from 'lucide-react';
 
 const CATEGORY_LABELS = {
   feature: '✨ New Features',
   improvement: '🔧 Improvements',
   bugfix: '🐛 Bug Fixes',
   ui: '🎨 UI/UX Changes',
+};
+
+const AREA_LABELS = {
+  finance: 'Finance',
+  roster: 'Roster',
+  schedule: 'Schedule',
+  compliance: 'Compliance',
+  admin: 'Admin',
+  parent: 'Parent',
+  general: 'General',
+};
+
+const AREA_STYLES = {
+  finance: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
+  roster: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
+  schedule: 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400',
+  compliance: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+  admin: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400',
+  parent: 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400',
+  general: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
 };
 
 const CATEGORY_STYLES = {
@@ -57,6 +77,7 @@ export default function Changelog() {
   const [loading, setLoading] = useState(true);
   const [showRawLog, setShowRawLog] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [activeArea, setActiveArea] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -76,8 +97,13 @@ export default function Changelog() {
     .filter((e) => e.ai_summary && Array.isArray(e.ai_summary))
     .flatMap((e) => e.ai_summary);
 
+  // Derive available areas from actual data (only show filter pills that have entries)
+  const availableAreas = [...new Set(allSummaryItems.map((i) => i.area).filter(Boolean))].sort();
+
+  const filteredItems = activeArea ? allSummaryItems.filter((i) => i.area === activeArea) : allSummaryItems;
+
   const categorized = {};
-  for (const item of allSummaryItems) {
+  for (const item of filteredItems) {
     const cat = item.category || 'improvement';
     if (!categorized[cat]) categorized[cat] = [];
     // Deduplicate by description
@@ -122,7 +148,7 @@ export default function Changelog() {
       </div>
 
       {/* AI Summary Cards */}
-      {Object.keys(categorized).length > 0 && (
+      {allSummaryItems.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Sparkles size={14} className="text-amber-500" />
@@ -132,23 +158,57 @@ export default function Changelog() {
             <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
           </div>
 
-          {Object.entries(categorized).map(([category, items]) => {
-            const style = CATEGORY_STYLES[category] || CATEGORY_STYLES.improvement;
-            const label = CATEGORY_LABELS[category] || category;
-            return (
-              <div key={category} className={`rounded-xl border p-4 ${style.bg} ${style.border}`}>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">{label}</h3>
-                <ul className="space-y-1.5">
-                  {items.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className={`w-1.5 h-1.5 rounded-full ${style.dot} mt-1.5 flex-shrink-0`} />
-                      <span className="text-sm text-slate-700 dark:text-slate-300">{item.description}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
+          {/* Area filter pills */}
+          {availableAreas.length > 1 && (
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setActiveArea(null)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors ${activeArea === null ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+              >
+                <Tag size={10} /> All
+              </button>
+              {availableAreas.map((area) => (
+                <button
+                  key={area}
+                  onClick={() => setActiveArea(activeArea === area ? null : area)}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors ${activeArea === area ? AREA_STYLES[area] + ' ring-1 ring-current' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                >
+                  {AREA_LABELS[area] || area}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {Object.keys(categorized).length > 0 ? (
+            Object.entries(categorized).map(([category, items]) => {
+              const style = CATEGORY_STYLES[category] || CATEGORY_STYLES.improvement;
+              const label = CATEGORY_LABELS[category] || category;
+              return (
+                <div key={category} className={`rounded-xl border p-4 ${style.bg} ${style.border}`}>
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2">{label}</h3>
+                  <ul className="space-y-1.5">
+                    {items.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className={`w-1.5 h-1.5 rounded-full ${style.dot} mt-1.5 flex-shrink-0`} />
+                        <div className="flex items-start gap-1.5 min-w-0">
+                          <span className="text-sm text-slate-700 dark:text-slate-300">{item.description}</span>
+                          {item.area && !activeArea && (
+                            <span
+                              className={`shrink-0 text-[9px] font-black px-1.5 py-0.5 rounded-full mt-0.5 ${AREA_STYLES[item.area] || AREA_STYLES.general}`}
+                            >
+                              {AREA_LABELS[item.area] || item.area}
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-xs text-slate-400 italic py-2">No entries match this filter.</p>
+          )}
         </div>
       )}
 

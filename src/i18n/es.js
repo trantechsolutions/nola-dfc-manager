@@ -397,6 +397,7 @@ export default {
     chatPlaceholder: 'Pregunta sobre presupuesto o calendario...',
     chatDisabled: 'Configura la clave de API primero...',
     connectionError: 'Error de conexión:',
+    exportReport: 'Exportar Informe',
   },
 
   // ── Configuración del Equipo ───────────────────────────

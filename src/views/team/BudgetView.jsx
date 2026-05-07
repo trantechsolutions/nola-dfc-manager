@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Plus,
   Trash2,
@@ -16,6 +16,7 @@ import {
   ArrowDownRight,
   Sparkles,
   FileSpreadsheet,
+  Download,
   UserPlus,
   AlertTriangle,
   GitBranch,
@@ -26,6 +27,7 @@ import {
 import { supabaseService } from '../../services/supabaseService';
 import PlayerFormModal from '../../components/PlayerFormModal';
 import { useBudgetForecast } from '../../hooks/useBudgetForecast';
+import { exportBudgetActualsPDF, exportBudgetActualsCSV } from '../../utils/exportUtils';
 
 // Fallback budget categories used when no categoryOptions prop is provided
 const FALLBACK_BUDGET_CATEGORIES = [
@@ -88,6 +90,8 @@ export default function BudgetView({
 
   // Modals
   const [showNewSeasonModal, setShowNewSeasonModal] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef(null);
   const [newSeasonName, setNewSeasonName] = useState('');
   const [showPlayerForm, setShowPlayerForm] = useState(false);
   const [isSubmittingPlayer, setIsSubmittingPlayer] = useState(false);
@@ -182,6 +186,15 @@ export default function BudgetView({
   useEffect(() => {
     fetchData();
   }, [selectedSeason, currentTeamSeason?.id]);
+
+  useEffect(() => {
+    if (!showExportMenu) return;
+    const handler = (e) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) setShowExportMenu(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showExportMenu]);
 
   useEffect(() => {
     if (rosterSizeManual) return; // Don't auto-set when manually overridden
@@ -789,13 +802,69 @@ export default function BudgetView({
               </>
             )}
             {!isAmending && (
-              <button
-                onClick={() => setShowNewSeasonModal(true)}
-                className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                title="New Season"
-              >
-                <Plus size={16} />
-              </button>
+              <>
+                <div className="relative" ref={exportMenuRef}>
+                  <button
+                    onClick={() => setShowExportMenu((v) => !v)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                    title="Export Budget Report"
+                  >
+                    <Download size={14} />
+                    <span className="hidden sm:inline">Export</span>
+                  </button>
+                  {showExportMenu && (
+                    <div className="absolute right-0 top-full mt-1 z-50 min-w-[200px] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-1">
+                      {[
+                        {
+                          label: 'Budget vs Actuals PDF',
+                          icon: FileSpreadsheet,
+                          action: () => {
+                            setShowExportMenu(false);
+                            exportBudgetActualsPDF(
+                              budgetCategories,
+                              subtotals,
+                              actuals,
+                              { name: selectedSeason },
+                              formatMoney,
+                              roundedBaseFee,
+                            );
+                          },
+                        },
+                        {
+                          label: 'Budget vs Actuals CSV',
+                          icon: FileSpreadsheet,
+                          action: () => {
+                            setShowExportMenu(false);
+                            exportBudgetActualsCSV(
+                              budgetCategories,
+                              subtotals,
+                              actuals,
+                              { name: selectedSeason },
+                              formatMoney,
+                            );
+                          },
+                        },
+                      ].map((item) => (
+                        <button
+                          key={item.label}
+                          onClick={item.action}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          <item.icon size={14} />
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowNewSeasonModal(true)}
+                  className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                  title="New Season"
+                >
+                  <Plus size={16} />
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -1674,6 +1743,11 @@ export default function BudgetView({
                     {formatMoney(forecastResult.summary.suggestedFee)}
                     <span className="text-[10px] font-bold text-slate-400 ml-1">/ player</span>
                   </p>
+                  {forecastResult.summary.rawSuggestedFee !== forecastResult.summary.suggestedFee && (
+                    <p className="text-[9px] text-violet-400 mt-0.5">
+                      Raw: {formatMoney(forecastResult.summary.rawSuggestedFee)}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1691,8 +1765,18 @@ export default function BudgetView({
                   {forecastResult.confidence.toUpperCase()} CONFIDENCE
                 </div>
                 {forecastResult.accuracy != null && (
-                  <div className="px-3 py-1.5 rounded-full text-xs font-black bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                  <div
+                    className="px-3 py-1.5 rounded-full text-xs font-black bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                    title={
+                      forecastResult.accuracySource === 'actuals'
+                        ? 'Backtested against real transaction actuals'
+                        : 'Backtested against budgeted amounts (no transaction actuals available)'
+                    }
+                  >
                     {forecastResult.accuracy}% ACCURACY
+                    {forecastResult.accuracySource === 'budget' && (
+                      <span className="ml-1 font-normal opacity-70">(vs budget)</span>
+                    )}
                   </div>
                 )}
                 <div className="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
@@ -1768,12 +1852,14 @@ export default function BudgetView({
                         <th className="text-right py-2 font-bold">Income</th>
                         <th className="text-right py-2 font-bold">Fall Exp</th>
                         <th className="text-right py-2 font-bold">Spring Exp</th>
+                        <th className="text-right py-2 font-bold">Range</th>
                         <th className="text-center py-2 font-bold">Confidence</th>
                       </tr>
                     </thead>
                     <tbody>
                       {forecastResult.forecast.map((item, i) => {
                         const catInfo = budgetCategories.find((c) => c.code === item.category);
+                        const totalExp = item.expensesFall + item.expensesSpring;
                         return (
                           <tr key={i} className="border-b border-slate-100 dark:border-slate-800">
                             <td className="py-2 font-bold text-slate-600 dark:text-slate-300">
@@ -1788,6 +1874,15 @@ export default function BudgetView({
                             </td>
                             <td className="py-2 text-right font-bold text-red-500">
                               {item.expensesSpring > 0 ? formatMoney(item.expensesSpring) : '—'}
+                            </td>
+                            <td className="py-2 text-right">
+                              {totalExp > 0 && item.forecastLow != null ? (
+                                <span className="text-[9px] text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                                  {formatMoney(item.forecastLow)}–{formatMoney(item.forecastHigh)}
+                                </span>
+                              ) : (
+                                <span className="text-[9px] text-slate-300">—</span>
+                              )}
                             </td>
                             <td className="py-2 text-center">
                               <span

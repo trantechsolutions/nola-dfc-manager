@@ -1,22 +1,23 @@
 import { Globe, LogOut, Menu } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { isSingleTeamMode } from '../utils/singleTeamMode';
+import { useNavigation } from '../context/NavigationContext';
 
-export default function MobileHeader({
-  club,
-  selectedTeam,
-  teams,
-  selectedTeamId,
-  setSelectedTeamId,
-  toggleLocale,
-  locale,
-  cycleTheme,
-  theme,
-  ThemeIcon,
-  mobileMenuOpen,
-  setMobileMenuOpen,
-  supabase,
-}) {
+export default function MobileHeader() {
+  const {
+    club,
+    selectedTeam,
+    teams,
+    selectedTeamId,
+    setSelectedTeamId,
+    toggleLocale,
+    locale,
+    cycleTheme,
+    theme,
+    ThemeIcon,
+    setMobileMenuOpen,
+    supabase,
+  } = useNavigation();
   const { t } = useT();
   const singleTeam = isSingleTeamMode();
 

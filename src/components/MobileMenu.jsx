@@ -1,24 +1,23 @@
 import { X, GitCommit } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
+import { useNavigation } from '../context/NavigationContext';
 
-export default function MobileMenu({
-  club,
-  selectedTeam,
-  appNavItems,
-  clubNavItems,
-  seasonNavItems,
-  teamNavItems,
-  selectedSeason,
-  setSelectedSeason,
-  seasons,
-  currentView,
-  currentSearch,
-  navigate,
-  user,
-  effectiveRole,
-  mobileMenuOpen,
-  setMobileMenuOpen,
-}) {
+export default function MobileMenu() {
+  const {
+    club,
+    selectedTeam,
+    seasonNavItems,
+    teamNavItems,
+    selectedSeason,
+    setSelectedSeason,
+    seasons,
+    currentView,
+    navigate,
+    user,
+    effectiveRole,
+    mobileMenuOpen,
+    setMobileMenuOpen,
+  } = useNavigation();
   const { t } = useT();
 
   if (!mobileMenuOpen) return null;

@@ -397,6 +397,7 @@ export default {
     chatPlaceholder: 'Ask about budget or schedule...',
     chatDisabled: 'Set up API key first...',
     connectionError: 'Connection error:',
+    exportReport: 'Export Report',
   },
 
   // ── Team Settings ──────────────────────────────────────

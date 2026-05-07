@@ -21,12 +21,14 @@ import {
   CircleDollarSign,
   CircleAlert,
   CircleCheck,
+  Download,
 } from 'lucide-react';
 import { EVENT_TYPES } from '../../utils/eventClassifier';
 import { buildEventMatchReport } from '../../utils/eventMatcher';
 import { filterEventsBySeason, getSeasonDateRange } from '../../utils/seasonUtils';
 import { useT } from '../../i18n/I18nContext';
 import { CATEGORY_LABELS } from '../../utils/constants';
+import { exportInsightsPDF } from '../../utils/exportUtils';
 
 const GEMINI_MODEL = 'gemini-2.0-flash-lite';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
@@ -312,15 +314,24 @@ ${playerSummary}`;
 
   return (
     <div className="space-y-5 pb-24 md:pb-6">
-      <div>
-        <h2 className="text-2xl font-black text-slate-900 dark:text-white">{t('insights.title')}</h2>
-        <p className="text-xs text-slate-400 font-bold mt-0.5">
-          {selectedSeason} (Aug {selectedSeason.split('-')[0]} – May {selectedSeason.split('-')[1]}) ·{' '}
-          {seasonEvents.upcoming.length + seasonEvents.past.length} events ·{' '}
-          {m.summary.upcomingWithNoCost > 0
-            ? `${m.summary.upcomingWithNoCost} ${t('insights.unpaid')}`
-            : t('insights.allPaid')}
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white">{t('insights.title')}</h2>
+          <p className="text-xs text-slate-400 font-bold mt-0.5">
+            {selectedSeason} (Aug {selectedSeason.split('-')[0]} – May {selectedSeason.split('-')[1]}) ·{' '}
+            {seasonEvents.upcoming.length + seasonEvents.past.length} events ·{' '}
+            {m.summary.upcomingWithNoCost > 0
+              ? `${m.summary.upcomingWithNoCost} ${t('insights.unpaid')}`
+              : t('insights.allPaid')}
+          </p>
+        </div>
+        <button
+          onClick={() => exportInsightsPDF(a, s, m, selectedSeason, formatMoney, CATEGORY_LABELS)}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shrink-0"
+        >
+          <Download size={14} />
+          <span>{t('insights.exportReport')}</span>
+        </button>
       </div>
 
       {/* ── TOP METRICS ── */}

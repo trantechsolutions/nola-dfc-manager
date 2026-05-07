@@ -1,4 +1,6 @@
 import { supabase } from '../supabase';
+import { logAuditEvent } from './auditService';
+import { pushService } from './pushService';
 
 export const playerService = {
   getAllPlayers: async () => {
@@ -58,36 +60,56 @@ export const playerService = {
       .single();
     if (pErr) throw pErr;
 
-    // 2. Insert guardians
-    if (playerData.guardians?.length > 0) {
-      const guardianRows = playerData.guardians
-        .filter((g) => g.name)
-        .map((g) => ({
-          player_id: player.id,
-          name: g.name,
-          email: g.email?.toLowerCase().trim() || null,
-          phone: g.phone || null,
-        }));
-      if (guardianRows.length > 0) {
-        const { error: gErr } = await supabase.from('guardians').insert(guardianRows);
-        if (gErr) throw gErr;
+    try {
+      // 2. Insert guardians
+      if (playerData.guardians?.length > 0) {
+        const guardianRows = playerData.guardians
+          .filter((g) => g.name)
+          .map((g) => ({
+            player_id: player.id,
+            name: g.name,
+            email: g.email?.toLowerCase().trim() || null,
+            phone: g.phone || null,
+          }));
+        if (guardianRows.length > 0) {
+          const { error: gErr } = await supabase.from('guardians').insert(guardianRows);
+          if (gErr) throw gErr;
+        }
       }
+
+      // 3. Insert season enrollment (no base_fee — computed by view)
+      if (playerData.seasonProfiles) {
+        const seasonRows = Object.entries(playerData.seasonProfiles).map(([seasonId, profile]) => ({
+          player_id: player.id,
+          season_id: seasonId,
+          fee_waived: profile.feeWaived ?? false,
+          status: profile.status || 'active',
+          ...(profile.teamSeasonId ? { team_season_id: profile.teamSeasonId } : {}),
+        }));
+        if (seasonRows.length > 0) {
+          const { error: sErr } = await supabase.from('player_seasons').insert(seasonRows);
+          if (sErr) throw sErr;
+        }
+      }
+    } catch (childErr) {
+      // Compensating delete — remove orphaned player if subsequent steps fail
+      await supabase.from('players').delete().eq('id', player.id);
+      throw childErr;
     }
 
-    // 3. Insert season enrollment (no base_fee — computed by view)
-    if (playerData.seasonProfiles) {
-      const seasonRows = Object.entries(playerData.seasonProfiles).map(([seasonId, profile]) => ({
-        player_id: player.id,
-        season_id: seasonId,
-        fee_waived: profile.feeWaived ?? false,
-        status: profile.status || 'active',
-        ...(profile.teamSeasonId ? { team_season_id: profile.teamSeasonId } : {}),
-      }));
-      if (seasonRows.length > 0) {
-        const { error: sErr } = await supabase.from('player_seasons').insert(seasonRows);
-        if (sErr) throw sErr;
+    // Fire-and-forget audit log
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        logAuditEvent({
+          tableName: 'players',
+          recordId: player.id,
+          action: 'insert',
+          changedBy: user.id,
+          newData: player,
+          metadata: { team_id: playerData.teamId || null, club_id: playerData.clubId || null },
+        });
       }
-    }
+    });
 
     return player;
   },
@@ -138,6 +160,20 @@ export const playerService = {
         if (sErr) throw sErr;
       }
     }
+
+    // Fire-and-forget audit log
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        logAuditEvent({
+          tableName: 'players',
+          recordId: playerId,
+          action: 'update',
+          changedBy: user.id,
+          newData: { ...playerData, id: playerId },
+          metadata: { updated_fields: Object.keys(playerData) },
+        });
+      }
+    });
   },
 
   updatePlayerField: async (playerId, field, value) => {
@@ -152,6 +188,60 @@ export const playerService = {
       .update({ [dbField]: value })
       .eq('id', playerId);
     if (error) throw error;
+
+    // Fire-and-forget audit log + compliance notification to parent
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        logAuditEvent({
+          tableName: 'players',
+          recordId: playerId,
+          action: 'update',
+          changedBy: user.id,
+          newData: { [dbField]: value },
+          metadata: { field, value },
+        });
+      }
+
+      // Notify parent when a compliance document is updated
+      const complianceFields = ['medicalRelease', 'reePlayerWaiver'];
+      if (complianceFields.includes(field)) {
+        try {
+          const { data: player } = await supabase
+            .from('players')
+            .select('first_name, last_name, guardians(email)')
+            .eq('id', playerId)
+            .single();
+
+          if (player) {
+            const guardianEmails = (player.guardians || []).map((g) => g.email?.toLowerCase()).filter(Boolean);
+
+            if (guardianEmails.length > 0) {
+              const { data: profiles } = await supabase
+                .from('user_profiles')
+                .select('user_id')
+                .in('email', guardianEmails);
+
+              const userIds = (profiles || []).map((p) => p.user_id);
+              if (userIds.length > 0) {
+                const label = field === 'medicalRelease' ? 'Medical Release' : 'Player Waiver';
+                const status = value ? 'approved' : 'flagged';
+                pushService
+                  .notifyUsers({
+                    userIds,
+                    eventType: 'compliance',
+                    title: `${player.first_name} ${player.last_name} — ${label}`,
+                    body: `${label} has been ${status}.`,
+                    url: '/dashboard',
+                  })
+                  .catch(() => {});
+              }
+            }
+          }
+        } catch {
+          // Non-fatal — push notification failure should not break the update
+        }
+      }
+    });
   },
 
   updateSeasonProfile: async (playerId, seasonId, updates) => {
