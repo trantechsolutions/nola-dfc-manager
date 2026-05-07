@@ -57,6 +57,8 @@ export default function RosterManagement({
 }) {
   const { t } = useT();
   const [searchTerm, setSearchTerm] = useState('');
+  const ROSTER_PAGE_SIZE = 50;
+  const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('active');
   const [expandedPlayerId, setExpandedPlayerId] = useState(null);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -169,6 +171,14 @@ export default function RosterManagement({
 
     return list;
   }, [players, searchTerm, statusFilter, complianceFilter, sortField, sortDir]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, complianceFilter, sortField, sortDir]);
+
+  const totalRosterPages = Math.ceil(filteredPlayers.length / ROSTER_PAGE_SIZE);
+  const pagedPlayers = filteredPlayers.slice((currentPage - 1) * ROSTER_PAGE_SIZE, currentPage * ROSTER_PAGE_SIZE);
 
   // ── Stats ──
   const activePlayers = players.filter((p) => p.status === 'active');
@@ -433,7 +443,7 @@ export default function RosterManagement({
           </div>
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-slate-700">
-            {filteredPlayers.map((player) => {
+            {pagedPlayers.map((player) => {
               const isExpanded = expandedPlayerId === player.id;
               const isCompliant = player.medicalRelease && player.reePlayerWaiver;
               const enrolledSeasons = Object.keys(player.seasonProfiles || {});
@@ -815,10 +825,34 @@ export default function RosterManagement({
           </div>
         )}
 
-        {/* ── Footer count ── */}
-        <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 text-[10px] font-bold text-slate-400">
-          Showing {filteredPlayers.length} of {players.length}{' '}
-          {players.length === 1 ? t('common.player') : t('common.players')}
+        {/* ── Footer count + pagination ── */}
+        <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <span className="text-[10px] font-bold text-slate-400">
+            Showing {Math.min((currentPage - 1) * ROSTER_PAGE_SIZE + 1, filteredPlayers.length)}–
+            {Math.min(currentPage * ROSTER_PAGE_SIZE, filteredPlayers.length)} of {filteredPlayers.length}{' '}
+            {filteredPlayers.length === 1 ? t('common.player') : t('common.players')}
+          </span>
+          {totalRosterPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-2 py-1 text-xs font-bold text-slate-500 dark:text-slate-400 disabled:opacity-30 hover:text-blue-500 transition-colors"
+              >
+                ‹ Prev
+              </button>
+              <span className="text-[10px] font-bold text-slate-400">
+                {currentPage} / {totalRosterPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalRosterPages, p + 1))}
+                disabled={currentPage === totalRosterPages}
+                className="px-2 py-1 text-xs font-bold text-slate-500 dark:text-slate-400 disabled:opacity-30 hover:text-blue-500 transition-colors"
+              >
+                Next ›
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
