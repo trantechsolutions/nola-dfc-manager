@@ -11,6 +11,7 @@ export default function PlayerFormModal({
   initialData,
   isSubmitting,
   selectedSeason,
+  isReadOnly = false,
 }) {
   const { t } = useT();
   const [formData, setFormData] = useState({
@@ -87,6 +88,14 @@ export default function PlayerFormModal({
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center z-50 p-4 overflow-y-auto">
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl dark:shadow-none w-full max-w-lg my-auto animate-in fade-in zoom-in-95 duration-200">
+        {isReadOnly && (
+          <div className="px-6 pt-4 pb-0">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-semibold">
+              <span>👁</span>
+              <span>{t('impersonation.viewingAs', 'Viewing as parent — read-only mode')}</span>
+            </div>
+          </div>
+        )}
         <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-700">
           <h2 className="text-xl font-black text-slate-800 dark:text-white">
             {initialData ? t('playerForm.editTitle') : t('playerForm.addTitle')}
@@ -273,7 +282,7 @@ export default function PlayerFormModal({
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isReadOnly}
                 className="px-6 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {isSubmitting

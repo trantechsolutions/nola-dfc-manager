@@ -502,6 +502,8 @@ function App() {
     teamEvents,
     collapsedTeamEvents,
     fetchData,
+    viewingAsParent,
+    impersonatingAs,
   };
 
   const financeContextValue = {

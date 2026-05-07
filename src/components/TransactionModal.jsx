@@ -12,6 +12,7 @@ export default function TransactionModal({
   players,
   teamEvents = [],
   activeAccounts = [],
+  isReadOnly = false,
 }) {
   const defaultAccountId = activeAccounts[0]?.id || '';
   const [formData, setFormData] = useState({
@@ -124,6 +125,12 @@ export default function TransactionModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4">
+          {isReadOnly && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-semibold">
+              <span>👁</span>
+              <span>{t('impersonation.viewingAs', 'Viewing as parent — read-only mode')}</span>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">
               {isTransfer ? t('txModal.transferDesc') : t('txModal.titleLabel')}
@@ -352,6 +359,7 @@ export default function TransactionModal({
               type="submit"
               disabled={
                 isSubmitting ||
+                isReadOnly ||
                 (isTransfer && formData.transferFromAccountId === formData.transferToAccountId) ||
                 (isTransfer && !formData.transferFromAccountId)
               }

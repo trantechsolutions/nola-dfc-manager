@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate, Suspense, lazy } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
 import { Settings } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { PERMISSIONS } from '../utils/roles';
@@ -7,6 +8,7 @@ import { supabaseService } from '../services/supabaseService';
 import { useData } from '../context/DataContext';
 import { useFinanceContext } from '../context/FinanceContext';
 import { useScheduleContext } from '../context/ScheduleContext';
+import { useImpersonationGuard } from '../hooks/useImpersonationGuard';
 
 import ErrorBoundary from './ErrorBoundary';
 import TransactionModal from './TransactionModal';
@@ -142,7 +144,10 @@ export default function AppRoutes({
     teamEvents,
     collapsedTeamEvents,
     fetchData,
+    viewingAsParent,
   } = useData();
+
+  const { isReadOnly, guardedAction } = useImpersonationGuard(user);
 
   const { teamBalance, totalExpenses, calculatePlayerFinancials, handleWaterfallCredit, revertWaterfall } =
     useFinanceContext();
@@ -312,7 +317,10 @@ export default function AppRoutes({
                       setPlayerToView(p);
                       setShowPlayerModal(true);
                     }}
-                    onToggleWaive={(pId, state) => handleToggleWaiveFee(pId, selectedSeason, state)}
+                    onToggleWaive={guardedAction((pId, state) => handleToggleWaiveFee(pId, selectedSeason, state), {
+                      action: 'toggle_waive_fee',
+                      tableName: 'players',
+                    })}
                     accountMap={accountMap}
                   />
                 ) : (
@@ -433,15 +441,19 @@ export default function AppRoutes({
                                       setShowTxForm(true);
                                     }
                                   : null,
-                                onDeleteTx: canEditLedger
-                                  ? async (id) => {
-                                      const ok = await showConfirm(t('toast.deleteTxConfirm'));
-                                      if (ok) {
-                                        await handleDeleteTransaction(id);
-                                        showToast(t('toast.txDeleted'));
-                                      }
-                                    }
-                                  : null,
+                                onDeleteTx:
+                                  canEditLedger && !isReadOnly
+                                    ? guardedAction(
+                                        async (id) => {
+                                          const ok = await showConfirm(t('toast.deleteTxConfirm'));
+                                          if (ok) {
+                                            await handleDeleteTransaction(id);
+                                            showToast(t('toast.txDeleted'));
+                                          }
+                                        },
+                                        { action: 'delete_transaction', tableName: 'transactions' },
+                                      )
+                                    : null,
                                 categoryLabels,
                                 categoryColors,
                                 categoryOptions,
@@ -663,34 +675,45 @@ export default function AppRoutes({
         show={showPlayerForm}
         initialData={playerToEdit}
         selectedSeason={selectedSeason}
-        onSubmit={async (data) => {
-          await handleSavePlayer(data);
-          setShowPlayerForm(false);
-          showToast(playerToEdit ? t('toast.playerUpdated') : t('toast.playerAdded'));
-        }}
-        onArchive={async (id) => {
-          const ok = await showConfirm(t('toast.archivePlayerConfirm'));
-          if (ok) {
-            await handleArchivePlayer(id);
+        isReadOnly={isReadOnly}
+        onSubmit={guardedAction(
+          async (data) => {
+            await handleSavePlayer(data);
             setShowPlayerForm(false);
-            showToast(t('toast.playerArchived'));
-          }
-        }}
+            showToast(playerToEdit ? t('toast.playerUpdated') : t('toast.playerAdded'));
+          },
+          { action: 'save_player', tableName: 'players' },
+        )}
+        onArchive={guardedAction(
+          async (id) => {
+            const ok = await showConfirm(t('toast.archivePlayerConfirm'));
+            if (ok) {
+              await handleArchivePlayer(id);
+              setShowPlayerForm(false);
+              showToast(t('toast.playerArchived'));
+            }
+          },
+          { action: 'archive_player', tableName: 'players' },
+        )}
         onClose={() => setShowPlayerForm(false)}
       />
 
       <TransactionModal
         show={showTxForm}
         initialData={txToEdit}
-        onSubmit={async (data) => {
-          const r = await handleSaveTransaction(data);
-          if (r && r.success === false) {
-            showToast(r.error, true);
-          } else {
-            setShowTxForm(false);
-            showToast(txToEdit ? t('toast.txUpdated') : t('toast.txAdded'));
-          }
-        }}
+        isReadOnly={isReadOnly}
+        onSubmit={guardedAction(
+          async (data) => {
+            const r = await handleSaveTransaction(data);
+            if (r && r.success === false) {
+              showToast(r.error, true);
+            } else {
+              setShowTxForm(false);
+              showToast(txToEdit ? t('toast.txUpdated') : t('toast.txAdded'));
+            }
+          },
+          { action: 'save_transaction', tableName: 'transactions' },
+        )}
         onClose={() => setShowTxForm(false)}
         players={seasonalPlayers}
         categoryOptions={categoryOptions}
