@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { supabase } from '../supabase';
 import { supabaseService } from '../services/supabaseService';
 
 /**
@@ -120,6 +121,34 @@ export function useAppData({
       });
   }, [currentTeamSeason?.id, selectedSeason]);
 
+  // Real-time subscriptions: keep players, transactions, and team_events in sync
+  // when other users make changes. Scoped to the active team to avoid noise.
+  useEffect(() => {
+    const teamId = selectedTeamId || parentTeamId;
+    if (!teamId) return;
+
+    const channel = supabase
+      .channel(`realtime-team-${teamId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `team_id=eq.${teamId}` }, () =>
+        fetchData(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions', filter: `team_id=eq.${teamId}` },
+        () => fetchData(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'team_events', filter: `team_id=eq.${teamId}` },
+        () => fetchData(),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedTeamId, parentTeamId, fetchData]);
+
   const updateTeamEvent = (dbEventId, updates) => {
     setTeamEvents((prev) => prev.map((e) => (e.id === dbEventId ? { ...e, ...updates } : e)));
   };
@@ -175,6 +204,7 @@ export function useAppData({
     players,
     setPlayers,
     transactions,
+    setTransactions,
     playerFinancials,
     teamEvents,
     collapsedTeamEvents,

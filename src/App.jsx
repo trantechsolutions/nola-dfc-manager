@@ -140,7 +140,9 @@ function App() {
 
   const {
     players,
+    setPlayers,
     transactions,
+    setTransactions,
     playerFinancials,
     teamEvents,
     collapsedTeamEvents,
@@ -238,12 +240,14 @@ function App() {
     fetchData,
     club?.id || null,
     selectedTeamId,
+    setPlayers,
   );
 
   const { handleSaveTransaction, handleDeleteTransaction, handleBulkUpload } = useLedgerManager(
     fetchData,
     selectedSeason,
     teamSeasonId,
+    setTransactions,
   );
 
   const {
@@ -487,10 +491,12 @@ function App() {
 
   const dataContextValue = {
     players,
+    setPlayers,
     seasonalPlayers,
     archivedPlayers,
     myPlayers,
     transactions,
+    setTransactions,
     seasonalTransactions,
     playerFinancials,
     teamEvents,

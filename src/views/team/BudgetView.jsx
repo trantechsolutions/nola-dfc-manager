@@ -427,6 +427,8 @@ export default function BudgetView({
 
       await refreshSeasons();
       onDataChange?.();
+      // Bust forecast cache so next open reflects the updated budget
+      clearForecast();
       if (showToast) showToast(finalize ? 'Budget Finalized & Fees Applied!' : 'Draft Saved.');
     } catch (e) {
       console.error('Save budget failed:', e);

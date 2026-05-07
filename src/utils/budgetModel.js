@@ -177,15 +177,18 @@ export function nextSeasonId(currentSeasonId) {
 
 /**
  * Calculate how far through a season we are (0-1).
- * Season runs Aug 1 → May 31 (10 months).
+ * Defaults to Aug 1 → May 31 (10 months) when no explicit dates are provided.
+ * Pass startDate/endDate (Date objects) to override for non-standard seasons.
  * @param {string} seasonId - e.g. "2025-2026"
  * @param {Date} [now] - Current date (defaults to now)
+ * @param {Date} [startDate] - Season start override
+ * @param {Date} [endDate] - Season end override
  * @returns {number} Completion ratio (0 = not started, 1 = finished)
  */
-function seasonCompletion(seasonId, now = new Date()) {
+function seasonCompletion(seasonId, now = new Date(), startDate = null, endDate = null) {
   const startYear = seasonToIndex(seasonId);
-  const start = new Date(startYear, 7, 1); // Aug 1
-  const end = new Date(startYear + 1, 4, 31); // May 31
+  const start = startDate ?? new Date(startYear, 7, 1); // Aug 1
+  const end = endDate ?? new Date(startYear + 1, 4, 31); // May 31
   const totalMs = end - start;
   const elapsedMs = now - start;
   if (elapsedMs <= 0) return 0;
@@ -213,9 +216,12 @@ export function prepareHistoricalData(allBudgetItems, allTransactions, teamSeaso
   const seasonStatus = {};
   for (const ts of teamSeasons) {
     if (ts.seasonId) {
+      // Use explicit start/end dates from DB when available (non-standard seasons)
+      const startDate = ts.startDate ? new Date(ts.startDate) : null;
+      const endDate = ts.endDate ? new Date(ts.endDate) : null;
       seasonStatus[ts.seasonId] = {
         isFinalized: ts.isFinalized || false,
-        completion: seasonCompletion(ts.seasonId),
+        completion: seasonCompletion(ts.seasonId, new Date(), startDate, endDate),
       };
     }
   }
