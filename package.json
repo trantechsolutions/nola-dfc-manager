@@ -14,11 +14,6 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "npx playwright test",
-    "test:e2e:ui": "npx playwright test --ui",
-    "test:e2e:headed": "npx playwright test --headed",
-    "test:e2e:chromium": "npx playwright test --project=chromium",
-    "test:e2e:mobile": "npx playwright test --project=mobile",
     "prepare": "husky"
   },
   "dependencies": {
@@ -46,14 +41,12 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@playwright/test": "^1.58.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
-    "@vitest/browser-playwright": "^4.1.0",
     "@vitest/coverage-v8": "^4.1.0",
     "@vitest/ui": "^4.1.0",
     "autoprefixer": "^10.4.27",
@@ -66,10 +59,10 @@
     "husky": "^9.1.7",
     "jsdom": "^29.0.0",
     "lint-staged": "^16.4.0",
-    "playwright": "^1.58.2",
     "postcss": "^8.5.8",
     "prettier": "^3.8.1",
     "prop-types": "^15.8.1",
+    "supabase": "^2.98.2",
     "tailwindcss": "^3.4.19",
     "vite": "^7.3.1",
     "vitest": "^4.1.0"
