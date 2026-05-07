@@ -36,6 +36,9 @@ import ErrorBoundary from './components/ErrorBoundary';
 import AppRoutes from './components/AppRoutes';
 import NotificationPermissionBanner from './components/NotificationPermissionBanner';
 import { NavigationContext } from './context/NavigationContext';
+import { DataContext } from './context/DataContext';
+import { FinanceContext } from './context/FinanceContext';
+import { ScheduleContext } from './context/ScheduleContext';
 
 // Services & Hooks
 import { supabaseService } from './services/supabaseService';
@@ -482,140 +485,156 @@ function App() {
     setShowTxForm,
   };
 
+  const dataContextValue = {
+    players,
+    seasonalPlayers,
+    archivedPlayers,
+    myPlayers,
+    transactions,
+    seasonalTransactions,
+    playerFinancials,
+    teamEvents,
+    collapsedTeamEvents,
+    fetchData,
+  };
+
+  const financeContextValue = {
+    teamBalance,
+    totalExpenses,
+    formatMoney,
+    calculatePlayerFinancials,
+    handleWaterfallCredit,
+    revertWaterfall,
+  };
+
+  const scheduleContextValue = {
+    events,
+    blackoutDates,
+    toggleBlackout,
+    handleSyncCalendar,
+    handleTeamEventTypeChange,
+    handleSaveExpense,
+    handleToggleCleared,
+    handleDeleteExpense,
+  };
+
   return (
     <NavigationContext.Provider value={navContextValue}>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors">
-        {/* ═══ IMPERSONATION BANNER ═══ */}
-        {viewingAsParent && (
-          <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
-            <div className="flex items-center gap-2 text-sm font-bold">
-              <Eye size={14} />
-              <span>
-                {t('impersonation.viewingAs')}{' '}
-                <span className="font-black">
-                  {impersonatingAs.firstName} {impersonatingAs.lastName}
-                </span>
-                {impersonatingAs.guardians?.[0]?.name && (
-                  <span className="opacity-80"> ({impersonatingAs.guardians[0].name})</span>
-                )}
-              </span>
+      <DataContext.Provider value={dataContextValue}>
+        <FinanceContext.Provider value={financeContextValue}>
+          <ScheduleContext.Provider value={scheduleContextValue}>
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors">
+              {/* ═══ IMPERSONATION BANNER ═══ */}
+              {viewingAsParent && (
+                <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
+                  <div className="flex items-center gap-2 text-sm font-bold">
+                    <Eye size={14} />
+                    <span>
+                      {t('impersonation.viewingAs')}{' '}
+                      <span className="font-black">
+                        {impersonatingAs.firstName} {impersonatingAs.lastName}
+                      </span>
+                      {impersonatingAs.guardians?.[0]?.name && (
+                        <span className="opacity-80"> ({impersonatingAs.guardians[0].name})</span>
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setImpersonatingAs(null);
+                      navigate('/dashboard');
+                    }}
+                    className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-black transition-colors"
+                  >
+                    {t('common.exit')}
+                  </button>
+                </div>
+              )}
+
+              <div className="flex flex-1 md:flex-row flex-col">
+                <DesktopSidebar />
+                <MobileHeader />
+                <MobileMenu />
+
+                <main className="flex-grow p-4 md:p-8 pb-32 md:pb-8 max-w-6xl mx-auto w-full dark:text-slate-100">
+                  <AppRoutes
+                    user={user}
+                    club={club}
+                    teams={teams}
+                    selectedTeam={selectedTeam}
+                    selectedTeamId={selectedTeamId}
+                    setSelectedTeamId={setSelectedTeamId}
+                    userRoles={userRoles}
+                    effectiveRole={effectiveRole}
+                    isClubAdmin={isClubAdmin}
+                    isSuperAdmin={isSuperAdmin}
+                    effectiveIsStaff={effectiveIsStaff}
+                    can={can}
+                    refreshContext={refreshContext}
+                    seasons={seasons}
+                    teamSeasons={teamSeasons}
+                    selectedSeason={selectedSeason}
+                    setSelectedSeason={setSelectedSeason}
+                    currentSeasonData={currentSeasonData}
+                    currentTeamSeason={currentTeamSeason}
+                    teamSeasonId={teamSeasonId}
+                    refreshSeasons={refreshSeasons}
+                    formatMoney={formatMoney}
+                    customCategories={customCategories}
+                    categoryLabels={categoryLabels}
+                    categoryColors={categoryColors}
+                    categoryOptions={categoryOptions}
+                    saveCategory={saveCategory}
+                    deleteCategory={deleteCategory}
+                    isCategorySaving={isCategorySaving}
+                    accounts={accounts}
+                    activeAccounts={activeAccounts}
+                    accountsByHolding={accountsByHolding}
+                    accountMap={accountMap}
+                    saveAccount={saveAccount}
+                    deleteAccount={deleteAccount}
+                    isAccountSaving={isAccountSaving}
+                    effectiveTeam={effectiveTeam}
+                    canEditSchedule={canEditSchedule}
+                    canEditLedger={canEditLedger}
+                    handleSaveTransaction={handleSaveTransaction}
+                    handleDeleteTransaction={handleDeleteTransaction}
+                    handleBulkUpload={handleBulkUpload}
+                    isBulkUploading={isBulkUploading}
+                    setIsBulkUploading={setIsBulkUploading}
+                    handleSavePlayer={handleSavePlayer}
+                    handleArchivePlayer={handleArchivePlayer}
+                    handleToggleWaiveFee={handleToggleWaiveFee}
+                    showPlayerForm={showPlayerForm}
+                    setShowPlayerForm={setShowPlayerForm}
+                    playerToEdit={playerToEdit}
+                    setPlayerToEdit={setPlayerToEdit}
+                    showPlayerModal={showPlayerModal}
+                    setShowPlayerModal={setShowPlayerModal}
+                    playerToView={playerToView}
+                    setPlayerToView={setPlayerToView}
+                    showTxForm={showTxForm}
+                    setShowTxForm={setShowTxForm}
+                    txToEdit={txToEdit}
+                    setTxToEdit={setTxToEdit}
+                    confirmDialog={confirmDialog}
+                    impersonatingAs={impersonatingAs}
+                    setImpersonatingAs={setImpersonatingAs}
+                    toast={toast}
+                    setToast={setToast}
+                    showToast={showToast}
+                    showConfirm={showConfirm}
+                    navigate={navigate}
+                  />
+                </main>
+
+                <MobileBottomNav />
+              </div>
+              <NotificationPermissionBanner />
             </div>
-            <button
-              onClick={() => {
-                setImpersonatingAs(null);
-                navigate('/dashboard');
-              }}
-              className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-black transition-colors"
-            >
-              {t('common.exit')}
-            </button>
-          </div>
-        )}
-
-        <div className="flex flex-1 md:flex-row flex-col">
-          <DesktopSidebar />
-          <MobileHeader />
-          <MobileMenu />
-
-          <main className="flex-grow p-4 md:p-8 pb-32 md:pb-8 max-w-6xl mx-auto w-full dark:text-slate-100">
-            <AppRoutes
-              user={user}
-              club={club}
-              teams={teams}
-              selectedTeam={selectedTeam}
-              selectedTeamId={selectedTeamId}
-              setSelectedTeamId={setSelectedTeamId}
-              userRoles={userRoles}
-              effectiveRole={effectiveRole}
-              isClubAdmin={isClubAdmin}
-              isSuperAdmin={isSuperAdmin}
-              effectiveIsStaff={effectiveIsStaff}
-              can={can}
-              refreshContext={refreshContext}
-              seasons={seasons}
-              teamSeasons={teamSeasons}
-              selectedSeason={selectedSeason}
-              setSelectedSeason={setSelectedSeason}
-              currentSeasonData={currentSeasonData}
-              currentTeamSeason={currentTeamSeason}
-              teamSeasonId={teamSeasonId}
-              refreshSeasons={refreshSeasons}
-              players={players}
-              seasonalPlayers={seasonalPlayers}
-              archivedPlayers={archivedPlayers}
-              myPlayers={myPlayers}
-              transactions={transactions}
-              seasonalTransactions={seasonalTransactions}
-              playerFinancials={playerFinancials}
-              teamEvents={teamEvents}
-              collapsedTeamEvents={collapsedTeamEvents}
-              fetchData={fetchData}
-              formatMoney={formatMoney}
-              teamBalance={teamBalance}
-              totalExpenses={totalExpenses}
-              calculatePlayerFinancials={calculatePlayerFinancials}
-              handleWaterfallCredit={handleWaterfallCredit}
-              revertWaterfall={revertWaterfall}
-              customCategories={customCategories}
-              categoryLabels={categoryLabels}
-              categoryColors={categoryColors}
-              categoryOptions={categoryOptions}
-              saveCategory={saveCategory}
-              deleteCategory={deleteCategory}
-              isCategorySaving={isCategorySaving}
-              accounts={accounts}
-              activeAccounts={activeAccounts}
-              accountsByHolding={accountsByHolding}
-              accountMap={accountMap}
-              saveAccount={saveAccount}
-              deleteAccount={deleteAccount}
-              isAccountSaving={isAccountSaving}
-              effectiveTeam={effectiveTeam}
-              events={events}
-              blackoutDates={blackoutDates}
-              toggleBlackout={toggleBlackout}
-              canEditSchedule={canEditSchedule}
-              handleSyncCalendar={handleSyncCalendar}
-              handleTeamEventTypeChange={handleTeamEventTypeChange}
-              handleSaveExpense={handleSaveExpense}
-              handleToggleCleared={handleToggleCleared}
-              handleDeleteExpense={handleDeleteExpense}
-              canEditLedger={canEditLedger}
-              handleSaveTransaction={handleSaveTransaction}
-              handleDeleteTransaction={handleDeleteTransaction}
-              handleBulkUpload={handleBulkUpload}
-              isBulkUploading={isBulkUploading}
-              setIsBulkUploading={setIsBulkUploading}
-              handleSavePlayer={handleSavePlayer}
-              handleArchivePlayer={handleArchivePlayer}
-              handleToggleWaiveFee={handleToggleWaiveFee}
-              showPlayerForm={showPlayerForm}
-              setShowPlayerForm={setShowPlayerForm}
-              playerToEdit={playerToEdit}
-              setPlayerToEdit={setPlayerToEdit}
-              showPlayerModal={showPlayerModal}
-              setShowPlayerModal={setShowPlayerModal}
-              playerToView={playerToView}
-              setPlayerToView={setPlayerToView}
-              showTxForm={showTxForm}
-              setShowTxForm={setShowTxForm}
-              txToEdit={txToEdit}
-              setTxToEdit={setTxToEdit}
-              confirmDialog={confirmDialog}
-              impersonatingAs={impersonatingAs}
-              setImpersonatingAs={setImpersonatingAs}
-              toast={toast}
-              setToast={setToast}
-              showToast={showToast}
-              showConfirm={showConfirm}
-              navigate={navigate}
-            />
-          </main>
-
-          <MobileBottomNav />
-        </div>
-        <NotificationPermissionBanner />
-      </div>
+          </ScheduleContext.Provider>
+        </FinanceContext.Provider>
+      </DataContext.Provider>
     </NavigationContext.Provider>
   );
 }

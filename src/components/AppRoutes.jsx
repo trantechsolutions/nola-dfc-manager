@@ -4,6 +4,9 @@ import { useT } from '../i18n/I18nContext';
 import { PERMISSIONS } from '../utils/roles';
 import { isSingleTeamMode } from '../utils/singleTeamMode';
 import { supabaseService } from '../services/supabaseService';
+import { useData } from '../context/DataContext';
+import { useFinanceContext } from '../context/FinanceContext';
+import { useScheduleContext } from '../context/ScheduleContext';
 
 import ErrorBoundary from './ErrorBoundary';
 import TransactionModal from './TransactionModal';
@@ -43,7 +46,7 @@ export default function AppRoutes({
   can,
   refreshContext,
 
-  // Season / data
+  // Season
   seasons,
   teamSeasons,
   selectedSeason,
@@ -52,24 +55,9 @@ export default function AppRoutes({
   currentTeamSeason,
   teamSeasonId,
   refreshSeasons,
-  players,
-  seasonalPlayers,
-  archivedPlayers,
-  myPlayers,
-  transactions,
-  seasonalTransactions,
-  playerFinancials,
-  teamEvents,
-  collapsedTeamEvents,
-  fetchData,
 
-  // Finance helpers
+  // Finance helpers (non-context)
   formatMoney,
-  teamBalance,
-  totalExpenses,
-  calculatePlayerFinancials,
-  handleWaterfallCredit,
-  revertWaterfall,
 
   // Category / account
   customCategories,
@@ -87,17 +75,9 @@ export default function AppRoutes({
   deleteAccount,
   isAccountSaving,
 
-  // Schedule
+  // Schedule permissions + team
   effectiveTeam,
-  events,
-  blackoutDates,
-  toggleBlackout,
   canEditSchedule,
-  handleSyncCalendar,
-  handleTeamEventTypeChange,
-  handleSaveExpense,
-  handleToggleCleared,
-  handleDeleteExpense,
 
   // Transaction handlers
   canEditLedger,
@@ -138,6 +118,33 @@ export default function AppRoutes({
 }) {
   const { t } = useT();
   const singleTeam = isSingleTeamMode();
+
+  const {
+    players,
+    seasonalPlayers,
+    archivedPlayers,
+    myPlayers,
+    transactions,
+    seasonalTransactions,
+    playerFinancials,
+    teamEvents,
+    collapsedTeamEvents,
+    fetchData,
+  } = useData();
+
+  const { teamBalance, totalExpenses, calculatePlayerFinancials, handleWaterfallCredit, revertWaterfall } =
+    useFinanceContext();
+
+  const {
+    events,
+    blackoutDates,
+    toggleBlackout,
+    handleSyncCalendar,
+    handleTeamEventTypeChange,
+    handleSaveExpense,
+    handleToggleCleared,
+    handleDeleteExpense,
+  } = useScheduleContext();
 
   return (
     <>
