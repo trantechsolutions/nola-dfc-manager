@@ -39,4 +39,5 @@ export default {
   clearFilters: 'Limpiar Filtros',
   noResults: 'No se encontraron resultados.',
   confirmAction: 'Confirmar Acción',
+  offlineNotice: 'Estás sin conexión — mostrando datos en caché',
 };

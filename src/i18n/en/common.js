@@ -39,4 +39,5 @@ export default {
   clearFilters: 'Clear Filters',
   noResults: 'No results found.',
   confirmAction: 'Confirm Action',
+  offlineNotice: 'You are offline — showing cached data',
 };

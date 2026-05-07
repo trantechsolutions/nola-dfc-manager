@@ -35,6 +35,7 @@ import MobileBottomNav from './components/MobileBottomNav';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppRoutes from './components/AppRoutes';
 import NotificationPermissionBanner from './components/NotificationPermissionBanner';
+import OfflineBanner from './components/OfflineBanner';
 import { NavigationContext } from './context/NavigationContext';
 import { DataContext } from './context/DataContext';
 import { FinanceContext } from './context/FinanceContext';
@@ -639,6 +640,7 @@ function App() {
                 <MobileBottomNav />
               </div>
               <NotificationPermissionBanner />
+              <OfflineBanner />
             </div>
           </ScheduleContext.Provider>
         </FinanceContext.Provider>

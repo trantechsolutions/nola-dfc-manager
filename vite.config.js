@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import { execSync } from 'child_process';
 import { resolve } from 'path';
 
@@ -31,7 +32,24 @@ export const buildDate = ${JSON.stringify(new Date().toISOString())};`;
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), gitInfoPlugin()],
+  plugins: [
+    react(),
+    gitInfoPlugin(),
+    VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'public',
+      filename: 'service-worker.js',
+      // Generated SW is placed at /sw.js so it doesn't clobber the source file
+      outDir: 'dist',
+      injectRegister: null, // we register manually in main.jsx
+      manifest: false, // manifest.json is already hand-crafted in /public
+      injectManifest: {
+        // Precache all JS/CSS/HTML build artefacts
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        globIgnores: ['service-worker.js'],
+      },
+    }),
+  ],
   resolve: {
     alias: {
       '@': resolve(process.cwd(), 'src'),

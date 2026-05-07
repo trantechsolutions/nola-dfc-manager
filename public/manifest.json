@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Team Manager",
   "short_name": "Team Manager",
   "description": "Soccer team management for coaches, staff, and parents.",
@@ -26,6 +27,8 @@
   "theme_color": "#0f172a",
   "background_color": "#0f172a",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
-  "categories": ["sports", "productivity"]
+  "categories": ["sports", "productivity"],
+  "prefer_related_applications": false
 }

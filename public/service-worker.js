@@ -1,6 +1,47 @@
 /* global clients */
-// Service Worker for Web Push Notifications
-// Handles push events and notification click routing
+// Service Worker — handles push notifications + Workbox offline caching.
+// vite-plugin-pwa (injectManifest strategy) injects `self.__WB_MANIFEST`
+// at build time; at dev time the array is empty and precaching is a no-op.
+
+import { precacheAndRoute } from 'workbox-precaching';
+import { registerRoute } from 'workbox-routing';
+import { StaleWhileRevalidate, CacheFirst } from 'workbox-strategies';
+import { ExpirationPlugin } from 'workbox-expiration';
+
+// Precache all build artefacts (JS, CSS, HTML) injected by vite-plugin-pwa
+precacheAndRoute(self.__WB_MANIFEST || []);
+
+// StaleWhileRevalidate for Supabase REST reads — serves cached data instantly
+// while silently refreshing in the background. Only GET requests are cached.
+registerRoute(
+  ({ url, request }) =>
+    url.hostname.endsWith('.supabase.co') && url.pathname.startsWith('/rest/') && request.method === 'GET',
+  new StaleWhileRevalidate({
+    cacheName: 'supabase-rest-v1',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 200,
+        maxAgeSeconds: 60 * 60 * 24, // 24 h
+      }),
+    ],
+  }),
+);
+
+// CacheFirst for static assets from our own origin (fonts, icons)
+registerRoute(
+  ({ request }) => request.destination === 'font' || request.destination === 'image',
+  new CacheFirst({
+    cacheName: 'static-assets-v1',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 60,
+        maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+      }),
+    ],
+  }),
+);
+
+// ── Push Notifications ────────────────────────────────────────────────────────
 
 self.addEventListener('push', (event) => {
   if (!event.data) return;
@@ -21,7 +62,7 @@ self.addEventListener('push', (event) => {
     data: { url },
     vibrate: [200, 100, 200],
     requireInteraction: false,
-    tag: url, // collapse duplicate notifications for the same route
+    tag: url,
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
@@ -34,14 +75,12 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // Focus existing tab if open
       for (const client of windowClients) {
         const clientUrl = new URL(client.url);
         if (clientUrl.pathname === targetUrl && 'focus' in client) {
           return client.focus();
         }
       }
-      // Otherwise open new tab
       if (clients.openWindow) {
         return clients.openWindow(targetUrl);
       }
@@ -50,14 +89,12 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 self.addEventListener('pushsubscriptionchange', (event) => {
-  // Resubscribe automatically when subscription expires
   event.waitUntil(
     self.registration.pushManager
       .subscribe({ userVisibleOnly: true })
       .then((newSubscription) => {
-        // Post back to client so it can save to Supabase
-        return self.clients.matchAll().then((clients) => {
-          clients.forEach((client) =>
+        return self.clients.matchAll().then((allClients) => {
+          allClients.forEach((client) =>
             client.postMessage({ type: 'PUSH_SUBSCRIPTION_CHANGED', subscription: newSubscription.toJSON() }),
           );
         });
