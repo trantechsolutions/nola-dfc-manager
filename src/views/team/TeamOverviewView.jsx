@@ -47,7 +47,7 @@ export default function TeamOverviewView({
   canViewFinancials = true,
   accountMap = {},
 }) {
-  const { t } = useT();
+  const { t, tp } = useT();
   const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
   const [viewArchived, setViewArchived] = useState(false);
@@ -233,7 +233,7 @@ export default function TeamOverviewView({
                     {rosterCount > 0 && (
                       <span className="text-amber-600 dark:text-amber-400">
                         {' '}
-                        · {rosterCount} {rosterCount !== 1 ? t('common.players') : t('common.player')}
+                        · {rosterCount} {tp('common.player', rosterCount)}
                       </span>
                     )}
                     {buffer > 0 && (
@@ -394,8 +394,8 @@ export default function TeamOverviewView({
                   <TrendingUp size={16} className="text-blue-600" /> {t('overview.feeCollection')}
                 </h3>
                 <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
-                  {players.length} {players.length !== 1 ? t('common.players') : t('common.player')} ·{' '}
-                  {formatMoney(paymentStats.totalCollected)} {t('overview.collected')}
+                  {players.length} {tp('common.player', players.length)} · {formatMoney(paymentStats.totalCollected)}{' '}
+                  {t('overview.collected')}
                 </span>
               </div>
 
@@ -655,7 +655,7 @@ export default function TeamOverviewView({
                 </span>
               </div>
               <p className="text-[10px] font-bold text-red-600/70 dark:text-red-400/70 mb-3">
-                {outstandingPlayers.length} {outstandingPlayers.length !== 1 ? t('common.players') : t('common.player')}{' '}
+                {outstandingPlayers.length} {tp('common.player', outstandingPlayers.length)}{' '}
                 {t('overview.unpaidBalances')}
               </p>
               <div className="space-y-1.5">

@@ -55,7 +55,7 @@ export default function RosterManagement({
   onViewAsParent,
   refreshData,
 }) {
-  const { t } = useT();
+  const { t, tp } = useT();
   const [searchTerm, setSearchTerm] = useState('');
   const ROSTER_PAGE_SIZE = 50;
   const [currentPage, setCurrentPage] = useState(1);
@@ -830,7 +830,7 @@ export default function RosterManagement({
           <span className="text-[10px] font-bold text-slate-400">
             Showing {Math.min((currentPage - 1) * ROSTER_PAGE_SIZE + 1, filteredPlayers.length)}–
             {Math.min(currentPage * ROSTER_PAGE_SIZE, filteredPlayers.length)} of {filteredPlayers.length}{' '}
-            {filteredPlayers.length === 1 ? t('common.player') : t('common.players')}
+            {tp('common.player', filteredPlayers.length)}
           </span>
           {totalRosterPages > 1 && (
             <div className="flex items-center gap-1">

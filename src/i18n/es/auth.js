@@ -1,0 +1,16 @@
+export default {
+  signIn: 'Iniciar Sesión',
+  register: 'Registrarse',
+  email: 'Correo Electrónico',
+  password: 'Contraseña',
+  emailPlaceholder: 'padre@ejemplo.com',
+  passwordPlaceholder: '••••••••',
+  createAccount: 'Crear Cuenta de Padre',
+  managerPortal: 'Portal del Administrador del Equipo',
+  hasAccount: '¿Ya tienes cuenta? Inicia Sesión',
+  noAccount: '¿No tienes cuenta? Crea una',
+  continueGoogle: 'Continuar con Google',
+  errorCreate: 'No se pudo crear la cuenta. El correo puede estar en uso.',
+  errorLogin: 'Correo o contraseña inválidos.',
+  errorGoogle: 'Error con Google. Inténtalo de nuevo.',
+};

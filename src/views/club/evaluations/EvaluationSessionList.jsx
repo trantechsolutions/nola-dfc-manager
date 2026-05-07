@@ -29,7 +29,7 @@ export default function EvaluationSessionList({
   showToast,
   showConfirm,
 }) {
-  const { t } = useT();
+  const { t, tp } = useT();
   const { sessions, loading, createSession, deleteSession } = useEvaluationManager(club?.id);
 
   const [showModal, setShowModal] = useState(false);
@@ -99,8 +99,7 @@ export default function EvaluationSessionList({
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          {sessions.length}{' '}
-          {sessions.length === 1 ? t('evaluations.session', 'session') : t('evaluations.sessions', 'sessions')}
+          {sessions.length} {tp('evaluations.session', sessions.length)}
         </p>
         <button
           onClick={openModal}

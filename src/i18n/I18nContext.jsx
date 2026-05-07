@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import en from './en';
-import es from './es';
+import en from './en/index';
+import es from './es/index';
 
 const LOCALES = { en, es };
 const STORAGE_KEY = 'app_locale';
@@ -59,7 +59,24 @@ export function I18nProvider({ children }) {
     [locale],
   );
 
-  const value = useMemo(() => ({ locale, setLocale, toggleLocale, t }), [locale, setLocale, toggleLocale, t]);
+  /**
+   * tp('common.player', count) — plural-aware lookup
+   * Uses key_plural when count !== 1, falls back to key if _plural missing.
+   */
+  const tp = useCallback(
+    (key, count) => {
+      const pluralKey = count === 1 ? key : `${key}_plural`;
+      const resolved =
+        resolve(LOCALES[locale], pluralKey) ??
+        resolve(LOCALES[locale], key) ??
+        resolve(LOCALES.en, pluralKey) ??
+        resolve(LOCALES.en, key);
+      return typeof resolved === 'string' ? resolved : key;
+    },
+    [locale],
+  );
+
+  const value = useMemo(() => ({ locale, setLocale, toggleLocale, t, tp }), [locale, setLocale, toggleLocale, t, tp]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
@@ -67,9 +84,11 @@ export function I18nProvider({ children }) {
 /**
  * useT() — access translation function and locale state.
  *
- * const { t, locale, setLocale, toggleLocale } = useT();
- * t('common.save')            // "Save" or "Guardar"
- * t('roster.count', { n: 5 }) // "5 players"
+ * const { t, tp, locale, setLocale, toggleLocale } = useT();
+ * t('common.save')              // "Save" or "Guardar"
+ * t('roster.count', { n: 5 })  // "5 players"
+ * tp('common.player', 1)        // "player" / "jugador"
+ * tp('common.player', 3)        // "players" / "jugadores"
  */
 export function useT() {
   const ctx = useContext(I18nContext);

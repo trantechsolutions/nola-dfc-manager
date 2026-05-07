@@ -1,0 +1,16 @@
+export default {
+  signIn: 'Sign In',
+  register: 'Register',
+  email: 'Email Address',
+  password: 'Password',
+  emailPlaceholder: 'parent@example.com',
+  passwordPlaceholder: '••••••••',
+  createAccount: 'Create Parent Account',
+  managerPortal: 'Team Manager Portal',
+  hasAccount: 'Already have an account? Sign In',
+  noAccount: "Don't have an account? Create one",
+  continueGoogle: 'Continue with Google',
+  errorCreate: 'Failed to create account. Email may already be in use.',
+  errorLogin: 'Invalid email or password.',
+  errorGoogle: 'Google Sign-In failed. Please try again.',
+};
