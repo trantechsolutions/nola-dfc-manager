@@ -354,6 +354,7 @@ export default function Ledger({
               <th className="px-5 py-3.5">{t('common.date')}</th>
               <th className="px-5 py-3.5">{t('ledger.transaction')}</th>
               <th className="px-5 py-3.5">{t('ledger.player')}</th>
+              <th className="px-5 py-3.5">{t('accountMgr.title')}</th>
               <th className="px-5 py-3.5">{t('common.status')}</th>
               <th className="px-5 py-3.5 text-right">{t('common.amount')}</th>
               <th className="px-3 py-3.5 text-center w-14"></th>
@@ -398,7 +399,18 @@ export default function Ledger({
                     )}
                     {tx.notes && <p className="text-[11px] text-slate-400 mt-0.5 truncate max-w-[350px]">{tx.notes}</p>}
                   </td>
-                  <td className="px-5 py-3 text-xs text-slate-600">{tx.playerName || '—'}</td>
+                  <td className="px-5 py-3 text-xs text-slate-600 dark:text-slate-400">{tx.playerName || '—'}</td>
+                  <td className="px-5 py-3 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                    {tx.category === 'TRF' ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span>{accountMap[tx.transferFromAccountId]?.name || '—'}</span>
+                        <ArrowRightLeft size={10} className="text-indigo-400 shrink-0" />
+                        <span>{accountMap[tx.transferToAccountId]?.name || '—'}</span>
+                      </span>
+                    ) : (
+                      accountMap[tx.accountId]?.name || '—'
+                    )}
+                  </td>
                   <td className="px-5 py-3">
                     {tx.cleared ? (
                       <span className="inline-flex items-center gap-1 text-emerald-600 text-[11px] font-bold">
@@ -434,7 +446,7 @@ export default function Ledger({
             })}
             {pagedTransactions.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center py-10 text-slate-400 text-sm font-bold">
+                <td colSpan={7} className="text-center py-10 text-slate-400 text-sm font-bold">
                   {hasActiveFilters ? t('ledger.noFilterMatch') : t('ledger.noTransactions')}
                 </td>
               </tr>

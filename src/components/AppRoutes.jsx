@@ -93,6 +93,9 @@ export default function AppRoutes({
   effectiveTeam,
   canEditSchedule,
 
+  // Book balance
+  bookBalance,
+
   // Transaction handlers
   canEditLedger,
   handleSaveTransaction,
@@ -423,6 +426,7 @@ export default function AppRoutes({
                           ...(can(PERMISSIONS.TEAM_VIEW_LEDGER) ? ['ledger'] : []),
                           ...(can(PERMISSIONS.TEAM_VIEW_BUDGET) ? ['budget'] : []),
                           ...(can(PERMISSIONS.TEAM_VIEW_SPONSORS) ? ['fundraising'] : []),
+                          ...(can(PERMISSIONS.TEAM_VIEW_LEDGER) ? ['book-balance'] : []),
                         ]}
                         ledgerProps={
                           can(PERMISSIONS.TEAM_VIEW_LEDGER)
@@ -531,6 +535,18 @@ export default function AppRoutes({
                                     : null,
                                 seasonalPlayers,
                                 seasons,
+                              }
+                            : null
+                        }
+                        bookBalanceProps={
+                          can(PERMISSIONS.TEAM_VIEW_LEDGER) && bookBalance
+                            ? {
+                                ...bookBalance,
+                                accounts,
+                                transactions: seasonalTransactions,
+                                formatMoney,
+                                showConfirm,
+                                isSuperAdmin,
                               }
                             : null
                         }

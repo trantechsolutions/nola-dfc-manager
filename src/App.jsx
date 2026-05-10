@@ -19,6 +19,7 @@ import {
   Moon,
   Monitor,
   ClipboardCheck,
+  BookOpen,
 } from 'lucide-react';
 import { useT } from './i18n/I18nContext';
 import { useTheme } from './theme/ThemeContext';
@@ -54,6 +55,7 @@ import { useModalState } from './hooks/useModalState';
 import { PERMISSIONS } from './utils/roles';
 import { useCategoryManager } from './hooks/useCategoryManager';
 import { useAccounts } from './hooks/useAccounts';
+import { useBookBalance } from './hooks/useBookBalance';
 import { isSingleTeamMode } from './utils/singleTeamMode';
 
 function App() {
@@ -271,6 +273,8 @@ function App() {
     isSaving: isAccountSaving,
   } = useAccounts(selectedTeamId);
 
+  const bookBalance = useBookBalance(selectedTeamId, transactions, accounts);
+
   // ── AUTH LISTENER ──
   const lastUserIdRef = useRef(null);
   useEffect(() => {
@@ -432,6 +436,9 @@ function App() {
           : []),
         ...(can(PERMISSIONS.TEAM_VIEW_SPONSORS)
           ? [{ id: 'finance/fundraising', label: t('nav.fundraising'), icon: Handshake }]
+          : []),
+        ...(can(PERMISSIONS.TEAM_VIEW_LEDGER)
+          ? [{ id: 'finance/book-balance', label: t('nav.bookBalance'), icon: BookOpen }]
           : []),
       ]
     : [{ id: 'dashboard', label: t('nav.myPlayer'), icon: Users }];
@@ -634,6 +641,7 @@ function App() {
                     showToast={showToast}
                     showConfirm={showConfirm}
                     navigate={navigate}
+                    bookBalance={bookBalance}
                   />
                 </main>
 

@@ -18,4 +18,5 @@ export default {
   documents: 'Documents',
   permissions: 'Permissions',
   categories: 'Categories',
+  bookBalance: 'Book Balance',
 };

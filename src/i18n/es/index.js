@@ -23,6 +23,7 @@ export default {
   catMgr: finance.catMgr,
   accountMgr: finance.accountMgr,
   bulk: finance.bulk,
+  bookBalance: finance.bookBalance,
   playerForm: people.playerForm,
   playerModal: people.playerModal,
   parent: people.parent,
