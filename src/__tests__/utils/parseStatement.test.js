@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseStatementCSV, compareStatement } from '../../utils/parseStatement';
+import { parseStatementCSV, compareStatement, detectColumns, parseDate } from '../../utils/parseStatement';
 
 // ── parseStatementCSV ──────────────────────────────────────────────────────────
 describe('parseStatementCSV', () => {
@@ -163,5 +163,108 @@ describe('compareStatement', () => {
     const { matched, appOnly } = compareStatement(stmt, app, MONTH);
     expect(matched).toHaveLength(1);
     expect(appOnly).toHaveLength(1);
+  });
+});
+
+// ── parseDate (extended formats) ──────────────────────────────────────────────
+describe('parseDate', () => {
+  const cases = [
+    // ISO variants
+    ['2025-03-01', '2025-03-01'],
+    ['2025-03-01T12:00:00', '2025-03-01'],
+    ['2025/03/01', '2025-03-01'],
+    // US numeric 4-digit year
+    ['3/1/2025', '2025-03-01'],
+    ['03/01/2025', '2025-03-01'],
+    ['3-1-2025', '2025-03-01'],
+    // 2-digit year (>=70 → 19xx, <70 → 20xx)
+    ['3/1/25', '2025-03-01'],
+    ['3/1/99', '1999-03-01'],
+    // Month-name formats
+    ['15-Mar-2025', '2025-03-15'],
+    ['15-March-2025', '2025-03-15'],
+    ['Mar 15 2025', '2025-03-15'],
+    ['March 15 2025', '2025-03-15'],
+    ['March 15, 2025', '2025-03-15'],
+    ['15 Mar 2025', '2025-03-15'],
+    ['15 March 2025', '2025-03-15'],
+  ];
+
+  cases.forEach(([input, expected]) => {
+    it(`parses "${input}" → "${expected}"`, () => {
+      expect(parseDate(input)).toBe(expected);
+    });
+  });
+
+  it('returns null for unrecognised format', () => {
+    expect(parseDate('not-a-date')).toBeNull();
+    expect(parseDate('')).toBeNull();
+    expect(parseDate(null)).toBeNull();
+  });
+});
+
+// ── detectColumns ──────────────────────────────────────────────────────────────
+describe('detectColumns', () => {
+  it('detects standard Format A headers', () => {
+    const csv = `Date,Description,Amount\n2025-03-01,Fee,100`;
+    const m = detectColumns(csv);
+    expect(m.dateCol).toBe(0);
+    expect(m.descCol).toBe(1);
+    expect(m.amtCol).toBe(2);
+    expect(m.debitCol).toBe(-1);
+    expect(m.isMinimalFormat).toBe(false);
+  });
+
+  it('detects debit/credit columns (Format B)', () => {
+    const csv = `Date,Description,Debit,Credit\n2025-03-01,Fee,100,`;
+    const m = detectColumns(csv);
+    expect(m.debitCol).toBe(2);
+    expect(m.creditCol).toBe(3);
+    expect(m.amtCol).toBe(-1);
+  });
+
+  it('flags minimal format (no headers)', () => {
+    const csv = `2025-03-01,100.00\n2025-03-15,-50.00`;
+    const m = detectColumns(csv);
+    expect(m.isMinimalFormat).toBe(true);
+  });
+
+  it('exposes rawHeaders for the mapper UI', () => {
+    const csv = `Date,Description,Amount\n2025-03-01,Fee,100`;
+    const m = detectColumns(csv);
+    expect(m.rawHeaders).toEqual(['Date', 'Description', 'Amount']);
+  });
+});
+
+// ── parseStatementCSV with mapping override ────────────────────────────────────
+describe('parseStatementCSV with mapping', () => {
+  it('uses provided mapping to override column assignments', () => {
+    // CSV has Amount in col 3 (index 2), but we remap it to col 1 (index 0)
+    const csv = `Ref,Date,Memo,Amt\nABC,2025-03-01,Fee,150.00`;
+    // dateCol=1, amtCol=3, descCol=2
+    const rows = parseStatementCSV(csv, {
+      dateCol: 1,
+      amtCol: 3,
+      descCol: 2,
+      debitCol: -1,
+      creditCol: -1,
+      isMinimalFormat: false,
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].date).toBe('2025-03-01');
+    expect(rows[0].amount).toBe(150);
+    expect(rows[0].description).toBe('Fee');
+  });
+
+  it('falls back to auto-detect when mapping is null', () => {
+    const csv = `Date,Description,Amount\n2025-03-01,Fee,99.00`;
+    const rows = parseStatementCSV(csv, null);
+    expect(rows[0].amount).toBe(99);
+  });
+
+  it('auto-detects when no mapping argument passed', () => {
+    const csv = `Date,Description,Amount\n2025-03-01,Fee,99.00`;
+    const rows = parseStatementCSV(csv);
+    expect(rows[0].amount).toBe(99);
   });
 });
