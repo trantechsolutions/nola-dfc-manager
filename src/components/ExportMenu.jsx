@@ -88,7 +88,7 @@ export default function ExportMenu({ transactions, players, calculatePlayerFinan
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-border bg-card text-foreground hover:bg-background transition-all"
       >
         <Download size={14} />
         <span className="hidden sm:inline">Export</span>
@@ -96,7 +96,7 @@ export default function ExportMenu({ transactions, players, calculatePlayerFinan
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-1">
+        <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border border-border bg-card shadow-lg py-1">
           {menuItems.map((item) => {
             const disabled = item.needsPlayers && !hasPlayers;
             const Icon = item.icon;
@@ -106,9 +106,7 @@ export default function ExportMenu({ transactions, players, calculatePlayerFinan
                 onClick={disabled ? undefined : item.action}
                 disabled={disabled}
                 className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ${
-                  disabled
-                    ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  disabled ? 'text-muted-foreground cursor-not-allowed' : 'text-foreground hover:bg-background'
                 }`}
               >
                 <Icon size={14} />

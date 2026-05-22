@@ -119,6 +119,8 @@ CREATE TABLE IF NOT EXISTS transactions (
   title text NOT NULL,
   notes text,
   cleared boolean DEFAULT false,
+  cleared_date date,
+  reconciled boolean DEFAULT false,
   distributed boolean DEFAULT false,
   waterfall_batch_id text,
   original_tx_id uuid REFERENCES transactions(id),

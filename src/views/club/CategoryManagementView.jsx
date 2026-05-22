@@ -8,12 +8,12 @@ export default function CategoryManagementView({ customCategories, onSave, onDel
       {/* Header */}
       <div>
         <div className="flex items-center gap-3 mb-1">
-          <div className="p-2.5 bg-violet-100 text-violet-600 rounded-xl">
+          <div className="p-2.5 bg-violet-100 text-violet-700 dark:text-violet-400 rounded-lg">
             <Tag size={20} />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-slate-900">Categories</h2>
-            <p className="text-xs text-slate-400 font-bold mt-0.5">
+            <h2 className="text-2xl font-bold text-foreground">Categories</h2>
+            <p className="text-xs text-muted-foreground font-semibold mt-0.5">
               Manage transaction and budget categories for your club
             </p>
           </div>
@@ -21,13 +21,13 @@ export default function CategoryManagementView({ customCategories, onSave, onDel
       </div>
 
       {/* Info banner */}
-      <div className="bg-violet-50 border border-violet-200 rounded-2xl p-4 text-xs text-violet-700 font-bold">
+      <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 text-xs text-violet-700 dark:text-violet-300 font-semibold">
         Categories defined here are available when adding transactions to the ledger and when building budget line
         items. System categories cannot be deleted, but you can add custom ones for your club's specific needs.
       </div>
 
       {/* Manager panel */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+      <div className="bg-card rounded-lg border border-border shadow-sm p-6">
         <CategoryManager customCategories={customCategories} onSave={onSave} onDelete={onDelete} isSaving={isSaving} />
       </div>
     </div>

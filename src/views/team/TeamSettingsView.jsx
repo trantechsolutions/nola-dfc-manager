@@ -113,26 +113,28 @@ export default function TeamSettingsView({
   return (
     <div className="space-y-6 pb-20 md:pb-6 max-w-2xl">
       <div>
-        <h2 className="text-2xl font-black text-slate-900 dark:text-white">{t('settings.title')}</h2>
-        <p className="text-xs text-slate-400 font-bold mt-0.5">{selectedTeam?.name}</p>
+        <h2 className="text-2xl font-bold text-foreground">{t('settings.title')}</h2>
+        <p className="text-xs text-muted-foreground font-semibold mt-0.5">{selectedTeam?.name}</p>
       </div>
 
       {/* ── iCal Feed ── */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden">
+      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         <div className="p-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl">
-              <Rss size={16} className="text-slate-500" />
+            <div className="p-2 bg-background rounded-lg">
+              <Rss size={16} className="text-muted-foreground" />
             </div>
             <div>
-              <p className="text-sm font-black text-slate-800 dark:text-white">{t('settings.calendarFeed')}</p>
+              <p className="text-sm font-bold text-foreground">{t('settings.calendarFeed')}</p>
               {currentIcsUrl ? (
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <CheckCircle2 size={11} className="text-emerald-500" />
-                  <span className="text-[10px] text-slate-400 font-medium truncate max-w-[300px]">{currentIcsUrl}</span>
+                  <CheckCircle2 size={11} className="text-emerald-700 dark:text-emerald-400" />
+                  <span className="text-xs text-muted-foreground font-medium truncate max-w-[300px]">
+                    {currentIcsUrl}
+                  </span>
                 </div>
               ) : (
-                <p className="text-[10px] text-amber-600 font-bold mt-0.5 flex items-center gap-1">
+                <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold mt-0.5 flex items-center gap-1">
                   <AlertCircle size={11} /> {t('settings.noFeed')}
                 </p>
               )}
@@ -141,7 +143,7 @@ export default function TeamSettingsView({
           {!isEditingIcs && (
             <button
               onClick={handleStartEdit}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted text-foreground text-xs font-semibold rounded-lg transition-colors"
             >
               <Edit size={12} /> {currentIcsUrl ? t('common.edit') : t('settings.addFeed')}
             </button>
@@ -149,12 +151,10 @@ export default function TeamSettingsView({
         </div>
 
         {isEditingIcs && (
-          <div className="border-t border-slate-100 dark:border-slate-700 p-5 bg-slate-50 dark:bg-slate-800 space-y-3">
+          <div className="border-t border-border p-5 bg-background space-y-3">
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                {t('settings.icsLabel')}
-              </label>
-              <p className="text-[10px] text-slate-400 mt-0.5 mb-2">{t('settings.icsHelp')}</p>
+              <label className="text-xs font-bold text-muted-foreground">{t('settings.icsLabel')}</label>
+              <p className="text-xs text-muted-foreground mt-0.5 mb-2">{t('settings.icsHelp')}</p>
               <div className="flex gap-2">
                 <input
                   type="url"
@@ -164,34 +164,34 @@ export default function TeamSettingsView({
                     setTestResult(null);
                   }}
                   placeholder={t('settings.icsPlaceholder')}
-                  className="flex-grow border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900 dark:text-white"
+                  className="flex-grow border border-border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-ring bg-card"
                 />
                 <button
                   onClick={handleTestUrl}
                   disabled={isTesting || !icsUrl.trim()}
-                  className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 shrink-0"
+                  className="px-4 py-2 bg-card border border-border text-foreground text-xs font-semibold rounded-lg hover:bg-muted disabled:opacity-50 shrink-0"
                 >
                   {isTesting ? <Loader2 size={14} className="animate-spin" /> : t('common.test')}
                 </button>
               </div>
               {testResult === 'valid' && (
-                <p className="text-xs text-emerald-600 font-bold mt-1.5 flex items-center gap-1">
+                <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold mt-1.5 flex items-center gap-1">
                   <CheckCircle2 size={12} /> {t('settings.feedVerified')}
                 </p>
               )}
               {testResult === 'invalid' && (
-                <p className="text-xs text-red-500 font-bold mt-1.5 flex items-center gap-1">
+                <p className="text-xs text-red-700 dark:text-red-400 font-semibold mt-1.5 flex items-center gap-1">
                   <AlertCircle size={12} /> {t('settings.feedInvalid')}
                 </p>
               )}
             </div>
-            <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between pt-2 border-t border-border">
               <div>
                 {currentIcsUrl && (
                   <button
                     onClick={handleRemoveIcs}
                     disabled={isSavingIcs}
-                    className="text-xs font-bold text-red-500 hover:text-red-700 disabled:opacity-50"
+                    className="text-xs font-semibold text-red-700 dark:text-red-400 hover:text-red-700 dark:text-red-300 disabled:opacity-50"
                   >
                     {t('settings.removeFeed')}
                   </button>
@@ -200,14 +200,14 @@ export default function TeamSettingsView({
               <div className="flex gap-2">
                 <button
                   onClick={handleCancelEdit}
-                  className="flex items-center gap-1 px-3 py-1.5 text-slate-500 dark:text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
+                  className="flex items-center gap-1 px-3 py-1.5 text-muted-foreground text-xs font-semibold rounded-lg hover:bg-muted"
                 >
                   <X size={12} /> {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleSaveIcs}
                   disabled={isSavingIcs || !icsUrl.trim()}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-lg disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg disabled:opacity-50"
                 >
                   {isSavingIcs ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
                   {t('settings.saveFeed')}
@@ -220,7 +220,7 @@ export default function TeamSettingsView({
 
       {/* ── Accounts ── */}
       {onSaveAccount && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none p-5">
+        <div className="bg-card rounded-lg border border-border shadow-sm p-5">
           <AccountManager
             accounts={accounts}
             onSave={onSaveAccount}
@@ -231,14 +231,14 @@ export default function TeamSettingsView({
       )}
 
       {/* ── Payment Instructions ── */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none p-5 space-y-4">
+      <div className="bg-card rounded-lg border border-border shadow-sm p-5 space-y-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl">
-            <CreditCard size={16} className="text-slate-500" />
+          <div className="p-2 bg-background rounded-lg">
+            <CreditCard size={16} className="text-muted-foreground" />
           </div>
           <div>
-            <p className="text-sm font-black text-slate-800 dark:text-white">{t('settings.paymentInstructions')}</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">{t('settings.paymentHelp')}</p>
+            <p className="text-sm font-bold text-foreground">{t('settings.paymentInstructions')}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t('settings.paymentHelp')}</p>
           </div>
         </div>
         <textarea
@@ -246,13 +246,13 @@ export default function TeamSettingsView({
           onChange={(e) => setPaymentInfo(e.target.value)}
           rows={5}
           placeholder={t('settings.paymentPlaceholder')}
-          className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none text-slate-700 dark:text-slate-300 dark:bg-slate-800"
+          className="w-full border border-border rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none text-foreground"
         />
         <div className="flex justify-end">
           <button
             onClick={handleSavePayment}
             disabled={isSavingPayment}
-            className="flex items-center gap-1.5 px-5 py-2 bg-slate-900 dark:bg-slate-100 hover:bg-slate-700 dark:hover:bg-slate-200 text-white dark:text-slate-900 text-xs font-black rounded-xl disabled:opacity-50 transition-colors"
+            className="flex items-center gap-1.5 px-5 py-2 bg-accent hover:bg-accent/90 text-accent-foreground text-xs font-bold rounded-lg disabled:opacity-50 transition-colors"
           >
             {isSavingPayment ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
             {t('common.save')}

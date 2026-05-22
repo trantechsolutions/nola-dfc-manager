@@ -178,11 +178,11 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-            <Users size={22} className="text-blue-500" />
+          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Users size={22} className="text-blue-700 dark:text-blue-400" />
             {t('clubPlayers.title', 'Club Players')}
           </h2>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {t('clubPlayers.subtitle', 'All players across all teams')}
           </p>
         </div>
@@ -191,7 +191,7 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
             setAddForm({ ...EMPTY_PLAYER });
             setShowAddModal(true);
           }}
-          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-xs font-black rounded-xl hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus size={14} /> Add Player
         </button>
@@ -204,16 +204,11 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
           { label: 'Prospects', value: stats.prospects, color: 'text-violet-600 dark:text-violet-400' },
           { label: 'Assigned', value: stats.assigned, color: 'text-emerald-600 dark:text-emerald-400' },
           { label: 'Unassigned', value: stats.unassigned, color: 'text-amber-600 dark:text-amber-400' },
-          { label: 'Archived', value: stats.archived, color: 'text-slate-500 dark:text-slate-400' },
+          { label: 'Archived', value: stats.archived, color: 'text-muted-foreground' },
         ].map((s) => (
-          <div
-            key={s.label}
-            className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-3 text-center"
-          >
-            <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
-            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-              {s.label}
-            </p>
+          <div key={s.label} className="bg-card rounded-lg border border-border p-3 text-center">
+            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+            <p className="text-xs font-semibold text-muted-foreground">{s.label}</p>
           </div>
         ))}
       </div>
@@ -221,19 +216,19 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder={t('clubPlayers.search', 'Search players...')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-9 pr-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
         <select
           value={filterTeam}
           onChange={(e) => setFilterTeam(e.target.value)}
-          className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 outline-none"
+          className="px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none"
         >
           <option value="all">{t('clubPlayers.allTeams', 'All Teams')}</option>
           <option value="unassigned">{t('clubPlayers.unassigned', 'Unassigned')}</option>
@@ -243,15 +238,13 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
             </option>
           ))}
         </select>
-        <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div className="flex rounded-lg border border-border overflow-hidden">
           {['active', 'prospect', 'archived'].map((s) => (
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
-              className={`px-3 py-2 text-xs font-bold capitalize transition-colors ${
-                filterStatus === s
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+              className={`px-3 py-2 text-xs font-semibold capitalize transition-colors ${
+                filterStatus === s ? 'bg-blue-600 text-white' : 'bg-card text-muted-foreground hover:bg-background'
               }`}
             >
               {s}
@@ -261,53 +254,50 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
       </div>
 
       {/* Player List */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
         {filtered.length === 0 ? (
-          <div className="py-12 text-center text-sm text-slate-400 dark:text-slate-500">
+          <div className="py-12 text-center text-sm text-muted-foreground">
             {t('clubPlayers.noPlayers', 'No players found.')}
           </div>
         ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="divide-y divide-border">
             {filtered.map((player) => {
               const ageGroup =
                 player.birthdate && selectedSeason ? getUSAgeGroup(player.birthdate, selectedSeason) : null;
               const isTransferring = transferringId === player.id;
 
               return (
-                <div
-                  key={player.id}
-                  className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                >
+                <div key={player.id} className="px-4 py-3 hover:bg-background transition-colors">
                   <div className="flex items-center gap-3">
                     {/* Player info */}
                     <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handleEditPlayer(player)}>
                       <div className="flex items-center gap-2">
-                        <p className="font-bold text-sm text-slate-900 dark:text-white truncate hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                        <p className="font-semibold text-sm text-foreground truncate hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-400 transition-colors">
                           {player.firstName} {player.lastName}
                         </p>
                         {player.jerseyNumber && (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-black text-slate-600 dark:text-slate-300">
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-muted text-xs font-bold text-foreground">
                             #{player.jerseyNumber}
                           </span>
                         )}
                         {ageGroup && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                          <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
                             {ageGroup}
                           </span>
                         )}
                         {player.status === 'prospect' && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
+                          <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
                             Prospect
                           </span>
                         )}
                         {player.status === 'archived' && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                          <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-muted text-muted-foreground">
                             Archived
                           </span>
                         )}
                       </div>
                       <div className="flex items-center gap-3 mt-0.5">
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                           {player.teamName ? (
                             <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                               {player.teamName}
@@ -317,7 +307,7 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                           )}
                         </p>
                         {player.guardians?.length > 0 && (
-                          <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                          <p className="text-xs text-muted-foreground">
                             {player.guardians[0].name}
                             {player.guardians[0].email && ` · ${player.guardians[0].email}`}
                           </p>
@@ -329,7 +319,7 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => handleEditPlayer(player)}
-                        className="p-2 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-emerald-900/30 transition-colors"
+                        className="p-2 rounded-lg text-muted-foreground hover:text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:text-emerald-400 dark:hover:bg-emerald-900/30 transition-colors"
                         title="Edit player"
                       >
                         <Edit size={14} />
@@ -339,14 +329,14 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                           setTransferringId(isTransferring ? null : player.id);
                           setTransferTeamId(player.teamId || '');
                         }}
-                        className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
+                        className="p-2 rounded-lg text-muted-foreground hover:text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
                         title="Transfer team"
                       >
                         <ArrowRightLeft size={14} />
                       </button>
                       <button
                         onClick={() => handleArchiveRestore(player)}
-                        className="p-2 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:text-amber-400 dark:hover:bg-amber-900/30 transition-colors"
+                        className="p-2 rounded-lg text-muted-foreground hover:text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:text-amber-400 dark:hover:bg-amber-900/30 transition-colors"
                         title={player.status === 'active' ? 'Archive' : 'Restore'}
                       >
                         {player.status === 'active' ? <Archive size={14} /> : <RotateCcw size={14} />}
@@ -360,7 +350,7 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                       <select
                         value={transferTeamId}
                         onChange={(e) => setTransferTeamId(e.target.value)}
-                        className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 outline-none"
+                        className="flex-1 px-3 py-1.5 rounded-lg border border-border bg-card text-sm text-foreground outline-none"
                       >
                         <option value="none">— Unassigned —</option>
                         {teams.map((team) => (
@@ -371,7 +361,7 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                       </select>
                       <button
                         onClick={() => handleTransfer(player.id)}
-                        className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors"
+                        className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors"
                       >
                         Transfer
                       </button>
@@ -380,7 +370,7 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                           setTransferringId(null);
                           setTransferTeamId('');
                         }}
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors"
                       >
                         Cancel
                       </button>
@@ -394,7 +384,7 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
       </div>
 
       {/* Summary */}
-      <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center">
+      <p className="text-xs text-muted-foreground text-center">
         {t('clubPlayers.showing', 'Showing {{n}} of {{total}} players', { n: filtered.length, total: players.length })}
       </p>
 
@@ -414,14 +404,14 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowAddModal(false)} />
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <UserPlus size={20} className="text-blue-500" /> Add Player
+          <div className="relative w-full max-w-lg bg-card rounded-lg shadow-md border border-border max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <UserPlus size={20} className="text-blue-700 dark:text-blue-400" /> Add Player
               </h3>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
               >
                 <X size={18} />
               </button>
@@ -430,10 +420,8 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
             <form onSubmit={handleAddPlayer} className="p-5 space-y-4">
               {/* Player Type */}
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
-                  Player Type
-                </label>
-                <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Player Type</label>
+                <div className="flex rounded-lg border border-border overflow-hidden">
                   {[
                     { value: 'current', label: 'Current Player' },
                     { value: 'prospect', label: 'Prospect' },
@@ -442,12 +430,12 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                       key={opt.value}
                       type="button"
                       onClick={() => setAddForm((f) => ({ ...f, playerType: opt.value }))}
-                      className={`flex-1 px-3 py-2 text-xs font-bold transition-colors ${
+                      className={`flex-1 px-3 py-2 text-xs font-semibold transition-colors ${
                         addForm.playerType === opt.value
                           ? opt.value === 'prospect'
                             ? 'bg-violet-600 text-white'
                             : 'bg-blue-600 text-white'
-                          : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                          : 'bg-card text-muted-foreground'
                       }`}
                     >
                       {opt.label}
@@ -459,27 +447,23 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
               {/* Name */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
-                    First Name *
-                  </label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">First Name *</label>
                   <input
                     required
                     type="text"
                     value={addForm.firstName}
                     onChange={(e) => setAddForm((f) => ({ ...f, firstName: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
-                    Last Name *
-                  </label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Last Name *</label>
                   <input
                     required
                     type="text"
                     value={addForm.lastName}
                     onChange={(e) => setAddForm((f) => ({ ...f, lastName: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
               </div>
@@ -487,38 +471,32 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
               {/* DOB + Jersey */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
-                    Birthdate
-                  </label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Birthdate</label>
                   <input
                     type="date"
                     value={addForm.birthdate}
                     onChange={(e) => setAddForm((f) => ({ ...f, birthdate: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
-                    Jersey #
-                  </label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Jersey #</label>
                   <input
                     type="text"
                     value={addForm.jerseyNumber}
                     onChange={(e) => setAddForm((f) => ({ ...f, jerseyNumber: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
               </div>
 
               {/* Gender */}
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
-                  Gender
-                </label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Gender</label>
                 <select
                   value={addForm.gender || ''}
                   onChange={(e) => setAddForm((f) => ({ ...f, gender: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                 >
                   <option value="">— Select —</option>
                   <option value="M">Male</option>
@@ -528,13 +506,13 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
 
               {/* Team Assignment */}
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">
                   {addForm.playerType === 'prospect' ? 'Interested Team (optional)' : 'Assign to Team'}
                 </label>
                 <select
                   value={addForm.teamId}
                   onChange={(e) => setAddForm((f) => ({ ...f, teamId: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                 >
                   <option value="">— No team —</option>
                   {teams.map((team) => (
@@ -546,8 +524,8 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
               </div>
 
               {/* Guardian */}
-              <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
-                <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
+              <div className="border-t border-border pt-4">
+                <label className="block text-xs font-semibold text-muted-foreground mb-2">
                   Guardian / Parent (optional)
                 </label>
                 <div className="space-y-2">
@@ -556,7 +534,7 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                     placeholder="Guardian name"
                     value={addForm.guardianName}
                     onChange={(e) => setAddForm((f) => ({ ...f, guardianName: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <input
@@ -564,14 +542,14 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                       placeholder="Email"
                       value={addForm.guardianEmail}
                       onChange={(e) => setAddForm((f) => ({ ...f, guardianEmail: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                     />
                     <input
                       type="tel"
                       placeholder="Phone"
                       value={addForm.guardianPhone}
                       onChange={(e) => setAddForm((f) => ({ ...f, guardianPhone: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>
                 </div>
@@ -582,14 +560,14 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="px-4 py-2 rounded-lg text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving || !addForm.firstName.trim() || !addForm.lastName.trim()}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-bold transition-colors"
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors"
                 >
                   {saving ? 'Adding...' : addForm.playerType === 'prospect' ? 'Add Prospect' : 'Add Player'}
                 </button>

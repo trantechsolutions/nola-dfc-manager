@@ -73,15 +73,15 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
-            <Wallet size={16} className="text-indigo-600" /> {t('accountMgr.title')}
+          <p className="text-sm font-bold text-foreground flex items-center gap-2">
+            <Wallet size={16} className="text-indigo-700 dark:text-indigo-400" /> {t('accountMgr.title')}
           </p>
-          <p className="text-[10px] text-slate-400 font-bold mt-0.5">{t('accountMgr.subtitle')}</p>
+          <p className="text-xs text-muted-foreground font-semibold mt-0.5">{t('accountMgr.subtitle')}</p>
         </div>
         {!showForm && (
           <button
             onClick={handleNew}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors"
           >
             <Plus size={12} /> {t('accountMgr.addAccount')}
           </button>
@@ -89,48 +89,44 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
       </div>
 
       {showForm && (
-        <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-3">
+        <div className="bg-background border border-border rounded-lg p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            <p className="text-xs font-bold text-muted-foreground">
               {formData.id ? t('accountMgr.editAccount') : t('accountMgr.newAccount')}
             </p>
-            <button onClick={handleCancel} className="text-slate-400 hover:text-slate-600">
+            <button onClick={handleCancel} className="text-muted-foreground hover:text-foreground">
               <X size={14} />
             </button>
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-              {t('accountMgr.name')}
-            </label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">{t('accountMgr.name')}</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder={t('accountMgr.namePlaceholder')}
-              className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-900 dark:text-white"
+              className="w-full border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-card"
             />
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-              {t('accountMgr.handle')}
-            </label>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1">{t('accountMgr.handle')}</label>
             <input
               type="text"
               value={formData.handle}
               onChange={(e) => setFormData({ ...formData, handle: e.target.value })}
               placeholder={t('accountMgr.handlePlaceholder')}
-              className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-900 dark:text-white"
+              className="w-full border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-card"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">
                 {t('accountMgr.holding')}
               </label>
               <select
                 value={formData.holding}
                 onChange={(e) => setFormData({ ...formData, holding: e.target.value })}
-                className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-900 dark:text-white"
+                className="w-full border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-card"
               >
                 {HOLDINGS.map((h) => (
                   <option key={h} value={h}>
@@ -140,14 +136,14 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">
                 {t('accountMgr.sortOrder')}
               </label>
               <input
                 type="number"
                 value={formData.sortOrder}
                 onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value, 10) || 0 })}
-                className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-900 dark:text-white"
+                className="w-full border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-card"
               />
             </div>
           </div>
@@ -157,24 +153,24 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
               id="account-active"
               checked={formData.isActive}
               onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-              className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+              className="w-4 h-4 text-indigo-700 dark:text-indigo-400 rounded focus:ring-indigo-500"
             />
-            <label htmlFor="account-active" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+            <label htmlFor="account-active" className="text-xs font-semibold text-foreground">
               {t('accountMgr.active')}
             </label>
           </div>
-          {error && <p className="text-xs text-red-500 font-bold">{error}</p>}
+          {error && <p className="text-xs text-red-700 dark:text-red-400 font-semibold">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">
             <button
               onClick={handleCancel}
-              className="px-3 py-1.5 text-slate-500 dark:text-slate-400 text-xs font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
+              className="px-3 py-1.5 text-muted-foreground text-xs font-semibold rounded-lg hover:bg-muted"
             >
               {t('common.cancel')}
             </button>
             <button
               onClick={handleSubmit}
               disabled={isSaving}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-lg disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg disabled:opacity-50"
             >
               {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
               {t('common.save')}
@@ -192,33 +188,25 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
           const IconComp = HOLDING_ICONS[h];
           return (
             <div key={h} className="space-y-1.5">
-              <p
-                className={`text-[10px] font-black uppercase tracking-widest ${colors.text} flex items-center gap-1.5`}
-              >
+              <p className={`text-xs font-bold ${colors.text} flex items-center gap-1.5`}>
                 <IconComp size={11} /> {HOLDING_LABELS[h]}
               </p>
               {list.map((acc) => (
                 <div
                   key={acc.id}
-                  className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl border ${
-                    acc.isActive
-                      ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
-                      : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 opacity-60'
+                  className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg border ${
+                    acc.isActive ? 'bg-card border-border' : 'bg-background border-border opacity-60'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="min-w-0">
-                      <span className="text-sm font-bold text-slate-800 dark:text-white truncate block">
-                        {acc.name}
-                      </span>
+                      <span className="text-sm font-semibold text-foreground truncate block">{acc.name}</span>
                       {acc.handle && (
-                        <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium truncate block">
-                          {acc.handle}
-                        </span>
+                        <span className="text-xs text-muted-foreground font-medium truncate block">{acc.handle}</span>
                       )}
                     </div>
                     {!acc.isActive && (
-                      <span className="text-[9px] font-black text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded uppercase shrink-0">
+                      <span className="text-xs font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded uppercase shrink-0">
                         {t('accountMgr.archived')}
                       </span>
                     )}
@@ -226,14 +214,14 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => handleEdit(acc)}
-                      className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded"
+                      className="p-1.5 text-muted-foreground hover:text-foreground rounded"
                       title={t('common.edit')}
                     >
                       <Edit size={13} />
                     </button>
                     <button
                       onClick={() => handleDelete(acc)}
-                      className="p-1.5 text-slate-300 hover:text-red-500 rounded"
+                      className="p-1.5 text-muted-foreground hover:text-red-700 dark:text-red-400 rounded"
                       title={t('common.delete')}
                     >
                       <Trash2 size={13} />
@@ -245,7 +233,9 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
           );
         })}
         {accounts.length === 0 && !showForm && (
-          <div className="text-center py-8 text-slate-400 text-sm font-bold">{t('accountMgr.noAccounts')}</div>
+          <div className="text-center py-8 text-muted-foreground text-sm font-semibold">
+            {t('accountMgr.noAccounts')}
+          </div>
         )}
       </div>
     </div>

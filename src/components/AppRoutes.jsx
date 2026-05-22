@@ -296,6 +296,7 @@ export default function AppRoutes({
               element={
                 effectiveIsStaff ? (
                   <TeamOverviewView
+                    selectedTeam={effectiveTeam}
                     players={seasonalPlayers}
                     archivedPlayers={archivedPlayers}
                     teamBalance={teamBalance}
@@ -747,7 +748,7 @@ export default function AppRoutes({
 
       {toast && (
         <div
-          className={`fixed bottom-24 left-1/2 -translate-x-1/2 text-white px-6 py-4 rounded-2xl shadow-2xl font-black z-[200] border-2 flex items-center gap-3 ${toast.isError ? 'bg-red-600 border-red-400' : 'bg-slate-900 border-slate-700'}`}
+          className={`fixed bottom-24 left-1/2 -translate-x-1/2 text-white px-6 py-4 rounded-lg shadow-md font-bold z-[200] border-2 flex items-center gap-3 ${toast.isError ? 'bg-red-600 border-red-400' : 'bg-foreground border-border'}`}
         >
           {toast.isError && <Settings size={20} className="animate-spin" />}
           <span>{toast.msg}</span>
@@ -757,7 +758,7 @@ export default function AppRoutes({
                 toast.action.onClick();
                 setToast(null);
               }}
-              className="ml-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-black uppercase tracking-wider transition-all"
+              className="ml-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold transition-all"
             >
               {toast.action.label}
             </button>

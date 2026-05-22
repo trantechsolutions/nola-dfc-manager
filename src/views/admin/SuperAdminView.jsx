@@ -68,11 +68,7 @@ export default function SuperAdminView({ onSelectClub, showToast, showConfirm })
   };
 
   if (loading) {
-    return (
-      <div className="p-20 text-center font-black text-slate-300 dark:text-slate-600 animate-pulse">
-        Loading clubs...
-      </div>
-    );
+    return <div className="p-20 text-center font-bold text-muted-foreground animate-pulse">Loading clubs...</div>;
   }
 
   return (
@@ -80,17 +76,17 @@ export default function SuperAdminView({ onSelectClub, showToast, showConfirm })
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-            <Shield size={24} className="text-violet-500" />
+          <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Shield size={24} className="text-violet-700 dark:text-violet-400" />
             App Administration
           </h2>
-          <p className="text-xs text-slate-400 font-bold mt-1">
+          <p className="text-xs text-muted-foreground font-semibold mt-1">
             {clubs.length} club{clubs.length !== 1 ? 's' : ''} registered
           </p>
         </div>
         <button
           onClick={() => setShowCreateForm(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white text-xs font-black rounded-xl hover:bg-violet-700 transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-lg hover:bg-violet-700 transition-colors"
         >
           <Plus size={14} /> New Club
         </button>
@@ -101,7 +97,7 @@ export default function SuperAdminView({ onSelectClub, showToast, showConfirm })
         {clubs.map((club) => (
           <div
             key={club.id}
-            className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 hover:border-violet-300 dark:hover:border-violet-700 transition-all cursor-pointer group"
+            className="bg-card rounded-lg border border-border p-5 hover:border-violet-300 dark:hover:border-violet-700 transition-all cursor-pointer group"
             onClick={() => {
               localStorage.setItem('nola_selected_club', club.id);
               if (onSelectClub) onSelectClub(club);
@@ -109,12 +105,12 @@ export default function SuperAdminView({ onSelectClub, showToast, showConfirm })
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center">
                   <Building2 size={20} className="text-violet-600 dark:text-violet-400" />
                 </div>
                 <div>
-                  <h3 className="font-black text-slate-900 dark:text-white text-sm">{club.name}</h3>
-                  <p className="text-[10px] text-slate-400 font-mono">{club.slug}</p>
+                  <h3 className="font-bold text-foreground text-sm">{club.name}</h3>
+                  <p className="text-xs text-muted-foreground font-mono">{club.slug}</p>
                 </div>
               </div>
               <button
@@ -123,7 +119,7 @@ export default function SuperAdminView({ onSelectClub, showToast, showConfirm })
                   handleDelete(club);
                 }}
                 disabled={isSaving}
-                className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                className="p-2 text-muted-foreground hover:text-red-700 dark:text-red-400 dark:hover:text-red-400 rounded-lg transition-all opacity-0 group-hover:opacity-100"
               >
                 <Trash2 size={14} />
               </button>
@@ -133,30 +129,28 @@ export default function SuperAdminView({ onSelectClub, showToast, showConfirm })
       </div>
 
       {clubs.length === 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-16 text-center">
-          <Building2 size={32} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-          <p className="text-sm font-bold text-slate-400 dark:text-slate-500">
-            No clubs yet. Create one to get started.
-          </p>
+        <div className="bg-card rounded-lg border-2 border-dashed border-border p-16 text-center">
+          <Building2 size={32} className="mx-auto text-muted-foreground mb-3" />
+          <p className="text-sm font-semibold text-muted-foreground">No clubs yet. Create one to get started.</p>
         </div>
       )}
 
       {/* Create Club Modal */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md border border-slate-200 dark:border-slate-700">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
+          <div className="bg-card rounded-lg p-6 w-full max-w-md border border-border">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
-                <Building2 size={20} className="text-violet-600" /> New Club
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <Building2 size={20} className="text-violet-700 dark:text-violet-400" /> New Club
               </h3>
-              <button onClick={() => setShowCreateForm(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowCreateForm(false)} className="text-muted-foreground hover:text-foreground">
                 <X size={20} />
               </button>
             </div>
 
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Club Name *</label>
+                <label className="text-xs font-semibold text-muted-foreground">Club Name *</label>
                 <input
                   autoFocus
                   required
@@ -172,33 +166,33 @@ export default function SuperAdminView({ onSelectClub, showToast, showConfirm })
                         .replace(/[^a-z0-9-]/g, ''),
                     );
                   }}
-                  className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-violet-500 mt-1 dark:bg-slate-800 dark:text-white"
+                  className="w-full border border-border rounded-lg p-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-violet-500 mt-1"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Slug</label>
+                <label className="text-xs font-semibold text-muted-foreground">Slug</label>
                 <input
                   type="text"
                   placeholder="my-club"
                   value={newClubSlug}
                   onChange={(e) => setNewClubSlug(e.target.value)}
-                  className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm font-mono outline-none mt-1 dark:bg-slate-800 dark:text-white"
+                  className="w-full border border-border rounded-lg p-2.5 text-sm font-mono outline-none mt-1"
                 />
-                <p className="text-[10px] text-slate-400 mt-1">URL-friendly identifier. Auto-generated from name.</p>
+                <p className="text-xs text-muted-foreground mt-1">URL-friendly identifier. Auto-generated from name.</p>
               </div>
 
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowCreateForm(false)}
-                  className="flex-1 py-2.5 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm text-muted-foreground hover:bg-background transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving || !newClubName.trim()}
-                  className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 transition-all"
+                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 transition-all"
                 >
                   {isSaving ? 'Creating...' : 'Create Club'}
                 </button>

@@ -108,31 +108,31 @@ export default function TransactionModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center p-4 z-50">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl dark:shadow-none w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center p-4 z-50">
+      <div className="bg-card rounded-lg shadow-md w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
         <div
           className={`px-6 py-4 flex justify-between items-center text-white shrink-0 ${
             isTransfer ? 'bg-indigo-600' : 'bg-emerald-600'
           }`}
         >
-          <h3 className="font-bold text-lg flex items-center gap-2">
+          <h3 className="font-semibold text-lg flex items-center gap-2">
             {isTransfer && <ArrowRightLeft size={18} />}
             {initialData ? t('txModal.editTitle') : isTransfer ? t('txModal.transferTitle') : t('txModal.addTitle')}
           </h3>
-          <button type="button" onClick={onClose} className="text-white/60 hover:text-white font-bold text-xl">
+          <button type="button" onClick={onClose} className="text-white/60 hover:text-white font-semibold text-xl">
             &times;
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4">
           {isReadOnly && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-semibold">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-xs font-medium">
               <span>👁</span>
               <span>{t('impersonation.viewingAs', 'Viewing as parent — read-only mode')}</span>
             </div>
           )}
           <div>
-            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-sm font-semibold text-foreground mb-1">
               {isTransfer ? t('txModal.transferDesc') : t('txModal.titleLabel')}
             </label>
             <input
@@ -140,36 +140,32 @@ export default function TransactionModal({
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-800 dark:text-white"
+              className="w-full border border-border rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none"
               placeholder={isTransfer ? t('txModal.transferPlaceholder') : t('txModal.titlePlaceholder')}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {t('txModal.amount')}
-              </label>
+              <label className="block text-sm font-semibold text-foreground mb-1">{t('txModal.amount')}</label>
               <input
                 required
                 type="number"
                 step="0.01"
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-800 dark:text-white"
+                className="w-full border border-border rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none"
                 placeholder="0.00"
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {t('common.date')}
-              </label>
+              <label className="block text-sm font-semibold text-foreground mb-1">{t('common.date')}</label>
               <input
                 required
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-800 dark:text-white"
+                className="w-full border border-border rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none"
               />
             </div>
           </div>
@@ -177,13 +173,11 @@ export default function TransactionModal({
           {/* Category */}
           <div className={`grid ${formData.category === 'CRE' || isTransfer ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {t('txModal.category')}
-              </label>
+              <label className="block text-sm font-semibold text-foreground mb-1">{t('txModal.category')}</label>
               <select
                 value={formData.category}
                 onChange={(e) => handleCategoryChange(e.target.value)}
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-800 dark:text-white"
+                className="w-full border border-border rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none"
               >
                 <option value="TMF">{t('txModal.catTeamFees')}</option>
                 <option value="FUN">{t('txModal.catFundraising')}</option>
@@ -197,13 +191,11 @@ export default function TransactionModal({
             </div>
             {!isTransfer && formData.category !== 'CRE' && (
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  {t('txModal.account')}
-                </label>
+                <label className="block text-sm font-semibold text-foreground mb-1">{t('txModal.account')}</label>
                 <select
                   value={formData.accountId || ''}
                   onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
-                  className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-800 dark:text-white"
+                  className="w-full border border-border rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none"
                 >
                   <option value="">{t('txModal.noAccount')}</option>
                   {HOLDINGS.filter((h) => h !== 'none' && accountsByHolding[h]?.length > 0).map((h) => (
@@ -222,19 +214,15 @@ export default function TransactionModal({
 
           {/* ── TRANSFER: From / To Account ── */}
           {isTransfer && (
-            <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 rounded-xl p-4 space-y-3">
-              <p className="text-xs font-black text-indigo-600 uppercase tracking-widest">
-                {t('txModal.transferDetails')}
-              </p>
+            <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 rounded-lg p-4 space-y-3">
+              <p className="text-xs font-bold text-indigo-700 dark:text-indigo-400">{t('txModal.transferDetails')}</p>
               <div className="grid grid-cols-[1fr,auto,1fr] gap-2 items-end">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                    {t('txModal.fromAccount')}
-                  </label>
+                  <label className="block text-xs font-semibold text-foreground mb-1">{t('txModal.fromAccount')}</label>
                   <select
                     value={formData.transferFromAccountId || ''}
                     onChange={(e) => setFormData({ ...formData, transferFromAccountId: e.target.value })}
-                    className="w-full border border-indigo-200 dark:border-indigo-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-800 dark:text-white"
+                    className="w-full border border-indigo-200 dark:border-indigo-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-card"
                   >
                     {HOLDINGS.filter((h) => h !== 'none' && accountsByHolding[h]?.length > 0).map((h) => (
                       <optgroup key={h} label={HOLDING_LABELS[h]}>
@@ -251,13 +239,11 @@ export default function TransactionModal({
                   <ArrowRightLeft size={18} className="text-indigo-400" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                    {t('txModal.toAccount')}
-                  </label>
+                  <label className="block text-xs font-semibold text-foreground mb-1">{t('txModal.toAccount')}</label>
                   <select
                     value={formData.transferToAccountId || ''}
                     onChange={(e) => setFormData({ ...formData, transferToAccountId: e.target.value })}
-                    className="w-full border border-indigo-200 dark:border-indigo-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-800 dark:text-white"
+                    className="w-full border border-indigo-200 dark:border-indigo-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-card"
                   >
                     {HOLDINGS.filter((h) => h !== 'none' && accountsByHolding[h]?.length > 0).map((h) => (
                       <optgroup key={h} label={HOLDING_LABELS[h]}>
@@ -272,7 +258,7 @@ export default function TransactionModal({
                 </div>
               </div>
               {formData.transferFromAccountId === formData.transferToAccountId && formData.transferFromAccountId && (
-                <p className="text-xs text-red-500 font-bold">{t('txModal.sameAccountError')}</p>
+                <p className="text-xs text-red-700 dark:text-red-400 font-semibold">{t('txModal.sameAccountError')}</p>
               )}
             </div>
           )}
@@ -280,9 +266,7 @@ export default function TransactionModal({
           {/* Player link (hidden for transfers) */}
           {!isTransfer && (
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {t('txModal.linkPlayer')}
-              </label>
+              <label className="block text-sm font-semibold text-foreground mb-1">{t('txModal.linkPlayer')}</label>
               <select
                 value={formData.playerId}
                 onChange={(e) => {
@@ -293,7 +277,7 @@ export default function TransactionModal({
                     playerName: selectedPlayer ? `${selectedPlayer.firstName} ${selectedPlayer.lastName}` : '',
                   });
                 }}
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-800 dark:text-white"
+                className="w-full border border-border rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none"
               >
                 <option value="">{t('txModal.generalExpense')}</option>
                 {players.map((p) => (
@@ -308,13 +292,13 @@ export default function TransactionModal({
           {/* Event link (hidden for transfers, only shown when events exist) */}
           {!isTransfer && teamEvents.length > 0 && (
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
-                <Link2 size={13} className="text-slate-400" /> {t('txModal.linkEvent')}
+              <label className="block text-sm font-semibold text-foreground mb-1 flex items-center gap-1.5">
+                <Link2 size={13} className="text-muted-foreground" /> {t('txModal.linkEvent')}
               </label>
               <select
                 value={formData.eventId}
                 onChange={(e) => setFormData({ ...formData, eventId: e.target.value })}
-                className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-800 dark:text-white"
+                className="w-full border border-border rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none"
               >
                 <option value="">{t('txModal.noEventLinked')}</option>
                 {teamEvents.map((ev) => (
@@ -339,19 +323,19 @@ export default function TransactionModal({
                 id="cleared"
                 checked={formData.cleared}
                 onChange={(e) => setFormData({ ...formData, cleared: e.target.checked })}
-                className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                className="w-4 h-4 text-emerald-700 dark:text-emerald-400 rounded focus:ring-emerald-500"
               />
-              <label htmlFor="cleared" className="text-sm font-bold text-slate-700 dark:text-slate-300">
+              <label htmlFor="cleared" className="text-sm font-semibold text-foreground">
                 {t('txModal.fundsCleared')}
               </label>
             </div>
           )}
 
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3 shrink-0">
+          <div className="pt-4 border-t border-border flex justify-end gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="px-4 py-2 font-semibold text-muted-foreground hover:bg-muted rounded-lg transition-colors"
             >
               {t('common.cancel')}
             </button>
@@ -363,7 +347,7 @@ export default function TransactionModal({
                 (isTransfer && formData.transferFromAccountId === formData.transferToAccountId) ||
                 (isTransfer && !formData.transferFromAccountId)
               }
-              className={`font-bold py-2 px-6 rounded-lg shadow-sm dark:shadow-none transition-colors disabled:opacity-50 text-white ${
+              className={`font-semibold py-2 px-6 rounded-lg shadow-sm transition-colors disabled:opacity-50 text-white ${
                 isTransfer ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'
               }`}
             >

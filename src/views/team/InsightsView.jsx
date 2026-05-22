@@ -316,8 +316,8 @@ ${playerSummary}`;
     <div className="space-y-5 pb-24 md:pb-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white">{t('insights.title')}</h2>
-          <p className="text-xs text-slate-400 font-bold mt-0.5">
+          <h2 className="text-2xl font-bold text-foreground">{t('insights.title')}</h2>
+          <p className="text-xs text-muted-foreground font-semibold mt-0.5">
             {selectedSeason} (Aug {selectedSeason.split('-')[0]} – May {selectedSeason.split('-')[1]}) ·{' '}
             {seasonEvents.upcoming.length + seasonEvents.past.length} events ·{' '}
             {m.summary.upcomingWithNoCost > 0
@@ -327,7 +327,7 @@ ${playerSummary}`;
         </div>
         <button
           onClick={() => exportInsightsPDF(a, s, m, selectedSeason, formatMoney, CATEGORY_LABELS)}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shrink-0"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-border bg-card text-foreground hover:bg-background transition-all shrink-0"
         >
           <Download size={14} />
           <span>{t('insights.exportReport')}</span>
@@ -337,68 +337,79 @@ ${playerSummary}`;
       {/* ── TOP METRICS ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div
-          className={`p-4 rounded-2xl shadow-sm dark:shadow-none border ${a.netCash >= 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700' : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700'}`}
+          className={`p-4 rounded-lg shadow-sm border ${a.netCash >= 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700' : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700'}`}
         >
-          <DollarSign size={14} className={a.netCash >= 0 ? 'text-emerald-600' : 'text-red-600'} />
-          <p className={`text-xl font-black mt-1 ${a.netCash >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+          <DollarSign
+            size={14}
+            className={a.netCash >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}
+          />
+          <p
+            className={`text-xl font-bold mt-1 ${a.netCash >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}
+          >
             {formatMoney(a.netCash)}
           </p>
-          <p className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">{t('insights.netCash')}</p>
+          <p className="text-xs font-semibold text-muted-foreground mt-0.5">{t('insights.netCash')}</p>
         </div>
-        <div className="p-4 rounded-2xl shadow-sm dark:shadow-none border bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700">
-          <Target size={14} className="text-amber-600" />
-          <p className="text-xl font-black text-amber-700 mt-1">{formatMoney(a.totalOutstanding)}</p>
-          <p className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">{t('insights.outstandingLabel')}</p>
+        <div className="p-4 rounded-lg shadow-sm border bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700">
+          <Target size={14} className="text-amber-700 dark:text-amber-400" />
+          <p className="text-xl font-bold text-amber-700 dark:text-amber-300 mt-1">{formatMoney(a.totalOutstanding)}</p>
+          <p className="text-xs font-semibold text-muted-foreground mt-0.5">{t('insights.outstandingLabel')}</p>
         </div>
         <div
-          className={`p-4 rounded-2xl shadow-sm dark:shadow-none border ${m.summary.upcomingWithNoCost > 0 ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700' : 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700'}`}
+          className={`p-4 rounded-lg shadow-sm border ${m.summary.upcomingWithNoCost > 0 ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700' : 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700'}`}
         >
           <CircleDollarSign
             size={14}
-            className={m.summary.upcomingWithNoCost > 0 ? 'text-red-600' : 'text-emerald-600'}
+            className={
+              m.summary.upcomingWithNoCost > 0
+                ? 'text-red-700 dark:text-red-400'
+                : 'text-emerald-700 dark:text-emerald-400'
+            }
           />
           <p
-            className={`text-xl font-black mt-1 ${m.summary.upcomingWithNoCost > 0 ? 'text-red-700' : 'text-emerald-700'}`}
+            className={`text-xl font-bold mt-1 ${m.summary.upcomingWithNoCost > 0 ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'}`}
           >
             {formatMoney(a.projRemainingTotal)}
           </p>
-          <p className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">{t('insights.projRemaining')}</p>
+          <p className="text-xs font-semibold text-muted-foreground mt-0.5">{t('insights.projRemaining')}</p>
         </div>
         <div
-          className={`p-4 rounded-2xl shadow-sm dark:shadow-none border ${a.projectedOverUnder >= 0 ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700' : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700'}`}
+          className={`p-4 rounded-lg shadow-sm border ${a.projectedOverUnder >= 0 ? 'bg-card border-border' : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700'}`}
         >
           {a.projectedOverUnder >= 0 ? (
-            <TrendingUp size={14} className="text-emerald-600" />
+            <TrendingUp size={14} className="text-emerald-700 dark:text-emerald-400" />
           ) : (
-            <TrendingDown size={14} className="text-red-600" />
+            <TrendingDown size={14} className="text-red-700 dark:text-red-400" />
           )}
-          <p className={`text-xl font-black mt-1 ${a.projectedOverUnder >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+          <p
+            className={`text-xl font-bold mt-1 ${a.projectedOverUnder >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}
+          >
             {formatMoney(Math.abs(a.projectedOverUnder))}
           </p>
-          <p className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">
+          <p className="text-xs font-semibold text-muted-foreground mt-0.5">
             {a.projectedOverUnder >= 0 ? t('insights.projSurplus') : t('insights.projShortfall')}
           </p>
         </div>
       </div>
 
       {/* ── EVENT-TRANSACTION MATCH REPORT ── */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden">
+      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         <button
           onClick={() => togglePanel('events')}
-          className="w-full flex justify-between items-center p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          className="w-full flex justify-between items-center p-4 hover:bg-background transition-colors"
         >
-          <span className="font-bold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
-            <CalendarDays size={16} className="text-blue-600" /> {t('insights.eventCosts')}
+          <span className="font-semibold text-foreground text-sm flex items-center gap-2">
+            <CalendarDays size={16} className="text-blue-700 dark:text-blue-400" /> {t('insights.eventCosts')}
             {m.summary.upcomingWithNoCost > 0 && (
-              <span className="text-[9px] font-black bg-red-100 dark:bg-red-900/30 text-red-600 px-1.5 py-0.5 rounded-full">
+              <span className="text-xs font-bold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded-full">
                 {m.summary.upcomingWithNoCost} {t('insights.unpaid')}
               </span>
             )}
           </span>
           {expandedPanel === 'events' ? (
-            <ChevronUp size={16} className="text-slate-400" />
+            <ChevronUp size={16} className="text-muted-foreground" />
           ) : (
-            <ChevronDown size={16} className="text-slate-400" />
+            <ChevronDown size={16} className="text-muted-foreground" />
           )}
         </button>
 
@@ -406,23 +417,23 @@ ${playerSummary}`;
           <div className="px-4 pb-4 space-y-3">
             {/* Summary strip */}
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-xl text-center">
-                <p className="text-2xl font-black text-emerald-700">{m.summary.upcomingPaid}</p>
-                <p className="text-[10px] font-bold text-slate-500 uppercase">Paid</p>
+              <div className="bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-lg text-center">
+                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{m.summary.upcomingPaid}</p>
+                <p className="text-xs font-semibold text-muted-foreground">Paid</p>
               </div>
               <div
-                className={`p-3 rounded-xl text-center ${m.summary.upcomingWithNoCost > 0 ? 'bg-red-50 dark:bg-red-900/30' : 'bg-slate-50 dark:bg-slate-800'}`}
+                className={`p-3 rounded-lg text-center ${m.summary.upcomingWithNoCost > 0 ? 'bg-red-50 dark:bg-red-900/30' : 'bg-background'}`}
               >
                 <p
-                  className={`text-2xl font-black ${m.summary.upcomingWithNoCost > 0 ? 'text-red-700' : 'text-slate-400'}`}
+                  className={`text-2xl font-bold ${m.summary.upcomingWithNoCost > 0 ? 'text-red-700 dark:text-red-300' : 'text-muted-foreground'}`}
                 >
                   {m.summary.upcomingWithNoCost}
                 </p>
-                <p className="text-[10px] font-bold text-slate-500 uppercase">Unpaid</p>
+                <p className="text-xs font-semibold text-muted-foreground">Unpaid</p>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl text-center">
-                <p className="text-2xl font-black text-slate-700 dark:text-slate-300">{m.summary.pastGroups}</p>
-                <p className="text-[10px] font-bold text-slate-500 uppercase">Completed</p>
+              <div className="bg-background p-3 rounded-lg text-center">
+                <p className="text-2xl font-bold text-foreground">{m.summary.pastGroups}</p>
+                <p className="text-xs font-semibold text-muted-foreground">Completed</p>
               </div>
             </div>
 
@@ -432,12 +443,12 @@ ${playerSummary}`;
                 const isExpanded = expandedGroup === group.id;
                 const typeInfo = group.type === 'tournament' ? EVENT_TYPES.tournament : EVENT_TYPES.league;
                 const statusColor = group.isPast
-                  ? 'text-slate-400'
+                  ? 'text-muted-foreground'
                   : group.hasCost
-                    ? 'text-emerald-600'
-                    : 'text-red-600';
+                    ? 'text-emerald-700 dark:text-emerald-400'
+                    : 'text-red-700 dark:text-red-400';
                 const statusBg = group.isPast
-                  ? 'bg-slate-50 dark:bg-slate-800'
+                  ? 'bg-background'
                   : group.hasCost
                     ? 'bg-emerald-50 dark:bg-emerald-900/30'
                     : 'bg-red-50 dark:bg-red-900/30';
@@ -452,11 +463,11 @@ ${playerSummary}`;
                 return (
                   <div
                     key={group.id}
-                    className={`rounded-xl border overflow-hidden ${group.isPast ? 'border-slate-100 dark:border-slate-700 opacity-70' : group.hasCost ? 'border-emerald-200 dark:border-emerald-700' : 'border-red-200 dark:border-red-700'}`}
+                    className={`rounded-lg border overflow-hidden ${group.isPast ? 'border-border opacity-70' : group.hasCost ? 'border-emerald-200 dark:border-emerald-700' : 'border-red-200 dark:border-red-700'}`}
                   >
                     <button
                       onClick={() => setExpandedGroup(isExpanded ? null : group.id)}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors"
+                      className="w-full flex items-center gap-3 p-3 hover:bg-background/50 transition-colors"
                     >
                       {/* Status icon */}
                       <div className={`p-1.5 rounded-lg ${statusBg} ${statusColor}`}>{statusIcon}</div>
@@ -464,16 +475,12 @@ ${playerSummary}`;
                       {/* Info */}
                       <div className="flex-grow text-left min-w-0">
                         <div className="flex items-center gap-2">
-                          <span
-                            className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${typeInfo.colorLight}`}
-                          >
+                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded uppercase ${typeInfo.colorLight}`}>
                             {group.type}
                           </span>
-                          <span className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
-                            {group.name}
-                          </span>
+                          <span className="text-sm font-semibold text-foreground truncate">{group.name}</span>
                         </div>
-                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                        <p className="text-xs text-muted-foreground font-medium mt-0.5">
                           {group.gameCount} game{group.gameCount !== 1 ? 's' : ''} · {group.upcomingCount} upcoming
                         </p>
                       </div>
@@ -481,50 +488,44 @@ ${playerSummary}`;
                       {/* Cost */}
                       <div className="text-right shrink-0">
                         {group.hasCost ? (
-                          <p className="text-sm font-black text-slate-800 dark:text-slate-100">
-                            {formatMoney(group.totalSpent)}
-                          </p>
+                          <p className="text-sm font-bold text-foreground">{formatMoney(group.totalSpent)}</p>
                         ) : group.isUpcoming ? (
-                          <p className="text-sm font-black text-red-500">
+                          <p className="text-sm font-bold text-red-700 dark:text-red-400">
                             ~{formatMoney(group.type === 'tournament' ? a.avgTournamentCost : a.avgLeagueCost)}
                           </p>
                         ) : (
-                          <p className="text-sm font-bold text-slate-300">$0</p>
+                          <p className="text-sm font-semibold text-muted-foreground">$0</p>
                         )}
-                        <p className="text-[10px] text-slate-400">
+                        <p className="text-xs text-muted-foreground">
                           {group.hasCost ? 'spent' : group.isUpcoming ? 'estimated' : ''}
                         </p>
                       </div>
 
                       <ChevronDown
                         size={14}
-                        className={`text-slate-300 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        className={`text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                       />
                     </button>
 
                     {/* Expanded detail */}
                     {isExpanded && (
-                      <div className="bg-slate-50/50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-700 p-3 space-y-2">
+                      <div className="bg-background/50 border-t border-border p-3 space-y-2">
                         {/* Transactions */}
                         {group.transactions.length > 0 && (
                           <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
-                              {t('insights.payments')}
-                            </p>
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">{t('insights.payments')}</p>
                             {group.transactions.map((tx) => (
                               <div
                                 key={tx.id}
-                                className="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-700 last:border-0"
+                                className="flex justify-between items-center py-1.5 border-b border-border last:border-0"
                               >
                                 <div className="min-w-0">
-                                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
-                                    {tx.title}
-                                  </p>
-                                  <p className="text-[10px] text-slate-400">
+                                  <p className="text-xs font-semibold text-foreground truncate">{tx.title}</p>
+                                  <p className="text-xs text-muted-foreground">
                                     {tx.date?.seconds ? new Date(tx.date.seconds * 1000).toLocaleDateString() : ''}
                                   </p>
                                 </div>
-                                <span className="text-xs font-black text-red-600 shrink-0 ml-2">
+                                <span className="text-xs font-bold text-red-700 dark:text-red-400 shrink-0 ml-2">
                                   {formatMoney(tx.amount)}
                                 </span>
                               </div>
@@ -534,20 +535,18 @@ ${playerSummary}`;
                         {/* Upcoming games in this group */}
                         {group.upcomingEvents.length > 0 && (
                           <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">
                               {t('insights.upcomingGames')}
                             </p>
                             {group.upcomingEvents.slice(0, 5).map((e) => (
                               <div
                                 key={e.id}
-                                className="flex items-center gap-2 py-1.5 border-b border-slate-100 dark:border-slate-700 last:border-0"
+                                className="flex items-center gap-2 py-1.5 border-b border-border last:border-0"
                               >
                                 <div className={`w-1 h-5 rounded-full ${typeInfo.dot}`} />
                                 <div className="min-w-0">
-                                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
-                                    {e.title}
-                                  </p>
-                                  <p className="text-[10px] text-slate-400">
+                                  <p className="text-xs font-semibold text-foreground truncate">{e.title}</p>
+                                  <p className="text-xs text-muted-foreground">
                                     {e.displayDate} · {e.displayTime}
                                   </p>
                                 </div>
@@ -556,7 +555,7 @@ ${playerSummary}`;
                           </div>
                         )}
                         {group.transactions.length === 0 && group.upcomingEvents.length === 0 && (
-                          <p className="text-xs text-slate-400 italic py-2">No payment or upcoming game data.</p>
+                          <p className="text-xs text-muted-foreground italic py-2">No payment or upcoming game data.</p>
                         )}
                       </div>
                     )}
@@ -566,21 +565,20 @@ ${playerSummary}`;
 
               {/* Unmatched transactions */}
               {m.unmatchedTx.length > 0 && (
-                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">
+                <div className="bg-background p-3 rounded-lg">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">
                     {t('insights.unmatchedExpenses')} ({m.unmatchedTx.length})
                   </p>
                   {m.unmatchedTx.slice(0, 5).map((tx) => (
-                    <div
-                      key={tx.id}
-                      className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-700 last:border-0"
-                    >
-                      <span className="text-xs text-slate-600 dark:text-slate-400 truncate">{tx.title}</span>
-                      <span className="text-xs font-bold text-slate-500 shrink-0 ml-2">{formatMoney(tx.amount)}</span>
+                    <div key={tx.id} className="flex justify-between py-1 border-b border-border last:border-0">
+                      <span className="text-xs text-foreground truncate">{tx.title}</span>
+                      <span className="text-xs font-semibold text-muted-foreground shrink-0 ml-2">
+                        {formatMoney(tx.amount)}
+                      </span>
                     </div>
                   ))}
                   {m.unmatchedTx.length > 5 && (
-                    <p className="text-[10px] text-slate-400 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {t('insights.more', { n: m.unmatchedTx.length - 5 })}
                     </p>
                   )}
@@ -592,64 +590,65 @@ ${playerSummary}`;
       </div>
 
       {/* ── PLAYER BALANCES & BUDGET ── */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden">
+      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         <button
           onClick={() => togglePanel('balances')}
-          className="w-full flex justify-between items-center p-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          className="w-full flex justify-between items-center p-4 hover:bg-background transition-colors"
         >
-          <span className="font-bold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
-            <Users size={16} className="text-blue-600" /> {t('insights.playerBalances')}
+          <span className="font-semibold text-foreground text-sm flex items-center gap-2">
+            <Users size={16} className="text-blue-700 dark:text-blue-400" /> {t('insights.playerBalances')}
           </span>
           {expandedPanel === 'balances' ? (
-            <ChevronUp size={16} className="text-slate-400" />
+            <ChevronUp size={16} className="text-muted-foreground" />
           ) : (
-            <ChevronDown size={16} className="text-slate-400" />
+            <ChevronDown size={16} className="text-muted-foreground" />
           )}
         </button>
         {expandedPanel === 'balances' && (
           <div className="px-4 pb-4 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">{t('overview.spent')}</p>
-                <p className="text-lg font-black text-slate-800 dark:text-white">{formatMoney(a.totalExpenses)}</p>
-                <p className="text-[10px] text-slate-400 font-bold">
+              <div className="bg-background p-3 rounded-lg">
+                <p className="text-xs font-semibold text-muted-foreground">{t('overview.spent')}</p>
+                <p className="text-lg font-bold text-foreground">{formatMoney(a.totalExpenses)}</p>
+                <p className="text-xs text-muted-foreground font-semibold">
                   {a.burnRate}% {t('insights.ofBudget')}
                 </p>
               </div>
-              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">{t('insights.budgetRemaining')}</p>
-                <p className={`text-lg font-black ${a.budgetRemaining >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+              <div className="bg-background p-3 rounded-lg">
+                <p className="text-xs font-semibold text-muted-foreground">{t('insights.budgetRemaining')}</p>
+                <p
+                  className={`text-lg font-bold ${a.budgetRemaining >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}
+                >
                   {formatMoney(a.budgetRemaining)}
                 </p>
               </div>
               <div
-                className={`p-3 rounded-xl ${a.projectedOverUnder >= 0 ? 'bg-emerald-50 dark:bg-emerald-900/30' : 'bg-red-50 dark:bg-red-900/30'}`}
+                className={`p-3 rounded-lg ${a.projectedOverUnder >= 0 ? 'bg-emerald-50 dark:bg-emerald-900/30' : 'bg-red-50 dark:bg-red-900/30'}`}
               >
-                <p className="text-[10px] font-bold text-slate-400 uppercase">{t('insights.projFinalSpend')}</p>
-                <p className={`text-lg font-black ${a.projectedOverUnder >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                <p className="text-xs font-semibold text-muted-foreground">{t('insights.projFinalSpend')}</p>
+                <p
+                  className={`text-lg font-bold ${a.projectedOverUnder >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}
+                >
                   {formatMoney(a.projectedFinalExpense)}
                 </p>
               </div>
             </div>
             {a.topOwed.length > 0 && (
               <div>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-                  {t('insights.outstandingBalances')}
-                </p>
+                <p className="text-xs font-semibold text-muted-foreground mb-2">{t('insights.outstandingBalances')}</p>
                 <div className="space-y-1.5">
                   {a.topOwed.map((p, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800 rounded-lg"
-                    >
+                    <div key={i} className="flex items-center justify-between p-2.5 bg-background rounded-lg">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black text-slate-400 w-6">#{p.jerseyNumber || '?'}</span>
-                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{p.name}</span>
+                        <span className="text-xs font-bold text-muted-foreground w-6">#{p.jerseyNumber || '?'}</span>
+                        <span className="text-sm font-semibold text-foreground">{p.name}</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-black text-red-600">{formatMoney(p.remainingBalance)}</span>
+                        <span className="text-sm font-bold text-red-700 dark:text-red-400">
+                          {formatMoney(p.remainingBalance)}
+                        </span>
                         {p.totalPaid > 0 && (
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-xs text-muted-foreground">
                             {t('insights.paidAmount', { amount: formatMoney(p.totalPaid) })}
                           </p>
                         )}
@@ -660,18 +659,18 @@ ${playerSummary}`;
               </div>
             )}
             <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-                {t('insights.categoryBreakdown')}
-              </p>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">{t('insights.categoryBreakdown')}</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {Object.entries(a.categoryActuals)
                   .sort((x, y) => Math.abs(y[1]) - Math.abs(x[1]))
                   .map(([cat, amt]) => (
-                    <div key={cat} className="bg-slate-50 dark:bg-slate-800 p-2.5 rounded-lg">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase truncate">
+                    <div key={cat} className="bg-background p-2.5 rounded-lg">
+                      <p className="text-xs font-semibold text-muted-foreground truncate">
                         {CATEGORY_LABELS[cat] || cat}
                       </p>
-                      <p className={`text-sm font-black ${amt < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                      <p
+                        className={`text-sm font-bold ${amt < 0 ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}
+                      >
                         {formatMoney(amt)}
                       </p>
                     </div>
@@ -683,35 +682,35 @@ ${playerSummary}`;
       </div>
 
       {/* ── AI CHAT ── */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden">
-        <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-border flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-gradient-to-br from-violet-500 to-blue-600 rounded-lg">
               <Sparkles size={14} className="text-white" />
             </div>
             <div>
-              <h3 className="font-black text-slate-800 dark:text-white text-sm">{t('insights.budgetAdvisor')}</h3>
-              <p className="text-[10px] text-slate-400 font-medium">{t('insights.advisorHelp')}</p>
+              <h3 className="font-bold text-foreground text-sm">{t('insights.budgetAdvisor')}</h3>
+              <p className="text-xs text-muted-foreground font-medium">{t('insights.advisorHelp')}</p>
             </div>
           </div>
           <button
             onClick={() => setShowApiSetup(!showApiSetup)}
-            className={`p-2 rounded-lg transition-colors ${apiKey ? 'text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30' : 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30'}`}
+            className={`p-2 rounded-lg transition-colors ${apiKey ? 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30' : 'text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30'}`}
           >
             <Key size={16} />
           </button>
         </div>
         {showApiSetup && (
-          <div className="p-4 bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
+          <div className="p-4 bg-background border-b border-border">
             <div className="flex items-start gap-2 mb-3">
-              <Info size={14} className="text-blue-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-slate-600 dark:text-slate-400">
+              <Info size={14} className="text-blue-700 dark:text-blue-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-foreground">
                 {t('insights.apiKeyHelp')}{' '}
                 <a
                   href="https://aistudio.google.com/apikey"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 font-bold underline"
+                  className="text-blue-700 dark:text-blue-400 font-semibold underline"
                 >
                   Google AI Studio
                 </a>
@@ -724,16 +723,19 @@ ${playerSummary}`;
                 placeholder={t('insights.apiKeyPlaceholder')}
                 value={apiKey}
                 onChange={(e) => saveApiKey(e.target.value)}
-                className="flex-grow bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                className="flex-grow bg-card border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
               {apiKey && (
-                <button onClick={() => saveApiKey('')} className="text-xs font-bold text-red-500 px-2">
+                <button
+                  onClick={() => saveApiKey('')}
+                  className="text-xs font-semibold text-red-700 dark:text-red-400 px-2"
+                >
                   {t('common.clear')}
                 </button>
               )}
             </div>
             {apiKey && (
-              <p className="text-[10px] text-emerald-600 font-bold mt-2 flex items-center gap-1">
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold mt-2 flex items-center gap-1">
                 <CheckCircle2 size={12} /> {t('insights.keySaved')}
               </p>
             )}
@@ -742,11 +744,11 @@ ${playerSummary}`;
         <div className="h-80 md:h-96 overflow-y-auto p-4 space-y-4">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center px-4">
-              <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full mb-3">
-                <Bot size={24} className="text-slate-400" />
+              <div className="p-3 bg-muted rounded-full mb-3">
+                <Bot size={24} className="text-muted-foreground" />
               </div>
-              <p className="text-sm font-bold text-slate-800 dark:text-white mb-1">{t('insights.chatHeader')}</p>
-              <p className="text-xs text-slate-400 mb-4 max-w-xs">
+              <p className="text-sm font-semibold text-foreground mb-1">{t('insights.chatHeader')}</p>
+              <p className="text-xs text-muted-foreground mb-4 max-w-xs">
                 I've matched {m.summary.totalGroups} tournaments/leagues from the {selectedSeason} season against your
                 payment records.{' '}
                 {m.summary.upcomingWithNoCost > 0
@@ -758,7 +760,7 @@ ${playerSummary}`;
                   <button
                     key={i}
                     onClick={() => sendMessage(p)}
-                    className="text-[11px] font-bold text-blue-700 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 px-3 py-1.5 rounded-full border border-blue-100 dark:border-blue-700"
+                    className="text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 px-3 py-1.5 rounded-full border border-blue-100 dark:border-blue-700"
                   >
                     {p}
                   </button>
@@ -775,7 +777,7 @@ ${playerSummary}`;
                     </div>
                   )}
                   <div
-                    className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-4 py-2.5 ${msg.role === 'user' ? 'bg-slate-900 text-white rounded-br-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-md'}`}
+                    className={`max-w-[85%] md:max-w-[75%] rounded-lg px-4 py-2.5 ${msg.role === 'user' ? 'bg-accent text-accent-foreground rounded-br-md' : 'bg-muted text-foreground rounded-bl-md'}`}
                   >
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                   </div>
@@ -791,8 +793,8 @@ ${playerSummary}`;
                   <div className="shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center">
                     <Bot size={14} className="text-white" />
                   </div>
-                  <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-bl-md px-4 py-3">
-                    <Loader2 size={16} className="text-slate-400 animate-spin" />
+                  <div className="bg-muted rounded-lg rounded-bl-md px-4 py-3">
+                    <Loader2 size={16} className="text-muted-foreground animate-spin" />
                   </div>
                 </div>
               )}
@@ -800,7 +802,7 @@ ${playerSummary}`;
             </>
           )}
         </div>
-        <div className="p-3 border-t border-slate-100 dark:border-slate-700">
+        <div className="p-3 border-t border-border">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -814,12 +816,12 @@ ${playerSummary}`;
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={isLoading}
-              className="flex-grow bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:text-white"
+              className="flex-grow bg-background border border-border rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="bg-slate-900 text-white p-2.5 rounded-xl hover:bg-slate-800 disabled:opacity-30 transition-all shrink-0"
+              className="bg-accent text-accent-foreground p-2.5 rounded-lg hover:bg-accent/90 disabled:opacity-30 transition-all shrink-0"
             >
               <Send size={16} />
             </button>
@@ -831,7 +833,7 @@ ${playerSummary}`;
                   key={i}
                   onClick={() => sendMessage(p)}
                   disabled={isLoading}
-                  className="text-[10px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 px-2.5 py-1 rounded-full border border-slate-100 dark:border-slate-700 shrink-0 disabled:opacity-50 whitespace-nowrap"
+                  className="text-xs font-semibold text-muted-foreground bg-background hover:bg-muted px-2.5 py-1 rounded-full border border-border shrink-0 disabled:opacity-50 whitespace-nowrap"
                 >
                   {p}
                 </button>

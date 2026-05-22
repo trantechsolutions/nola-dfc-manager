@@ -67,11 +67,11 @@ export default function LedgerView({
       {/* ── HEADER ── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white">{t('ledger.title')}</h2>
-          <p className="text-xs text-slate-400 font-bold mt-0.5">
+          <h2 className="text-2xl font-bold text-foreground">{t('ledger.title')}</h2>
+          <p className="text-xs text-muted-foreground font-semibold mt-0.5">
             {filteredTransactions.length}{' '}
             {filteredTransactions.length === 1 ? t('ledger.transaction') : t('ledger.transactions')}
-            {hasDateFilter && <span className="text-blue-500"> {t('ledger.dateFiltered')}</span>}
+            {hasDateFilter && <span className="text-blue-700 dark:text-blue-400"> {t('ledger.dateFiltered')}</span>}
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
@@ -79,7 +79,7 @@ export default function LedgerView({
           {onManageCategories && (
             <button
               onClick={onManageCategories}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-border bg-card text-foreground hover:bg-background transition-all"
             >
               <Tag size={14} />
               <span className="hidden sm:inline">{t('nav.categories')}</span>
@@ -88,10 +88,10 @@ export default function LedgerView({
           {/* Date Range filter */}
           <button
             onClick={() => setShowDateRange(!showDateRange)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${
               hasDateFilter
-                ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-700'
-                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300'
+                : 'bg-card border-border text-foreground hover:bg-background'
             }`}
           >
             <CalendarDays size={14} />
@@ -101,7 +101,7 @@ export default function LedgerView({
           {onBulkUpload && (
             <button
               onClick={() => setShowBulkUpload(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-border bg-card text-foreground hover:bg-background transition-all"
             >
               <Upload size={14} />
               <span className="hidden sm:inline">{t('ledger.bulkUpload')}</span>
@@ -119,7 +119,7 @@ export default function LedgerView({
           {onAddTx && (
             <button
               onClick={onAddTx}
-              className="flex-1 sm:flex-none bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-4 py-2 rounded-xl font-bold text-xs hover:bg-slate-800 dark:hover:bg-slate-200 flex items-center justify-center gap-1.5 transition-all"
+              className="flex-1 sm:flex-none bg-accent text-accent-foreground px-4 py-2 rounded-lg font-semibold text-xs hover:bg-accent/90 flex items-center justify-center gap-1.5 transition-all"
             >
               <Plus size={14} /> {t('ledger.addTransaction')}
             </button>
@@ -129,27 +129,23 @@ export default function LedgerView({
 
       {/* ── DATE RANGE PANEL ── */}
       {showDateRange && (
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none flex flex-col sm:flex-row gap-3 items-end">
+        <div className="bg-card p-4 rounded-lg border border-border shadow-sm flex flex-col sm:flex-row gap-3 items-end">
           <div className="w-full sm:w-40">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-              {t('ledger.from')}
-            </label>
+            <label className="block text-xs font-bold text-muted-foreground mb-1">{t('ledger.from')}</label>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-white"
+              className="w-full border border-border rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
           <div className="w-full sm:w-40">
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-              {t('ledger.to')}
-            </label>
+            <label className="block text-xs font-bold text-muted-foreground mb-1">{t('ledger.to')}</label>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-white"
+              className="w-full border border-border rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
           {hasDateFilter && (
@@ -158,7 +154,7 @@ export default function LedgerView({
                 setStartDate('');
                 setEndDate('');
               }}
-              className="text-xs font-bold text-red-500 hover:text-red-700 flex items-center gap-1 px-2 py-2"
+              className="text-xs font-semibold text-red-700 dark:text-red-400 hover:text-red-700 dark:text-red-300 flex items-center gap-1 px-2 py-2"
             >
               <X size={12} /> {t('common.clear')}
             </button>
@@ -168,11 +164,13 @@ export default function LedgerView({
 
       {/* Date filter summary */}
       {hasDateFilter && (
-        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-700 p-3 rounded-xl flex justify-between items-center">
-          <span className="text-blue-800 text-xs font-bold">
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-700 p-3 rounded-lg flex justify-between items-center">
+          <span className="text-blue-800 text-xs font-semibold">
             {t('ledger.resultsInRange', { n: filteredTransactions.length })}
           </span>
-          <span className={`text-sm font-black ${filteredTotal >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+          <span
+            className={`text-sm font-bold ${filteredTotal >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}
+          >
             {t('ledger.net')} {formatMoney(filteredTotal)}
           </span>
         </div>

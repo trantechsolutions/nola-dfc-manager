@@ -14,13 +14,7 @@ function QRCode({ value, size = 150 }) {
     }).catch(() => {});
   }, [value, size]);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      className="rounded-xl border border-slate-200 dark:border-slate-700"
-      style={{ width: size, height: size }}
-    />
-  );
+  return <canvas ref={canvasRef} className="rounded-lg border border-border" style={{ width: size, height: size }} />;
 }
 
 function getServiceStyle(name) {
@@ -52,9 +46,9 @@ function getServiceStyle(name) {
   return {
     type: 'other',
     color: 'bg-slate-500',
-    textColor: 'text-slate-700 dark:text-slate-300',
-    bgColor: 'bg-slate-50 dark:bg-slate-800',
-    borderColor: 'border-slate-200 dark:border-slate-700',
+    textColor: 'text-foreground',
+    bgColor: 'bg-background',
+    borderColor: 'border-border',
   };
 }
 
@@ -162,21 +156,21 @@ export default function PaymentOptions({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-      <div className="p-4 border-b border-slate-100 dark:border-slate-800">
-        <h3 className="font-bold text-slate-800 dark:text-white text-xs uppercase tracking-widest flex items-center gap-2">
-          <DollarSign size={14} className="text-emerald-500" /> How to Pay
+    <div className="bg-card rounded-lg border border-border overflow-hidden">
+      <div className="p-4 border-b border-border">
+        <h3 className="font-semibold text-foreground text-xs flex items-center gap-2">
+          <DollarSign size={14} className="text-emerald-700 dark:text-emerald-400" /> How to Pay
         </h3>
       </div>
 
       <div className="p-4 space-y-3">
         {/* Amount due */}
-        <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 text-center">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Amount Due</p>
-          <p className="text-2xl font-black text-slate-900 dark:text-white">{formatMoney(amount)}</p>
+        <div className="bg-background rounded-lg p-3 text-center">
+          <p className="text-xs font-semibold text-muted-foreground">Amount Due</p>
+          <p className="text-2xl font-bold text-foreground">{formatMoney(amount)}</p>
           <button
             onClick={() => handleCopy(memo, 'memo')}
-            className="inline-flex items-center gap-1 mt-1 text-[10px] text-slate-400 hover:text-blue-500 transition-colors"
+            className="inline-flex items-center gap-1 mt-1 text-xs text-muted-foreground hover:text-blue-700 dark:text-blue-400 transition-colors"
           >
             {copiedField === 'memo' ? <Check size={10} /> : <Copy size={10} />}
             Memo: {memo}
@@ -191,18 +185,18 @@ export default function PaymentOptions({
               const isShowingQR = showQR === method.key;
 
               return (
-                <div key={method.key} className={`rounded-xl border p-3 ${method.bgColor} ${method.borderColor}`}>
+                <div key={method.key} className={`rounded-lg border p-3 ${method.bgColor} ${method.borderColor}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className={`w-8 h-8 rounded-lg ${method.color} flex items-center justify-center`}>
                         <Smartphone size={16} className="text-white" />
                       </div>
                       <div>
-                        <p className={`text-sm font-bold ${method.textColor}`}>{method.label}</p>
+                        <p className={`text-sm font-semibold ${method.textColor}`}>{method.label}</p>
                         {method.handle && (
                           <button
                             onClick={() => handleCopy(method.handle, method.key)}
-                            className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400 hover:text-blue-500"
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-blue-700 dark:text-blue-400"
                           >
                             {copiedField === method.key ? <Check size={10} /> : <Copy size={10} />}
                             {method.handle}
@@ -214,7 +208,7 @@ export default function PaymentOptions({
                       {method.handle && (
                         <button
                           onClick={() => setShowQR(isShowingQR ? null : method.key)}
-                          className="px-2 py-1 rounded-lg text-[10px] font-bold bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-colors"
+                          className="px-2 py-1 rounded-lg text-xs font-semibold bg-white/80 text-foreground hover:bg-card transition-colors"
                         >
                           {isShowingQR ? 'Hide QR' : 'QR Code'}
                         </button>
@@ -224,7 +218,7 @@ export default function PaymentOptions({
                           href={deepLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-2 py-1 rounded-lg text-[10px] font-bold bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-colors flex items-center gap-1"
+                          className="px-2 py-1 rounded-lg text-xs font-semibold bg-white/80 text-foreground hover:bg-card transition-colors flex items-center gap-1"
                         >
                           <ExternalLink size={10} /> Pay
                         </a>
@@ -243,15 +237,15 @@ export default function PaymentOptions({
           </div>
         ) : (
           /* No parseable methods — show raw instructions only */
-          <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3">
-            <p className="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{paymentInfo}</p>
+          <div className="bg-background rounded-lg p-3">
+            <p className="text-xs text-foreground whitespace-pre-wrap">{paymentInfo}</p>
           </div>
         )}
 
         {/* Payment instructions always shown below cards when present */}
         {methods.length > 0 && paymentInfo && (
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 whitespace-pre-wrap">{paymentInfo}</p>
+          <div className="pt-2 border-t border-border">
+            <p className="text-xs text-muted-foreground whitespace-pre-wrap">{paymentInfo}</p>
           </div>
         )}
       </div>

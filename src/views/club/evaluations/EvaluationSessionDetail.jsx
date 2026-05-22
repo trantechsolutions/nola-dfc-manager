@@ -29,7 +29,7 @@ const TABS = [
 ];
 
 const STATUS_COLORS = {
-  draft: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  draft: 'bg-muted text-foreground',
   active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400',
   scoring: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
   completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
@@ -392,7 +392,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
 
   if (!session) {
     return (
-      <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+      <div className="text-center py-12 text-muted-foreground">
         {t('evaluations.sessionNotFound', 'Session not found.')}
       </div>
     );
@@ -405,26 +405,26 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
       {/* ---- Header ---- */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{session.name}</h3>
+          <h3 className="text-lg font-semibold text-foreground">{session.name}</h3>
           <span
-            className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${STATUS_COLORS[session.status] || STATUS_COLORS.draft}`}
+            className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${STATUS_COLORS[session.status] || STATUS_COLORS.draft}`}
           >
             {session.status || 'draft'}
           </span>
         </div>
-        {loading && <RefreshCw size={16} className="animate-spin text-slate-400 dark:text-slate-500" />}
+        {loading && <RefreshCw size={16} className="animate-spin text-muted-foreground" />}
       </div>
 
       {/* ---- Tab Bar ---- */}
-      <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-100 dark:bg-slate-800 p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
         {TABS.map(({ key, icon: Icon, labelKey, fallback }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
               activeTab === key
-                ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                ? 'bg-card text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Icon size={16} />
@@ -434,7 +434,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
       </div>
 
       {/* ---- Tab Content ---- */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
+      <div className="bg-card border border-border rounded-lg p-5">
         {activeTab === 'setup' && renderSetupTab()}
         {activeTab === 'roster' && renderRosterTab()}
         {activeTab === 'scoring' && renderScoringTab()}
@@ -452,22 +452,20 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
       <div className="space-y-8">
         {/* Session info */}
         <section className="space-y-4">
-          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-            {t('evaluations.sessionInfo', 'Session Info')}
-          </h4>
+          <h4 className="text-sm font-medium text-foreground">{t('evaluations.sessionInfo', 'Session Info')}</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 {t('evaluations.sessionName', 'Session Name')}
               </label>
               <input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 {t('evaluations.scoreScale', 'Score Scale')}
               </label>
               <div className="flex gap-2">
@@ -475,10 +473,8 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                   <button
                     key={s}
                     onClick={() => setEditScale(s)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                      editScale === s
-                        ? 'bg-indigo-500 text-white'
-                        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      editScale === s ? 'bg-indigo-500 text-white' : 'bg-muted text-foreground hover:bg-muted'
                     }`}
                   >
                     1–{s}
@@ -488,19 +484,19 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1">
               {t('evaluations.description', 'Description')}
             </label>
             <textarea
               value={editDesc}
               onChange={(e) => setEditDesc(e.target.value)}
               rows={3}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
           <button
             onClick={handleSaveSetup}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
           >
             <Save size={16} />
             {t('common.save', 'Save')}
@@ -509,7 +505,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
 
         {/* Categories */}
         <section className="space-y-4">
-          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+          <h4 className="text-sm font-medium text-foreground">
             {t('evaluations.scoringCategories', 'Scoring Categories')}
           </h4>
           <div className="space-y-2">
@@ -519,19 +515,19 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                   value={cat.name}
                   onChange={(e) => handleUpdateCategory(idx, 'name', e.target.value)}
                   placeholder={t('evaluations.categoryName', 'Category name')}
-                  className="flex-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
                 <input
                   type="number"
                   min={1}
                   value={cat.weight}
                   onChange={(e) => handleUpdateCategory(idx, 'weight', e.target.value)}
-                  className="w-20 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-center"
+                  className="w-20 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-center"
                   placeholder={t('evaluations.weight', 'Weight')}
                 />
                 <button
                   onClick={() => handleRemoveCategory(idx)}
-                  className="p-2 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  className="p-2 rounded-lg text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -541,14 +537,14 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
           <div className="flex gap-2">
             <button
               onClick={handleAddCategory}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-sm font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted text-foreground hover:bg-muted text-sm font-medium transition-colors"
             >
               <Plus size={16} />
               {t('evaluations.addCategory', 'Add Category')}
             </button>
             <button
               onClick={handleSaveCategories}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
             >
               <Save size={16} />
               {t('evaluations.saveCategories', 'Save Categories')}
@@ -558,26 +554,21 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
 
         {/* Evaluators */}
         <section className="space-y-4">
-          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-            {t('evaluations.evaluators', 'Evaluators')}
-          </h4>
+          <h4 className="text-sm font-medium text-foreground">{t('evaluations.evaluators', 'Evaluators')}</h4>
           <div className="space-y-2">
             {evaluators.map((ev) => (
-              <div
-                key={ev.id}
-                className="flex items-center justify-between bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-2"
-              >
-                <span className="text-sm text-slate-700 dark:text-slate-300">{ev.displayName || ev.userId}</span>
+              <div key={ev.id} className="flex items-center justify-between bg-background rounded-lg px-4 py-2">
+                <span className="text-sm text-foreground">{ev.displayName || ev.userId}</span>
                 <button
                   onClick={() => handleRemoveEvaluator(ev.id)}
-                  className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  className="p-1.5 rounded-lg text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 >
                   <X size={14} />
                 </button>
               </div>
             ))}
             {evaluators.length === 0 && (
-              <p className="text-sm text-slate-400 dark:text-slate-500 italic">
+              <p className="text-sm text-muted-foreground italic">
                 {t('evaluations.noEvaluators', 'No evaluators added yet.')}
               </p>
             )}
@@ -587,38 +578,38 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
               value={newEvaluatorId}
               onChange={(e) => setNewEvaluatorId(e.target.value)}
               placeholder={t('evaluations.evaluatorId', 'User ID')}
-              className="flex-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
             <button
               onClick={handleAddEvaluator}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
             >
               <Plus size={16} />
               {t('common.add', 'Add')}
             </button>
           </div>
           {/* Evaluator Link */}
-          <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl p-3">
-            <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-1">
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3">
+            <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-1">
               {t('evaluations.evaluatorLink', 'Evaluator Scoring Link')}
             </p>
             <div className="flex items-center gap-2">
               <input
                 readOnly
                 value={`${window.location.origin}/evaluate/${sessionId}`}
-                className="flex-1 text-xs font-mono bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 rounded-lg px-3 py-1.5 text-slate-600 dark:text-slate-300"
+                className="flex-1 text-xs font-mono bg-card border border-indigo-200 dark:border-indigo-700 rounded-lg px-3 py-1.5 text-foreground"
               />
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(`${window.location.origin}/evaluate/${sessionId}`);
                   showToast?.('Link copied!');
                 }}
-                className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-colors"
               >
                 Copy
               </button>
             </div>
-            <p className="text-[10px] text-indigo-500 dark:text-indigo-400 mt-1">
+            <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-1">
               {t(
                 'evaluations.evaluatorLinkHint',
                 'Share this link with evaluators. They will see bib numbers only — no player names.',
@@ -629,20 +620,13 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
 
         {/* Team Thresholds */}
         <section className="space-y-4">
-          <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-            {t('evaluations.teamThresholds', 'Team Thresholds')}
-          </h4>
+          <h4 className="text-sm font-medium text-foreground">{t('evaluations.teamThresholds', 'Team Thresholds')}</h4>
           <div className="space-y-2">
             {editThresholds.map((th, idx) => (
-              <div
-                key={th.teamId}
-                className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3"
-              >
-                <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-300">{th.teamName}</span>
+              <div key={th.teamId} className="flex items-center gap-3 bg-background rounded-lg px-4 py-3">
+                <span className="flex-1 text-sm font-medium text-foreground">{th.teamName}</span>
                 <div className="flex items-center gap-2">
-                  <label className="text-xs text-slate-500 dark:text-slate-400">
-                    {t('evaluations.minScore', 'Min Score')}
-                  </label>
+                  <label className="text-xs text-muted-foreground">{t('evaluations.minScore', 'Min Score')}</label>
                   <input
                     type="number"
                     min={0}
@@ -652,13 +636,11 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                         prev.map((t, i) => (i === idx ? { ...t, minScore: Number(e.target.value) } : t)),
                       )
                     }
-                    className="w-20 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1 text-sm text-slate-900 dark:text-white text-center"
+                    className="w-20 rounded-lg border border-border bg-card px-2 py-1 text-sm text-foreground text-center"
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-xs text-slate-500 dark:text-slate-400">
-                    {t('evaluations.maxRoster', 'Max Roster')}
-                  </label>
+                  <label className="text-xs text-muted-foreground">{t('evaluations.maxRoster', 'Max Roster')}</label>
                   <input
                     type="number"
                     min={1}
@@ -668,21 +650,19 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                         prev.map((t, i) => (i === idx ? { ...t, maxRoster: Number(e.target.value) } : t)),
                       )
                     }
-                    className="w-20 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1 text-sm text-slate-900 dark:text-white text-center"
+                    className="w-20 rounded-lg border border-border bg-card px-2 py-1 text-sm text-foreground text-center"
                   />
                 </div>
               </div>
             ))}
             {editThresholds.length === 0 && (
-              <p className="text-sm text-slate-400 dark:text-slate-500 italic">
-                {t('evaluations.noTeams', 'No teams available.')}
-              </p>
+              <p className="text-sm text-muted-foreground italic">{t('evaluations.noTeams', 'No teams available.')}</p>
             )}
           </div>
           {editThresholds.length > 0 && (
             <button
               onClick={handleSaveThresholds}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
             >
               <Save size={16} />
               {t('evaluations.saveThresholds', 'Save Thresholds')}
@@ -700,11 +680,9 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
     return (
       <div className="space-y-6">
         {/* Template + Import Actions */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+        <div className="bg-card rounded-lg border border-border p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-bold text-slate-800 dark:text-white">
-              {t('evaluations.importRoster', 'Import Roster')}
-            </h4>
+            <h4 className="text-sm font-semibold text-foreground">{t('evaluations.importRoster', 'Import Roster')}</h4>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => {
@@ -718,7 +696,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                   a.click();
                   URL.revokeObjectURL(url);
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-foreground hover:bg-muted text-xs font-medium transition-colors"
               >
                 <Download size={14} />
                 {t('evaluations.downloadTemplate', 'Download Template')}
@@ -740,7 +718,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
               </button>
             </div>
           </div>
-          <p className="text-[11px] text-slate-400 dark:text-slate-500">
+          <p className="text-xs text-muted-foreground">
             {t(
               'evaluations.importHint',
               'CSV columns: First Name, Last Name, Bib, Birthdate (YYYY-MM-DD), Gender (Boys/Girls), Age Group, Position, Notes. Gender enforces team placement rules — boys can only be placed on boys teams, girls on girls teams, coed teams accept both.',
@@ -766,14 +744,14 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
 
         {/* CSV Preview */}
         {csvPreview && (
-          <div className="space-y-3 border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4">
-            <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+          <div className="space-y-3 border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-amber-800 dark:text-amber-300">
               {t('evaluations.csvPreview', 'CSV Preview')} — {csvPreview.length} {t('evaluations.rows', 'rows')}
             </h4>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase">
+                  <tr className="text-left text-xs font-medium text-amber-700 dark:text-amber-400 uppercase">
                     <th className="px-3 py-2">{t('evaluations.firstName', 'First Name')}</th>
                     <th className="px-3 py-2">{t('evaluations.lastName', 'Last Name')}</th>
                     <th className="px-3 py-2">Bib</th>
@@ -786,13 +764,13 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                 <tbody>
                   {csvPreview.slice(0, 10).map((row, idx) => (
                     <tr key={idx} className="border-t border-amber-200 dark:border-amber-700/50">
-                      <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{row.firstName}</td>
-                      <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{row.lastName}</td>
-                      <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{row.bibNumber || '—'}</td>
-                      <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{row.birthdate}</td>
-                      <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{row.ageGroup}</td>
-                      <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{row.position}</td>
-                      <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{row.notes}</td>
+                      <td className="px-3 py-1.5 text-foreground">{row.firstName}</td>
+                      <td className="px-3 py-1.5 text-foreground">{row.lastName}</td>
+                      <td className="px-3 py-1.5 text-foreground">{row.bibNumber || '—'}</td>
+                      <td className="px-3 py-1.5 text-foreground">{row.birthdate}</td>
+                      <td className="px-3 py-1.5 text-foreground">{row.ageGroup}</td>
+                      <td className="px-3 py-1.5 text-foreground">{row.position}</td>
+                      <td className="px-3 py-1.5 text-foreground">{row.notes}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -806,14 +784,14 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
             <div className="flex gap-2">
               <button
                 onClick={handleConfirmImport}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors"
               >
                 <Check size={16} />
                 {t('evaluations.confirmImport', 'Confirm Import')}
               </button>
               <button
                 onClick={() => setCsvPreview(null)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-sm font-medium transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-foreground hover:bg-muted text-sm font-medium transition-colors"
               >
                 <X size={16} />
                 {t('common.cancel', 'Cancel')}
@@ -825,14 +803,14 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
         {/* Candidate List */}
         <div className="space-y-2">
           {candidates.length === 0 ? (
-            <p className="text-sm text-slate-400 dark:text-slate-500 italic py-4 text-center">
+            <p className="text-sm text-muted-foreground italic py-4 text-center">
               {t('evaluations.noCandidates', 'No candidates yet. Import from CSV to get started.')}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-700">
+                  <tr className="text-left text-xs font-medium text-muted-foreground uppercase border-b border-border">
                     <th className="px-3 py-2">{t('evaluations.name', 'Name')}</th>
                     <th className="px-3 py-2">{t('evaluations.ageGroup', 'Age Group')}</th>
                     <th className="px-3 py-2">{t('evaluations.position', 'Position')}</th>
@@ -842,35 +820,30 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                 </thead>
                 <tbody>
                   {candidates.map((c) => (
-                    <tr
-                      key={c.id}
-                      className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                    >
-                      <td className="px-3 py-2 text-slate-800 dark:text-slate-200 font-medium">
+                    <tr key={c.id} className="border-b border-border hover:bg-background">
+                      <td className="px-3 py-2 text-foreground font-medium">
                         {c.bibNumber && (
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-black mr-2">
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-bold mr-2">
                             {c.bibNumber}
                           </span>
                         )}
                         {c.firstName} {c.lastName}
                       </td>
-                      <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{c.ageGroup || '—'}</td>
-                      <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{c.position || '—'}</td>
+                      <td className="px-3 py-2 text-foreground">{c.ageGroup || '—'}</td>
+                      <td className="px-3 py-2 text-foreground">{c.position || '—'}</td>
                       <td className="px-3 py-2">
                         {c.matchedPlayerId ? (
                           <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                             <Check size={12} /> {t('evaluations.linked', 'Linked')}
                           </span>
                         ) : (
-                          <span className="text-xs text-slate-400 dark:text-slate-500">
-                            {t('evaluations.unlinked', 'Unlinked')}
-                          </span>
+                          <span className="text-xs text-muted-foreground">{t('evaluations.unlinked', 'Unlinked')}</span>
                         )}
                       </td>
                       <td className="px-3 py-2 text-right">
                         <button
                           onClick={() => handleDeleteCandidate(c.id)}
-                          className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          className="p-1.5 rounded-lg text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -887,32 +860,32 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
         {showClubPicker && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/50" onClick={() => setShowClubPicker(false)} />
-            <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-[80vh] flex flex-col">
-              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Users size={16} className="text-blue-500" />
+            <div className="relative w-full max-w-lg bg-card rounded-lg shadow-md border border-border max-h-[80vh] flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Users size={16} className="text-blue-700 dark:text-blue-400" />
                   {t('evaluations.addFromClub', 'Add from Club Roster')}
                   {selectedClubPlayerIds.size > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-bold">
+                    <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-semibold">
                       {selectedClubPlayerIds.size} selected
                     </span>
                   )}
                 </h3>
                 <button
                   onClick={() => setShowClubPicker(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground"
                 >
                   <X size={16} />
                 </button>
               </div>
 
-              <div className="p-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="p-3 border-b border-border">
                 <input
                   type="text"
                   placeholder="Search players..."
                   value={clubPickerSearch}
                   onChange={(e) => setClubPickerSearch(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
 
@@ -927,25 +900,23 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                     <label
                       key={p.id}
                       className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                        selectedClubPlayerIds.has(p.id)
-                          ? 'bg-blue-50 dark:bg-blue-900/20'
-                          : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                        selectedClubPlayerIds.has(p.id) ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-background'
                       }`}
                     >
                       <input
                         type="checkbox"
                         checked={selectedClubPlayerIds.has(p.id)}
                         onChange={() => toggleClubPlayer(p.id)}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-border text-blue-700 dark:text-blue-400 focus:ring-ring"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                        <p className="text-sm font-medium text-foreground">
                           {p.firstName} {p.lastName}
                           {p.jerseyNumber && (
-                            <span className="ml-1.5 text-[10px] text-slate-400">#{p.jerseyNumber}</span>
+                            <span className="ml-1.5 text-xs text-muted-foreground">#{p.jerseyNumber}</span>
                           )}
                         </p>
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                           {p.teamName || 'Unassigned'}
                           {p.status === 'prospect' && ' · Prospect'}
                         </p>
@@ -953,21 +924,21 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                     </label>
                   ))}
                 {clubPlayers.length === 0 && (
-                  <p className="text-center py-8 text-sm text-slate-400">No club players available to add.</p>
+                  <p className="text-center py-8 text-sm text-muted-foreground">No club players available to add.</p>
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-2 p-4 border-t border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
                 <button
                   onClick={() => setShowClubPicker(false)}
-                  className="px-4 py-2 rounded-xl text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="px-4 py-2 rounded-lg text-sm font-semibold text-muted-foreground hover:bg-muted"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAddClubPlayers}
                   disabled={selectedClubPlayerIds.size === 0}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-bold transition-colors"
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors"
                 >
                   Add {selectedClubPlayerIds.size || ''} Player{selectedClubPlayerIds.size !== 1 ? 's' : ''}
                 </button>
@@ -986,17 +957,15 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
     return (
       <div className="space-y-6">
         {/* Progress */}
-        <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            {t('evaluations.progress', 'Progress')}
-          </span>
-          <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+        <div className="flex items-center justify-between bg-background rounded-lg px-4 py-3">
+          <span className="text-sm font-medium text-foreground">{t('evaluations.progress', 'Progress')}</span>
+          <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
             {scoredCount} / {candidates.length} {t('evaluations.candidatesScored', 'candidates scored')}
           </span>
         </div>
 
         {/* Progress bar */}
-        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+        <div className="w-full bg-muted rounded-full h-2">
           <div
             className="bg-indigo-500 h-2 rounded-full transition-all"
             style={{ width: `${candidates.length ? (scoredCount / candidates.length) * 100 : 0}%` }}
@@ -1012,19 +981,17 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
         {/* Candidate scoring cards */}
         <div className="space-y-4">
           {candidates.map((c) => (
-            <div key={c.id} className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-3">
-              <h5 className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+            <div key={c.id} className="border border-border rounded-lg p-4 space-y-3">
+              <h5 className="font-medium text-foreground flex items-center gap-2">
                 {c.bibNumber && (
-                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-sm font-black">
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-sm font-bold">
                     {c.bibNumber}
                   </span>
                 )}
                 <span>
                   {c.firstName} {c.lastName}
                 </span>
-                {c.ageGroup && (
-                  <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({c.ageGroup})</span>
-                )}
+                {c.ageGroup && <span className="text-xs font-normal text-muted-foreground">({c.ageGroup})</span>}
               </h5>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {categories.map((cat) => {
@@ -1032,16 +999,16 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                   const currentScore = localScores[key];
                   return (
                     <div key={cat.id} className="space-y-1.5">
-                      <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{cat.name}</span>
+                      <span className="text-xs font-medium text-foreground">{cat.name}</span>
                       <div className="flex gap-1 flex-wrap">
                         {Array.from({ length: scale }, (_, i) => i + 1).map((val) => (
                           <button
                             key={val}
                             onClick={() => handleSubmitScore(c.id, cat.id, val)}
-                            className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${
+                            className={`w-8 h-8 rounded-lg text-xs font-semibold transition-colors ${
                               currentScore === val
                                 ? 'bg-indigo-500 text-white shadow-sm'
-                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400'
+                                : 'bg-muted text-foreground hover:bg-indigo-100 dark:hover:bg-indigo-900/30 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-400'
                             }`}
                           >
                             {val}
@@ -1057,7 +1024,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
         </div>
 
         {candidates.length === 0 && (
-          <p className="text-sm text-slate-400 dark:text-slate-500 italic text-center py-4">
+          <p className="text-sm text-muted-foreground italic text-center py-4">
             {t('evaluations.noCandidatesToScore', 'No candidates to score. Add candidates in the Roster tab.')}
           </p>
         )}
@@ -1076,7 +1043,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
         <div className="flex justify-end">
           <button
             onClick={handleComputeScores}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
           >
             <Zap size={16} />
             {t('evaluations.computeScores', 'Compute Scores')}
@@ -1084,14 +1051,14 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
         </div>
 
         {sorted.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500 italic text-center py-4">
+          <p className="text-sm text-muted-foreground italic text-center py-4">
             {t('evaluations.noResults', 'No results yet.')}
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-700">
+                <tr className="text-left text-xs font-medium text-muted-foreground uppercase border-b border-border">
                   <th className="px-3 py-2">#</th>
                   <th className="px-3 py-2">{t('evaluations.name', 'Name')}</th>
                   {categories.map((cat) => (
@@ -1105,14 +1072,11 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
               </thead>
               <tbody>
                 {sorted.map((c, idx) => (
-                  <tr
-                    key={c.id}
-                    className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                  >
-                    <td className="px-3 py-2 text-slate-400 dark:text-slate-500">{idx + 1}</td>
-                    <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">
+                  <tr key={c.id} className="border-b border-border hover:bg-background">
+                    <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
+                    <td className="px-3 py-2 font-medium text-foreground">
                       {c.bibNumber && (
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[10px] font-black mr-1.5">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-bold mr-1.5">
                           {c.bibNumber}
                         </span>
                       )}
@@ -1123,11 +1087,9 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                       return (
                         <td key={cat.id} className="px-3 py-2 text-center">
                           {catScore != null ? (
-                            <span className={`font-semibold ${scoreColor(catScore, scale)}`}>
-                              {catScore.toFixed(1)}
-                            </span>
+                            <span className={`font-medium ${scoreColor(catScore, scale)}`}>{catScore.toFixed(1)}</span>
                           ) : (
-                            <span className="text-slate-300 dark:text-slate-600">—</span>
+                            <span className="text-muted-foreground">—</span>
                           )}
                         </td>
                       );
@@ -1135,17 +1097,15 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                     <td className="px-3 py-2 text-center">
                       {c.overallScore != null ? (
                         <span
-                          className={`inline-block px-2 py-0.5 rounded-lg text-xs font-bold ${scoreColorBg(c.overallScore, scale)}`}
+                          className={`inline-block px-2 py-0.5 rounded-lg text-xs font-semibold ${scoreColorBg(c.overallScore, scale)}`}
                         >
                           {c.overallScore.toFixed(1)}
                         </span>
                       ) : (
-                        <span className="text-slate-300 dark:text-slate-600">—</span>
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-center text-slate-600 dark:text-slate-400">
-                      {c.evaluatorCount ?? 0}
-                    </td>
+                    <td className="px-3 py-2 text-center text-foreground">{c.evaluatorCount ?? 0}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1167,9 +1127,9 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
         {/* Thresholds summary */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {editThresholds.map((th) => (
-            <div key={th.teamId} className="bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3">
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{th.teamName}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <div key={th.teamId} className="bg-background rounded-lg px-4 py-3">
+              <p className="text-sm font-medium text-foreground">{th.teamName}</p>
+              <p className="text-xs text-muted-foreground mt-1">
                 {t('evaluations.minScore', 'Min Score')}: {th.minScore} | {t('evaluations.maxRoster', 'Max Roster')}:{' '}
                 {th.maxRoster}
               </p>
@@ -1181,14 +1141,14 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
         <div className="flex flex-wrap gap-2">
           <button
             onClick={handleAutoPlace}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-medium transition-colors"
           >
             <Zap size={16} />
             {t('evaluations.autoPlace', 'Auto-Place')}
           </button>
           <button
             onClick={handleFinalize}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors"
           >
             <Check size={16} />
             {t('evaluations.finalize', 'Finalize')}
@@ -1196,31 +1156,31 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
         </div>
 
         {/* Placement stats */}
-        <div className="flex gap-4 bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3">
+        <div className="flex gap-4 bg-background rounded-lg px-4 py-3">
           <div className="text-center">
-            <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{placedCount}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{t('evaluations.placed', 'Placed')}</p>
+            <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">{placedCount}</p>
+            <p className="text-xs text-muted-foreground">{t('evaluations.placed', 'Placed')}</p>
           </div>
           <div className="text-center">
-            <p className="text-lg font-bold text-amber-600 dark:text-amber-400">{unplacedCount}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{t('evaluations.unplaced', 'Unplaced')}</p>
+            <p className="text-lg font-semibold text-amber-600 dark:text-amber-400">{unplacedCount}</p>
+            <p className="text-xs text-muted-foreground">{t('evaluations.unplaced', 'Unplaced')}</p>
           </div>
           <div className="text-center">
-            <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{newPlayersCount}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{t('evaluations.newPlayers', 'New Players')}</p>
+            <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">{newPlayersCount}</p>
+            <p className="text-xs text-muted-foreground">{t('evaluations.newPlayers', 'New Players')}</p>
           </div>
         </div>
 
         {/* Candidate placement list */}
         {sorted.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500 italic text-center py-4">
+          <p className="text-sm text-muted-foreground italic text-center py-4">
             {t('evaluations.noCandidates', 'No candidates yet.')}
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-700">
+                <tr className="text-left text-xs font-medium text-muted-foreground uppercase border-b border-border">
                   <th className="px-3 py-2">{t('evaluations.name', 'Name')}</th>
                   <th className="px-3 py-2 text-center">{t('evaluations.overall', 'Overall')}</th>
                   <th className="px-3 py-2">{t('evaluations.assignedTeam', 'Assigned Team')}</th>
@@ -1228,13 +1188,10 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
               </thead>
               <tbody>
                 {sorted.map((c) => (
-                  <tr
-                    key={c.id}
-                    className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                  >
-                    <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">
+                  <tr key={c.id} className="border-b border-border hover:bg-background">
+                    <td className="px-3 py-2 font-medium text-foreground">
                       {c.bibNumber && (
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[10px] font-black mr-1.5">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-bold mr-1.5">
                           {c.bibNumber}
                         </span>
                       )}
@@ -1243,19 +1200,19 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                     <td className="px-3 py-2 text-center">
                       {c.overallScore != null ? (
                         <span
-                          className={`inline-block px-2 py-0.5 rounded-lg text-xs font-bold ${scoreColorBg(c.overallScore, scale)}`}
+                          className={`inline-block px-2 py-0.5 rounded-lg text-xs font-semibold ${scoreColorBg(c.overallScore, scale)}`}
                         >
                           {c.overallScore.toFixed(1)}
                         </span>
                       ) : (
-                        <span className="text-slate-300 dark:text-slate-600">—</span>
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </td>
                     <td className="px-3 py-2">
                       <select
                         value={c.placedTeamId || ''}
                         onChange={(e) => handleManualPlace(c.id, e.target.value)}
-                        className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        className="rounded-lg border border-border bg-card px-2 py-1 text-sm text-foreground focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                       >
                         <option value="">{t('evaluations.unassigned', '— Unassigned —')}</option>
                         {teams.map((tm) => (

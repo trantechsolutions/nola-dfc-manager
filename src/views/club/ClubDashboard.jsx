@@ -107,22 +107,24 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
     totals.totalPlayers > 0 ? Math.round((totals.totalCompliant / totals.totalPlayers) * 100) : 100;
 
   if (loading)
-    return <div className="p-20 text-center font-black text-slate-300 animate-pulse">Loading club overview...</div>;
+    return (
+      <div className="p-20 text-center font-bold text-muted-foreground animate-pulse">Loading club overview...</div>
+    );
 
   return (
     <div className="space-y-6 pb-24 md:pb-6">
       {/* Tab strip */}
-      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 w-fit">
+      <div className="flex gap-1 bg-muted rounded-lg p-1 w-fit">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'overview' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm dark:shadow-none' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'overview' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
         >
           <Building2 size={14} />
           {t('clubDash.overview')}
         </button>
         <button
           onClick={() => setActiveTab('calendar')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'calendar' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm dark:shadow-none' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'calendar' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
         >
           <CalendarRange size={14} />
           {t('clubDash.calendar')}
@@ -135,14 +137,14 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
         <>
           {/* Header */}
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-slate-900 rounded-xl">
+            <div className="p-2 bg-muted rounded-lg">
               <Building2 size={20} className="text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-900 dark:text-white">
+              <h2 className="text-2xl font-bold text-foreground">
                 {club?.name || 'Club'} {t('clubDash.overview')}
               </h2>
-              <p className="text-xs text-slate-400 font-bold">
+              <p className="text-xs text-muted-foreground font-semibold">
                 {selectedSeason} · {teams.length} teams · {totals.totalPlayers} players
               </p>
             </div>
@@ -150,48 +152,44 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
 
           {/* Summary Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
-              <Users size={16} className="text-blue-600" />
-              <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{totals.totalPlayers}</p>
-              <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">
-                {t('clubDash.totalPlayers')}
-              </p>
+            <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
+              <Users size={16} className="text-blue-700 dark:text-blue-400" />
+              <p className="text-2xl font-bold text-foreground mt-1">{totals.totalPlayers}</p>
+              <p className="text-xs font-semibold text-muted-foreground">{t('clubDash.totalPlayers')}</p>
             </div>
             <div
-              className={`p-4 rounded-2xl border shadow-sm dark:shadow-none ${overallComplianceRate === 100 ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}
+              className={`p-4 rounded-lg border shadow-sm ${overallComplianceRate === 100 ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'}`}
             >
               <ShieldCheck
                 size={16}
-                className={overallComplianceRate === 100 ? 'text-emerald-600' : 'text-amber-600'}
+                className={
+                  overallComplianceRate === 100
+                    ? 'text-emerald-700 dark:text-emerald-400'
+                    : 'text-amber-700 dark:text-amber-400'
+                }
               />
               <p
-                className={`text-2xl font-black mt-1 ${overallComplianceRate === 100 ? 'text-emerald-700' : 'text-amber-700'}`}
+                className={`text-2xl font-bold mt-1 ${overallComplianceRate === 100 ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}`}
               >
                 {overallComplianceRate}%
               </p>
-              <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">
-                {t('clubDash.complianceRate')}
-              </p>
+              <p className="text-xs font-semibold text-muted-foreground">{t('clubDash.complianceRate')}</p>
             </div>
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
-              <FileText size={16} className="text-violet-600" />
-              <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{totals.totalDocs}</p>
-              <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">
-                {t('clubDash.documents')}
-              </p>
+            <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
+              <FileText size={16} className="text-violet-700 dark:text-violet-400" />
+              <p className="text-2xl font-bold text-foreground mt-1">{totals.totalDocs}</p>
+              <p className="text-xs font-semibold text-muted-foreground">{t('clubDash.documents')}</p>
             </div>
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
-              <UserCheck size={16} className="text-blue-600" />
-              <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{totals.totalStaff}</p>
-              <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">
-                {t('clubDash.staffMembers')}
-              </p>
+            <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
+              <UserCheck size={16} className="text-blue-700 dark:text-blue-400" />
+              <p className="text-2xl font-bold text-foreground mt-1">{totals.totalStaff}</p>
+              <p className="text-xs font-semibold text-muted-foreground">{t('clubDash.staffMembers')}</p>
             </div>
           </div>
 
           {/* Per-Team Cards */}
           <div className="space-y-3">
-            <h3 className="font-black text-slate-800 dark:text-white text-sm">{t('clubDash.teams')}</h3>
+            <h3 className="font-bold text-foreground text-sm">{t('clubDash.teams')}</h3>
             {teams.map((team) => {
               const d = teamData[team.id] || {};
               const hasMissing = d.missingCompliance?.length > 0;
@@ -200,7 +198,7 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
                 <div
                   key={team.id}
                   onClick={() => onSelectTeam(team.id)}
-                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none p-5 hover:shadow-md hover:border-blue-200 dark:hover:border-blue-700 cursor-pointer transition-all active:scale-[0.99] group"
+                  className="bg-card rounded-lg border border-border shadow-sm p-5 hover:shadow-md hover:border-blue-200 dark:hover:border-blue-700 cursor-pointer transition-all active:scale-[0.99] group"
                 >
                   <div className="flex items-center gap-4">
                     <div
@@ -210,21 +208,21 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
 
                     <div className="flex-grow min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-black text-slate-900 dark:text-white text-sm truncate">{team.name}</h4>
-                        <span className="text-[9px] font-bold text-slate-400">
+                        <h4 className="font-bold text-foreground text-sm truncate">{team.name}</h4>
+                        <span className="text-xs font-semibold text-muted-foreground">
                           {team.ageGroup} · {team.gender}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-4 text-[11px] font-medium">
-                        <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <div className="flex items-center gap-4 text-xs font-medium">
+                        <span className="text-muted-foreground flex items-center gap-1">
                           <Users size={12} /> {d.playerCount || 0} players
                         </span>
-                        <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <span className="text-muted-foreground flex items-center gap-1">
                           <UserCheck size={12} /> {d.staffCount || 0} staff
                         </span>
                         {d.docsUploaded > 0 && (
-                          <span className="text-slate-400 flex items-center gap-1">
+                          <span className="text-muted-foreground flex items-center gap-1">
                             <FileText size={12} /> {d.docsUploaded} docs
                           </span>
                         )}
@@ -233,14 +231,14 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
                       {/* Compliance bar */}
                       {d.playerCount > 0 && (
                         <div className="mt-2 flex items-center gap-2">
-                          <div className="flex-grow h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div className="flex-grow h-1.5 bg-muted rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${d.complianceRate === 100 ? 'bg-emerald-500' : d.complianceRate >= 75 ? 'bg-amber-400' : 'bg-red-400'}`}
                               style={{ width: `${d.complianceRate}%` }}
                             />
                           </div>
                           <span
-                            className={`text-[10px] font-bold ${d.complianceRate === 100 ? 'text-emerald-600' : 'text-amber-600'}`}
+                            className={`text-xs font-semibold ${d.complianceRate === 100 ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}
                           >
                             {d.fullyCompliant}/{d.playerCount} compliant
                           </span>
@@ -252,10 +250,13 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
                     <div className="flex items-center gap-2 shrink-0">
                       {hasMissing && (
                         <div className="p-1.5 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
-                          <AlertTriangle size={14} className="text-amber-600" />
+                          <AlertTriangle size={14} className="text-amber-700 dark:text-amber-400" />
                         </div>
                       )}
-                      <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
+                      <ChevronRight
+                        size={16}
+                        className="text-muted-foreground group-hover:text-blue-700 dark:text-blue-400 transition-colors"
+                      />
                     </div>
                   </div>
                 </div>
@@ -265,22 +266,19 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
 
           {/* Compliance Alerts */}
           {(totals.totalMissingMedical > 0 || totals.totalMissingReeplayer > 0) && (
-            <div className="bg-gradient-to-r from-amber-50 to-red-50 dark:from-amber-900/20 dark:to-red-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-5">
-              <h3 className="font-black text-amber-800 text-sm flex items-center gap-2 mb-3">
-                <AlertTriangle size={16} className="text-amber-500" /> Missing Compliance — All Teams
+            <div className="bg-gradient-to-r from-amber-50 to-red-50 dark:from-amber-900/20 dark:to-red-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-5">
+              <h3 className="font-bold text-amber-800 text-sm flex items-center gap-2 mb-3">
+                <AlertTriangle size={16} className="text-amber-700 dark:text-amber-400" /> Missing Compliance — All
+                Teams
               </h3>
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-white/70 dark:bg-slate-800/70 rounded-xl p-3 text-center">
-                  <p className="text-xl font-black text-red-600">{totals.totalMissingMedical}</p>
-                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">
-                    Missing Medical Release
-                  </p>
+                <div className="bg-white/70 rounded-lg p-3 text-center">
+                  <p className="text-xl font-bold text-red-700 dark:text-red-400">{totals.totalMissingMedical}</p>
+                  <p className="text-xs font-semibold text-muted-foreground">Missing Medical Release</p>
                 </div>
-                <div className="bg-white/70 dark:bg-slate-800/70 rounded-xl p-3 text-center">
-                  <p className="text-xl font-black text-red-600">{totals.totalMissingReeplayer}</p>
-                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase">
-                    Missing ReePlayer Waiver
-                  </p>
+                <div className="bg-white/70 rounded-lg p-3 text-center">
+                  <p className="text-xl font-bold text-red-700 dark:text-red-400">{totals.totalMissingReeplayer}</p>
+                  <p className="text-xs font-semibold text-muted-foreground">Missing ReePlayer Waiver</p>
                 </div>
               </div>
 
@@ -289,11 +287,11 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
                   const d = teamData[team.id] || {};
                   if (!d.missingCompliance?.length) return null;
                   return (
-                    <div key={team.id} className="bg-white/70 dark:bg-slate-800/70 rounded-xl p-3">
+                    <div key={team.id} className="bg-white/70 rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: team.colorPrimary }} />
-                        <span className="text-xs font-bold text-slate-800 dark:text-white">{team.name}</span>
-                        <span className="text-[10px] font-bold text-red-600">
+                        <span className="text-xs font-semibold text-foreground">{team.name}</span>
+                        <span className="text-xs font-semibold text-red-700 dark:text-red-400">
                           {d.missingCompliance.length} player{d.missingCompliance.length !== 1 && 's'}
                         </span>
                       </div>
@@ -301,9 +299,9 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
                         {d.missingCompliance.slice(0, 6).map((p, i) => (
                           <span
                             key={i}
-                            className="inline-flex items-center gap-1 text-[10px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded"
+                            className="inline-flex items-center gap-1 text-xs font-semibold bg-card border border-border px-2 py-0.5 rounded"
                           >
-                            <span className="text-slate-600 dark:text-slate-300">
+                            <span className="text-foreground">
                               #{p.jersey || '?'} {p.name}
                             </span>
                             {p.missingMedical && <ShieldX size={10} className="text-red-400" title="Missing medical" />}
@@ -313,7 +311,7 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
                           </span>
                         ))}
                         {d.missingCompliance.length > 6 && (
-                          <span className="text-[10px] text-slate-400 font-bold self-center">
+                          <span className="text-xs text-muted-foreground font-semibold self-center">
                             +{d.missingCompliance.length - 6} more
                           </span>
                         )}
@@ -327,11 +325,11 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
 
           {/* All Compliant Banner */}
           {totals.totalMissingMedical === 0 && totals.totalMissingReeplayer === 0 && totals.totalPlayers > 0 && (
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-5 flex items-center gap-3">
-              <CheckCircle2 size={24} className="text-emerald-600 shrink-0" />
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-5 flex items-center gap-3">
+              <CheckCircle2 size={24} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
               <div>
-                <p className="font-black text-emerald-800 text-sm">All Players Compliant</p>
-                <p className="text-xs text-emerald-600">
+                <p className="font-bold text-emerald-800 text-sm">All Players Compliant</p>
+                <p className="text-xs text-emerald-700 dark:text-emerald-400">
                   Every player across all {teams.length} teams has their medical release and ReePlayer waiver on file.
                 </p>
               </div>

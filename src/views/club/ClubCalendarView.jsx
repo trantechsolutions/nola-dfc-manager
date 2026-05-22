@@ -95,8 +95,8 @@ export default function ClubCalendarView({ club, teams }) {
   if (loading)
     return (
       <div className="p-20 text-center">
-        <Loader2 size={24} className="text-slate-400 animate-spin mx-auto mb-2" />
-        <p className="text-xs font-bold text-slate-400">
+        <Loader2 size={24} className="text-muted-foreground animate-spin mx-auto mb-2" />
+        <p className="text-xs font-semibold text-muted-foreground">
           Loading calendars from {teams.filter((t) => t.icalUrl).length} teams...
         </p>
       </div>
@@ -105,23 +105,23 @@ export default function ClubCalendarView({ club, teams }) {
   return (
     <div className="space-y-5 pb-24 md:pb-6">
       <div>
-        <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
-          <Calendar size={24} className="text-blue-600" /> Club Calendar
+        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <Calendar size={24} className="text-blue-700 dark:text-blue-400" /> Club Calendar
         </h2>
-        <p className="text-xs text-slate-400 font-bold">
+        <p className="text-xs text-muted-foreground font-semibold">
           {allEvents.length} events from {teamsWithEvents.length} teams
         </p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+      <div className="bg-card p-4 rounded-lg border border-border shadow-sm space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <Filter size={14} className="text-slate-400" />
+          <Filter size={14} className="text-muted-foreground" />
           {/* Team filter */}
-          <div className="flex flex-wrap gap-1 bg-slate-100 rounded-lg p-0.5">
+          <div className="flex flex-wrap gap-1 bg-muted rounded-lg p-0.5">
             <button
               onClick={() => setFilterTeam('all')}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${filterTeam === 'all' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${filterTeam === 'all' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
             >
               All Teams
             </button>
@@ -129,7 +129,7 @@ export default function ClubCalendarView({ club, teams }) {
               <button
                 key={t.id}
                 onClick={() => setFilterTeam(t.id)}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 ${filterTeam === t.id ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1 ${filterTeam === t.id ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
               >
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: t.colorPrimary }} />
                 {t.name}
@@ -140,10 +140,10 @@ export default function ClubCalendarView({ club, teams }) {
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* Type filter */}
-          <div className="flex flex-wrap gap-1 bg-slate-100 rounded-lg p-0.5">
+          <div className="flex flex-wrap gap-1 bg-muted rounded-lg p-0.5">
             <button
               onClick={() => setFilterType('all')}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${filterType === 'all' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${filterType === 'all' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
             >
               All
             </button>
@@ -151,7 +151,7 @@ export default function ClubCalendarView({ club, teams }) {
               <button
                 key={key}
                 onClick={() => setFilterType(key)}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 ${filterType === key ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1 ${filterType === key ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
               >
                 <span className={`w-2 h-2 rounded-full ${type.dot}`} />
                 {type.label}
@@ -165,23 +165,23 @@ export default function ClubCalendarView({ club, teams }) {
                 setFilterTeam('all');
                 setFilterType('all');
               }}
-              className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 ml-auto"
+              className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 flex items-center gap-1 ml-auto"
             >
               <X size={12} /> Reset
             </button>
           )}
 
           {/* View toggle */}
-          <div className="ml-auto flex bg-slate-100 rounded-lg p-0.5">
+          <div className="ml-auto flex bg-muted rounded-lg p-0.5">
             <button
               onClick={() => setView('calendar')}
-              className={`px-3 py-1 rounded-md text-[11px] font-bold ${view === 'calendar' ? 'bg-white shadow-sm' : 'text-slate-500'}`}
+              className={`px-3 py-1 rounded-md text-xs font-semibold ${view === 'calendar' ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}
             >
               Calendar
             </button>
             <button
               onClick={() => setView('list')}
-              className={`px-3 py-1 rounded-md text-[11px] font-bold ${view === 'list' ? 'bg-white shadow-sm' : 'text-slate-500'}`}
+              className={`px-3 py-1 rounded-md text-xs font-semibold ${view === 'list' ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}
             >
               List
             </button>
@@ -189,7 +189,7 @@ export default function ClubCalendarView({ club, teams }) {
         </div>
 
         {/* Team legend */}
-        <div className="flex flex-wrap gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        <div className="flex flex-wrap gap-3 text-xs font-semibold text-muted-foreground">
           {teamsWithEvents.map((t) => (
             <span key={t.id} className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: t.colorPrimary }} /> {t.name}
@@ -200,7 +200,7 @@ export default function ClubCalendarView({ club, teams }) {
 
       {/* Calendar View */}
       {view === 'calendar' && (
-        <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-card p-4 md:p-6 rounded-lg border border-border shadow-sm">
           <FullCalendar
             plugins={[dayGridPlugin]}
             initialView="dayGridMonth"
@@ -225,24 +225,24 @@ export default function ClubCalendarView({ club, teams }) {
       {view === 'list' && (
         <div className="space-y-2">
           {upcomingFiltered.length === 0 ? (
-            <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center text-slate-400 font-bold text-sm">
+            <div className="bg-card rounded-lg border-2 border-dashed border-border p-10 text-center text-muted-foreground font-semibold text-sm">
               No upcoming events match your filters.
             </div>
           ) : (
             upcomingFiltered.map((e) => {
               const type = EVENT_TYPES[e.eventType] || EVENT_TYPES.event;
               return (
-                <div key={e.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex">
+                <div key={e.id} className="bg-card rounded-lg border border-border shadow-sm overflow-hidden flex">
                   <div className="w-1.5 shrink-0" style={{ backgroundColor: e.teamColor }} />
                   <div className="p-3 flex-grow">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${type.colorLight}`}>
+                      <span className={`text-xs font-bold uppercase px-1.5 py-0.5 rounded ${type.colorLight}`}>
                         {type.label}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-400">{e.teamName}</span>
+                      <span className="text-xs font-semibold text-muted-foreground">{e.teamName}</span>
                     </div>
-                    <p className="text-sm font-bold text-slate-800">{e.title}</p>
-                    <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                    <p className="text-sm font-semibold text-foreground">{e.title}</p>
+                    <p className="text-xs text-muted-foreground font-medium mt-0.5">
                       {e.displayDate} · {e.displayTime} · {e.location}
                     </p>
                   </div>

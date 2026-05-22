@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Lock,
   Unlock,
@@ -111,17 +111,15 @@ export default function BookBalanceView({
       <div className="flex flex-col sm:flex-row sm:items-start gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white leading-tight">
-              {t('bookBalance.title')}
-            </h2>
+            <h2 className="text-2xl font-bold text-foreground leading-tight">{t('bookBalance.title')}</h2>
             {isMonthLocked && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+              <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg bg-muted text-foreground">
                 <Lock size={10} aria-hidden="true" />
                 {t('bookBalance.lockedBadge')}
               </span>
             )}
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">{t('bookBalance.subtitle')}</p>
+          <p className="text-sm text-muted-foreground font-medium mt-1">{t('bookBalance.subtitle')}</p>
         </div>
 
         {/* Controls row */}
@@ -130,7 +128,7 @@ export default function BookBalanceView({
           <button
             onClick={() => setShowInstructions((p) => !p)}
             aria-expanded={showInstructions}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-border bg-card text-muted-foreground hover:bg-background transition-all"
           >
             <Info size={13} aria-hidden="true" />
             {t('bookBalance.howItWorks')}
@@ -143,7 +141,7 @@ export default function BookBalanceView({
               aria-haspopup="listbox"
               aria-expanded={showMonthPicker}
               aria-label={`Selected month: ${monthKeyToLabel(selectedMonth)}`}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-border bg-card text-foreground hover:bg-background transition-all"
             >
               <BookOpen size={13} aria-hidden="true" />
               {monthKeyToLabel(selectedMonth)}
@@ -157,7 +155,7 @@ export default function BookBalanceView({
               <ul
                 role="listbox"
                 aria-label="Select month"
-                className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden min-w-[176px] max-h-64 overflow-y-auto"
+                className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded-lg shadow-md overflow-hidden min-w-[176px] max-h-64 overflow-y-auto"
               >
                 {monthOptions.map((key) => (
                   <li key={key} role="option" aria-selected={key === selectedMonth}>
@@ -166,10 +164,10 @@ export default function BookBalanceView({
                         setSelectedMonth(key);
                         setShowMonthPicker(false);
                       }}
-                      className={`w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${
+                      className={`w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-background transition-colors ${
                         key === selectedMonth
                           ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                          : 'text-slate-700 dark:text-slate-300'
+                          : 'text-foreground'
                       }`}
                     >
                       {monthKeyToLabel(key)}
@@ -187,7 +185,7 @@ export default function BookBalanceView({
                 <button
                   onClick={handleUnlockClick}
                   disabled={isSaving}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 disabled:opacity-40 transition-all focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 disabled:opacity-40 transition-all focus:outline-none focus:ring-2 focus:ring-amber-400"
                 >
                   <Unlock size={13} aria-hidden="true" />
                   {t('bookBalance.unlockMonth')}
@@ -197,11 +195,11 @@ export default function BookBalanceView({
               <button
                 onClick={handleLockClick}
                 disabled={isSaving || totalAccounts === 0}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black transition-all
-                bg-slate-900 dark:bg-white text-white dark:text-slate-900
-                hover:bg-slate-700 dark:hover:bg-slate-100
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all
+                bg-card text-white
+                hover:bg-accent/90
                 disabled:opacity-30 disabled:cursor-not-allowed
-                focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-700 dark:focus:ring-white"
+                focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-ring dark:focus:ring-white"
               >
                 <Lock size={13} aria-hidden="true" />
                 {t('bookBalance.lockMonth')}
@@ -215,15 +213,13 @@ export default function BookBalanceView({
         <div
           role="region"
           aria-label="How book balance works"
-          className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-2xl p-5"
+          className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg p-5"
         >
-          <p className="text-xs font-black text-blue-700 dark:text-blue-300 uppercase tracking-widest mb-3">
-            {t('bookBalance.howItWorks')}
-          </p>
+          <p className="text-xs font-bold text-blue-700 dark:text-blue-300 mb-3">{t('bookBalance.howItWorks')}</p>
           <ol className="space-y-2.5" aria-label="Steps">
             {[t('bookBalance.step1'), t('bookBalance.step2'), t('bookBalance.step3')].map((step, i) => (
               <li key={i} className="flex items-start gap-3">
-                <span className="shrink-0 w-5 h-5 rounded-full bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-200 text-[10px] font-black flex items-center justify-center mt-0.5">
+                <span className="shrink-0 w-5 h-5 rounded-full bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-200 text-xs font-bold flex items-center justify-center mt-0.5">
                   {i + 1}
                 </span>
                 <p className="text-sm text-blue-800 dark:text-blue-200 font-medium leading-snug">{step}</p>
@@ -236,12 +232,12 @@ export default function BookBalanceView({
       {/* ══ STATUS BAR ══ */}
       {totalAccounts > 0 && !isMonthLocked && !isSeasonView && (
         <div
-          className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold transition-all ${
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg border text-sm font-medium transition-all ${
             allBalanced
               ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
               : enteredCount > 0
                 ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300'
-                : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+                : 'bg-background border-border text-muted-foreground'
           }`}
           role="status"
           aria-live="polite"
@@ -259,7 +255,7 @@ export default function BookBalanceView({
                 : `${enteredCount} of ${totalAccounts} entered · ${balancedCount} balanced`}
           </span>
           {allBalanced && !isMonthLocked && (
-            <span className="ml-auto flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+            <span className="ml-auto flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
               <ArrowRight size={12} aria-hidden="true" />
               {t('bookBalance.lockHint')}
             </span>
@@ -270,45 +266,37 @@ export default function BookBalanceView({
       {/* ══ OVERVIEW PANEL ══ */}
       {totalAccounts > 0 && (
         <div
-          className={`rounded-2xl border-2 p-5 ${
+          className={`rounded-lg border-2 p-5 ${
             totalIsBalanced
               ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
+              : 'bg-card border-border'
           }`}
           aria-label="Balance overview"
         >
-          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
+          <p className="text-xs font-bold text-muted-foreground mb-4">
             {monthKeyToLabel(selectedMonth)} — {isSeasonView ? 'Running Total' : 'Overview'}
           </p>
 
           {/* Top-line totals */}
           <div className="grid grid-cols-3 gap-4 text-center mb-4">
             <div>
-              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
-                {t('bookBalance.totalLedger')}
-              </p>
-              <p className="text-xl font-black text-slate-900 dark:text-white tabular-nums">
-                {formatMoney(totals.totalLedger)}
-              </p>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">calculated by the app</p>
+              <p className="text-xs font-bold text-muted-foreground mb-1">{t('bookBalance.totalLedger')}</p>
+              <p className="text-xl font-bold text-foreground tabular-nums">{formatMoney(totals.totalLedger)}</p>
+              <p className="text-xs text-muted-foreground font-medium mt-0.5">calculated by the app</p>
             </div>
             <div className="flex flex-col items-center justify-center gap-1">
-              <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
-              <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                vs
-              </span>
-              <div className="w-px h-6 bg-slate-200 dark:bg-slate-700" />
+              <div className="w-px h-6 bg-muted" />
+              <span className="text-xs font-bold text-muted-foreground">vs</span>
+              <div className="w-px h-6 bg-muted" />
             </div>
             <div>
-              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
-                {t('bookBalance.totalStated')}
-              </p>
+              <p className="text-xs font-bold text-muted-foreground mb-1">{t('bookBalance.totalStated')}</p>
               <p
-                className={`text-xl font-black tabular-nums ${enteredCount === 0 ? 'text-slate-300 dark:text-slate-600' : 'text-slate-900 dark:text-white'}`}
+                className={`text-xl font-bold tabular-nums ${enteredCount === 0 ? 'text-muted-foreground' : 'text-foreground'}`}
               >
                 {enteredCount === 0 ? '—' : formatMoney(totals.totalStated)}
               </p>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+              <p className="text-xs text-muted-foreground font-medium mt-0.5">
                 {enteredCount === 0 ? 'not yet entered' : 'what you counted'}
               </p>
             </div>
@@ -318,16 +306,12 @@ export default function BookBalanceView({
           {enteredCount > 0 && (
             <div
               className={`pt-4 border-t flex items-center justify-center gap-2 mb-4 ${
-                totalIsBalanced
-                  ? 'border-emerald-200 dark:border-emerald-800'
-                  : 'border-slate-200 dark:border-slate-700'
+                totalIsBalanced ? 'border-emerald-200 dark:border-emerald-800' : 'border-border'
               }`}
             >
-              <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                {t('bookBalance.totalDelta')}
-              </span>
+              <span className="text-xs font-semibold text-muted-foreground">{t('bookBalance.totalDelta')}</span>
               <span
-                className={`text-xl font-black tabular-nums flex items-center gap-1.5 ${
+                className={`text-xl font-bold tabular-nums flex items-center gap-1.5 ${
                   totalIsBalanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
                 }`}
                 aria-live="polite"
@@ -340,8 +324,8 @@ export default function BookBalanceView({
 
           {/* Per-account status rows */}
           <div
-            className={`rounded-xl overflow-hidden border ${
-              totalIsBalanced ? 'border-emerald-200 dark:border-emerald-800' : 'border-slate-200 dark:border-slate-700'
+            className={`rounded-lg overflow-hidden border ${
+              totalIsBalanced ? 'border-emerald-200 dark:border-emerald-800' : 'border-border'
             }`}
           >
             {/* Bank aggregate row */}
@@ -352,26 +336,24 @@ export default function BookBalanceView({
                 const delta = stated !== null ? stated - ledger : null;
                 const balanced = delta !== null && Math.abs(delta) < 0.01;
                 return (
-                  <div className="flex items-center justify-between px-4 py-2.5 bg-white dark:bg-slate-900 gap-3">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-card gap-3">
                     <div className="flex items-center gap-2 min-w-0">
                       {stated !== null ? (
                         balanced ? (
-                          <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                          <CheckCircle2 size={13} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
                         ) : (
                           <AlertCircle size={13} className="text-red-400 shrink-0" />
                         )
                       ) : (
-                        <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-200 dark:border-slate-600 shrink-0" />
+                        <div className="w-3.5 h-3.5 rounded-full border-2 border-border shrink-0" />
                       )}
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
-                        Bank Accounts
-                      </span>
+                      <span className="text-xs font-medium text-foreground truncate">Bank Accounts</span>
                     </div>
                     <div className="flex items-center gap-4 shrink-0 text-xs tabular-nums">
-                      <span className="text-slate-500 dark:text-slate-400">{formatMoney(ledger)}</span>
+                      <span className="text-muted-foreground">{formatMoney(ledger)}</span>
                       {delta !== null && (
                         <span
-                          className={`font-black ${balanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}
+                          className={`font-bold ${balanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}
                         >
                           {balanced ? '✓' : formatMoney(delta)}
                         </span>
@@ -387,7 +369,7 @@ export default function BookBalanceView({
                               _allBankIds: bankAccounts.map((a) => a.id),
                             })
                           }
-                          className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-400 transition-colors"
                           aria-label="Compare bank statement"
                         >
                           <FileSearch size={12} />
@@ -410,34 +392,30 @@ export default function BookBalanceView({
               return (
                 <div
                   key={acct.id}
-                  className={`flex items-center justify-between px-4 py-2.5 bg-white dark:bg-slate-900 gap-3 ${showBorder ? 'border-t border-slate-100 dark:border-slate-800' : ''}`}
+                  className={`flex items-center justify-between px-4 py-2.5 bg-card gap-3 ${showBorder ? 'border-t border-border' : ''}`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     {stated !== null ? (
                       balanced ? (
-                        <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                        <CheckCircle2 size={13} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
                       ) : (
                         <AlertCircle size={13} className="text-red-400 shrink-0" />
                       )
                     ) : (
-                      <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-200 dark:border-slate-600 shrink-0" />
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-border shrink-0" />
                     )}
                     <div className="min-w-0">
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate block">
-                        {acct.name}
-                      </span>
+                      <span className="text-xs font-medium text-foreground truncate block">{acct.name}</span>
                       {acct.handle && (
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500 truncate block">
-                          {acct.handle}
-                        </span>
+                        <span className="text-xs text-muted-foreground truncate block">{acct.handle}</span>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-4 shrink-0 text-xs tabular-nums">
-                    <span className="text-slate-500 dark:text-slate-400">{formatMoney(ledger)}</span>
+                    <span className="text-muted-foreground">{formatMoney(ledger)}</span>
                     {delta !== null && (
                       <span
-                        className={`font-black ${balanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}
+                        className={`font-bold ${balanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}
                       >
                         {balanced ? '✓' : formatMoney(delta)}
                       </span>
@@ -445,7 +423,7 @@ export default function BookBalanceView({
                     {!isMonthLocked && !isSeasonView && (
                       <button
                         onClick={() => setStatementAccount(acct)}
-                        className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                        className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-400 transition-colors"
                         aria-label={`Compare statement for ${acct.name}`}
                       >
                         <FileSearch size={12} />
@@ -462,10 +440,10 @@ export default function BookBalanceView({
 
       {/* ══ EMPTY STATE ══ */}
       {!loading && totalAccounts === 0 && (
-        <div className="text-center py-16 px-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
-          <BookOpen size={32} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" aria-hidden="true" />
-          <p className="font-bold text-slate-600 dark:text-slate-300 text-sm mb-1">{t('bookBalance.noAccounts')}</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500">{t('bookBalance.noAccountsHint')}</p>
+        <div className="text-center py-16 px-6 border-2 border-dashed border-border rounded-lg">
+          <BookOpen size={32} className="mx-auto text-muted-foreground mb-3" aria-hidden="true" />
+          <p className="font-semibold text-foreground text-sm mb-1">{t('bookBalance.noAccounts')}</p>
+          <p className="text-xs text-muted-foreground">{t('bookBalance.noAccountsHint')}</p>
         </div>
       )}
 

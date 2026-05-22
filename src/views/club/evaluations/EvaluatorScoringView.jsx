@@ -111,23 +111,23 @@ export default function EvaluatorScoringView({ user, showToast }) {
   }
 
   if (!session) {
-    return <div className="text-center py-12 text-slate-500 dark:text-slate-400">Session not found.</div>;
+    return <div className="text-center py-12 text-muted-foreground">Session not found.</div>;
   }
 
   return (
     <div className="space-y-5 max-w-2xl mx-auto pb-24 md:pb-6">
       {/* Header */}
       <div className="text-center">
-        <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center justify-center gap-2">
-          <ClipboardCheck size={20} className="text-indigo-500" />
+        <h2 className="text-lg font-bold text-foreground flex items-center justify-center gap-2">
+          <ClipboardCheck size={20} className="text-indigo-700 dark:text-indigo-400" />
           {session.name}
         </h2>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           {t('evaluations.blindScoring', 'Blind Evaluation')} — {scoredCount}/{candidates.length}{' '}
           {t('evaluations.completed', 'completed')}
         </p>
         {/* Progress bar */}
-        <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full mt-3 overflow-hidden">
+        <div className="w-full h-2 bg-muted rounded-full mt-3 overflow-hidden">
           <div
             className="h-full bg-indigo-500 rounded-full transition-all duration-300"
             style={{ width: `${candidates.length > 0 ? (scoredCount / candidates.length) * 100 : 0}%` }}
@@ -136,7 +136,7 @@ export default function EvaluatorScoringView({ user, showToast }) {
       </div>
 
       {candidates.length === 0 ? (
-        <div className="text-center py-12 text-slate-400 dark:text-slate-500">
+        <div className="text-center py-12 text-muted-foreground">
           {t('evaluations.noCandidates', 'No candidates to evaluate.')}
         </div>
       ) : (
@@ -146,16 +146,16 @@ export default function EvaluatorScoringView({ user, showToast }) {
             <button
               onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
               disabled={currentIndex === 0}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 transition-colors"
+              className="p-2 rounded-lg bg-muted text-foreground hover:bg-muted disabled:opacity-30 transition-colors"
             >
               <ChevronLeft size={20} />
             </button>
 
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-2xl font-black">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-2xl font-bold">
                 {currentCandidate?.bibNumber || '?'}
               </div>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-widest font-bold">
+              <p className="text-xs text-muted-foreground mt-1 font-semibold">
                 Bib #{currentCandidate?.bibNumber} — {currentIndex + 1} of {candidates.length}
               </p>
             </div>
@@ -163,7 +163,7 @@ export default function EvaluatorScoringView({ user, showToast }) {
             <button
               onClick={() => setCurrentIndex(Math.min(candidates.length - 1, currentIndex + 1))}
               disabled={currentIndex === candidates.length - 1}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 transition-colors"
+              className="p-2 rounded-lg bg-muted text-foreground hover:bg-muted disabled:opacity-30 transition-colors"
             >
               <ChevronRight size={20} />
             </button>
@@ -177,12 +177,12 @@ export default function EvaluatorScoringView({ user, showToast }) {
                 <button
                   key={c.id}
                   onClick={() => setCurrentIndex(i)}
-                  className={`w-9 h-9 rounded-lg text-xs font-bold transition-all ${
+                  className={`w-9 h-9 rounded-lg text-xs font-semibold transition-all ${
                     i === currentIndex
                       ? 'bg-indigo-600 text-white ring-2 ring-indigo-300 dark:ring-indigo-700'
                       : isScored
                         ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        : 'bg-muted text-muted-foreground hover:bg-muted'
                   }`}
                 >
                   {c.bibNumber}
@@ -196,19 +196,14 @@ export default function EvaluatorScoringView({ user, showToast }) {
             {categories.map((cat) => {
               const currentScore = candidateScores[cat.id];
               return (
-                <div
-                  key={cat.id}
-                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4"
-                >
+                <div key={cat.id} className="bg-card rounded-lg border border-border p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <h4 className="text-sm font-bold text-slate-800 dark:text-white">{cat.name}</h4>
-                      {cat.description && (
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500">{cat.description}</p>
-                      )}
+                      <h4 className="text-sm font-semibold text-foreground">{cat.name}</h4>
+                      {cat.description && <p className="text-xs text-muted-foreground">{cat.description}</p>}
                     </div>
                     {currentScore !== undefined && (
-                      <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">
+                      <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
                         {currentScore}/{scale}
                       </span>
                     )}
@@ -218,10 +213,10 @@ export default function EvaluatorScoringView({ user, showToast }) {
                       <button
                         key={val}
                         onClick={() => setScore(cat.id, val)}
-                        className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                        className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                           currentScore === val
                             ? 'bg-indigo-600 text-white shadow-md shadow-indigo-300 dark:shadow-indigo-900'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400'
+                            : 'bg-muted text-foreground hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-400'
                         }`}
                       >
                         {val}
@@ -238,7 +233,7 @@ export default function EvaluatorScoringView({ user, showToast }) {
             <button
               onClick={handleSaveCurrentScores}
               disabled={saving}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-sm transition-colors disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-muted text-foreground hover:bg-muted font-semibold text-sm transition-colors disabled:opacity-50"
             >
               <Save size={16} />
               {t('common.save', 'Save')}
@@ -246,7 +241,7 @@ export default function EvaluatorScoringView({ user, showToast }) {
             <button
               onClick={handleSaveAndNext}
               disabled={saving || currentIndex === candidates.length - 1}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition-colors disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-colors disabled:opacity-50"
             >
               <Check size={16} />
               {t('evaluations.saveAndNext', 'Save & Next')}

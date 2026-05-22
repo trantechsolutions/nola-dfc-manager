@@ -43,10 +43,8 @@ const EventCard = ({
 
   return (
     <div
-      className={`bg-white dark:bg-slate-900 rounded-xl border overflow-hidden transition-all ${
-        isPast
-          ? 'opacity-60 border-slate-200 dark:border-slate-700'
-          : `${type.border} hover:shadow-md hover:-translate-y-0.5`
+      className={`bg-card rounded-lg border overflow-hidden transition-all ${
+        isPast ? 'opacity-60 border-border' : `${type.border} hover:shadow-md hover:-translate-y-0.5`
       } ${event.isCancelled ? 'opacity-40' : ''}`}
     >
       <div className={`h-1.5 ${type.color}`} />
@@ -58,7 +56,7 @@ const EventCard = ({
               onBlur={() => setEditing(false)}
               onChange={handleTypeSelect}
               defaultValue={effectiveType}
-              className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white outline-none cursor-pointer"
+              className="text-xs font-bold px-2 py-0.5 rounded border border-border bg-card outline-none cursor-pointer"
             >
               {Object.entries(EVENT_TYPES).map(([key, et]) => (
                 <option key={key} value={key}>
@@ -69,27 +67,27 @@ const EventCard = ({
           ) : (
             <button
               onClick={canEdit ? () => setEditing(true) : undefined}
-              className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded flex items-center gap-1 ${type.colorLight} ${canEdit ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+              className={`text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1 ${type.colorLight} ${canEdit ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
               title={canEdit ? t('schedule.clickToChangeType') : undefined}
             >
               {type.label}
               {dbEvent?.typeLocked && <Lock size={8} className="opacity-60" />}
             </button>
           )}
-          <span className="text-[11px] font-bold text-slate-400">{event.displayDate}</span>
+          <span className="text-xs font-semibold text-muted-foreground">{event.displayDate}</span>
         </div>
         <h4
-          className={`font-black text-slate-900 dark:text-white text-sm leading-tight mb-3 ${event.isCancelled ? 'line-through' : ''}`}
+          className={`font-bold text-foreground text-sm leading-tight mb-3 ${event.isCancelled ? 'line-through' : ''}`}
         >
           {event.title}
         </h4>
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-            <Clock size={12} className="text-slate-400 shrink-0" />
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock size={12} className="text-muted-foreground shrink-0" />
             <span className="font-medium">{event.displayTime}</span>
           </div>
-          <div className="flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400">
-            <MapPin size={12} className="text-slate-400 shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2 text-xs text-muted-foreground">
+            <MapPin size={12} className="text-muted-foreground shrink-0 mt-0.5" />
             <span className="font-medium leading-tight" title={event.location}>
               {event.location}
             </span>
@@ -100,26 +98,26 @@ const EventCard = ({
         {dbEvent && onManageExpenses && (
           <button
             onClick={() => onManageExpenses(dbEvent)}
-            className="mt-3 w-full flex items-center justify-between px-3 py-2 rounded-lg border border-dashed border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all group"
+            className="mt-3 w-full flex items-center justify-between px-3 py-2 rounded-lg border border-dashed border-border hover:border-border dark:hover:border-border hover:bg-background transition-all group"
           >
             {expenseSummary && expenseSummary.total > 0 ? (
               <>
-                <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
-                  <DollarSign size={11} className="text-slate-400" />
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                  <DollarSign size={11} className="text-muted-foreground" />
                   {expenseSummary.paid}/{expenseSummary.count} {t('schedule.paid').toLowerCase()}
                 </span>
                 {expenseSummary.remaining > 0 ? (
-                  <span className="text-[10px] font-black text-amber-600 bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
                     ${expenseSummary.remaining.toFixed(2)} {t('schedule.due')}
                   </span>
                 ) : (
-                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded flex items-center gap-0.5">
                     <CheckCircle2 size={9} /> {t('schedule.paid')}
                   </span>
                 )}
               </>
             ) : (
-              <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 group-hover:text-slate-600 mx-auto">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground group-hover:text-foreground mx-auto">
                 <DollarSign size={11} /> {t('schedule.manageExpenses')}
               </span>
             )}
@@ -136,14 +134,12 @@ const NextUpBanner = ({ event }) => {
   if (!event) return null;
   const type = EVENT_TYPES[event.eventType] || EVENT_TYPES.event;
   return (
-    <div
-      className={`rounded-2xl border ${type.border} bg-white dark:bg-slate-900 p-4 flex items-center gap-4 shadow-sm dark:shadow-none`}
-    >
+    <div className={`rounded-lg border ${type.border} bg-card p-4 flex items-center gap-4 shadow-sm`}>
       <div className={`w-1 self-stretch rounded-full ${type.color}`} />
       <div className="flex-grow min-w-0">
-        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{t('schedule.nextUp')}</p>
-        <p className="font-black text-slate-900 dark:text-white text-sm truncate">{event.title}</p>
-        <div className="flex items-center gap-3 mt-1 text-[11px] font-bold text-slate-400">
+        <p className="text-xs font-bold text-muted-foreground mb-0.5">{t('schedule.nextUp')}</p>
+        <p className="font-bold text-foreground text-sm truncate">{event.title}</p>
+        <div className="flex items-center gap-3 mt-1 text-xs font-semibold text-muted-foreground">
           <span className="flex items-center gap-1">
             <Calendar size={11} />
             {event.displayDate}
@@ -158,11 +154,7 @@ const NextUpBanner = ({ event }) => {
           </span>
         </div>
       </div>
-      <span
-        className={`shrink-0 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg ${type.colorLight}`}
-      >
-        {type.label}
-      </span>
+      <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg ${type.colorLight}`}>{type.label}</span>
     </div>
   );
 };
@@ -273,31 +265,31 @@ export default function ScheduleView({
   const hasFilters = typeFilter !== 'all' || searchTerm;
 
   const FilterBar = () => (
-    <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none space-y-3">
+    <div className="bg-card p-4 rounded-lg border border-border shadow-sm space-y-3">
       <div className="relative">
-        <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+        <Search className="absolute left-3 top-2.5 text-muted-foreground" size={16} />
         <input
           type="text"
           placeholder={t('schedule.searchPlaceholder')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white"
+          className="w-full pl-9 pr-8 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-ring outline-none"
         />
         {searchTerm && (
           <button
             onClick={() => setSearchTerm('')}
-            className="absolute right-3 top-2.5 text-slate-300 hover:text-slate-500"
+            className="absolute right-3 top-2.5 text-muted-foreground hover:text-muted-foreground"
           >
             <X size={16} />
           </button>
         )}
       </div>
       <div className="flex items-center gap-2 flex-wrap">
-        <Filter size={13} className="text-slate-400" />
-        <div className="flex flex-wrap gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+        <Filter size={13} className="text-muted-foreground" />
+        <div className="flex flex-wrap gap-1 bg-muted rounded-lg p-0.5">
           <button
             onClick={() => setTypeFilter('all')}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${typeFilter === 'all' ? 'bg-white dark:bg-slate-900 shadow-sm dark:shadow-none text-slate-900 dark:text-white' : 'text-slate-500'}`}
+            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${typeFilter === 'all' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
           >
             {t('common.all')}
           </button>
@@ -305,10 +297,8 @@ export default function ScheduleView({
             <button
               key={key}
               onClick={() => setTypeFilter(key)}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 ${
-                typeFilter === key
-                  ? 'bg-white dark:bg-slate-900 shadow-sm dark:shadow-none text-slate-900 dark:text-white'
-                  : 'text-slate-500'
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1 ${
+                typeFilter === key ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${type.dot}`} />
@@ -322,7 +312,7 @@ export default function ScheduleView({
               setTypeFilter('all');
               setSearchTerm('');
             }}
-            className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 ml-auto"
+            className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 flex items-center gap-1 ml-auto"
           >
             <X size={12} /> {t('common.reset')}
           </button>
@@ -336,8 +326,8 @@ export default function ScheduleView({
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white">{t('schedule.title')}</h2>
-          <p className="text-xs text-slate-400 font-bold mt-0.5">
+          <h2 className="text-2xl font-bold text-foreground">{t('schedule.title')}</h2>
+          <p className="text-xs text-muted-foreground font-semibold mt-0.5">
             {t('schedule.upcomingStat', { n: seasonEvents.upcoming.length })} ·{' '}
             {t('schedule.pastStat', { n: seasonEvents.past.length })}
           </p>
@@ -347,14 +337,14 @@ export default function ScheduleView({
             <button
               onClick={handleSync}
               disabled={isSyncing}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted text-foreground text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
             >
               <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
               {isSyncing ? t('schedule.syncing') : t('schedule.sync')}
             </button>
           )}
           {currentIcsUrl && (
-            <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5">
+            <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
@@ -367,32 +357,30 @@ export default function ScheduleView({
 
       {/* ── No feed warning (non-admins only) ── */}
       {!currentIcsUrl && !canEditSchedule && (
-        <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl p-4 flex items-center gap-3">
-          <AlertCircle size={18} className="text-amber-500 shrink-0" />
-          <p className="text-sm text-amber-700 font-medium">{t('schedule.noFeed')}</p>
+        <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg p-4 flex items-center gap-3">
+          <AlertCircle size={18} className="text-amber-700 dark:text-amber-400 shrink-0" />
+          <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">{t('schedule.noFeed')}</p>
         </div>
       )}
 
       {/* ── Tabs ── */}
-      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 w-fit">
+      <div className="flex gap-1 bg-muted rounded-lg p-1 w-fit">
         {ALL_TABS.map((tb) => (
           <button
             key={tb.id}
             onClick={() => setTab(tb.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-              tab === tb.id
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm dark:shadow-none'
-                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              tab === tb.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <tb.icon size={14} />
             {tb.label}
             {tb.id === 'upcoming' && seasonEvents.upcoming.length > 0 && (
               <span
-                className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
                   tab === 'upcoming'
-                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                    : 'bg-muted text-muted-foreground'
                 }`}
               >
                 {seasonEvents.upcoming.length}
@@ -408,7 +396,7 @@ export default function ScheduleView({
           <NextUpBanner event={seasonEvents.upcoming[0]} />
           <FilterBar />
           {filteredUpcoming.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-10 text-center text-slate-400 font-bold italic text-sm">
+            <div className="bg-card rounded-lg border-2 border-dashed border-border p-10 text-center text-muted-foreground font-semibold italic text-sm">
               {hasFilters ? t('schedule.noFilterMatch') : t('schedule.noUpcoming')}
             </div>
           ) : (
@@ -436,7 +424,7 @@ export default function ScheduleView({
         <>
           <FilterBar />
           {filteredPast.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-10 text-center text-slate-400 font-bold italic text-sm">
+            <div className="bg-card rounded-lg border-2 border-dashed border-border p-10 text-center text-muted-foreground font-semibold italic text-sm">
               {hasFilters ? t('schedule.noFilterMatch') : t('schedule.noPast')}
             </div>
           ) : (

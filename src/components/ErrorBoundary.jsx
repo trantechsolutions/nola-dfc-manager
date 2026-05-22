@@ -31,14 +31,14 @@ export default class ErrorBoundary extends Component {
           <AlertTriangle size={24} className="text-red-600 dark:text-red-400" />
         </div>
         <div>
-          <p className="font-black text-slate-800 dark:text-white text-sm">Something went wrong</p>
-          <p className="text-xs text-slate-400 mt-1 max-w-xs">
+          <p className="font-bold text-foreground text-sm">Something went wrong</p>
+          <p className="text-xs text-muted-foreground mt-1 max-w-xs">
             {this.state.error?.message || 'An unexpected error occurred in this section.'}
           </p>
         </div>
         <button
           onClick={this.handleReset}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-muted text-foreground hover:bg-muted transition-colors"
         >
           <RefreshCw size={12} /> Try again
         </button>

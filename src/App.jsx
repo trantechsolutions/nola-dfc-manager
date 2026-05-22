@@ -375,7 +375,7 @@ function App() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-3">
           <div className="w-10 h-10 border-4 border-blue-200 dark:border-blue-800 border-t-blue-500 rounded-full animate-spin mx-auto" />
-          <p className="text-sm font-bold text-slate-400 dark:text-slate-500">{t('common.loading')}</p>
+          <p className="text-sm font-semibold text-muted-foreground">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -393,7 +393,7 @@ function App() {
                 <LoginView />
                 <button
                   onClick={() => navigate('/calendar')}
-                  className="absolute top-4 right-4 bg-white/20 px-4 py-2 rounded-xl text-white font-bold"
+                  className="absolute top-4 right-4 bg-white/20 px-4 py-2 rounded-lg text-white font-semibold"
                 >
                   📅 Calendar
                 </button>
@@ -539,15 +539,15 @@ function App() {
       <DataContext.Provider value={dataContextValue}>
         <FinanceContext.Provider value={financeContextValue}>
           <ScheduleContext.Provider value={scheduleContextValue}>
-            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors">
+            <div className="min-h-screen bg-background flex flex-col transition-colors">
               {/* ═══ IMPERSONATION BANNER ═══ */}
               {viewingAsParent && (
                 <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
-                  <div className="flex items-center gap-2 text-sm font-bold">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
                     <Eye size={14} />
                     <span>
                       {t('impersonation.viewingAs')}{' '}
-                      <span className="font-black">
+                      <span className="font-bold">
                         {impersonatingAs.firstName} {impersonatingAs.lastName}
                       </span>
                       {impersonatingAs.guardians?.[0]?.name && (
@@ -560,7 +560,7 @@ function App() {
                       setImpersonatingAs(null);
                       navigate('/dashboard');
                     }}
-                    className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-black transition-colors"
+                    className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold transition-colors"
                   >
                     {t('common.exit')}
                   </button>
@@ -572,7 +572,7 @@ function App() {
                 <MobileHeader />
                 <MobileMenu />
 
-                <main className="flex-grow p-4 md:p-8 pb-32 md:pb-8 max-w-6xl mx-auto w-full dark:text-slate-100">
+                <main className="flex-grow p-4 md:p-8 pb-32 md:pb-8 max-w-6xl mx-auto w-full">
                   <AppRoutes
                     user={user}
                     club={club}

@@ -5,9 +5,9 @@ import { useT } from '../i18n/I18nContext';
 import { getSeasonForDate } from '../utils/seasonUtils';
 
 const CATEGORY_COLORS = {
-  TOU: 'bg-amber-50 text-amber-700',
+  TOU: 'bg-amber-50 text-amber-700 dark:text-amber-300',
   LEA: 'bg-orange-50 text-orange-700',
-  OPE: 'bg-slate-100 text-slate-600',
+  OPE: 'bg-muted text-foreground',
   FRI: 'bg-rose-50 text-rose-700',
 };
 
@@ -130,20 +130,18 @@ export default function EventExpenseModal({
   const existingTitles = new Set(expenses.map((tx) => tx.title.toLowerCase()));
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center p-4 z-50">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl dark:shadow-none w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center p-4 z-50">
+      <div className="bg-card rounded-lg shadow-md w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className={`px-6 py-4 shrink-0 ${eventType.color} text-white`}>
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[9px] font-black uppercase tracking-widest opacity-70 mb-0.5">
-                {t('expenses.title', { type: eventType.label })}
-              </p>
-              <h3 className="font-bold text-lg leading-tight">{dbEvent.title}</h3>
+              <p className="text-xs font-bold opacity-70 mb-0.5">{t('expenses.title', { type: eventType.label })}</p>
+              <h3 className="font-semibold text-lg leading-tight">{dbEvent.title}</h3>
               <p className="text-xs opacity-80 mt-1">{eventDate}</p>
               {dbEvent.location && <p className="text-xs opacity-70 mt-0.5">{dbEvent.location}</p>}
             </div>
-            <button onClick={onClose} className="text-white/60 hover:text-white font-bold text-xl ml-4">
+            <button onClick={onClose} className="text-white/60 hover:text-white font-semibold text-xl ml-4">
               &times;
             </button>
           </div>
@@ -151,23 +149,22 @@ export default function EventExpenseModal({
 
         <div className="overflow-y-auto flex-1">
           {/* Summary bar */}
-          <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
+          <div className="px-6 py-3 bg-background border-b border-border flex items-center justify-between text-xs">
             <div className="flex items-center gap-4">
-              <span className="font-bold text-slate-500 dark:text-slate-400">
-                {t('expenses.planned')}{' '}
-                <span className="text-slate-900 dark:text-white">${totalPlanned.toFixed(2)}</span>
+              <span className="font-semibold text-muted-foreground">
+                {t('expenses.planned')} <span className="text-foreground">${totalPlanned.toFixed(2)}</span>
               </span>
-              <span className="font-bold text-emerald-600">
+              <span className="font-semibold text-emerald-700 dark:text-emerald-400">
                 {t('expenses.paidLabel')} ${totalPaid.toFixed(2)}
               </span>
             </div>
             {remaining > 0 && (
-              <span className="font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+              <span className="font-bold text-amber-700 dark:text-amber-400 bg-amber-50 px-2 py-0.5 rounded-full">
                 {t('expenses.unpaid', { amount: `$${remaining.toFixed(2)}` })}
               </span>
             )}
             {remaining === 0 && expenses.length > 0 && (
-              <span className="font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+              <span className="font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 px-2 py-0.5 rounded-full">
                 {t('expenses.allPaid')}
               </span>
             )}
@@ -176,9 +173,9 @@ export default function EventExpenseModal({
           {/* Existing expenses */}
           <div className="px-6 py-4 space-y-2">
             {expenses.length === 0 ? (
-              <div className="text-center py-6 text-slate-400">
+              <div className="text-center py-6 text-muted-foreground">
                 <Receipt size={24} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm font-bold">{t('expenses.noExpenses')}</p>
+                <p className="text-sm font-semibold">{t('expenses.noExpenses')}</p>
                 <p className="text-xs mt-0.5">{t('expenses.addExpenseHint')}</p>
               </div>
             ) : (
@@ -189,10 +186,10 @@ export default function EventExpenseModal({
                 return (
                   <div
                     key={tx.id}
-                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
                       tx.cleared
                         ? 'bg-emerald-50/50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700'
-                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 border-dashed'
+                        : 'bg-card border-border border-dashed'
                     }`}
                   >
                     <button
@@ -201,7 +198,7 @@ export default function EventExpenseModal({
                       title={tx.cleared ? t('expenses.markUnpaid') : t('expenses.markPaid')}
                     >
                       {tx.cleared ? (
-                        <CheckCircle2 size={20} className="text-emerald-500" />
+                        <CheckCircle2 size={20} className="text-emerald-700 dark:text-emerald-400" />
                       ) : (
                         <Clock size={20} className="text-amber-400" />
                       )}
@@ -209,33 +206,35 @@ export default function EventExpenseModal({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                            CATEGORY_COLORS[tx.category] || 'bg-slate-100 text-slate-600'
+                          className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                            CATEGORY_COLORS[tx.category] || 'bg-muted text-foreground'
                           }`}
                         >
                           {CATEGORY_LABELS[tx.category] || tx.category}
                         </span>
                         <span
-                          className={`text-sm font-bold truncate ${tx.cleared ? 'text-slate-500 line-through' : 'text-slate-800 dark:text-white'}`}
+                          className={`text-sm font-semibold truncate ${tx.cleared ? 'text-muted-foreground line-through' : 'text-foreground'}`}
                         >
                           {tx.title}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] text-slate-400 font-medium">{txDate}</span>
+                        <span className="text-xs text-muted-foreground font-medium">{txDate}</span>
                         {accountMap[tx.accountId]?.name && (
-                          <span className="text-[10px] text-slate-400 font-medium">
+                          <span className="text-xs text-muted-foreground font-medium">
                             · {accountMap[tx.accountId].name}
                           </span>
                         )}
                       </div>
                     </div>
-                    <span className={`font-black text-sm shrink-0 ${tx.cleared ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <span
+                      className={`font-bold text-sm shrink-0 ${tx.cleared ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}
+                    >
                       ${Math.abs(tx.amount).toFixed(2)}
                     </span>
                     <button
                       onClick={() => onDeleteExpense(tx.id)}
-                      className="shrink-0 text-slate-300 hover:text-red-500 transition-colors"
+                      className="shrink-0 text-muted-foreground hover:text-red-700 dark:text-red-400 transition-colors"
                       title={t('expenses.deleteExpense')}
                     >
                       <Trash2 size={14} />
@@ -249,9 +248,7 @@ export default function EventExpenseModal({
           {/* Quick-add templates */}
           {!adding && (
             <div className="px-6 pb-4">
-              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                {t('expenses.suggested')}
-              </p>
+              <p className="text-xs font-bold text-muted-foreground mb-2">{t('expenses.suggested')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {templates.map((tmpl, i) => {
                   const alreadyAdded = existingTitles.has(tmpl.title.toLowerCase());
@@ -260,10 +257,10 @@ export default function EventExpenseModal({
                       key={i}
                       onClick={() => handleQuickAdd(tmpl)}
                       disabled={alreadyAdded}
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                         alreadyAdded
-                          ? 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-default'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-800 dark:hover:text-white'
+                          ? 'bg-background text-muted-foreground cursor-default'
+                          : 'bg-muted text-foreground hover:bg-muted hover:text-foreground dark:hover:text-white'
                       }`}
                     >
                       {alreadyAdded ? <CheckCircle2 size={11} /> : <Plus size={11} />}
@@ -276,7 +273,7 @@ export default function EventExpenseModal({
                     setForm({ title: '', amount: '', category: 'OPE', accountId: defaultAccountId });
                     setAdding(true);
                   }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 dark:text-blue-400 hover:bg-blue-100 transition-all"
                 >
                   <Plus size={11} /> {t('expenses.custom')}
                 </button>
@@ -287,12 +284,10 @@ export default function EventExpenseModal({
           {/* Add expense form */}
           {adding && (
             <div className="px-6 pb-4">
-              <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-3">
+              <div className="bg-background border border-border rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
-                    {t('expenses.newExpense')}
-                  </p>
-                  <button onClick={() => setAdding(false)} className="text-slate-400 hover:text-slate-600">
+                  <p className="text-xs font-bold text-muted-foreground">{t('expenses.newExpense')}</p>
+                  <button onClick={() => setAdding(false)} className="text-muted-foreground hover:text-foreground">
                     <X size={14} />
                   </button>
                 </div>
@@ -301,11 +296,11 @@ export default function EventExpenseModal({
                   placeholder={t('expenses.description')}
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-800 dark:text-white"
+                  className="w-full border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-ring outline-none"
                 />
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+                    <label className="block text-xs font-semibold text-muted-foreground mb-0.5">
                       {t('expenses.amountLabel')}
                     </label>
                     <input
@@ -315,17 +310,17 @@ export default function EventExpenseModal({
                       placeholder="0.00"
                       value={form.amount}
                       onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                      className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-800 dark:text-white"
+                      className="w-full border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-ring outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+                    <label className="block text-xs font-semibold text-muted-foreground mb-0.5">
                       {t('expenses.category')}
                     </label>
                     <select
                       value={form.category}
                       onChange={(e) => setForm({ ...form, category: e.target.value })}
-                      className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-800 dark:text-white"
+                      className="w-full border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-ring outline-none"
                     >
                       <option value="OPE">{CATEGORY_LABELS.OPE}</option>
                       <option value="TOU">{CATEGORY_LABELS.TOU}</option>
@@ -334,13 +329,13 @@ export default function EventExpenseModal({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+                    <label className="block text-xs font-semibold text-muted-foreground mb-0.5">
                       {t('txModal.account')}
                     </label>
                     <select
                       value={form.accountId || ''}
                       onChange={(e) => setForm({ ...form, accountId: e.target.value })}
-                      className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:bg-slate-800 dark:text-white"
+                      className="w-full border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-ring outline-none"
                     >
                       <option value="">{t('txModal.noAccount')}</option>
                       {HOLDINGS.filter((h) => h !== 'none' && accountsByHolding[h]?.length > 0).map((h) => (
@@ -358,14 +353,14 @@ export default function EventExpenseModal({
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={() => setAdding(false)}
-                    className="px-3 py-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                    className="px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted rounded-lg transition-colors"
                   >
                     {t('common.cancel')}
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={saving || !form.title || !form.amount}
-                    className="px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1"
+                    className="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1"
                   >
                     <DollarSign size={12} />
                     {saving ? t('common.saving') : t('expenses.addAsDraft')}

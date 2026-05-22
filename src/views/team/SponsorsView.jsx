@@ -135,33 +135,33 @@ export default function SponsorsView({
   return (
     <div className="space-y-6">
       {/* TABS HEADER */}
-      <div className="flex flex-wrap gap-2 mb-6 bg-slate-200 dark:bg-slate-700 p-1 rounded-xl w-fit">
+      <div className="flex flex-wrap gap-2 mb-6 bg-muted p-1 rounded-lg w-fit">
         <button
           onClick={() => setActiveTab('undistributed')}
-          className={`px-4 md:px-6 py-2 rounded-lg font-bold text-sm transition-all ${
+          className={`px-4 md:px-6 py-2 rounded-lg font-semibold text-sm transition-all ${
             activeTab === 'undistributed'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm dark:shadow-none'
-              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           Undistributed ({undistributedSponsors.length})
         </button>
         <button
           onClick={() => setActiveTab('distributed')}
-          className={`px-4 md:px-6 py-2 rounded-lg font-bold text-sm transition-all ${
+          className={`px-4 md:px-6 py-2 rounded-lg font-semibold text-sm transition-all ${
             activeTab === 'distributed'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm dark:shadow-none'
-              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           Distribution History
         </button>
         <button
           onClick={() => setActiveTab('fundraising')}
-          className={`px-4 md:px-6 py-2 rounded-lg font-bold text-sm transition-all ${
+          className={`px-4 md:px-6 py-2 rounded-lg font-semibold text-sm transition-all ${
             activeTab === 'fundraising'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm dark:shadow-none'
-              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           Player Fundraising
@@ -172,16 +172,16 @@ export default function SponsorsView({
       {activeTab === 'undistributed' && (
         <div className="animate-in fade-in duration-300">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-            <h3 className="font-black text-slate-800 dark:text-white flex items-center gap-2">
-              <Lock size={18} className="text-amber-500" /> Pending Distributions
+            <h3 className="font-bold text-foreground flex items-center gap-2">
+              <Lock size={18} className="text-amber-700 dark:text-amber-400" /> Pending Distributions
             </h3>
             {undistributedSponsors.length > 1 && (
               <button
                 onClick={handleDistributeAll}
                 disabled={isDistributingAll || !isBudgetLocked}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-sm transition-all shadow-md ${
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-md ${
                   !isBudgetLocked
-                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    ? 'bg-slate-300 text-muted-foreground cursor-not-allowed'
                     : isDistributingAll
                       ? 'bg-amber-500 text-white cursor-wait'
                       : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
@@ -204,22 +204,20 @@ export default function SponsorsView({
 
           {/* Progress Bar (visible during Distribute All) */}
           {isDistributingAll && (
-            <div className="mb-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-amber-200 dark:border-amber-700 shadow-sm dark:shadow-none animate-in fade-in duration-200">
+            <div className="mb-4 bg-card p-4 rounded-lg border border-amber-200 dark:border-amber-700 shadow-sm animate-in fade-in duration-200">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-                  Processing
-                </span>
-                <span className="text-xs font-black text-slate-700 dark:text-slate-300">
+                <span className="text-xs font-semibold text-muted-foreground">Processing</span>
+                <span className="text-xs font-bold text-foreground">
                   {distributeAllProgress.current} of {distributeAllProgress.total}
                 </span>
               </div>
-              <div className="h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-2.5 bg-muted rounded-full overflow-hidden">
                 <div
                   className="h-full bg-emerald-500 rounded-full transition-all duration-500 ease-out"
                   style={{ width: `${(distributeAllProgress.current / distributeAllProgress.total) * 100}%` }}
                 />
               </div>
-              <p className="text-sm font-bold text-slate-600 dark:text-slate-300 mt-2 truncate">
+              <p className="text-sm font-semibold text-foreground mt-2 truncate">
                 {distributeAllProgress.currentTitle}
               </p>
             </div>
@@ -227,33 +225,33 @@ export default function SponsorsView({
 
           <div className="grid grid-cols-1 gap-4">
             {undistributedSponsors.length === 0 ? (
-              <div className="bg-slate-50 dark:bg-slate-800 p-12 rounded-2xl border border-slate-200 dark:border-slate-700 text-center text-slate-400 font-bold italic">
+              <div className="bg-background p-12 rounded-lg border border-border text-center text-muted-foreground font-semibold italic">
                 All sponsorship funds have been distributed.
               </div>
             ) : (
               sortedUndistributed.map((tx) => (
                 <div
                   key={tx.id}
-                  className={`bg-white dark:bg-slate-900 p-5 rounded-2xl border flex justify-between items-center shadow-sm dark:shadow-none ${isDistributingAll ? 'opacity-60 pointer-events-none' : ''} ${tx.category === 'SPO' ? 'border-blue-200 dark:border-blue-700' : 'border-emerald-200 dark:border-emerald-700'}`}
+                  className={`bg-card p-5 rounded-lg border flex justify-between items-center shadow-sm ${isDistributingAll ? 'opacity-60 pointer-events-none' : ''} ${tx.category === 'SPO' ? 'border-blue-200 dark:border-blue-700' : 'border-emerald-200 dark:border-emerald-700'}`}
                 >
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span
-                        className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${
+                        className={`text-xs font-bold px-2 py-0.5 rounded ${
                           tx.category === 'SPO'
-                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600'
-                            : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600'
+                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                            : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
                         }`}
                       >
                         {tx.category === 'SPO' ? 'Sponsorship' : 'Fundraising'}
                       </span>
                       {tx.playerName && (
-                        <span className="text-[10px] font-bold text-slate-400">via {tx.playerName}</span>
+                        <span className="text-xs font-semibold text-muted-foreground">via {tx.playerName}</span>
                       )}
                     </div>
-                    <p className="font-black text-slate-800 dark:text-white text-lg">{tx.title}</p>
-                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1">
-                      Amount: <span className="text-emerald-600">{formatMoney(tx.amount)}</span>
+                    <p className="font-bold text-foreground text-lg">{tx.title}</p>
+                    <p className="text-sm font-semibold text-muted-foreground mt-1">
+                      Amount: <span className="text-emerald-700 dark:text-emerald-400">{formatMoney(tx.amount)}</span>
                     </p>
                   </div>
                   <button
@@ -265,7 +263,7 @@ export default function SponsorsView({
                       setSourcePlayerId(tx.playerId || '');
                       setShowDistribute(true);
                     }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-md"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors shadow-md"
                   >
                     Distribute Funds
                   </button>
@@ -279,66 +277,61 @@ export default function SponsorsView({
       {/* --- DISTRIBUTED VIEW (RECEIPT GROUPS) --- */}
       {activeTab === 'distributed' && (
         <div className="animate-in fade-in duration-300">
-          <h3 className="font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-            <CheckCircle2 size={18} className="text-emerald-500" /> Distribution History
+          <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
+            <CheckCircle2 size={18} className="text-emerald-700 dark:text-emerald-400" /> Distribution History
           </h3>
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden">
+          <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
-                  <tr className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <thead className="bg-background border-b border-border">
+                  <tr className="text-xs font-semibold text-muted-foreground">
                     <th className="px-6 py-4">Title / Source</th>
                     <th className="px-6 py-4">Waterfall Breakdown</th>
                     <th className="px-6 py-4 text-right">Total Applied</th>
                     <th className="px-6 py-4 text-center">Undo</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
+                <tbody className="divide-y divide-border">
                   {historyList.length === 0 ? (
                     <tr>
-                      <td colSpan="4" className="px-6 py-12 text-center text-slate-400 font-bold italic">
+                      <td colSpan="4" className="px-6 py-12 text-center text-muted-foreground font-semibold italic">
                         No distributed sponsorships or fundraising found.
                       </td>
                     </tr>
                   ) : (
                     historyList.map((group) => (
-                      <tr
-                        key={group.batchId}
-                        className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors items-start"
-                      >
+                      <tr key={group.batchId} className="hover:bg-background transition-colors items-start">
                         <td className="px-6 py-4 align-top">
-                          <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">{group.title}</p>
-                          <p className="text-[10px] text-slate-400 font-medium mt-1">
+                          <p className="font-semibold text-foreground text-sm">{group.title}</p>
+                          <p className="text-xs text-muted-foreground font-medium mt-1">
                             {group.date?.seconds ? new Date(group.date.seconds * 1000).toLocaleDateString() : 'Pending'}
                           </p>
                         </td>
                         <td className="px-6 py-4 align-top">
                           <div className="flex flex-col gap-2">
-                            <span className="text-[10px] font-black px-2 py-1 rounded uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 text-blue-600 w-fit">
+                            <span className="text-xs font-bold px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 w-fit">
                               {group.recipients.length} Recipient{group.recipients.length !== 1 && 's'}
                             </span>
-                            <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+                            <div className="text-xs text-muted-foreground space-y-1">
                               {group.recipients.map((r, i) => (
                                 <div
                                   key={i}
-                                  className="flex justify-between max-w-[200px] border-b border-slate-100 dark:border-slate-700 last:border-0 pb-1 last:pb-0"
+                                  className="flex justify-between max-w-[200px] border-b border-border last:border-0 pb-1 last:pb-0"
                                 >
-                                  <span className="font-medium text-slate-700 dark:text-slate-300">{r.name}</span>
-                                  <span className="font-bold text-slate-900 dark:text-white">
-                                    {formatMoney(r.amount)}
-                                  </span>
+                                  <span className="font-medium text-foreground">{r.name}</span>
+                                  <span className="font-semibold text-foreground">{formatMoney(r.amount)}</span>
                                 </div>
                               ))}
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right font-black text-emerald-600 align-top">
+                        <td className="px-6 py-4 text-right font-bold text-emerald-700 dark:text-emerald-400 align-top">
                           {formatMoney(group.totalAmount)}
                         </td>
                         <td className="px-6 py-4 text-center align-top">
                           <button
                             onClick={() => onReset(group.batchId, group.originalTxId)}
-                            className="text-slate-300 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30"
+                            className="text-muted-foreground hover:text-red-700 dark:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30"
                             title="Undo this distribution"
                           >
                             <Undo2 size={16} />
@@ -357,52 +350,49 @@ export default function SponsorsView({
       {/* --- FUNDRAISING ROLLUP VIEW --- */}
       {activeTab === 'fundraising' && (
         <div className="animate-in fade-in duration-300">
-          <h3 className="font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-            <TrendingUp size={18} className="text-blue-500" /> Player Fundraising Totals
+          <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
+            <TrendingUp size={18} className="text-blue-700 dark:text-blue-400" /> Player Fundraising Totals
           </h3>
           <div className="space-y-3">
             {fundraisingByPlayer.length === 0 ? (
-              <div className="bg-slate-50 dark:bg-slate-800 p-12 rounded-2xl border border-slate-200 dark:border-slate-700 text-center text-slate-400 font-bold italic">
+              <div className="bg-background p-12 rounded-lg border border-border text-center text-muted-foreground font-semibold italic">
                 No fundraising activity recorded for this season yet.
               </div>
             ) : (
               fundraisingByPlayer.map((player) => (
-                <div
-                  key={player.id}
-                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden"
-                >
+                <div key={player.id} className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
                   <button
                     onClick={() => setExpandedPlayerId(expandedPlayerId === player.id ? null : player.id)}
-                    className="w-full flex justify-between items-center p-5 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    className="w-full flex justify-between items-center p-5 hover:bg-background transition-colors"
                   >
-                    <span className="font-black text-slate-800 dark:text-white text-lg flex items-center gap-3">
-                      <span className="flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-700 font-black h-8 w-8 rounded-full text-sm">
+                    <span className="font-bold text-foreground text-lg flex items-center gap-3">
+                      <span className="flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold h-8 w-8 rounded-full text-sm">
                         {player.jerseyNumber || '-'}
                       </span>
                       {player.firstName} {player.lastName}
                     </span>
                     <div className="flex items-center gap-4">
-                      <span className="font-black text-emerald-600 text-lg">
+                      <span className="font-bold text-emerald-700 dark:text-emerald-400 text-lg">
                         {formatMoney(player.fundraisingTotal)}
                       </span>
                       <ChevronDown
                         size={20}
-                        className={`text-slate-400 transition-transform duration-200 ${expandedPlayerId === player.id ? 'rotate-180' : ''}`}
+                        className={`text-muted-foreground transition-transform duration-200 ${expandedPlayerId === player.id ? 'rotate-180' : ''}`}
                       />
                     </div>
                   </button>
 
                   {expandedPlayerId === player.id && (
-                    <div className="bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 p-4">
+                    <div className="bg-background border-t border-border p-4">
                       <table className="w-full text-left text-sm">
                         <tbody>
                           {player.fundraisingTxs.map((tx) => (
-                            <tr key={tx.id} className="border-b border-slate-200/50 last:border-0">
-                              <td className="py-3 px-2 font-bold text-slate-700 dark:text-slate-300">{tx.title}</td>
-                              <td className="py-3 px-2 text-slate-500 dark:text-slate-400 text-xs font-medium">
+                            <tr key={tx.id} className="border-b border-border/50 last:border-0">
+                              <td className="py-3 px-2 font-semibold text-foreground">{tx.title}</td>
+                              <td className="py-3 px-2 text-muted-foreground text-xs font-medium">
                                 {tx.date?.seconds ? new Date(tx.date.seconds * 1000).toLocaleDateString() : 'N/A'}
                               </td>
-                              <td className="py-3 px-2 text-right font-black text-emerald-600">
+                              <td className="py-3 px-2 text-right font-bold text-emerald-700 dark:text-emerald-400">
                                 {formatMoney(tx.amount)}
                               </td>
                             </tr>
@@ -420,45 +410,41 @@ export default function SponsorsView({
 
       {/* --- WATERFALL MODAL --- */}
       {showDistribute && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-black text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-              <ArrowDownNarrowWide className="text-emerald-500" /> Waterfall Distribution
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
+          <div className="bg-card rounded-lg p-8 w-full max-w-md shadow-md animate-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-bold text-foreground mb-6 flex items-center gap-2">
+              <ArrowDownNarrowWide className="text-emerald-700 dark:text-emerald-400" /> Waterfall Distribution
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">
-                  Sponsor / Source
-                </label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Sponsor / Source</label>
                 <input
                   type="text"
                   value={distTitle}
                   onChange={(e) => setDistTitle(e.target.value)}
-                  className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-800 dark:text-white"
+                  className="w-full border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">
-                  Total Amount
-                </label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">Total Amount</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-3 text-slate-400 font-bold">$</span>
+                  <span className="absolute left-4 top-3 text-muted-foreground font-semibold">$</span>
                   <input
                     type="number"
                     value={distAmount}
                     onChange={(e) => setDistAmount(e.target.value)}
-                    className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 pl-8 font-black focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-800 dark:text-white"
+                    className="w-full border border-border rounded-lg p-3 pl-8 font-bold focus:ring-2 focus:ring-emerald-500 outline-none"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">
                   Apply Primary Credit To
                 </label>
                 <select
                   value={sourcePlayerId}
                   onChange={(e) => setSourcePlayerId(e.target.value)}
-                  className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 font-bold text-sm focus:ring-2 focus:ring-emerald-500 outline-none dark:bg-slate-800 dark:text-white"
+                  className="w-full border border-border rounded-lg p-3 font-semibold text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                 >
                   <option value="">Team Pool (Split Evenly)</option>
                   {seasonalPlayers.map((p) => (
@@ -467,18 +453,18 @@ export default function SponsorsView({
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-slate-400 mt-2">
+                <p className="text-xs text-muted-foreground mt-2">
                   Any funds exceeding a player's remaining fee will automatically waterfall to the rest of the team.
                 </p>
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
+              <div className="flex gap-3 pt-4 border-t border-border">
                 <button
                   onClick={() => {
                     setShowDistribute(false);
                     setOriginalTxId(null);
                   }}
-                  className="flex-1 py-3 font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                  className="flex-1 py-3 font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
@@ -488,7 +474,7 @@ export default function SponsorsView({
                     setShowDistribute(false);
                     setOriginalTxId(null);
                   }}
-                  className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl transition-all shadow-lg shadow-emerald-600/20"
+                  className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all shadow-lg shadow-emerald-600/20"
                 >
                   Apply Waterfall
                 </button>

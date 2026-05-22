@@ -3,33 +3,53 @@ import { useNavigate } from 'react-router-dom';
 import SeasonPicker from '../../components/SeasonPicker';
 import OnboardingChecklist from '../../components/OnboardingChecklist';
 import {
-  TrendingDown,
   Users,
-  DollarSign,
-  Activity,
   Archive,
   Edit,
   Search,
-  Shield,
   ChevronRight,
-  Wallet,
   AlertCircle,
-  Landmark,
   CheckCircle2,
   FileCheck2,
   Camera,
   LayoutDashboard,
   UsersRound,
-  TrendingUp,
-  Percent,
-  Clock,
+  ArrowUp,
+  ArrowDown,
+  Minus,
 } from 'lucide-react';
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup } from '../../utils/ageGroup';
 import JerseyBadge from '../../components/JerseyBadge';
-import { TRACKED_HOLDINGS, HOLDING_LABELS, HOLDING_ICONS, HOLDING_COLORS } from '../../utils/holdings';
+import { TRACKED_HOLDINGS, HOLDING_LABELS, HOLDING_ICONS } from '../../utils/holdings';
+
+// Small flat KPI tile. status.tone: 'good' | 'warn' | 'bad' | 'muted'.
+function KpiTile({ label, value, valueTone = 'default', status }) {
+  const valueColor =
+    valueTone === 'bad' ? 'text-destructive' : valueTone === 'good' ? 'text-success' : 'text-foreground';
+  const toneClass = {
+    good: 'text-success',
+    warn: 'text-warning',
+    bad: 'text-destructive',
+    muted: 'text-muted-foreground',
+  }[status?.tone || 'muted'];
+  const Icon = status?.tone === 'good' ? ArrowUp : status?.tone === 'bad' ? ArrowDown : Minus;
+  return (
+    <div className="bg-card border border-border rounded-lg p-4 md:p-5 flex flex-col gap-1.5">
+      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
+      <p className={`text-2xl font-bold tracking-tight tabular-nums ${valueColor}`}>{value}</p>
+      {status?.text && (
+        <p className={`text-xs font-medium flex items-center gap-1 ${toneClass}`}>
+          <Icon size={12} strokeWidth={2.5} />
+          <span>{status.text}</span>
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function TeamOverviewView({
+  selectedTeam,
   players,
   archivedPlayers = [],
   teamBalance,
@@ -200,9 +220,35 @@ export default function TeamOverviewView({
     { id: 'roster', label: t('overview.roster'), icon: UsersRound },
   ];
 
+  // Health summary line — one terse status string for the page header.
+  const healthSummary = useMemo(() => {
+    const bits = [];
+    bits.push(`${players.length} ${tp('common.player', players.length)}`);
+    if (canViewFinancials && baseFee > 0 && players.length > 0) {
+      bits.push(`${paymentStats.collectionRate}% collected`);
+      if (paymentStats.totalOutstanding > 0) {
+        bits.push(`${formatMoney(paymentStats.totalOutstanding)} outstanding`);
+      }
+    }
+    const docsMissing = complianceStats.total - complianceStats.fullyCompliant;
+    if (docsMissing > 0) bits.push(`${docsMissing} docs missing`);
+    return bits.join(' · ');
+  }, [players.length, canViewFinancials, baseFee, paymentStats, complianceStats, formatMoney, tp]);
+
   return (
     <div className="space-y-6 pb-20 md:pb-6">
-      <SeasonPicker seasons={seasons} selectedSeason={selectedSeason} onSeasonChange={setSelectedSeason} />
+      {/* ── PAGE HEADER ── */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 pb-4 border-b border-border">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight truncate">
+            {selectedTeam?.name || t('common.team')}
+          </h1>
+          {healthSummary && <p className="text-sm text-muted-foreground mt-1">{healthSummary}</p>}
+        </div>
+        <div className="shrink-0">
+          <SeasonPicker seasons={seasons} selectedSeason={selectedSeason} onSeasonChange={setSelectedSeason} compact />
+        </div>
+      </div>
 
       {/* ── Draft budget notice ── */}
       {!isFinalized &&
@@ -213,23 +259,23 @@ export default function TeamOverviewView({
           const buffer = selectedSeasonData?.bufferPercent ?? 0;
           const gap = projectedSpend - projIncome;
           return (
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 border border-amber-300 dark:border-amber-700 border-dashed rounded-2xl p-4 md:p-5">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 border border-amber-300 dark:border-amber-700 border-dashed rounded-lg p-4 md:p-5">
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-xl shrink-0 mt-0.5">
+                <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-lg shrink-0 mt-0.5">
                   <AlertCircle size={18} className="text-amber-600 dark:text-amber-400" />
                 </div>
                 <div className="flex-grow min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-black text-amber-800 dark:text-amber-200">
+                    <p className="text-sm font-bold text-amber-800 dark:text-amber-200">
                       {t('overview.budgetDraftAlert')}
                     </p>
-                    <span className="text-[9px] font-black bg-amber-200 dark:bg-amber-800 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                    <span className="text-xs font-bold bg-amber-200 dark:bg-amber-800 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full animate-pulse">
                       {t('overview.notFinalized')}
                     </span>
                   </div>
                   <p className="text-xs text-amber-700 dark:text-amber-300 mt-1.5 leading-relaxed">
                     {t('overview.estimatedFee')}{' '}
-                    <span className="font-black text-amber-900 dark:text-amber-100">{formatMoney(baseFee)}</span>
+                    <span className="font-bold text-amber-900 dark:text-amber-100">{formatMoney(baseFee)}</span>
                     {rosterCount > 0 && (
                       <span className="text-amber-600 dark:text-amber-400">
                         {' '}
@@ -244,7 +290,7 @@ export default function TeamOverviewView({
                     )}
                   </p>
                   {projectedSpend > 0 && (
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[10px] font-bold">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs font-semibold">
                       <span className="text-red-600 dark:text-red-400">
                         {t('overview.projSpend')} {formatMoney(projectedSpend)}
                       </span>
@@ -260,7 +306,7 @@ export default function TeamOverviewView({
                       )}
                     </div>
                   )}
-                  <p className="text-[10px] text-amber-500 dark:text-amber-400 mt-2">{t('overview.draftHelp')}</p>
+                  <p className="text-xs text-amber-500 dark:text-amber-400 mt-2">{t('overview.draftHelp')}</p>
                 </div>
               </div>
             </div>
@@ -268,15 +314,13 @@ export default function TeamOverviewView({
         })()}
 
       {/* ── Tabs ── */}
-      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 w-fit">
+      <div className="flex gap-1 bg-muted rounded-lg p-1 w-fit">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-              tab === t.id
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm dark:shadow-none'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              tab === t.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <t.icon size={14} />
@@ -297,110 +341,73 @@ export default function TeamOverviewView({
             navigate={navigate}
           />
 
-          {/* ── Primary stat cards (financial — hidden for coaches) ── */}
+          {/* ── KPI strip: flat, status-aware ── */}
           {canViewFinancials && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-              {/* Available Cash */}
-              <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white p-4 md:p-5 rounded-2xl">
-                <div className="flex items-center justify-between mb-3">
-                  <DollarSign size={18} className="opacity-70" />
-                  {!isFinalized && (
-                    <span className="text-[9px] font-bold bg-white/20 px-1.5 py-0.5 rounded">Draft</span>
-                  )}
-                </div>
-                <p className="text-xl md:text-2xl font-black tracking-tight">{formatMoney(teamBalance)}</p>
-                <p className="text-[10px] font-bold text-emerald-200 uppercase tracking-widest mt-1">
-                  {t('overview.availableCash')}
-                </p>
-              </div>
+              {/* Available Cash — overall holdings; pending shown as inline delta */}
+              <KpiTile
+                label={t('overview.availableCash')}
+                value={formatMoney(teamBalance)}
+                status={
+                  pendingDelta !== 0
+                    ? {
+                        tone: pendingDelta < 0 ? 'warn' : 'good',
+                        text: `${pendingDelta < 0 ? '−' : '+'}${formatMoney(Math.abs(pendingDelta))} pending`,
+                      }
+                    : { tone: teamBalance >= 0 ? 'good' : 'bad', text: teamBalance >= 0 ? 'healthy' : 'overdrawn' }
+                }
+              />
 
-              {/* Remaining Budget */}
-              <div
-                className={`p-4 md:p-5 rounded-2xl ${!isFinalized ? 'border-dashed ' : ''}${
-                  remainingBudget < 0
-                    ? 'bg-gradient-to-br from-red-500 to-red-600 text-white'
-                    : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <TrendingDown
-                    size={18}
-                    className={remainingBudget < 0 ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}
-                  />
-                  {!isFinalized && (
-                    <span
-                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${remainingBudget < 0 ? 'bg-white/20' : 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400'}`}
-                    >
-                      Draft
-                    </span>
-                  )}
-                </div>
-                <p
-                  className={`text-xl md:text-2xl font-black tracking-tight ${remainingBudget < 0 ? '' : 'text-slate-900 dark:text-white'}`}
-                >
-                  {formatMoney(remainingBudget)}
-                </p>
-                <p
-                  className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${remainingBudget < 0 ? 'text-red-200' : 'text-slate-400 dark:text-slate-500'}`}
-                >
-                  {t('overview.remainingBudget')}
-                  {!isFinalized ? ' (Est.)' : ''}
-                </p>
-              </div>
+              {/* Budget Left — burn % becomes the status indicator */}
+              <KpiTile
+                label={`${t('overview.remainingBudget')}${!isFinalized ? ' (est.)' : ''}`}
+                value={formatMoney(remainingBudget)}
+                valueTone={remainingBudget < 0 ? 'bad' : 'default'}
+                status={
+                  projectedSpend > 0
+                    ? {
+                        tone: spendPercentage > 90 ? 'bad' : spendPercentage > 60 ? 'warn' : 'good',
+                        text: `${Math.round(spendPercentage)}% spent`,
+                      }
+                    : { tone: 'muted', text: !isFinalized ? 'draft' : '—' }
+                }
+              />
 
-              {/* Season Fee */}
-              <div
-                className={`bg-white dark:bg-slate-900 p-4 md:p-5 rounded-2xl border ${!isFinalized && baseFee > 0 ? 'border-dashed border-amber-200 dark:border-amber-700' : 'border-slate-200 dark:border-slate-700'}`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <Wallet size={18} className="text-slate-400 dark:text-slate-500" />
-                  {!isFinalized && baseFee > 0 && (
-                    <span className="text-[8px] font-black bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded uppercase">
-                      Est.
-                    </span>
-                  )}
-                  {isFinalized && (
-                    <span className="text-[8px] font-black bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded uppercase">
-                      Locked
-                    </span>
-                  )}
-                </div>
-                <p className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  {formatMoney(baseFee)}
-                </p>
-                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
-                  {t('overview.seasonFeePlayer')}
-                </p>
-              </div>
+              {/* Season Fee — locked / draft as status */}
+              <KpiTile
+                label={t('overview.seasonFeePlayer')}
+                value={formatMoney(baseFee)}
+                status={{
+                  tone: isFinalized ? 'good' : 'warn',
+                  text: isFinalized ? 'locked' : 'draft',
+                }}
+              />
 
-              {/* Collection Rate */}
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-4 md:p-5 rounded-2xl">
-                <div className="flex items-center justify-between mb-3">
-                  <Percent size={18} className="opacity-70" />
-                </div>
-                <p className="text-xl md:text-2xl font-black tracking-tight">{paymentStats.collectionRate}%</p>
-                <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-1">
-                  {t('overview.collectionRate')}
-                </p>
-              </div>
+              {/* Collection rate */}
+              <KpiTile
+                label={t('overview.collectionRate')}
+                value={`${paymentStats.collectionRate}%`}
+                status={{
+                  tone: paymentStats.collectionRate >= 90 ? 'good' : paymentStats.collectionRate >= 60 ? 'warn' : 'bad',
+                  text: `${paymentStats.paid.length}/${paymentStats.nonWaived.length} paid`,
+                }}
+              />
             </div>
           )}
 
           {/* ── Payment status bar ── */}
           {canViewFinancials && baseFee > 0 && players.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none p-5">
+            <div className="bg-card rounded-lg border border-border shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
-                  <TrendingUp size={16} className="text-blue-600" /> {t('overview.feeCollection')}
-                </h3>
-                <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
+                <h3 className="font-semibold text-foreground text-sm">{t('overview.feeCollection')}</h3>
+                <span className="text-xs font-medium text-muted-foreground">
                   {players.length} {tp('common.player', players.length)} · {formatMoney(paymentStats.totalCollected)}{' '}
                   {t('overview.collected')}
                 </span>
               </div>
 
               {/* Stacked progress bar */}
-              <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex mb-3">
+              <div className="h-3 bg-muted rounded-full overflow-hidden flex mb-3">
                 {paymentStats.paid.length > 0 && (
                   <div
                     className="h-full bg-emerald-500 transition-all duration-700"
@@ -425,37 +432,27 @@ export default function TeamOverviewView({
               </div>
 
               <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="bg-emerald-50 dark:bg-emerald-900/30 rounded-xl p-3">
-                  <p className="text-lg font-black text-emerald-700 dark:text-emerald-300">
-                    {paymentStats.paid.length}
-                  </p>
-                  <p className="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 uppercase tracking-widest">
-                    {t('overview.paid')}
-                  </p>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-lg font-bold text-success tabular-nums">{paymentStats.paid.length}</p>
+                  <p className="text-xs font-medium text-muted-foreground mt-0.5">{t('overview.paid')}</p>
                   {paymentStats.totalCollected > 0 && (
-                    <p className="text-[10px] font-bold text-emerald-400 dark:text-emerald-500 mt-0.5">
+                    <p className="text-xs font-medium text-muted-foreground tabular-nums mt-0.5">
                       {formatMoney(paymentStats.totalCollected)}
                     </p>
                   )}
                 </div>
-                <div className="bg-amber-50 dark:bg-amber-900/30 rounded-xl p-3">
-                  <p className="text-lg font-black text-amber-700 dark:text-amber-300">
-                    {paymentStats.outstanding.length}
-                  </p>
-                  <p className="text-[10px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-widest">
-                    {t('overview.outstanding')}
-                  </p>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-lg font-bold text-warning tabular-nums">{paymentStats.outstanding.length}</p>
+                  <p className="text-xs font-medium text-muted-foreground mt-0.5">{t('overview.outstanding')}</p>
                   {paymentStats.totalOutstanding > 0 && (
-                    <p className="text-[10px] font-bold text-amber-400 dark:text-amber-500 mt-0.5">
+                    <p className="text-xs font-medium text-muted-foreground tabular-nums mt-0.5">
                       {formatMoney(paymentStats.totalOutstanding)}
                     </p>
                   )}
                 </div>
-                <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3">
-                  <p className="text-lg font-black text-slate-600 dark:text-slate-300">{paymentStats.waived.length}</p>
-                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                    {t('overview.waived')}
-                  </p>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-lg font-bold text-foreground tabular-nums">{paymentStats.waived.length}</p>
+                  <p className="text-xs font-medium text-muted-foreground mt-0.5">{t('overview.waived')}</p>
                 </div>
               </div>
             </div>
@@ -463,42 +460,41 @@ export default function TeamOverviewView({
 
           {/* ── Account holdings ── */}
           {canViewFinancials && holdingBalances.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
+            <div className="bg-card p-5 md:p-6 rounded-lg border border-border shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
-                  <Landmark size={16} className="text-indigo-600" /> {t('overview.moneyHoldings')}
-                </h3>
+                <h3 className="font-semibold text-foreground text-sm">{t('overview.moneyHoldings')}</h3>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {holdingBalances.map(({ holding, total, accounts: holdingAccounts }) => {
-                  const colors = HOLDING_COLORS[holding];
                   const IconComp = HOLDING_ICONS[holding];
                   return (
-                    <div key={holding} className={`${colors.bg} border ${colors.border} rounded-xl p-4`}>
+                    <div key={holding} className="bg-muted rounded-lg p-4">
                       <div className="flex items-center gap-3 mb-2">
-                        <div className={`p-2 rounded-lg ${colors.bg} ${colors.icon}`}>
+                        <div className="p-2 rounded-lg bg-card text-muted-foreground">
                           <IconComp size={18} />
                         </div>
                         <div className="flex-grow min-w-0">
-                          <p className="text-xs font-black text-slate-700 dark:text-slate-300 truncate">
+                          <p className="text-xs font-medium text-muted-foreground truncate">
                             {HOLDING_LABELS[holding]}
                           </p>
                           <p
-                            className={`text-lg font-black tracking-tight ${total < 0 ? 'text-red-600' : colors.text}`}
+                            className={`text-lg font-bold tracking-tight tabular-nums ${total < 0 ? 'text-destructive' : 'text-foreground'}`}
                           >
                             {formatMoney(total)}
                           </p>
                         </div>
                       </div>
                       {holdingAccounts.length > 0 && (
-                        <ul className="space-y-0.5 pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                        <ul className="space-y-0.5 pt-2 border-t border-border/60">
                           {holdingAccounts.map((a) => (
                             <li
                               key={a.id}
-                              className="flex justify-between items-center text-[11px] font-medium text-slate-500 dark:text-slate-400"
+                              className="flex justify-between items-center text-xs font-medium text-muted-foreground"
                             >
                               <span className="truncate">{a.name}</span>
-                              <span className={a.amount < 0 ? 'text-red-500' : ''}>{formatMoney(a.amount)}</span>
+                              <span className={`tabular-nums ${a.amount < 0 ? 'text-destructive' : ''}`}>
+                                {formatMoney(a.amount)}
+                              </span>
                             </li>
                           ))}
                         </ul>
@@ -507,134 +503,44 @@ export default function TeamOverviewView({
                   );
                 })}
               </div>
-              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                  {t('overview.totalHoldings')}
-                </span>
-                <span className={`text-sm font-black ${teamBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+              <div className="mt-3 pt-3 border-t border-border flex justify-between items-center">
+                <span className="text-xs font-medium text-muted-foreground">{t('overview.totalHoldings')}</span>
+                <span
+                  className={`text-sm font-bold tabular-nums ${teamBalance >= 0 ? 'text-foreground' : 'text-destructive'}`}
+                >
                   {formatMoney(holdingBalances.reduce((s, b) => s + b.total, 0))}
                 </span>
               </div>
             </div>
           )}
 
-          {/* ── Balance Outlook (only when uncleared transactions exist) ── */}
-          {canViewFinancials && pendingDelta !== 0 && (
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-amber-200 dark:border-amber-800 shadow-sm dark:shadow-none">
-              <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2 mb-4">
-                <Clock size={16} className="text-amber-500" /> {t('overview.balanceOutlook')}
-              </h3>
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3">
-                  <p className="text-lg font-black text-slate-800 dark:text-slate-100">{formatMoney(overallBalance)}</p>
-                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
-                    {t('overview.currentBalance')}
-                  </p>
-                </div>
-                <div className="bg-amber-50 dark:bg-amber-900/30 rounded-xl p-3">
-                  <p className="text-lg font-black text-amber-600 dark:text-amber-400">{formatMoney(pendingDelta)}</p>
-                  <p className="text-[10px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-widest mt-1">
-                    {t('overview.pendingOutflows')}
-                  </p>
-                </div>
-                <div
-                  className={`rounded-xl p-3 ${projectedBalance < overallBalance ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-emerald-50 dark:bg-emerald-900/20'}`}
-                >
-                  <p
-                    className={`text-lg font-black ${projectedBalance < overallBalance ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}
-                  >
-                    {formatMoney(projectedBalance)}
-                  </p>
-                  <p
-                    className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${projectedBalance < overallBalance ? 'text-amber-500 dark:text-amber-400' : 'text-emerald-500 dark:text-emerald-400'}`}
-                  >
-                    {t('overview.projectedBalance')}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Budget burn + Compliance ── */}
-          <div className={`grid grid-cols-1 ${canViewFinancials ? 'lg:grid-cols-2' : ''} gap-4`}>
-            {canViewFinancials && (
-              <div className="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
-                    <Activity size={16} className="text-blue-600" /> {t('overview.budgetBurnRate')}
-                  </h3>
-                  <div className="flex items-center gap-1">
-                    <span
-                      className={`text-xs font-black px-2 py-1 rounded-lg ${
-                        spendPercentage > 90
-                          ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                          : spendPercentage > 60
-                            ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
-                            : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                      }`}
-                    >
-                      {Math.round(spendPercentage)}%
-                    </span>
-                    {!isFinalized && (
-                      <span className="text-[8px] font-bold bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded ml-1">
-                        DRAFT
+          {/* ── Doc compliance (burn + outlook merged into KPI tiles above) ── */}
+          <div className="bg-card p-5 md:p-6 rounded-lg border border-border shadow-sm">
+            <h3 className="font-semibold text-foreground text-sm mb-4">{t('overview.docCompliance')}</h3>
+            <div className="space-y-3">
+              {[
+                { label: t('medical.medicalRelease'), count: complianceStats.medical },
+                { label: t('medical.reeplayerWaiver'), count: complianceStats.reeplayer },
+                { label: t('overview.fullyCompliant'), count: complianceStats.fullyCompliant },
+              ].map(({ label, count }) => {
+                const pct = complianceStats.total > 0 ? Math.round((count / complianceStats.total) * 100) : 0;
+                return (
+                  <div key={label}>
+                    <div className="flex justify-between text-xs font-medium text-foreground mb-1">
+                      <span>{label}</span>
+                      <span className="tabular-nums">
+                        {count} / {complianceStats.total} <span className="text-muted-foreground">({pct}%)</span>
                       </span>
-                    )}
-                  </div>
-                </div>
-                <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-700 ${
-                      spendPercentage > 90 ? 'bg-red-500' : spendPercentage > 60 ? 'bg-amber-500' : 'bg-emerald-500'
-                    }`}
-                    style={{ width: `${Math.min(100, spendPercentage)}%` }}
-                  />
-                </div>
-                <div className="flex justify-between mt-2 text-[10px] font-bold text-slate-400 dark:text-slate-500">
-                  <span>
-                    {t('overview.spent')} {formatMoney(totalExpenses)}
-                  </span>
-                  <span>
-                    {t('overview.budgetLabel')} {formatMoney(projectedSpend)}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-white dark:bg-slate-900 p-5 md:p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
-              <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2 mb-4">
-                <Shield size={16} className="text-violet-600" /> {t('overview.docCompliance')}
-              </h3>
-              <div className="space-y-2.5">
-                {[
-                  { label: t('medical.medicalRelease'), count: complianceStats.medical, color: 'bg-violet-500' },
-                  { label: t('medical.reeplayerWaiver'), count: complianceStats.reeplayer, color: 'bg-blue-500' },
-                  {
-                    label: t('overview.fullyCompliant'),
-                    count: complianceStats.fullyCompliant,
-                    color: 'bg-emerald-500',
-                  },
-                ].map(({ label, count, color }) => {
-                  const pct = complianceStats.total > 0 ? Math.round((count / complianceStats.total) * 100) : 0;
-                  return (
-                    <div key={label}>
-                      <div className="flex justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                        <span>{label}</span>
-                        <span>
-                          {count} / {complianceStats.total}{' '}
-                          <span className="text-slate-400 dark:text-slate-500">({pct}%)</span>
-                        </span>
-                      </div>
-                      <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full ${color} rounded-full transition-all duration-700`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
                     </div>
-                  );
-                })}
-              </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-foreground/70 rounded-full transition-all duration-700"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -645,16 +551,16 @@ export default function TeamOverviewView({
         <div className="space-y-5">
           {/* Outstanding fees callout */}
           {canViewFinancials && outstandingPlayers.length > 0 && (
-            <div className="bg-gradient-to-r from-red-50 to-amber-50 dark:from-red-900/30 dark:to-amber-900/30 border border-red-200 dark:border-red-700 rounded-2xl p-5 shadow-sm dark:shadow-none">
+            <div className="bg-gradient-to-r from-red-50 to-amber-50 dark:from-red-900/30 dark:to-amber-900/30 border border-red-200 dark:border-red-700 rounded-lg p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-black text-red-800 dark:text-red-200 text-sm flex items-center gap-2">
+                <h3 className="font-bold text-red-800 dark:text-red-200 text-sm flex items-center gap-2">
                   <AlertCircle size={16} className="text-red-500 dark:text-red-400" /> {t('overview.outstandingFees')}
                 </h3>
-                <span className="text-lg font-black text-red-600 dark:text-red-400">
+                <span className="text-lg font-bold text-red-600 dark:text-red-400">
                   {formatMoney(paymentStats.totalOutstanding)}
                 </span>
               </div>
-              <p className="text-[10px] font-bold text-red-600/70 dark:text-red-400/70 mb-3">
+              <p className="text-xs font-semibold text-red-600/70 dark:text-red-400/70 mb-3">
                 {outstandingPlayers.length} {tp('common.player', outstandingPlayers.length)}{' '}
                 {t('overview.unpaidBalances')}
               </p>
@@ -667,27 +573,28 @@ export default function TeamOverviewView({
                   return (
                     <div
                       key={p.id}
-                      className="flex items-center gap-3 bg-white/70 dark:bg-slate-800/70 rounded-xl p-2.5 backdrop-blur-sm"
+                      className="flex items-center gap-3 bg-red-100 dark:bg-red-950/70 border border-red-200 dark:border-red-900 rounded-lg p-2.5"
                     >
                       <JerseyBadge number={p.jerseyNumber} size={32} color="red" />
                       <div className="flex-grow min-w-0">
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                        <p className="text-xs font-semibold text-red-900 dark:text-red-100 truncate">
                           {p.firstName} {p.lastName}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
-                          <div className="flex-grow h-1.5 bg-red-100 dark:bg-red-900/30 rounded-full overflow-hidden">
-                            <div className="h-full bg-red-400 rounded-full" style={{ width: `${pct}%` }} />
+                          <div className="flex-grow h-1.5 bg-red-200 dark:bg-red-900/60 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-red-500 dark:bg-red-400 rounded-full"
+                              style={{ width: `${pct}%` }}
+                            />
                           </div>
-                          <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 shrink-0">
-                            {pct}%
-                          </span>
+                          <span className="text-xs font-semibold text-red-700 dark:text-red-300 shrink-0">{pct}%</span>
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-black text-red-600 dark:text-red-400">
+                        <p className="text-sm font-bold text-red-700 dark:text-red-200">
                           {formatMoney(p.fin.remainingBalance)}
                         </p>
-                        <p className="text-[9px] text-slate-400 dark:text-slate-500">of {formatMoney(p.fin.baseFee)}</p>
+                        <p className="text-xs text-red-600/80 dark:text-red-300/80">of {formatMoney(p.fin.baseFee)}</p>
                       </div>
                     </div>
                   );
@@ -697,11 +604,11 @@ export default function TeamOverviewView({
           )}
 
           {/* Player grid */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden">
-            <div className="p-4 md:p-6 border-b border-slate-100 dark:border-slate-700">
+          <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
+            <div className="p-4 md:p-6 border-b border-border">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
-                  <Users size={16} className="text-slate-400 dark:text-slate-500" />
+                <h3 className="font-bold text-foreground text-sm flex items-center gap-2">
+                  <Users size={16} className="text-muted-foreground" />
                   {viewArchived
                     ? `${t('common.archived')} (${archivedPlayers.length})`
                     : `${t('overview.activeRoster')} (${players.length})`}
@@ -709,33 +616,33 @@ export default function TeamOverviewView({
                 <div className="flex items-center gap-2 w-full md:w-auto">
                   <button
                     onClick={() => setViewArchived(!viewArchived)}
-                    className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 px-3 py-2 text-xs font-bold flex items-center gap-1 transition-all rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800"
+                    className="text-muted-foreground hover:text-foreground px-3 py-2 text-xs font-semibold flex items-center gap-1 transition-all rounded-lg hover:bg-background"
                   >
                     <Archive size={14} /> {viewArchived ? t('common.active') : t('common.archived')}
                   </button>
                   <button
                     onClick={onAddPlayer}
-                    className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-4 py-2 rounded-xl font-bold text-xs hover:bg-slate-800 dark:hover:bg-slate-200 transition-all"
+                    className="bg-accent text-accent-foreground px-4 py-2 rounded-lg font-semibold text-xs hover:bg-accent/90 transition-all"
                   >
                     {t('overview.addPlayer')}
                   </button>
                 </div>
               </div>
               <div className="relative mt-3">
-                <Search className="absolute left-3 top-2.5 text-slate-300 dark:text-slate-500" size={16} />
+                <Search className="absolute left-3 top-2.5 text-muted-foreground" size={16} />
                 <input
                   type="text"
                   placeholder={t('overview.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-ring outline-none"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4 md:p-6">
               {filteredPlayers.length === 0 ? (
-                <div className="col-span-full py-10 text-center text-slate-400 dark:text-slate-500 font-bold italic border-2 border-dashed border-slate-100 dark:border-slate-700 rounded-2xl">
+                <div className="col-span-full py-10 text-center text-muted-foreground font-semibold italic border-2 border-dashed border-border rounded-lg">
                   {searchTerm ? t('overview.noPlayersMatch') : t('overview.noPlayers')}
                 </div>
               ) : (
@@ -755,12 +662,12 @@ export default function TeamOverviewView({
                     <div
                       key={player.id}
                       onClick={() => onViewPlayer(player)}
-                      className={`group p-4 rounded-xl border cursor-pointer transition-all ${
+                      className={`group p-4 rounded-lg border cursor-pointer transition-all ${
                         viewArchived
-                          ? 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 opacity-60'
+                          ? 'bg-background border-border opacity-60'
                           : hasBalance
                             ? 'border-amber-200 dark:border-amber-700 hover:border-amber-400 hover:shadow-md dark:hover:shadow-none bg-amber-50/30 dark:bg-amber-900/20 active:scale-[0.98]'
-                            : 'border-slate-100 dark:border-slate-700 hover:border-blue-300 hover:shadow-md dark:hover:shadow-none bg-white dark:bg-slate-900 active:scale-[0.98]'
+                            : 'border-border hover:border-blue-300 hover:shadow-md dark:hover:shadow-none bg-card active:scale-[0.98]'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -771,17 +678,17 @@ export default function TeamOverviewView({
                           className="group-hover:scale-105 transition-transform"
                         />
                         <div className="flex-grow min-w-0">
-                          <p className="font-black text-slate-900 dark:text-white text-sm truncate flex items-center gap-2">
+                          <p className="font-bold text-foreground text-sm truncate flex items-center gap-2">
                             {player.firstName} {player.lastName}
                             {player.birthdate && getUSAgeGroup(player.birthdate, selectedSeasonData?.id) && (
-                              <span className="text-[9px] font-black bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
+                              <span className="text-xs font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
                                 {getUSAgeGroup(player.birthdate, selectedSeasonData?.id)}
                               </span>
                             )}
                           </p>
                           <div className="flex items-center gap-2 mt-0.5">
                             {isWaived && (
-                              <span className="text-[9px] font-black bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded uppercase">
+                              <span className="text-xs font-bold bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded uppercase">
                                 {t('overview.waived')}
                               </span>
                             )}
@@ -789,23 +696,25 @@ export default function TeamOverviewView({
                             <span title={hasMedical ? 'Waiver on file' : 'Waiver missing'}>
                               <FileCheck2
                                 size={13}
-                                className={hasMedical ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'}
+                                className={
+                                  hasMedical ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'
+                                }
                               />
                             </span>
                             {/* ReePlayer account status */}
                             <span title={hasReeplayer ? 'ReePlayer account created' : 'No ReePlayer account'}>
                               <Camera
                                 size={13}
-                                className={hasReeplayer ? 'text-blue-500' : 'text-slate-300 dark:text-slate-600'}
+                                className={hasReeplayer ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}
                               />
                             </span>
                             {hasBalance && (
-                              <span className="text-[9px] font-black text-red-500">
+                              <span className="text-xs font-bold text-red-700 dark:text-red-400">
                                 {t('overview.owes', { amount: formatMoney(fin.remainingBalance) })}
                               </span>
                             )}
                             {fin && fin.remainingBalance <= 0 && !isWaived && (
-                              <span className="text-[9px] font-bold text-emerald-500 flex items-center gap-0.5">
+                              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-0.5">
                                 <CheckCircle2 size={10} /> {t('overview.paid')}
                               </span>
                             )}
@@ -817,14 +726,14 @@ export default function TeamOverviewView({
                               e.stopPropagation();
                               onEditPlayer(player);
                             }}
-                            className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                            className="p-1.5 text-muted-foreground hover:text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                             title="Edit"
                           >
                             <Edit size={14} />
                           </button>
                           <ChevronRight
                             size={14}
-                            className="text-slate-300 dark:text-slate-600 group-hover:text-blue-500 transition-colors"
+                            className="text-muted-foreground group-hover:text-blue-700 dark:text-blue-400 transition-colors"
                           />
                         </div>
                       </div>
@@ -836,7 +745,7 @@ export default function TeamOverviewView({
                               style={{ width: `${paidPct}%` }}
                             />
                           </div>
-                          <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500">{paidPct}%</span>
+                          <span className="text-xs font-semibold text-muted-foreground">{paidPct}%</span>
                         </div>
                       )}
                     </div>

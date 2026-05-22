@@ -39,22 +39,22 @@ export default function CalendarView({ events, blackoutDates = [], onToggleBlack
   }));
 
   return (
-    <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-200">
+    <div className="bg-card p-4 md:p-6 rounded-lg shadow-sm border border-border">
       {/* Legend */}
-      <div className="flex flex-wrap gap-3 mb-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+      <div className="flex flex-wrap gap-3 mb-4 text-xs font-semibold text-muted-foreground">
         {Object.entries(EVENT_TYPES).map(([key, type]) => (
           <span key={key} className="flex items-center gap-1.5">
             <span className={`w-2.5 h-2.5 rounded-sm ${type.color}`}></span> {type.label}
           </span>
         ))}
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-slate-800"></span> Blackout
+          <span className="w-2.5 h-2.5 rounded-sm bg-foreground"></span> Blackout
         </span>
       </div>
 
       {onToggleBlackout && (
-        <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 font-medium flex items-start gap-2">
-          <Info size={14} className="text-blue-500 shrink-0 mt-0.5" />
+        <div className="mb-4 p-3 bg-background border border-border rounded-lg text-xs text-foreground font-medium flex items-start gap-2">
+          <Info size={14} className="text-blue-700 dark:text-blue-400 shrink-0 mt-0.5" />
           <span>Click any empty day to toggle a blackout date. Click a blackout event to remove it.</span>
         </div>
       )}

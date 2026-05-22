@@ -24,7 +24,7 @@ export default function MobileBottomNav() {
       {/* Club strip -- only visible to club admins, sits above the team bar */}
       {isClubAdmin && clubNavItems.length > 0 && (
         <div className="md:hidden fixed bottom-20 left-0 right-0 bg-violet-950 border-t border-violet-800 h-11 flex items-center z-40">
-          <span className="text-[8px] font-black text-violet-600 uppercase tracking-widest px-3 shrink-0">
+          <span className="text-xs font-bold text-violet-700 dark:text-violet-400 px-3 shrink-0">
             {t('common.club')}
           </span>
           <div className="flex items-center flex-1 justify-around pr-2">
@@ -33,11 +33,13 @@ export default function MobileBottomNav() {
                 key={item.id}
                 onClick={() => navigate(`/${item.id}`)}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition-colors ${
-                  currentView === item.id ? 'text-violet-200 bg-violet-800/60' : 'text-violet-500 hover:text-violet-300'
+                  currentView === item.id
+                    ? 'text-violet-200 bg-violet-800/60'
+                    : 'text-violet-700 dark:text-violet-400 hover:text-violet-300'
                 }`}
               >
                 <item.icon size={13} strokeWidth={currentView === item.id ? 2.5 : 2} />
-                <span className="text-[9px] font-bold">{item.label}</span>
+                <span className="text-xs font-semibold">{item.label}</span>
               </button>
             ))}
           </div>
@@ -45,9 +47,9 @@ export default function MobileBottomNav() {
       )}
 
       {/* Team bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 h-20 flex items-center justify-around px-2 z-50">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border h-20 flex items-center justify-around px-2 z-50">
         {!singleTeam && isClubAdmin && clubNavItems.length > 0 && (
-          <span className="absolute top-1 left-1/2 -translate-x-1/2 text-[8px] font-black text-slate-300 uppercase tracking-widest pointer-events-none">
+          <span className="absolute top-1 left-1/2 -translate-x-1/2 text-xs font-bold text-muted-foreground pointer-events-none">
             Team
           </span>
         )}
@@ -69,10 +71,10 @@ export default function MobileBottomNav() {
             <button
               key={item.id}
               onClick={() => navigate(`/${item.id}`)}
-              className={`flex flex-col items-center gap-1 flex-1 ${isActive ? 'text-blue-600' : 'text-slate-400'}`}
+              className={`flex flex-col items-center gap-1 flex-1 ${isActive ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}`}
             >
               <item.icon size={20} strokeWidth={isActive ? 3 : 2} />
-              <span className="text-[9px] font-bold">{item.label}</span>
+              <span className="text-xs font-semibold">{item.label}</span>
             </button>
           );
         })}
@@ -82,7 +84,7 @@ export default function MobileBottomNav() {
               setTxToEdit(null);
               setShowTxForm(true);
             }}
-            className="mb-10 bg-slate-900 text-white p-4 rounded-full shadow-xl border-4 border-white active:scale-90 transition-transform"
+            className="mb-10 bg-accent text-accent-foreground p-4 rounded-full shadow-md border-4 border-card active:scale-90 transition-transform"
             aria-label="Add transaction"
           >
             <Plus size={24} strokeWidth={3} />

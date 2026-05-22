@@ -160,13 +160,13 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
   const labels = lang === 'es' ? ES : EN;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-start p-4 z-50 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl dark:shadow-none w-full max-w-2xl my-4 overflow-hidden">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-start p-4 z-50 overflow-y-auto">
+      <div className="bg-card rounded-lg shadow-md w-full max-w-2xl my-4 overflow-hidden">
         {/* Header */}
         <div className="bg-red-600 text-white px-6 py-4 flex justify-between items-center shrink-0">
           <div>
-            <p className="text-[9px] font-black uppercase tracking-widest opacity-70">US Youth Soccer</p>
-            <h3 className="font-bold text-lg leading-tight">{labels.title}</h3>
+            <p className="text-xs font-bold opacity-70">US Youth Soccer</p>
+            <h3 className="font-semibold text-lg leading-tight">{labels.title}</h3>
             <p className="text-xs opacity-80 mt-0.5">
               {player.firstName} {player.lastName}
             </p>
@@ -176,31 +176,31 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
             <button
               type="button"
               onClick={() => setLang((l) => (l === 'en' ? 'es' : 'en'))}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs font-bold transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs font-semibold transition-colors"
               title="Toggle language"
             >
               <Globe size={12} />
               {lang === 'en' ? 'ES' : 'EN'}
             </button>
-            <button onClick={onClose} className="text-white/60 hover:text-white font-bold text-xl ml-2">
+            <button onClick={onClose} className="text-white/60 hover:text-white font-semibold text-xl ml-2">
               &times;
             </button>
           </div>
         </div>
 
         {loading ? (
-          <div className="p-12 flex items-center justify-center text-slate-400">
+          <div className="p-12 flex items-center justify-center text-muted-foreground">
             <Loader2 size={24} className="animate-spin" />
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
             {existingForm && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-2 text-sm text-emerald-700 font-medium">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300 font-medium">
                 <CheckCircle2 size={16} />
                 <div>
                   <span>{labels.alreadyCompleted}</span>
                   {(existingForm.completed_at || existingForm.updated_at) && (
-                    <span className="block text-[10px] text-emerald-500 font-bold mt-0.5">
+                    <span className="block text-xs text-emerald-700 dark:text-emerald-400 font-semibold mt-0.5">
                       {labels.completedOn}{' '}
                       {new Date(existingForm.completed_at || existingForm.updated_at).toLocaleDateString()}
                     </span>
@@ -243,7 +243,7 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
 
             {/* ── Emergency Information ── */}
             <Section icon={Phone} title={labels.emergencyInfo} color="amber">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{labels.guardian} 1</p>
+              <p className="text-xs font-semibold text-muted-foreground">{labels.guardian} 1</p>
               <div className="grid grid-cols-3 gap-3">
                 <Input
                   label={labels.name}
@@ -265,7 +265,7 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
                   onChange={(v) => set('guardian1WorkPhone', v)}
                 />
               </div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2">{labels.guardian} 2</p>
+              <p className="text-xs font-semibold text-muted-foreground mt-2">{labels.guardian} 2</p>
               <div className="grid grid-cols-3 gap-3">
                 <Input label={labels.name} value={formData.guardian2Name} onChange={(v) => set('guardian2Name', v)} />
                 <Input
@@ -282,8 +282,8 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
                 />
               </div>
 
-              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-                <p className="text-[10px] font-bold text-slate-400 italic mb-2">{labels.emergencyNote}</p>
+              <div className="mt-3 pt-3 border-t border-border">
+                <p className="text-xs font-semibold text-muted-foreground italic mb-2">{labels.emergencyNote}</p>
                 <div className="grid grid-cols-3 gap-3">
                   <Input
                     label={labels.name}
@@ -378,63 +378,59 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
                 />
                 <Input label={labels.groupNum} value={formData.groupNumber} onChange={(v) => set('groupNumber', v)} />
               </div>
-              <p className="text-[10px] text-slate-400 font-bold text-center mt-1">{labels.insuranceNote}</p>
+              <p className="text-xs text-muted-foreground font-semibold text-center mt-1">{labels.insuranceNote}</p>
             </Section>
 
             {/* ── Consent & Signature ── */}
             <Section icon={FileText} title={labels.consentTitle} color="slate">
-              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-3 max-h-36 overflow-y-auto text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed">
+              <div className="bg-background rounded-lg p-3 max-h-36 overflow-y-auto text-xs text-foreground leading-relaxed">
                 {labels.consentBody}
               </div>
               <div className="grid grid-cols-2 gap-4 mt-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    {labels.signatureLabel} *
-                  </label>
+                  <label className="block text-xs font-semibold text-foreground mb-1">{labels.signatureLabel} *</label>
                   <input
                     required
                     type="text"
                     value={formData.signatureName}
                     onChange={(e) => set('signatureName', e.target.value)}
-                    className="w-full border-b-2 border-slate-900 dark:border-slate-400 bg-transparent p-2 text-lg font-serif italic focus:border-red-600 outline-none dark:text-white"
+                    className="w-full border-b-2 border-slate-900 bg-transparent p-2 text-lg font-serif italic focus:border-red-600 outline-none"
                     placeholder={labels.signaturePlaceholder}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    {labels.dateLabel} *
-                  </label>
+                  <label className="block text-xs font-semibold text-foreground mb-1">{labels.dateLabel} *</label>
                   <input
                     required
                     type="date"
                     value={formData.signatureDate}
                     onChange={(e) => set('signatureDate', e.target.value)}
-                    className="w-full border border-slate-300 dark:border-slate-700 rounded-lg p-2 focus:ring-2 focus:ring-red-500 outline-none dark:bg-slate-800 dark:text-white"
+                    className="w-full border border-border rounded-lg p-2 focus:ring-2 focus:ring-red-500 outline-none"
                   />
                 </div>
               </div>
             </Section>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 text-sm text-red-700 font-medium">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-sm text-red-700 dark:text-red-300 font-medium">
                 <AlertTriangle size={16} />
                 {error}
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+            <div className="flex justify-end gap-3 pt-2 border-t border-border">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                className="px-4 py-2 font-semibold text-muted-foreground hover:bg-muted rounded-lg transition-colors"
               >
                 {labels.cancel}
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="px-6 py-2 font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="px-6 py-2 font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
                 {saving ? labels.saving : existingForm ? labels.updateBtn : labels.submitBtn}
@@ -453,7 +449,7 @@ function Input({ label, value, onChange, type = 'text', required = false, placeh
   if (options) {
     return (
       <div>
-        <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+        <label className="block text-xs font-semibold text-muted-foreground mb-0.5">
           {label}
           {required && ' *'}
         </label>
@@ -461,7 +457,7 @@ function Input({ label, value, onChange, type = 'text', required = false, placeh
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required={required}
-          className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-sm focus:ring-2 focus:ring-red-500 outline-none bg-white dark:bg-slate-800 dark:text-white"
+          className="w-full border border-border rounded-lg p-1.5 text-sm focus:ring-2 focus:ring-red-500 outline-none bg-card"
         >
           <option value="">--</option>
           {options.map((o) => (
@@ -475,7 +471,7 @@ function Input({ label, value, onChange, type = 'text', required = false, placeh
   }
   return (
     <div>
-      <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+      <label className="block text-xs font-semibold text-muted-foreground mb-0.5">
         {label}
         {required && ' *'}
       </label>
@@ -485,7 +481,7 @@ function Input({ label, value, onChange, type = 'text', required = false, placeh
         onChange={(e) => onChange(e.target.value)}
         required={required}
         placeholder={placeholder}
-        className="w-full border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-sm focus:ring-2 focus:ring-red-500 outline-none dark:bg-slate-800 dark:text-white"
+        className="w-full border border-border rounded-lg p-1.5 text-sm focus:ring-2 focus:ring-red-500 outline-none"
       />
     </div>
   );
@@ -498,14 +494,14 @@ const SECTION_COLORS = {
   amber: 'border-amber-200 bg-amber-50/30',
   red: 'border-red-200 bg-red-50/30',
   violet: 'border-violet-200 bg-violet-50/30',
-  slate: 'border-slate-200 bg-slate-50/30',
+  slate: 'border-border bg-background/30',
 };
 
 function Section({ icon: Icon, title, color, children }) {
   return (
-    <div className={`rounded-xl border p-4 space-y-3 ${SECTION_COLORS[color] || SECTION_COLORS.slate}`}>
-      <h4 className="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 flex items-center gap-2">
-        <Icon size={14} className="text-slate-400" /> {title}
+    <div className={`rounded-lg border p-4 space-y-3 ${SECTION_COLORS[color] || SECTION_COLORS.slate}`}>
+      <h4 className="text-xs font-bold text-foreground flex items-center gap-2">
+        <Icon size={14} className="text-muted-foreground" /> {title}
       </h4>
       {children}
     </div>

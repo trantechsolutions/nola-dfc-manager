@@ -33,6 +33,7 @@ export default function DesktopSidebar() {
   } = useNavigation();
   const { t } = useT();
   const [showTeamPicker, setShowTeamPicker] = useState(false);
+  const [showSeasonPicker, setShowSeasonPicker] = useState(false);
   const [broadcastMsg, setBroadcastMsg] = useState('');
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [broadcastSending, setBroadcastSending] = useState(false);
@@ -60,27 +61,29 @@ export default function DesktopSidebar() {
   };
 
   return (
-    <aside className="hidden md:flex w-64 bg-slate-900 text-white flex-col sticky top-0 h-screen">
+    <aside className="hidden md:flex w-64 bg-sidebar text-sidebar-foreground flex-col sticky top-0 h-screen border-r border-sidebar-border">
       <div className="p-6">
-        <h1 className="text-xl font-black tracking-tighter uppercase">{club?.name || 'Team Manager'}</h1>
+        <h1 className="text-xl font-bold tracking-tighter uppercase text-sidebar-foreground">
+          {club?.name || 'Team Manager'}
+        </h1>
 
         {!singleTeam && teams.length > 1 && (
-          <div className="mt-3 relative">
+          <div className={`mt-3 relative ${showTeamPicker ? 'z-[60]' : ''}`}>
             <button
               onClick={() => setShowTeamPicker(!showTeamPicker)}
-              className="w-full p-2.5 bg-slate-800 rounded-xl text-left flex items-center justify-between hover:bg-slate-700 transition-colors"
+              className="w-full p-2.5 bg-sidebar-accent rounded-lg text-left flex items-center justify-between hover:bg-sidebar-accent/80 transition-colors"
             >
               <div className="min-w-0">
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('common.team')}</p>
-                <p className="text-sm font-bold text-blue-400 truncate">{selectedTeam?.name || t('common.team')}</p>
+                <p className="text-xs font-semibold text-muted-foreground">{t('common.team')}</p>
+                <p className="text-sm font-semibold text-primary truncate">{selectedTeam?.name || t('common.team')}</p>
               </div>
               <ChevronDown
                 size={14}
-                className={`text-slate-400 transition-transform ${showTeamPicker ? 'rotate-180' : ''}`}
+                className={`text-muted-foreground transition-transform ${showTeamPicker ? 'rotate-180' : ''}`}
               />
             </button>
             {showTeamPicker && (
-              <div className="absolute left-0 right-0 top-full mt-1 bg-slate-800 rounded-xl border border-slate-700 shadow-2xl z-50 overflow-hidden max-h-60 overflow-y-auto">
+              <div className="absolute left-0 right-0 top-full mt-1 bg-card rounded-lg border border-border shadow-md overflow-hidden max-h-60 overflow-y-auto">
                 {teams.map((t) => (
                   <button
                     key={t.id}
@@ -88,15 +91,15 @@ export default function DesktopSidebar() {
                       setSelectedTeamId(t.id);
                       setShowTeamPicker(false);
                     }}
-                    className={`w-full text-left px-3 py-2.5 flex items-center gap-2 hover:bg-slate-700 transition-colors ${t.id === selectedTeamId ? 'bg-slate-700' : ''}`}
+                    className={`w-full text-left px-3 py-2.5 flex items-center gap-2 hover:bg-muted transition-colors ${t.id === selectedTeamId ? 'bg-muted' : ''}`}
                   >
                     <div
                       className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: t.colorPrimary || '#3b82f6' }}
+                      style={{ backgroundColor: t.colorPrimary || 'var(--primary)' }}
                     />
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-white truncate">{t.name}</p>
-                      <p className="text-[9px] text-slate-400">
+                      <p className="text-xs font-semibold text-foreground truncate">{t.name}</p>
+                      <p className="text-xs text-muted-foreground">
                         {t.ageGroup} · {t.gender} · {t.tier}
                       </p>
                     </div>
@@ -108,9 +111,49 @@ export default function DesktopSidebar() {
         )}
 
         {(singleTeam || teams.length === 1) && selectedTeam && (
-          <div className="mt-3 p-2.5 bg-slate-800 rounded-xl">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('common.team')}</p>
-            <p className="text-sm font-bold text-blue-400">{selectedTeam?.name}</p>
+          <div className="mt-3 p-2.5 bg-sidebar-accent rounded-lg">
+            <p className="text-xs font-semibold text-muted-foreground">{t('common.team')}</p>
+            <p className="text-sm font-semibold text-primary">{selectedTeam?.name}</p>
+          </div>
+        )}
+
+        {/* SEASON picker — matches team picker pattern */}
+        {selectedTeam && seasons.length > 0 && (
+          <div className={`mt-3 relative ${showSeasonPicker ? 'z-[60]' : ''}`}>
+            <button
+              onClick={() => setShowSeasonPicker((v) => !v)}
+              className="w-full p-2.5 bg-sidebar-accent rounded-lg text-left flex items-center justify-between hover:bg-sidebar-accent/80 transition-colors"
+            >
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-muted-foreground">{t('common.season')}</p>
+                <p className="text-sm font-semibold text-primary truncate">{selectedSeason}</p>
+              </div>
+              <ChevronDown
+                size={14}
+                className={`text-muted-foreground transition-transform ${showSeasonPicker ? 'rotate-180' : ''}`}
+              />
+            </button>
+            {showSeasonPicker && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-card rounded-lg border border-border shadow-md overflow-hidden max-h-60 overflow-y-auto">
+                {seasons.map((s) => {
+                  const isSelected = s.id === selectedSeason;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => {
+                        setSelectedSeason(s.id);
+                        setShowSeasonPicker(false);
+                      }}
+                      className={`w-full text-left px-3 py-2.5 text-sm font-semibold transition-colors ${
+                        isSelected ? 'bg-muted text-primary' : 'text-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {s.id}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -118,72 +161,55 @@ export default function DesktopSidebar() {
       <nav className="flex-grow px-4 space-y-1 overflow-y-auto">
         {appNavItems.length > 0 && (
           <>
-            <p className="text-[9px] font-bold text-violet-400 uppercase tracking-widest px-4 pt-2 pb-1">APP</p>
+            <p className="text-xs font-semibold text-accent px-4 pt-2 pb-1">APP</p>
             {appNavItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => navigate(`/${item.id}`)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold transition-all text-sm ${
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold transition-all text-sm ${
                   currentView === item.id
-                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/20'
-                    : 'text-slate-400 hover:bg-slate-800'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent'
                 }`}
               >
                 <item.icon size={18} />
                 <span>{item.label}</span>
               </button>
             ))}
-            <div className="border-t border-slate-800 my-2" />
+            <div className="border-t border-sidebar-border my-2" />
           </>
         )}
         {clubNavItems.length > 0 && (
           <>
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-4 pt-2 pb-1">
-              {t('common.club')}
-            </p>
+            <p className="text-xs font-semibold text-muted-foreground px-4 pt-2 pb-1">{t('common.club')}</p>
             {clubNavItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => navigate(`/${item.id}`)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold transition-all text-sm ${
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold transition-all text-sm ${
                   currentView === item.id
-                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/20'
-                    : 'text-slate-400 hover:bg-slate-800'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-sidebar-foreground hover:bg-sidebar-accent'
                 }`}
               >
                 <item.icon size={18} />
                 <span>{item.label}</span>
               </button>
             ))}
-            <div className="border-t border-slate-800 my-2" />
+            <div className="border-t border-sidebar-border my-2" />
           </>
         )}
 
-        {/* SEASON section */}
-        {selectedTeam && (
-          <div className="flex items-center justify-between px-4 pt-1 pb-1">
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{t('common.season')}</p>
-            <select
-              value={selectedSeason}
-              onChange={(e) => setSelectedSeason(e.target.value)}
-              className="bg-transparent border-none text-blue-400 font-bold text-[10px] p-0 focus:ring-0 cursor-pointer text-right"
-            >
-              {seasons.map((s) => (
-                <option key={s.id} value={s.id} className="text-slate-900">
-                  {s.id}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
         {seasonNavItems.map((item) => {
           const isActive = currentView === item.id;
           return (
             <button
               key={item.id}
               onClick={() => navigate(`/${item.id}`)}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold transition-all text-sm ${
-                isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'text-slate-400 hover:bg-slate-800'
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold transition-all text-sm ${
+                isActive
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent'
               }`}
             >
               <item.icon size={18} />
@@ -193,18 +219,18 @@ export default function DesktopSidebar() {
         })}
 
         {/* TEAM section */}
-        <div className="border-t border-slate-800 my-2" />
-        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-4 pt-1 pb-1">
+        <div className="border-t border-sidebar-border my-2" />
+        <p className="text-xs font-semibold text-muted-foreground px-4 pt-1 pb-1">
           {selectedTeam?.name || t('common.team')}
         </p>
         {teamNavItems.map((item) => (
           <button
             key={item.id}
             onClick={() => navigate(`/${item.id}`)}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold transition-all text-sm ${
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold transition-all text-sm ${
               currentView === item.id
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                : 'text-slate-400 hover:bg-slate-800'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-sidebar-foreground hover:bg-sidebar-accent'
             }`}
           >
             <item.icon size={18} />
@@ -213,14 +239,14 @@ export default function DesktopSidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-slate-800">
+      <div className="border-t border-sidebar-border">
         <button
           onClick={() => setSidebarSettingsOpen(!sidebarSettingsOpen)}
-          className="w-full flex items-center justify-between px-4 py-3 text-slate-400 hover:bg-slate-800 transition-all"
+          className="w-full flex items-center justify-between px-4 py-3 text-muted-foreground hover:bg-sidebar-accent transition-all"
         >
           <div className="flex items-center gap-2 min-w-0">
             <Settings size={14} />
-            <p className="text-[10px] font-bold text-slate-500 truncate">{user.email}</p>
+            <p className="text-xs font-semibold text-muted-foreground truncate">{user.email}</p>
           </div>
           <ChevronDown
             size={14}
@@ -231,14 +257,14 @@ export default function DesktopSidebar() {
           <div className="px-4 pb-3 space-y-1">
             <button
               onClick={toggleLocale}
-              className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-slate-400 hover:bg-slate-800 transition-all"
+              className="w-full flex items-center gap-3 px-4 py-2 rounded-lg font-semibold text-sidebar-foreground hover:bg-sidebar-accent transition-all"
             >
               <Globe size={16} />
               <span className="text-sm">{locale === 'en' ? 'Español' : 'English'}</span>
             </button>
             <button
               onClick={cycleTheme}
-              className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-slate-400 hover:bg-slate-800 transition-all"
+              className="w-full flex items-center gap-3 px-4 py-2 rounded-lg font-semibold text-sidebar-foreground hover:bg-sidebar-accent transition-all"
             >
               <ThemeIcon size={16} />
               <span className="text-sm capitalize">{theme}</span>
@@ -248,8 +274,10 @@ export default function DesktopSidebar() {
                 navigate('/changelog');
                 setSidebarSettingsOpen(false);
               }}
-              className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold transition-all ${
-                currentView === 'changelog' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-800'
+              className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg font-semibold transition-all ${
+                currentView === 'changelog'
+                  ? 'bg-sidebar-accent text-sidebar-foreground'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent'
               }`}
             >
               <GitCommit size={16} />
@@ -259,13 +287,13 @@ export default function DesktopSidebar() {
             {isSupported &&
               (isSubscribed ? (
                 <div className="px-4 py-2 flex items-center gap-3">
-                  <Bell size={16} className="text-green-400 shrink-0" />
-                  <span className="text-xs text-green-400 font-bold">Notifications on</span>
+                  <Bell size={16} className="text-success shrink-0" />
+                  <span className="text-xs text-success font-semibold">Notifications on</span>
                 </div>
               ) : (
                 <button
                   onClick={subscribe}
-                  className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-slate-400 hover:bg-slate-800 transition-all"
+                  className="w-full flex items-center gap-3 px-4 py-2 rounded-lg font-semibold text-sidebar-foreground hover:bg-sidebar-accent transition-all"
                 >
                   <Bell size={16} />
                   <span className="text-sm">Enable Notifications</span>
@@ -281,13 +309,13 @@ export default function DesktopSidebar() {
                     onChange={(e) => setBroadcastMsg(e.target.value)}
                     placeholder="Message to team…"
                     rows={2}
-                    className="w-full bg-slate-800 text-white text-xs rounded-xl px-3 py-2 resize-none border border-slate-700 focus:border-blue-500 focus:outline-none"
+                    className="w-full bg-sidebar-accent text-sidebar-foreground text-xs rounded-lg px-3 py-2 resize-none border border-sidebar-border focus:border-ring focus:outline-none"
                   />
                   <div className="flex gap-1">
                     <button
                       onClick={handleBroadcast}
                       disabled={broadcastSending || !broadcastMsg.trim()}
-                      className="flex-1 bg-blue-600 disabled:opacity-40 text-white text-xs font-black py-1.5 rounded-lg"
+                      className="flex-1 bg-primary disabled:opacity-40 text-primary-foreground text-xs font-bold py-1.5 rounded-lg"
                     >
                       {broadcastSending ? 'Sending…' : 'Send'}
                     </button>
@@ -296,7 +324,7 @@ export default function DesktopSidebar() {
                         setShowBroadcast(false);
                         setBroadcastMsg('');
                       }}
-                      className="flex-1 bg-slate-800 text-slate-400 text-xs font-bold py-1.5 rounded-lg"
+                      className="flex-1 bg-sidebar-accent text-muted-foreground text-xs font-semibold py-1.5 rounded-lg"
                     >
                       Cancel
                     </button>
@@ -305,7 +333,7 @@ export default function DesktopSidebar() {
               ) : (
                 <button
                   onClick={() => setShowBroadcast(true)}
-                  className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-slate-400 hover:bg-slate-800 transition-all"
+                  className="w-full flex items-center gap-3 px-4 py-2 rounded-lg font-semibold text-sidebar-foreground hover:bg-sidebar-accent transition-all"
                 >
                   <Bell size={16} />
                   <span className="text-sm">Broadcast to Team</span>
@@ -314,7 +342,7 @@ export default function DesktopSidebar() {
 
             <button
               onClick={() => supabase.auth.signOut()}
-              className="w-full flex items-center gap-3 px-4 py-2 rounded-xl font-bold text-red-400 hover:bg-red-900/20 transition-all"
+              className="w-full flex items-center gap-3 px-4 py-2 rounded-lg font-semibold text-destructive hover:bg-destructive/10 transition-all"
             >
               <LogOut size={16} />
               <span className="text-sm">{t('common.logout')}</span>

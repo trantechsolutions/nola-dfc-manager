@@ -166,17 +166,17 @@ export default function RubricEditor({ open, onClose, teamId, user, initialSecti
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-3xl h-[85vh] flex flex-col border border-slate-200 dark:border-slate-700">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
+      <div className="bg-card rounded-lg w-full max-w-3xl h-[85vh] flex flex-col border border-border">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between p-5 border-b border-border">
           <div>
-            <h3 className="text-lg font-black text-slate-900 dark:text-white">Customize Evaluation Rubric</h3>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+            <h3 className="text-lg font-bold text-foreground">Customize Evaluation Rubric</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
               Sections, groups, and questions apply to every coach evaluating this team.
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X size={20} />
           </button>
         </div>
@@ -184,21 +184,18 @@ export default function RubricEditor({ open, onClose, teamId, user, initialSecti
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {sections.map((section, sIdx) => (
-            <div
-              key={section.key}
-              className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50"
-            >
-              <div className="flex items-center gap-2 p-3 border-b border-slate-200 dark:border-slate-700">
-                <GripVertical size={14} className="text-slate-400 shrink-0" />
+            <div key={section.key} className="rounded-lg border border-border bg-background">
+              <div className="flex items-center gap-2 p-3 border-b border-border">
+                <GripVertical size={14} className="text-muted-foreground shrink-0" />
                 <input
                   value={section.label}
                   onChange={(e) => updateSection(sIdx, { label: e.target.value })}
                   placeholder="Section name (e.g. Technical)"
-                  className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 bg-card border border-border rounded-lg px-3 py-1.5 text-sm font-semibold text-foreground outline-none focus:ring-2 focus:ring-ring"
                 />
                 <button
                   onClick={() => removeSection(sIdx)}
-                  className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  className="p-1.5 rounded-lg text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                   title="Delete section"
                 >
                   <Trash2 size={14} />
@@ -207,20 +204,17 @@ export default function RubricEditor({ open, onClose, teamId, user, initialSecti
 
               <div className="p-3 space-y-3">
                 {section.groups.map((group, gIdx) => (
-                  <div
-                    key={group.key}
-                    className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 space-y-2"
-                  >
+                  <div key={group.key} className="rounded-lg border border-border bg-card p-3 space-y-2">
                     <div className="flex items-center gap-2">
                       <input
                         value={group.label}
                         onChange={(e) => updateGroup(sIdx, gIdx, { label: e.target.value })}
                         placeholder="Group name (e.g. Passing)"
-                        className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 bg-background border border-border rounded-lg px-3 py-1.5 text-xs font-semibold text-foreground outline-none focus:ring-2 focus:ring-ring"
                       />
                       <button
                         onClick={() => removeGroup(sIdx, gIdx)}
-                        className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        className="p-1.5 rounded-lg text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                         title="Delete group"
                       >
                         <Trash2 size={12} />
@@ -229,16 +223,16 @@ export default function RubricEditor({ open, onClose, teamId, user, initialSecti
 
                     {group.skills.map((skill, skIdx) => (
                       <div key={skill.key} className="flex items-center gap-2 pl-2">
-                        <span className="text-slate-300 dark:text-slate-600 text-xs">•</span>
+                        <span className="text-muted-foreground text-xs">•</span>
                         <input
                           value={skill.label}
                           onChange={(e) => updateSkill(sIdx, gIdx, skIdx, { label: e.target.value })}
                           placeholder="Question text"
-                          className="flex-1 bg-transparent border-b border-slate-200 dark:border-slate-700 px-1 py-1 text-[11px] text-slate-700 dark:text-slate-300 outline-none focus:border-blue-500"
+                          className="flex-1 bg-transparent border-b border-border px-1 py-1 text-xs text-foreground outline-none focus:border-ring"
                         />
                         <button
                           onClick={() => removeSkill(sIdx, gIdx, skIdx)}
-                          className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          className="p-1 rounded text-red-400 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                           title="Delete question"
                         >
                           <Trash2 size={11} />
@@ -248,7 +242,7 @@ export default function RubricEditor({ open, onClose, teamId, user, initialSecti
 
                     <button
                       onClick={() => addSkill(sIdx, gIdx)}
-                      className="flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 pt-1"
+                      className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-300 pt-1"
                     >
                       <Plus size={11} /> Add question
                     </button>
@@ -257,7 +251,7 @@ export default function RubricEditor({ open, onClose, teamId, user, initialSecti
 
                 <button
                   onClick={() => addGroup(sIdx)}
-                  className="flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
+                  className="flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-300"
                 >
                   <Plus size={12} /> Add group
                 </button>
@@ -267,19 +261,19 @@ export default function RubricEditor({ open, onClose, teamId, user, initialSecti
 
           <button
             onClick={addSection}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-sm font-bold text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-lg border-2 border-dashed border-border text-sm font-semibold text-muted-foreground hover:border-blue-400 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-400"
           >
             <Plus size={14} /> Add section
           </button>
         </div>
 
         {/* Footer */}
-        <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 rounded-b-2xl">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-t border-border bg-background rounded-b-2xl">
           <div className="flex gap-2">
             <button
               onClick={handleResetToDefault}
               disabled={saving}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-card border border-border text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-50"
               title="Load default rubric into the editor (not saved until you click Save)"
             >
               <RotateCcw size={12} /> Load defaults
@@ -288,7 +282,7 @@ export default function RubricEditor({ open, onClose, teamId, user, initialSecti
               <button
                 onClick={handleResetFromDb}
                 disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-red-200 dark:border-red-900 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-200 dark:border-red-900 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
                 title="Remove custom rubric; team falls back to the default"
               >
                 <Trash2 size={12} /> Delete custom rubric
@@ -299,14 +293,14 @@ export default function RubricEditor({ open, onClose, teamId, user, initialSecti
             <button
               onClick={onClose}
               disabled={saving}
-              className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50"
+              className="px-4 py-2 rounded-lg bg-card border border-border text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold disabled:opacity-50"
             >
               <Save size={12} /> Save Rubric
             </button>

@@ -18,15 +18,15 @@ import { useT } from '../i18n/I18nContext';
 import { HOLDINGS, HOLDING_LABELS } from '../utils/holdings';
 
 const DEFAULT_CATEGORY_COLORS = {
-  TMF: 'bg-blue-50 text-blue-700',
-  SPO: 'bg-violet-50 text-violet-700',
-  FUN: 'bg-emerald-50 text-emerald-700',
-  OPE: 'bg-slate-100 text-slate-600',
-  TOU: 'bg-amber-50 text-amber-700',
+  TMF: 'bg-blue-50 text-blue-700 dark:text-blue-300',
+  SPO: 'bg-violet-50 text-violet-700 dark:text-violet-300',
+  FUN: 'bg-emerald-50 text-emerald-700 dark:text-emerald-300',
+  OPE: 'bg-muted text-foreground',
+  TOU: 'bg-amber-50 text-amber-700 dark:text-amber-300',
   LEA: 'bg-orange-50 text-orange-700',
   CRE: 'bg-cyan-50 text-cyan-700',
   FRI: 'bg-rose-50 text-rose-700',
-  TRF: 'bg-indigo-50 text-indigo-700',
+  TRF: 'bg-indigo-50 text-indigo-700 dark:text-indigo-300',
 };
 
 export default function Ledger({
@@ -188,23 +188,23 @@ export default function Ledger({
     const fromName = accountMap[tx.transferFromAccountId]?.name || '';
     const toName = accountMap[tx.transferToAccountId]?.name || '';
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+      <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 dark:text-indigo-400 bg-indigo-50 px-2 py-0.5 rounded">
         {fromName} <ArrowRightLeft size={10} /> {toName}
       </span>
     );
   };
 
   const amountColor = (tx) => {
-    if (tx.category === 'TRF') return 'text-indigo-600';
-    return tx.amount < 0 ? 'text-red-500' : 'text-emerald-600';
+    if (tx.category === 'TRF') return 'text-indigo-700 dark:text-indigo-400';
+    return tx.amount < 0 ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400';
   };
 
   return (
     <div className="space-y-4 pb-20 md:pb-6">
       {/* ── TOOLBAR ── */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none space-y-3">
+      <div className="bg-card p-4 rounded-lg border border-border shadow-sm space-y-3">
         <div className="relative">
-          <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+          <Search className="absolute left-3 top-2.5 text-muted-foreground" size={16} />
           <input
             type="text"
             placeholder={t('ledger.searchPlaceholder')}
@@ -213,12 +213,12 @@ export default function Ledger({
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none dark:text-white"
+            className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-ring outline-none"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-2.5 text-slate-300 hover:text-slate-500"
+              className="absolute right-3 top-2.5 text-muted-foreground hover:text-muted-foreground"
             >
               <X size={16} />
             </button>
@@ -227,11 +227,11 @@ export default function Ledger({
 
         <div className="flex flex-wrap gap-2 items-center">
           <div className="flex items-center gap-1">
-            <Filter size={13} className="text-slate-400" />
+            <Filter size={13} className="text-muted-foreground" />
             <select
               value={categoryFilter}
               onChange={(e) => setFilterAndReset(setCategoryFilter)(e.target.value)}
-              className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-xs font-bold rounded-lg px-2 py-1.5 focus:ring-0 cursor-pointer dark:text-white"
+              className="bg-background border border-border text-xs font-semibold rounded-lg px-2 py-1.5 focus:ring-0 cursor-pointer"
             >
               <option value="all">{t('ledger.allCategories')}</option>
               {Object.entries(CATEGORY_LABELS).map(([code, label]) => (
@@ -248,7 +248,7 @@ export default function Ledger({
                 <select
                   value={accountFilter}
                   onChange={(e) => setFilterAndReset(setAccountFilter)(e.target.value)}
-                  className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-xs font-bold rounded-lg px-2 py-1.5 focus:ring-0 cursor-pointer dark:text-white"
+                  className="bg-background border border-border text-xs font-semibold rounded-lg px-2 py-1.5 focus:ring-0 cursor-pointer"
                 >
                   <option value="all">{t('ledger.allAccounts')}</option>
                   {HOLDINGS.filter((h) => accountsByHolding[h]?.length > 0).map((h) => (
@@ -266,7 +266,7 @@ export default function Ledger({
                 <select
                   value={holdingFilter}
                   onChange={(e) => setFilterAndReset(setHoldingFilter)(e.target.value)}
-                  className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-xs font-bold rounded-lg px-2 py-1.5 focus:ring-0 cursor-pointer dark:text-white"
+                  className="bg-background border border-border text-xs font-semibold rounded-lg px-2 py-1.5 focus:ring-0 cursor-pointer"
                 >
                   <option value="all">{t('ledger.allHoldings')}</option>
                   {HOLDINGS.filter((h) => h !== 'none').map((h) => (
@@ -279,7 +279,7 @@ export default function Ledger({
             </>
           )}
 
-          <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+          <div className="flex bg-muted rounded-lg p-0.5">
             {[
               { val: 'all', label: t('common.all') },
               { val: 'income', label: t('ledger.income') },
@@ -289,10 +289,10 @@ export default function Ledger({
               <button
                 key={opt.val}
                 onClick={() => setFilterAndReset(setFlowFilter)(opt.val)}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
                   flowFilter === opt.val
-                    ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    ? 'bg-card shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {opt.label}
@@ -300,7 +300,7 @@ export default function Ledger({
             ))}
           </div>
 
-          <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
+          <div className="flex bg-muted rounded-lg p-0.5">
             {[
               { val: 'all', label: t('common.all') },
               { val: 'cleared', label: t('ledger.cleared') },
@@ -309,10 +309,10 @@ export default function Ledger({
               <button
                 key={opt.val}
                 onClick={() => setFilterAndReset(setStatusFilter)(opt.val)}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
                   statusFilter === opt.val
-                    ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    ? 'bg-card shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {opt.label}
@@ -322,7 +322,7 @@ export default function Ledger({
 
           <button
             onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-[11px] font-bold transition-colors ml-auto dark:text-slate-300"
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-background border border-border hover:bg-muted rounded-lg text-xs font-semibold transition-colors ml-auto"
           >
             <ArrowUpDown size={12} />
             {sortOrder === 'desc' ? t('ledger.newest') : t('ledger.oldest')}
@@ -330,15 +330,15 @@ export default function Ledger({
         </div>
 
         {hasActiveFilters && (
-          <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-700">
-            <span className="text-[11px] text-slate-500 font-bold">
+          <div className="flex justify-between items-center pt-2 border-t border-border">
+            <span className="text-xs text-muted-foreground font-semibold">
               {filteredTransactions.length} result{filteredTransactions.length !== 1 && 's'}
-              <span className="text-emerald-600 ml-3">+{formatMoney(totalIncome)}</span>
-              <span className="text-red-500 ml-2">{formatMoney(totalExpense)}</span>
+              <span className="text-emerald-700 dark:text-emerald-400 ml-3">+{formatMoney(totalIncome)}</span>
+              <span className="text-red-700 dark:text-red-400 ml-2">{formatMoney(totalExpense)}</span>
             </span>
             <button
               onClick={clearAllFilters}
-              className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 flex items-center gap-1"
             >
               <X size={12} /> {t('common.clearFilters')}
             </button>
@@ -347,9 +347,9 @@ export default function Ledger({
       </div>
 
       {/* ── DESKTOP TABLE ── */}
-      <div className="hidden md:block bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden">
+      <div className="hidden md:block bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          <thead className="bg-background border-b border-border text-xs font-semibold text-muted-foreground">
             <tr>
               <th className="px-5 py-3.5">{t('common.date')}</th>
               <th className="px-5 py-3.5">{t('ledger.transaction')}</th>
@@ -360,16 +360,16 @@ export default function Ledger({
               <th className="px-3 py-3.5 text-center w-14"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+          <tbody className="divide-y divide-border">
             {pagedTransactions.map((tx) => {
               const isDraft = !tx.cleared && tx.eventId;
               return (
                 <tr
                   key={tx.id}
-                  className={`hover:bg-blue-50/30 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isDraft ? 'border-l-2 border-l-amber-400 bg-amber-50/20 dark:bg-amber-900/20' : ''}`}
+                  className={`hover:bg-blue-50/30 transition-colors cursor-pointer ${isDraft ? 'border-l-2 border-l-amber-400 bg-amber-50/20 dark:bg-amber-900/20' : ''}`}
                   onClick={() => onEditTx(tx)}
                 >
-                  <td className="px-5 py-3 text-xs font-medium text-slate-500 whitespace-nowrap">
+                  <td className="px-5 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">
                     {tx.date?.seconds
                       ? new Date(tx.date.seconds * 1000).toLocaleDateString('en-US', {
                           month: 'short',
@@ -381,26 +381,26 @@ export default function Ledger({
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap ${
-                          CATEGORY_COLORS[tx.category] || 'bg-slate-100 text-slate-600'
+                        className={`text-xs font-semibold px-2 py-0.5 rounded whitespace-nowrap ${
+                          CATEGORY_COLORS[tx.category] || 'bg-muted text-foreground'
                         }`}
                       >
                         {CATEGORY_LABELS[tx.category] || tx.category}
                       </span>
-                      <span className="text-sm font-bold text-slate-800 dark:text-white truncate max-w-[250px]">
-                        {tx.title}
-                      </span>
+                      <span className="text-sm font-semibold text-foreground truncate max-w-[250px]">{tx.title}</span>
                     </div>
                     {tx.category === 'TRF' && <TransferBadge tx={tx} />}
                     {tx.eventTitle && (
-                      <p className="text-[10px] text-blue-600 font-bold mt-0.5 flex items-center gap-1">
+                      <p className="text-xs text-blue-700 dark:text-blue-400 font-semibold mt-0.5 flex items-center gap-1">
                         <Link2 size={9} /> {tx.eventTitle}
                       </p>
                     )}
-                    {tx.notes && <p className="text-[11px] text-slate-400 mt-0.5 truncate max-w-[350px]">{tx.notes}</p>}
+                    {tx.notes && (
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[350px]">{tx.notes}</p>
+                    )}
                   </td>
-                  <td className="px-5 py-3 text-xs text-slate-600 dark:text-slate-400">{tx.playerName || '—'}</td>
-                  <td className="px-5 py-3 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                  <td className="px-5 py-3 text-xs text-foreground">{tx.playerName || '—'}</td>
+                  <td className="px-5 py-3 text-xs text-foreground whitespace-nowrap">
                     {tx.category === 'TRF' ? (
                       <span className="inline-flex items-center gap-1">
                         <span>{accountMap[tx.transferFromAccountId]?.name || '—'}</span>
@@ -413,20 +413,20 @@ export default function Ledger({
                   </td>
                   <td className="px-5 py-3">
                     {tx.cleared ? (
-                      <span className="inline-flex items-center gap-1 text-emerald-600 text-[11px] font-bold">
+                      <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
                         <CheckCircle2 size={12} /> {t('ledger.cleared')}
                       </span>
                     ) : isDraft ? (
-                      <span className="inline-flex items-center gap-1 text-amber-600 text-[11px] font-black">
+                      <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 text-xs font-bold">
                         <Clock size={12} /> {t('ledger.draft')}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-amber-500 text-[11px] font-bold">
+                      <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 text-xs font-semibold">
                         <Clock size={12} /> {t('ledger.pending')}
                       </span>
                     )}
                   </td>
-                  <td className={`px-5 py-3 text-right text-sm font-black whitespace-nowrap ${amountColor(tx)}`}>
+                  <td className={`px-5 py-3 text-right text-sm font-bold whitespace-nowrap ${amountColor(tx)}`}>
                     {tx.category === 'TRF' && '↔ '}
                     {tx.amount < 0 ? '-' : tx.category !== 'TRF' ? '+' : ''}
                     {formatMoney(Math.abs(tx.amount))}
@@ -435,7 +435,7 @@ export default function Ledger({
                     {onDeleteTx && (
                       <button
                         onClick={() => onDeleteTx(tx.id)}
-                        className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                        className="text-muted-foreground hover:text-red-700 dark:text-red-400 transition-colors p-1"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -446,7 +446,7 @@ export default function Ledger({
             })}
             {pagedTransactions.length === 0 && (
               <tr>
-                <td colSpan={7} className="text-center py-10 text-slate-400 text-sm font-bold">
+                <td colSpan={7} className="text-center py-10 text-muted-foreground text-sm font-semibold">
                   {hasActiveFilters ? t('ledger.noFilterMatch') : t('ledger.noTransactions')}
                 </td>
               </tr>
@@ -463,43 +463,43 @@ export default function Ledger({
             <div
               key={tx.id}
               onClick={() => onEditTx(tx)}
-              className={`bg-white dark:bg-slate-900 rounded-xl border p-4 active:bg-slate-50 dark:active:bg-slate-800 transition-colors ${isDraft ? 'border-amber-300 dark:border-amber-600 border-dashed' : 'border-slate-200 dark:border-slate-700'}`}
+              className={`bg-card rounded-lg border p-4 active:bg-muted transition-colors ${isDraft ? 'border-amber-300 dark:border-amber-600 border-dashed' : 'border-border'}`}
             >
               <div className="flex justify-between items-start gap-2 mb-2">
                 <div className="min-w-0 flex-grow">
                   <div className="flex items-center gap-2 mb-1">
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded shrink-0 ${
-                        CATEGORY_COLORS[tx.category] || 'bg-slate-100 text-slate-600'
+                      className={`text-xs font-semibold px-2 py-0.5 rounded shrink-0 ${
+                        CATEGORY_COLORS[tx.category] || 'bg-muted text-foreground'
                       }`}
                     >
                       {CATEGORY_LABELS[tx.category] || tx.category}
                     </span>
                     {tx.cleared ? (
-                      <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                      <CheckCircle2 size={12} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
                     ) : isDraft ? (
-                      <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">
+                      <span className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">
                         DRAFT
                       </span>
                     ) : (
                       <Clock size={12} className="text-amber-400 shrink-0" />
                     )}
                   </div>
-                  <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{tx.title}</p>
+                  <p className="text-sm font-semibold text-foreground truncate">{tx.title}</p>
                   {tx.category === 'TRF' && <TransferBadge tx={tx} />}
                   {tx.eventTitle && (
-                    <p className="text-[10px] text-blue-600 font-bold mt-0.5 flex items-center gap-1">
+                    <p className="text-xs text-blue-700 dark:text-blue-400 font-semibold mt-0.5 flex items-center gap-1">
                       <Link2 size={9} /> {tx.eventTitle}
                     </p>
                   )}
                 </div>
-                <span className={`text-sm font-black whitespace-nowrap ${amountColor(tx)}`}>
+                <span className={`text-sm font-bold whitespace-nowrap ${amountColor(tx)}`}>
                   {tx.category === 'TRF' && '↔ '}
                   {tx.amount < 0 ? '-' : tx.category !== 'TRF' ? '+' : ''}
                   {formatMoney(Math.abs(tx.amount))}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-[11px] text-slate-400 font-medium">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground font-medium">
                 <span>
                   {tx.date?.seconds
                     ? new Date(tx.date.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -522,7 +522,7 @@ export default function Ledger({
           );
         })}
         {pagedTransactions.length === 0 && (
-          <div className="text-center py-10 text-slate-400 text-sm font-bold">
+          <div className="text-center py-10 text-muted-foreground text-sm font-semibold">
             {hasActiveFilters ? t('ledger.noFilterMatch') : t('ledger.noTransactions')}
           </div>
         )}
@@ -534,31 +534,31 @@ export default function Ledger({
           <button
             onClick={() => setCurrentPage(1)}
             disabled={safePage === 1}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 disabled:opacity-30"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-30"
           >
             <ChevronsLeft size={16} />
           </button>
           <button
             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
             disabled={safePage === 1}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 disabled:opacity-30"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-30"
           >
             <ChevronLeft size={16} />
           </button>
-          <span className="text-xs font-bold text-slate-500 px-3">
+          <span className="text-xs font-semibold text-muted-foreground px-3">
             Page {safePage} of {totalPages}
           </span>
           <button
             onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
             disabled={safePage === totalPages}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 disabled:opacity-30"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-30"
           >
             <ChevronRight size={16} />
           </button>
           <button
             onClick={() => setCurrentPage(totalPages)}
             disabled={safePage === totalPages}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 disabled:opacity-30"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground disabled:opacity-30"
           >
             <ChevronsRight size={16} />
           </button>

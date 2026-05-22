@@ -52,19 +52,17 @@ function StmtRow({ row, borderClass, bgClass, formatMoney, onSelect, selected, s
       className={`flex items-center justify-between px-4 py-2.5 gap-3 transition-all ${borderClass} ${bgClass} ${interactiveClass}`}
     >
       <div className="min-w-0 flex items-center gap-2">
-        {selected && <Link2 size={11} className="text-blue-500 shrink-0" aria-hidden="true" />}
+        {selected && <Link2 size={11} className="text-blue-700 dark:text-blue-400 shrink-0" aria-hidden="true" />}
         <div className="min-w-0">
-          <p className="text-sm font-black tabular-nums text-slate-800 dark:text-white">{formatMoney(row.amount)}</p>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-tight mt-0.5">
+          <p className="text-sm font-bold tabular-nums text-foreground">{formatMoney(row.amount)}</p>
+          <p className="text-xs text-muted-foreground font-medium leading-tight mt-0.5">
             {row.date || 'No date'}
-            {row.description ? (
-              <span className="ml-1 text-slate-400 dark:text-slate-500">· {row.description}</span>
-            ) : null}
+            {row.description ? <span className="ml-1 text-muted-foreground">· {row.description}</span> : null}
           </p>
         </div>
       </div>
       <span
-        className={`text-[10px] font-black tabular-nums shrink-0 px-2 py-0.5 rounded-lg ${
+        className={`text-xs font-bold tabular-nums shrink-0 px-2 py-0.5 rounded-lg ${
           row.amount >= 0
             ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
             : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
@@ -304,14 +302,12 @@ export default function StatementImportModal({
       aria-label={`Statement import for ${account?.name}`}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white dark:bg-slate-900 w-full sm:max-w-3xl rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+      <div className="bg-card w-full sm:max-w-3xl rounded-t-3xl sm:rounded-lg shadow-md flex flex-col max-h-[92vh] overflow-hidden">
         {/* ── HEADER ── */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
           <div className="min-w-0">
-            <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-              Statement Comparison
-            </p>
-            <h2 className="text-base font-black text-slate-900 dark:text-white leading-tight truncate">
+            <p className="text-xs font-bold text-muted-foreground">Statement Comparison</p>
+            <h2 className="text-base font-bold text-foreground leading-tight truncate">
               {account?.name}
               {hasResult && result.stmtDateMin && result.stmtDateMax
                 ? ` — ${result.stmtDateMin} → ${result.stmtDateMax}`
@@ -319,7 +315,7 @@ export default function StatementImportModal({
             </h2>
             {/* Institution badge — derived from file name */}
             {institutionLabel && (
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-0.5 flex items-center gap-1">
+              <p className="text-xs font-semibold text-muted-foreground mt-0.5 flex items-center gap-1">
                 <FileText size={9} aria-hidden="true" />
                 {institutionLabel}
               </p>
@@ -327,7 +323,7 @@ export default function StatementImportModal({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-lg shrink-0"
+            className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-lg shrink-0"
             aria-label="Close"
           >
             <X size={18} />
@@ -337,7 +333,7 @@ export default function StatementImportModal({
         <div className="overflow-y-auto flex-1 p-5 space-y-5">
           {/* ── APP TRANSACTION FILTER MODE ── */}
           <div>
-            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+            <p className="text-xs font-bold text-muted-foreground mb-2 flex items-center gap-1.5">
               <Calendar size={11} aria-hidden="true" />
               Compare app transactions from
             </p>
@@ -346,10 +342,8 @@ export default function StatementImportModal({
                 <button
                   key={mode.id}
                   onClick={() => setFilterMode(mode.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    filterMode === mode.id
-                      ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    filterMode === mode.id ? 'bg-card text-white' : 'bg-muted text-foreground hover:bg-muted'
                   }`}
                 >
                   {mode.label}
@@ -360,38 +354,34 @@ export default function StatementImportModal({
             {filterMode === 'range' && (
               <div className="mt-3 flex gap-3 flex-wrap">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                    From
-                  </label>
+                  <label className="text-xs font-semibold text-muted-foreground">From</label>
                   <input
                     type="date"
                     value={rangeStart}
                     onChange={(e) => setRangeStart(e.target.value)}
-                    className="text-xs font-mono border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-white"
+                    className="text-xs font-mono border border-border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                    To
-                  </label>
+                  <label className="text-xs font-semibold text-muted-foreground">To</label>
                   <input
                     type="date"
                     value={rangeEnd}
                     onChange={(e) => setRangeEnd(e.target.value)}
-                    className="text-xs font-mono border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-white"
+                    className="text-xs font-mono border border-border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
               </div>
             )}
 
             {filterMode === 'season' && (
-              <p className="mt-2 text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+              <p className="mt-2 text-xs text-muted-foreground font-medium">
                 All {allAccountTransactions.length} transactions for this account will be included.
               </p>
             )}
 
             {filterMode === 'month' && (
-              <p className="mt-2 text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+              <p className="mt-2 text-xs text-muted-foreground font-medium">
                 Showing {accountTransactions.length} transaction{accountTransactions.length !== 1 ? 's' : ''} in{' '}
                 {monthKeyToLabel(monthKey)}.
               </p>
@@ -407,21 +397,21 @@ export default function StatementImportModal({
               }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
                 dragOver
                   ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/30'
-                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                  : 'border-border hover:border-border dark:hover:border-border'
               }`}
             >
-              <Upload size={28} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-              <p className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">
+              <Upload size={28} className="mx-auto text-muted-foreground mb-3" />
+              <p className="text-sm font-semibold text-foreground mb-1">
                 Drop a CSV statement here, or click to browse
               </p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">
+              <p className="text-xs text-muted-foreground mb-4">
                 Accepts any CSV with a date and amount column — description is optional. Works with Chase, Venmo,
                 PayPal, and most bank exports.
               </p>
-              <label className="cursor-pointer inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-black hover:bg-slate-700 dark:hover:bg-slate-100 transition-colors">
+              <label className="cursor-pointer inline-flex items-center gap-1.5 px-4 py-2 bg-card text-white rounded-lg text-xs font-bold hover:bg-accent/90 transition-colors">
                 <FileText size={13} />
                 Choose File
                 <input
@@ -437,15 +427,13 @@ export default function StatementImportModal({
           {/* ── PASTE FALLBACK ── */}
           {!csvText && (
             <div>
-              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5">
-                Or paste CSV text directly
-              </p>
+              <p className="text-xs font-bold text-muted-foreground mb-1.5">Or paste CSV text directly</p>
               <textarea
                 rows={5}
                 placeholder={
                   'Date,Amount\n2025-03-01,250.00\n2025-03-15,-75.00\n\nAlso works with Description column:\nDate,Description,Amount\n2025-03-01,Team Fees,250.00'
                 }
-                className="w-full text-xs font-mono border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-white resize-y placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                className="w-full text-xs font-mono border border-border rounded-lg px-3 py-2.5 outline-none focus:ring-2 focus:ring-ring resize-y placeholder:text-muted-foreground"
                 onBlur={(e) => {
                   if (e.target.value.trim()) {
                     setUserMapping(null);
@@ -458,30 +446,26 @@ export default function StatementImportModal({
 
           {/* ── FIELD MAPPER (shown after CSV is loaded) ── */}
           {csvText && autoDetected && (
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="rounded-lg border border-border overflow-hidden">
               {/* Mapper header row */}
-              <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/60">
+              <div className="flex items-center justify-between px-4 py-3 bg-background">
                 <div className="flex items-center gap-2">
-                  <FileText size={13} className="text-slate-400" />
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                    {fileName || 'Pasted CSV'}
-                  </span>
+                  <FileText size={13} className="text-muted-foreground" />
+                  <span className="text-xs font-semibold text-foreground">{fileName || 'Pasted CSV'}</span>
                   {hasResult && (
-                    <span className="text-[10px] text-slate-400 font-medium">
+                    <span className="text-xs text-muted-foreground font-medium">
                       · {result.totalStmtRows ?? result.matched.length + result.statementOnly.length} rows
                     </span>
                   )}
                   {userMapping && (
-                    <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
-                      custom mapping
-                    </span>
+                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">custom mapping</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
                   {userMapping && (
                     <button
                       onClick={() => setUserMapping(null)}
-                      className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                      className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                       title="Reset to auto-detected mapping"
                     >
                       <RotateCcw size={10} />
@@ -491,10 +475,8 @@ export default function StatementImportModal({
                   <button
                     onClick={() => setShowMapper((p) => !p)}
                     aria-expanded={showMapper}
-                    className={`flex items-center gap-1 text-[10px] font-bold transition-colors ${
-                      showMapper
-                        ? 'text-blue-600 dark:text-blue-400'
-                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                    className={`flex items-center gap-1 text-xs font-semibold transition-colors ${
+                      showMapper ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     <Settings2 size={11} />
@@ -502,7 +484,7 @@ export default function StatementImportModal({
                   </button>
                   <button
                     onClick={reset}
-                    className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                    className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                   >
                     Change
                   </button>
@@ -511,8 +493,8 @@ export default function StatementImportModal({
 
               {/* Mapper body */}
               {showMapper && !autoDetected.isMinimalFormat && (
-                <div className="px-4 py-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                <div className="px-4 py-4 border-t border-border space-y-3">
+                  <p className="text-xs text-muted-foreground font-medium">
                     Map each app field to the matching column in your CSV. Columns detected automatically are
                     pre-selected — override only what needs changing.
                   </p>
@@ -521,9 +503,7 @@ export default function StatementImportModal({
                       const currentVal = resolvedMapping?.[field.id] ?? -1;
                       return (
                         <div key={field.id} className="flex flex-col gap-1">
-                          <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-                            {field.label}
-                          </label>
+                          <label className="text-xs font-bold text-muted-foreground">{field.label}</label>
                           <select
                             value={currentVal}
                             onChange={(e) =>
@@ -536,7 +516,7 @@ export default function StatementImportModal({
                                   : {}),
                               }))
                             }
-                            className="text-xs border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-white"
+                            className="text-xs border border-border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-ring"
                           >
                             {colOptions.map((opt) => (
                               <option key={opt.value} value={opt.value}>
@@ -553,8 +533,8 @@ export default function StatementImportModal({
 
               {/* Minimal format notice */}
               {showMapper && autoDetected.isMinimalFormat && (
-                <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800">
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                <div className="px-4 py-3 border-t border-border">
+                  <p className="text-xs text-muted-foreground font-medium">
                     This file uses minimal format (no column headers). Column 1 = Date, Column 2 = Amount. Field mapping
                     is not available for headerless exports.
                   </p>
@@ -565,11 +545,14 @@ export default function StatementImportModal({
 
           {/* ── PARSE ERROR ── */}
           {result?.error && (
-            <div className="flex items-start gap-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3">
-              <AlertTriangle size={14} className="text-red-500 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
+              <AlertTriangle size={14} className="text-red-700 dark:text-red-400 shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-bold text-red-700 dark:text-red-300">{result.error}</p>
-                <button onClick={reset} className="text-xs text-red-500 hover:text-red-700 mt-1 font-semibold">
+                <p className="text-xs font-semibold text-red-700 dark:text-red-300">{result.error}</p>
+                <button
+                  onClick={reset}
+                  className="text-xs text-red-700 dark:text-red-400 hover:text-red-700 dark:text-red-300 mt-1 font-medium"
+                >
                   Try again
                 </button>
               </div>
@@ -581,46 +564,46 @@ export default function StatementImportModal({
             <>
               {/* Summary chips — counts reflect manual matches applied */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 text-center">
-                  <p className="text-xl font-black text-emerald-700 dark:text-emerald-300 tabular-nums">
+                <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3 text-center">
+                  <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300 tabular-nums">
                     {totalMatched}
                   </p>
-                  <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
                     Matched{manualMatches.length > 0 ? ` (${manualMatches.length} manual)` : ''}
                   </p>
                 </div>
                 <div
-                  className={`border rounded-xl p-3 text-center ${
+                  className={`border rounded-lg p-3 text-center ${
                     visibleStmtOnly.length > 0
                       ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800'
-                      : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'
+                      : 'bg-background border-border'
                   }`}
                 >
                   <p
-                    className={`text-xl font-black tabular-nums ${visibleStmtOnly.length > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-slate-400'}`}
+                    className={`text-xl font-bold tabular-nums ${visibleStmtOnly.length > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-muted-foreground'}`}
                   >
                     {visibleStmtOnly.length}
                   </p>
                   <p
-                    className={`text-[10px] font-bold mt-0.5 ${visibleStmtOnly.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}
+                    className={`text-xs font-semibold mt-0.5 ${visibleStmtOnly.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}
                   >
                     Statement only
                   </p>
                 </div>
                 <div
-                  className={`border rounded-xl p-3 text-center ${
+                  className={`border rounded-lg p-3 text-center ${
                     visibleAppOnly.length > 0
                       ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
-                      : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'
+                      : 'bg-background border-border'
                   }`}
                 >
                   <p
-                    className={`text-xl font-black tabular-nums ${visibleAppOnly.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-400'}`}
+                    className={`text-xl font-bold tabular-nums ${visibleAppOnly.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}
                   >
                     {visibleAppOnly.length}
                   </p>
                   <p
-                    className={`text-[10px] font-bold mt-0.5 ${visibleAppOnly.length > 0 ? 'text-red-500 dark:text-red-400' : 'text-slate-400'}`}
+                    className={`text-xs font-semibold mt-0.5 ${visibleAppOnly.length > 0 ? 'text-red-500 dark:text-red-400' : 'text-muted-foreground'}`}
                   >
                     App only
                   </p>
@@ -629,12 +612,10 @@ export default function StatementImportModal({
 
               {/* Net unmatched amount */}
               {(visibleStmtOnly.length > 0 || visibleAppOnly.length > 0) && (
-                <div className="flex items-center justify-between bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3">
-                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-                    Unmatched net amount
-                  </span>
+                <div className="flex items-center justify-between bg-card border border-border rounded-lg px-4 py-3">
+                  <span className="text-xs font-semibold text-muted-foreground">Unmatched net amount</span>
                   <span
-                    className={`text-base font-black tabular-nums ${
+                    className={`text-base font-bold tabular-nums ${
                       Math.abs(netUnmatched) < 0.01
                         ? 'text-emerald-600 dark:text-emerald-400'
                         : 'text-red-500 dark:text-red-400'
@@ -648,35 +629,35 @@ export default function StatementImportModal({
               {/* ── MANUAL MATCH HINT (shown when there are unmatched rows on both sides) ── */}
               {visibleStmtOnly.length > 0 && visibleAppOnly.length > 0 && (
                 <div
-                  className={`flex items-start gap-2.5 rounded-xl px-4 py-3 border transition-all ${
+                  className={`flex items-start gap-2.5 rounded-lg px-4 py-3 border transition-all ${
                     pendingMatch
                       ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700'
-                      : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
+                      : 'bg-background border-border'
                   }`}
                 >
                   <Link2
                     size={13}
-                    className={`shrink-0 mt-0.5 ${pendingMatch ? 'text-blue-500' : 'text-slate-400'}`}
+                    className={`shrink-0 mt-0.5 ${pendingMatch ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}`}
                     aria-hidden="true"
                   />
                   <div className="min-w-0">
                     {pendingMatch ? (
-                      <p className="text-xs font-bold text-blue-700 dark:text-blue-300">
+                      <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">
                         {pendingMatch.side === 'stmt'
                           ? 'Statement row selected — now click a row in "App only" to pair them.'
                           : 'App row selected — now click a row in "Statement only" to pair them.'}
                       </p>
                     ) : (
-                      <p className="text-xs font-bold text-slate-600 dark:text-slate-300">Manual matching available</p>
+                      <p className="text-xs font-semibold text-foreground">Manual matching available</p>
                     )}
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+                    <p className="text-xs text-muted-foreground font-medium mt-0.5">
                       Click any unmatched row to select it, then click its counterpart on the other side to link them as
                       a manual match.
                     </p>
                     {pendingMatch && (
                       <button
                         onClick={() => setPendingMatch(null)}
-                        className="mt-1 text-[10px] font-bold text-blue-500 hover:text-blue-700 dark:hover:text-blue-300"
+                        className="mt-1 text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-300"
                       >
                         Cancel selection
                       </button>
@@ -688,11 +669,11 @@ export default function StatementImportModal({
               {/* ── STATEMENT ONLY ── */}
               {visibleStmtOnly.length > 0 && (
                 <section aria-label="Transactions in statement but not in app">
-                  <p className="text-xs font-black text-amber-700 dark:text-amber-300 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <p className="text-xs font-bold text-amber-700 dark:text-amber-300 mb-2 flex items-center gap-1.5">
                     <AlertTriangle size={12} />
                     In your statement — not logged in the app ({visibleStmtOnly.length})
                   </p>
-                  <div className="rounded-xl border border-amber-200 dark:border-amber-800 overflow-hidden">
+                  <div className="rounded-lg border border-amber-200 dark:border-amber-800 overflow-hidden">
                     {result.statementOnly.map((row, i) => {
                       if (manualStmtIndices.has(i)) return null;
                       const visIdx = visibleStmtOnly.indexOf(row);
@@ -719,11 +700,11 @@ export default function StatementImportModal({
               {/* ── APP ONLY ── */}
               {visibleAppOnly.length > 0 && (
                 <section aria-label="Transactions in app but not in statement">
-                  <p className="text-xs font-black text-red-600 dark:text-red-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <p className="text-xs font-bold text-red-600 dark:text-red-400 mb-2 flex items-center gap-1.5">
                     <AlertTriangle size={12} />
                     Logged in app — not on your statement ({visibleAppOnly.length})
                   </p>
-                  <div className="rounded-xl border border-red-200 dark:border-red-800 overflow-hidden">
+                  <div className="rounded-lg border border-red-200 dark:border-red-800 overflow-hidden">
                     {result.appOnly.map((row, i) => {
                       if (manualAppIndices.has(i)) return null;
                       const visIdx = visibleAppOnly.indexOf(row);
@@ -751,14 +732,14 @@ export default function StatementImportModal({
                   <button
                     onClick={() => setShowManualMatches((p) => !p)}
                     aria-expanded={showManualMatches}
-                    className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors mb-2"
+                    className="flex items-center gap-1.5 text-xs font-bold text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-300 transition-colors mb-2"
                   >
                     {showManualMatches ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
                     <Link2 size={11} />
                     Manually matched ({manualMatches.length})
                   </button>
                   {showManualMatches && (
-                    <div className="rounded-xl border border-blue-200 dark:border-blue-800 overflow-hidden">
+                    <div className="rounded-lg border border-blue-200 dark:border-blue-800 overflow-hidden">
                       {manualMatches.map((pair, pairIdx) => {
                         const stmt = result.statementOnly[pair.stmtIdx];
                         const app = result.appOnly[pair.appIdx];
@@ -770,25 +751,21 @@ export default function StatementImportModal({
                           >
                             <div className="grid grid-cols-2 gap-3 mb-1.5">
                               <div className="min-w-0">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-                                  Statement
-                                </p>
-                                <p className="text-sm font-black tabular-nums text-slate-800 dark:text-white">
+                                <p className="text-xs font-bold text-muted-foreground mb-0.5">Statement</p>
+                                <p className="text-sm font-bold tabular-nums text-foreground">
                                   {formatMoney(stmt?.amount ?? 0)}
                                 </p>
-                                <p className="text-[10px] text-slate-400">
+                                <p className="text-xs text-muted-foreground">
                                   {stmt?.date || 'No date'}
                                   {stmt?.description ? ` · ${stmt.description}` : ''}
                                 </p>
                               </div>
                               <div className="min-w-0">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-                                  App
-                                </p>
-                                <p className="text-sm font-black tabular-nums text-slate-800 dark:text-white">
+                                <p className="text-xs font-bold text-muted-foreground mb-0.5">App</p>
+                                <p className="text-sm font-bold tabular-nums text-foreground">
                                   {formatMoney(app?.amount ?? 0)}
                                 </p>
-                                <p className="text-[10px] text-slate-400">
+                                <p className="text-xs text-muted-foreground">
                                   {app?.date || 'No date'}
                                   {app?.description ? ` · ${app.description}` : ''}
                                 </p>
@@ -796,17 +773,17 @@ export default function StatementImportModal({
                             </div>
                             <div className="flex items-center justify-between">
                               {Math.abs(delta) >= 0.01 ? (
-                                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
                                   Δ {formatMoney(delta)} amount difference
                                 </span>
                               ) : (
-                                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                                   <CheckCircle2 size={10} /> Amounts match
                                 </span>
                               )}
                               <button
                                 onClick={() => removeManualMatch(pairIdx)}
-                                className="flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                                className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-red-700 dark:text-red-400 dark:hover:text-red-400 transition-colors"
                                 aria-label="Remove manual match"
                               >
                                 <Unlink2 size={10} />
@@ -823,10 +800,10 @@ export default function StatementImportModal({
 
               {/* All clear */}
               {visibleStmtOnly.length === 0 && visibleAppOnly.length === 0 && (
-                <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-4">
+                <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg px-4 py-4">
                   <CheckCircle2 size={20} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <div>
-                    <p className="text-sm font-black text-emerald-700 dark:text-emerald-300">
+                    <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
                       All transactions accounted for
                     </p>
                     <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
@@ -843,38 +820,30 @@ export default function StatementImportModal({
                   <button
                     onClick={() => setShowMatched((p) => !p)}
                     aria-expanded={showMatched}
-                    className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {showMatched ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
                     Show auto-matched rows ({result.matched.length})
                   </button>
                   {showMatched && (
-                    <div className="mt-2 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div className="mt-2 rounded-lg border border-border overflow-hidden">
                       {result.matched.map(({ app, stmt }, i) => (
                         <div
                           key={i}
-                          className={`grid grid-cols-2 gap-3 px-4 py-2.5 ${i > 0 ? 'border-t border-slate-100 dark:border-slate-800' : ''}`}
+                          className={`grid grid-cols-2 gap-3 px-4 py-2.5 ${i > 0 ? 'border-t border-border' : ''}`}
                         >
                           <div className="min-w-0">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-                              App
-                            </p>
-                            <p className="text-sm font-black tabular-nums text-slate-800 dark:text-white">
-                              {formatMoney(app.amount)}
-                            </p>
-                            <p className="text-[10px] text-slate-400">
+                            <p className="text-xs font-bold text-muted-foreground mb-0.5">App</p>
+                            <p className="text-sm font-bold tabular-nums text-foreground">{formatMoney(app.amount)}</p>
+                            <p className="text-xs text-muted-foreground">
                               {app.date || 'No date'}
                               {app.description ? ` · ${app.description}` : ''}
                             </p>
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
-                              Statement
-                            </p>
-                            <p className="text-sm font-black tabular-nums text-slate-800 dark:text-white">
-                              {formatMoney(stmt.amount)}
-                            </p>
-                            <p className="text-[10px] text-slate-400">
+                            <p className="text-xs font-bold text-muted-foreground mb-0.5">Statement</p>
+                            <p className="text-sm font-bold tabular-nums text-foreground">{formatMoney(stmt.amount)}</p>
+                            <p className="text-xs text-muted-foreground">
                               {stmt.date || 'No date'}
                               {stmt.description ? ` · ${stmt.description}` : ''}
                             </p>
@@ -890,13 +859,11 @@ export default function StatementImportModal({
         </div>
 
         {/* ── FOOTER ── */}
-        <div className="shrink-0 px-5 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-            Nothing is saved — this comparison is read-only.
-          </p>
+        <div className="shrink-0 px-5 py-4 border-t border-border flex justify-between items-center">
+          <p className="text-xs text-muted-foreground font-medium">Nothing is saved — this comparison is read-only.</p>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-black bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-700 dark:hover:bg-slate-100 transition-colors"
+            className="px-4 py-2 rounded-lg text-xs font-bold bg-card text-white hover:bg-accent/90 transition-colors"
           >
             Done
           </button>

@@ -30,10 +30,16 @@ import PaymentOptions from '../../components/PaymentOptions';
 
 function getProgressColor(pct) {
   if (pct >= 100)
-    return { bar: 'bg-emerald-500', text: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/30' };
-  if (pct >= 75) return { bar: 'bg-blue-500', text: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/30' };
-  if (pct >= 25) return { bar: 'bg-amber-500', text: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/30' };
-  return { bar: 'bg-red-500', text: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/30' };
+    return {
+      bar: 'bg-emerald-500',
+      text: 'text-emerald-700 dark:text-emerald-400',
+      bg: 'bg-emerald-50 dark:bg-emerald-900/30',
+    };
+  if (pct >= 75)
+    return { bar: 'bg-blue-500', text: 'text-blue-700 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/30' };
+  if (pct >= 25)
+    return { bar: 'bg-amber-500', text: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/30' };
+  return { bar: 'bg-red-500', text: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/30' };
 }
 
 export default function ParentView({
@@ -197,12 +203,12 @@ export default function ParentView({
   // ── EMPTY STATE (after all hooks) ──
   if (!players || players.length === 0 || !activePlayer)
     return (
-      <div className="max-w-lg mx-auto mt-12 text-center p-10 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
-        <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
-          <ShieldX size={28} className="text-slate-400" />
+      <div className="max-w-lg mx-auto mt-12 text-center p-10 bg-card rounded-lg border border-border shadow-sm">
+        <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+          <ShieldX size={28} className="text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-black text-slate-800 dark:text-white mb-2">{t('parent.noPlayers')}</h3>
-        <p className="text-slate-500 font-medium text-sm leading-relaxed">{t('parent.noPlayersMsg')}</p>
+        <h3 className="text-lg font-bold text-foreground mb-2">{t('parent.noPlayers')}</h3>
+        <p className="text-muted-foreground font-medium text-sm leading-relaxed">{t('parent.noPlayersMsg')}</p>
       </div>
     );
 
@@ -272,24 +278,22 @@ export default function ParentView({
     <div className="pb-24 md:pb-6">
       {/* ── CHILD SWITCHER (always on top) ── */}
       {players.length > 1 && (
-        <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl mb-5">
+        <div className="flex gap-2 p-1 bg-muted rounded-lg mb-5">
           {players.map((p, index) => {
             const pTeam = teams.find((t) => t.id === p.teamId);
             return (
               <button
                 key={p.id}
                 onClick={() => setSelectedIndex(index)}
-                className={`flex-1 py-2.5 px-3 rounded-lg font-black text-xs transition-all ${
-                  selectedIndex === index
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm dark:shadow-none'
-                    : 'text-slate-500'
+                className={`flex-1 py-2.5 px-3 rounded-lg font-bold text-xs transition-all ${
+                  selectedIndex === index ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
                 }`}
               >
                 <span className="block">
                   #{p.jerseyNumber || '?'} {p.firstName}
                 </span>
                 {multipleTeams && pTeam && (
-                  <span className="block text-[9px] font-bold text-slate-400 mt-0.5">{pTeam.name}</span>
+                  <span className="block text-xs font-semibold text-muted-foreground mt-0.5">{pTeam.name}</span>
                 )}
               </button>
             );
@@ -299,17 +303,15 @@ export default function ParentView({
 
       {/* ── SEASON SELECTOR ── */}
       {playerSeasons.length > 1 && (
-        <div className="flex items-center justify-between bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5 mb-5">
-          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-            {t('common.season', 'Season')}
-          </span>
+        <div className="flex items-center justify-between bg-card rounded-lg border border-border px-4 py-2.5 mb-5">
+          <span className="text-xs font-bold text-muted-foreground">{t('common.season', 'Season')}</span>
           <select
             value={selectedSeason || ''}
             onChange={(e) => setSelectedSeason(e.target.value)}
-            className="bg-transparent border-none text-sm font-bold text-blue-600 dark:text-blue-400 focus:ring-0 cursor-pointer text-right"
+            className="bg-transparent border-none text-sm font-semibold text-blue-600 dark:text-blue-400 focus:ring-0 cursor-pointer text-right"
           >
             {playerSeasons.map((s) => (
-              <option key={s.id} value={s.id} className="text-slate-900 dark:text-white">
+              <option key={s.id} value={s.id} className="text-foreground">
                 {s.name || s.id}
               </option>
             ))}
@@ -322,29 +324,29 @@ export default function ParentView({
         {/* ════════ LEFT COLUMN (2/5 width on desktop) ════════ */}
         <div className="md:col-span-2 space-y-4">
           {/* Player Card */}
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white rounded-2xl overflow-hidden shadow-xl dark:shadow-none">
+          <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-lg overflow-hidden shadow-md">
             <div className="p-6">
               <div className="flex items-center gap-4 mb-5">
-                <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center text-3xl font-black">
+                <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center text-3xl font-bold">
                   {activePlayer.jerseyNumber || '?'}
                 </div>
                 <div>
-                  <h2 className="text-xl font-black flex items-center gap-2">
+                  <h2 className="text-xl font-bold flex items-center gap-2">
                     {activePlayer.firstName} {activePlayer.lastName}
                     {activePlayer.birthdate && getUSAgeGroup(activePlayer.birthdate, selectedSeason) && (
-                      <span className="text-[10px] font-black bg-blue-500/30 text-blue-200 px-2 py-0.5 rounded-full">
+                      <span className="text-xs font-bold bg-blue-500/30 text-blue-200 px-2 py-0.5 rounded-full">
                         {getUSAgeGroup(activePlayer.birthdate, selectedSeason)}
                       </span>
                     )}
                   </h2>
                   {activePlayer.birthdate && (
-                    <p className="text-[10px] text-slate-400 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {t('playerForm.age')} {getAge(activePlayer.birthdate)} &middot; DOB{' '}
                       {new Date(activePlayer.birthdate).toLocaleDateString()}
                     </p>
                   )}
                   {playerTeam && (
-                    <p className="text-xs font-bold text-slate-400 mt-0.5 flex items-center gap-1.5">
+                    <p className="text-xs font-semibold text-muted-foreground mt-0.5 flex items-center gap-1.5">
                       <span
                         className="w-2 h-2 rounded-full"
                         style={{ backgroundColor: playerTeam.colorPrimary || '#3b82f6' }}
@@ -360,7 +362,7 @@ export default function ParentView({
                 {complianceItems.map((item, i) => (
                   <div
                     key={i}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black ${
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold ${
                       item.done ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
                     }`}
                   >
@@ -373,43 +375,39 @@ export default function ParentView({
           </div>
 
           {/* Balance Hero */}
-          <div
-            className={`p-6 rounded-2xl border shadow-sm dark:shadow-none ${progressColors.bg} border-slate-200 dark:border-slate-700`}
-          >
+          <div className={`p-6 rounded-lg border shadow-sm ${progressColors.bg} border-border`}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  {t('parent.remainingBalance')}
-                </p>
+                <p className="text-xs font-bold text-muted-foreground">{t('parent.remainingBalance')}</p>
                 <p
-                  className={`text-3xl font-black tracking-tight mt-1 ${
-                    financials.remainingBalance <= 0 ? 'text-emerald-600' : progressColors.text
+                  className={`text-3xl font-bold tracking-tight mt-1 ${
+                    financials.remainingBalance <= 0 ? 'text-emerald-700 dark:text-emerald-400' : progressColors.text
                   }`}
                 >
                   {financials.remainingBalance <= 0 ? formatMoney(0) : formatMoney(financials.remainingBalance)}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  {t('parent.seasonFee')}
-                </p>
-                <p className="text-xl font-black text-slate-800 dark:text-white mt-1">
+                <p className="text-xs font-bold text-muted-foreground">{t('parent.seasonFee')}</p>
+                <p className="text-xl font-bold text-foreground mt-1">
                   {formatMoney(financials.baseFee)}
                   {isDraft && financials.baseFee > 0 && (
-                    <span className="text-[9px] text-amber-500 font-bold ml-1">{t('parent.est')}</span>
+                    <span className="text-xs text-amber-700 dark:text-amber-400 font-semibold ml-1">
+                      {t('parent.est')}
+                    </span>
                   )}
                 </p>
               </div>
             </div>
 
             {/* Progress bar */}
-            <div className="h-3 bg-white/80 dark:bg-slate-700/80 rounded-full overflow-hidden shadow-inner">
+            <div className="h-3 bg-white/80 rounded-full overflow-hidden shadow-inner">
               <div
                 className={`h-full rounded-full transition-all duration-1000 ${progressColors.bar}`}
                 style={{ width: `${paidPercent}%` }}
               />
             </div>
-            <div className="flex justify-between mt-2 text-[10px] font-bold text-slate-400">
+            <div className="flex justify-between mt-2 text-xs font-semibold text-muted-foreground">
               <span>{t('parent.paidPercent', { n: paidPercent })}</span>
               <span>
                 {financials.remainingBalance <= 0
@@ -421,11 +419,11 @@ export default function ParentView({
 
           {/* Payment Progress (visual breakdown) */}
           {financials.baseFee > 0 && !financials.isWaived && (
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
-              <h3 className="font-bold text-slate-800 dark:text-white mb-4 text-xs uppercase tracking-widest flex items-center gap-2">
-                <TrendingUp size={14} className="text-slate-400" /> {t('parent.paymentProgress')}
+            <div className="bg-card p-5 rounded-lg border border-border shadow-sm">
+              <h3 className="font-semibold text-foreground mb-4 text-xs flex items-center gap-2">
+                <TrendingUp size={14} className="text-muted-foreground" /> {t('parent.paymentProgress')}
               </h3>
-              <div className="relative h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div className="relative h-4 bg-muted rounded-full overflow-hidden">
                 <div
                   className="absolute inset-y-0 left-0 bg-blue-500 rounded-l-full transition-all duration-700"
                   style={{ width: `${Math.min(100, (financials.totalPaid / financials.baseFee) * 100)}%` }}
@@ -440,7 +438,7 @@ export default function ParentView({
                   />
                 )}
               </div>
-              <div className="flex flex-wrap gap-4 mt-3 text-[10px] font-bold text-slate-400">
+              <div className="flex flex-wrap gap-4 mt-3 text-xs font-semibold text-muted-foreground">
                 {financials.totalPaid > 0 && (
                   <span className="flex items-center gap-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> {t('parent.feesPaid')} (
@@ -484,15 +482,13 @@ export default function ParentView({
             )}
 
           {/* Season + Team Selector */}
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none space-y-3">
+          <div className="bg-card p-4 rounded-lg border border-border shadow-sm space-y-3">
             <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                {t('common.season')}
-              </label>
+              <label className="text-xs font-bold text-muted-foreground">{t('common.season')}</label>
               <select
                 value={selectedSeason}
                 onChange={(e) => setSelectedSeason(e.target.value)}
-                className="w-full mt-1 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm font-bold text-slate-800 dark:text-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full mt-1 border border-border rounded-lg p-2.5 text-sm font-semibold text-foreground outline-none focus:ring-2 focus:ring-ring"
               >
                 {playerSeasons.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -503,16 +499,14 @@ export default function ParentView({
             </div>
             {playerTeam && (
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  {t('common.team')}
-                </label>
-                <div className="mt-1 flex items-center gap-2 p-2.5 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700">
+                <label className="text-xs font-bold text-muted-foreground">{t('common.team')}</label>
+                <div className="mt-1 flex items-center gap-2 p-2.5 bg-background rounded-lg border border-border">
                   <span
                     className="w-3 h-3 rounded-full shrink-0"
                     style={{ backgroundColor: playerTeam.colorPrimary || '#1e293b' }}
                   />
-                  <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{playerTeam.name}</span>
-                  <span className="text-[10px] text-slate-400 ml-auto">
+                  <span className="text-sm font-semibold text-foreground">{playerTeam.name}</span>
+                  <span className="text-xs text-muted-foreground ml-auto">
                     {playerTeam.ageGroup} · {playerTeam.gender}
                   </span>
                 </div>
@@ -522,23 +516,25 @@ export default function ParentView({
 
           {/* Budget Status Card */}
           <div
-            className={`p-4 rounded-2xl border shadow-sm dark:shadow-none ${isFinalized ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200' : 'bg-amber-50 dark:bg-amber-900/30 border-amber-200'}`}
+            className={`p-4 rounded-lg border shadow-sm ${isFinalized ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200' : 'bg-amber-50 dark:bg-amber-900/30 border-amber-200'}`}
           >
             <div className="flex items-center gap-3">
               {isFinalized ? (
-                <Lock size={18} className="text-emerald-600" />
+                <Lock size={18} className="text-emerald-700 dark:text-emerald-400" />
               ) : (
-                <Unlock size={18} className="text-amber-600" />
+                <Unlock size={18} className="text-amber-700 dark:text-amber-400" />
               )}
               <div>
-                <p className={`text-sm font-black ${isFinalized ? 'text-emerald-800' : 'text-amber-800'}`}>
+                <p className={`text-sm font-bold ${isFinalized ? 'text-emerald-800' : 'text-amber-800'}`}>
                   {financials.isWaived
                     ? t('parent.feeWaived')
                     : isFinalized
                       ? t('parent.budgetFinalized')
                       : t('parent.budgetDraft')}
                 </p>
-                <p className={`text-[11px] font-medium ${isFinalized ? 'text-emerald-600' : 'text-amber-600'}`}>
+                <p
+                  className={`text-xs font-medium ${isFinalized ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}
+                >
                   {financials.isWaived
                     ? t('parent.feeWaivedMsg')
                     : isFinalized
@@ -551,7 +547,7 @@ export default function ParentView({
 
           {/* Medical Release Form */}
           <div
-            className={`p-4 rounded-2xl border shadow-sm dark:shadow-none ${
+            className={`p-4 rounded-lg border shadow-sm ${
               activePlayer.medicalRelease
                 ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200'
                 : 'bg-red-50 dark:bg-red-900/30 border-red-200'
@@ -565,13 +561,22 @@ export default function ParentView({
                     : 'bg-red-100 dark:bg-red-900/30'
                 }`}
               >
-                <Heart size={18} className={activePlayer.medicalRelease ? 'text-emerald-600' : 'text-red-500'} />
+                <Heart
+                  size={18}
+                  className={
+                    activePlayer.medicalRelease
+                      ? 'text-emerald-700 dark:text-emerald-400'
+                      : 'text-red-700 dark:text-red-400'
+                  }
+                />
               </div>
               <div>
-                <p className="text-sm font-black text-slate-800 dark:text-white">{t('parent.medicalForm')}</p>
+                <p className="text-sm font-bold text-foreground">{t('parent.medicalForm')}</p>
                 <p
-                  className={`text-[11px] font-medium ${
-                    activePlayer.medicalRelease ? 'text-emerald-600' : 'text-red-600'
+                  className={`text-xs font-medium ${
+                    activePlayer.medicalRelease
+                      ? 'text-emerald-700 dark:text-emerald-400'
+                      : 'text-red-700 dark:text-red-400'
                   }`}
                 >
                   {activePlayer.medicalRelease ? t('parent.completedOnFile') : t('parent.requiredNotSubmitted')}
@@ -580,9 +585,9 @@ export default function ParentView({
             </div>
             <button
               onClick={() => setShowMedicalForm(true)}
-              className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors ${
+              className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
                 activePlayer.medicalRelease
-                  ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                  ? 'bg-card text-foreground hover:bg-background border border-border'
                   : 'bg-red-600 text-white hover:bg-red-700'
               }`}
             >
@@ -604,15 +609,16 @@ export default function ParentView({
           />
 
           {/* Documents */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden">
-            <div className="p-5 border-b border-slate-100 dark:border-slate-700">
+          <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-border">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-slate-800 dark:text-white text-xs uppercase tracking-widest flex items-center gap-2">
-                  <FolderOpen size={14} className="text-slate-400" /> {t('parent.documents')} ({playerDocs.length})
+                <h3 className="font-semibold text-foreground text-xs flex items-center gap-2">
+                  <FolderOpen size={14} className="text-muted-foreground" /> {t('parent.documents')} (
+                  {playerDocs.length})
                 </h3>
                 <button
                   onClick={() => setShowUploadForm((v) => !v)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                 >
                   <Upload size={13} />
                   {t('parent.uploadDoc', 'Upload Document')}
@@ -622,18 +628,18 @@ export default function ParentView({
 
             {/* Inline upload form */}
             {showUploadForm && (
-              <div className="p-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 space-y-3">
+              <div className="p-5 border-b border-border bg-background space-y-3">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                  <label className="text-xs font-bold text-muted-foreground block mb-1">
                     {t('parent.selectFile', 'Select File')}
                   </label>
                   <input
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                     onChange={(e) => setUploadFile(e.target.files[0] || null)}
-                    className="block w-full text-sm text-slate-600 dark:text-slate-300
+                    className="block w-full text-sm text-foreground
                       file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0
-                      file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700
+                      file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 dark:text-blue-300
                       dark:file:bg-blue-900/30 dark:file:text-blue-300
                       hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50
                       file:cursor-pointer file:transition-colors"
@@ -642,13 +648,13 @@ export default function ParentView({
                 {uploadFile && (
                   <>
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                      <label className="text-xs font-bold text-muted-foreground block mb-1">
                         {t('parent.docType', 'Document Type')}
                       </label>
                       <select
                         value={uploadDocType}
                         onChange={(e) => setUploadDocType(e.target.value)}
-                        className="w-full border border-slate-200 dark:border-slate-600 rounded-lg p-2.5 text-sm font-bold text-slate-800 dark:text-white dark:bg-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-border rounded-lg p-2.5 text-sm font-semibold text-foreground outline-none focus:ring-2 focus:ring-ring"
                       >
                         <option value="medical_release">{DOC_TYPE_LABELS.medical_release}</option>
                         <option value="birth_certificate">{DOC_TYPE_LABELS.birth_certificate}</option>
@@ -661,7 +667,7 @@ export default function ParentView({
                       <button
                         onClick={handleUploadDoc}
                         disabled={uploading}
-                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {uploading ? t('common.saving', 'Uploading...') : t('parent.submitUpload', 'Upload')}
                       </button>
@@ -671,7 +677,7 @@ export default function ParentView({
                           setUploadFile(null);
                           setUploadDocType('medical_release');
                         }}
-                        className="px-4 py-2.5 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                        className="px-4 py-2.5 rounded-lg text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors"
                       >
                         {t('common.cancel', 'Cancel')}
                       </button>
@@ -682,13 +688,15 @@ export default function ParentView({
             )}
 
             {docsLoading ? (
-              <div className="p-10 text-center text-slate-300 font-bold text-sm animate-pulse">
+              <div className="p-10 text-center text-muted-foreground font-semibold text-sm animate-pulse">
                 {t('common.loading')}...
               </div>
             ) : playerDocs.length === 0 ? (
-              <div className="p-10 text-center text-slate-400 font-bold text-sm">{t('parent.noDocuments')}</div>
+              <div className="p-10 text-center text-muted-foreground font-semibold text-sm">
+                {t('parent.noDocuments')}
+              </div>
             ) : (
-              <div className="divide-y divide-slate-50 dark:divide-slate-700">
+              <div className="divide-y divide-border">
                 {playerDocs.map((doc) => {
                   const statusColor =
                     {
@@ -696,41 +704,41 @@ export default function ParentView({
                       verified: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
                       expired: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
                       rejected: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-                    }[doc.status] || 'bg-slate-100 dark:bg-slate-800 text-slate-500';
+                    }[doc.status] || 'bg-muted text-muted-foreground';
 
                   return (
                     <div
                       key={doc.id}
-                      className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors"
+                      className="flex items-center gap-3 px-5 py-3 hover:bg-background/50 transition-colors"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                        <FileText size={14} className="text-slate-400" />
+                      <div className="w-8 h-8 rounded-lg bg-background flex items-center justify-center shrink-0">
+                        <FileText size={14} className="text-muted-foreground" />
                       </div>
                       <div className="flex-grow min-w-0">
-                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">{doc.title}</p>
+                        <p className="text-sm font-semibold text-foreground truncate">{doc.title}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[9px] font-black text-slate-400 uppercase">
+                          <span className="text-xs font-bold text-muted-foreground uppercase">
                             {DOC_TYPE_LABELS[doc.docType] || doc.docType}
                           </span>
-                          <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${statusColor}`}>
+                          <span className={`text-xs font-bold uppercase px-1.5 py-0.5 rounded ${statusColor}`}>
                             {doc.status}
                           </span>
                           {doc.fileSize && (
-                            <span className="text-[10px] text-slate-400">{Math.round(doc.fileSize / 1024)}KB</span>
+                            <span className="text-xs text-muted-foreground">{Math.round(doc.fileSize / 1024)}KB</span>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => handleViewDoc(doc.filePath)}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors"
+                          className="p-1.5 text-muted-foreground hover:text-blue-700 dark:text-blue-400 transition-colors"
                           title={t('common.view')}
                         >
                           <Eye size={15} />
                         </button>
                         <button
                           onClick={() => handleDeleteDoc(doc)}
-                          className="p-1.5 text-slate-300 hover:text-red-500 transition-colors"
+                          className="p-1.5 text-muted-foreground hover:text-red-700 dark:text-red-400 transition-colors"
                           title={t('common.delete')}
                         >
                           <Trash2 size={15} />
@@ -747,28 +755,24 @@ export default function ParentView({
         {/* ════════ RIGHT COLUMN (3/5 width on desktop) ════════ */}
         <div className="md:col-span-3 space-y-4">
           {/* Player Info */}
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
-            <h3 className="font-bold text-slate-800 dark:text-white mb-3 text-xs uppercase tracking-widest">
-              {t('parent.playerInfo')}
-            </h3>
+          <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
+            <h3 className="font-semibold text-foreground mb-3 text-xs">{t('parent.playerInfo')}</h3>
             <div className="space-y-2.5">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-400">{t('parent.jerseyNum')}</span>
-                <span className="text-sm font-black text-slate-800 dark:text-white">
-                  {activePlayer.jerseyNumber || '—'}
-                </span>
+                <span className="text-sm text-muted-foreground">{t('parent.jerseyNum')}</span>
+                <span className="text-sm font-bold text-foreground">{activePlayer.jerseyNumber || '—'}</span>
               </div>
               {activePlayer.birthdate && (
                 <>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-400">{t('playerForm.birthdate')}</span>
-                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                    <span className="text-sm text-muted-foreground">{t('playerForm.birthdate')}</span>
+                    <span className="text-sm font-semibold text-foreground">
                       {new Date(activePlayer.birthdate).toLocaleDateString()}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-400">{t('playerForm.ageGroup')}</span>
-                    <span className="text-xs font-black bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                    <span className="text-sm text-muted-foreground">{t('playerForm.ageGroup')}</span>
+                    <span className="text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
                       {getUSAgeGroup(activePlayer.birthdate, selectedSeason) || '—'} ({t('playerForm.age')}{' '}
                       {getAge(activePlayer.birthdate)})
                     </span>
@@ -776,39 +780,40 @@ export default function ParentView({
                 </>
               )}
               <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-400">{t('common.status')}</span>
+                <span className="text-sm text-muted-foreground">{t('common.status')}</span>
                 <span
-                  className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+                  className={`text-xs font-bold uppercase px-2 py-0.5 rounded ${
                     activePlayer.status === 'active'
-                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   {activePlayer.status}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-400">{t('parent.compliance')}</span>
+                <span className="text-sm text-muted-foreground">{t('parent.compliance')}</span>
                 <span
-                  className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+                  className={`text-xs font-bold uppercase px-2 py-0.5 rounded ${
                     isFullyCompliant
-                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700'
-                      : 'bg-red-100 dark:bg-red-900/30 text-red-600'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
                   }`}
                 >
                   {isFullyCompliant ? t('parent.complete') : t('parent.incomplete')}
                 </span>
               </div>
               {activePlayer.guardians?.length > 0 && (
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                    {t('playerModal.guardians')}
-                  </p>
+                <div className="pt-2 border-t border-border">
+                  <p className="text-xs font-bold text-muted-foreground mb-2">{t('playerModal.guardians')}</p>
                   {activePlayer.guardians.map((g, i) => (
                     <div key={i} className="flex justify-between items-center py-1">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">{g.name}</span>
+                      <span className="text-sm text-foreground">{g.name}</span>
                       {g.phone && (
-                        <a href={`tel:${g.phone}`} className="text-[10px] font-bold text-blue-600 hover:text-blue-800">
+                        <a
+                          href={`tel:${g.phone}`}
+                          className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800"
+                        >
                           {g.phone}
                         </a>
                       )}
@@ -820,37 +825,37 @@ export default function ParentView({
           </div>
 
           {/* Fee Breakdown */}
-          <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
-            <h3 className="font-bold text-slate-800 dark:text-white mb-4 text-xs uppercase tracking-widest flex items-center gap-2">
-              <DollarSign size={14} className="text-slate-400" /> {t('parent.feeBreakdown')}
+          <div className="bg-card p-5 rounded-lg border border-border shadow-sm">
+            <h3 className="font-semibold text-foreground mb-4 text-xs flex items-center gap-2">
+              <DollarSign size={14} className="text-muted-foreground" /> {t('parent.feeBreakdown')}
             </h3>
             <div className="space-y-0">
               {[
                 {
                   label: t('parent.baseFee'),
                   value: financials.baseFee,
-                  color: 'text-slate-800 dark:text-white',
+                  color: 'text-foreground',
                   show: true,
                   sign: '',
                 },
                 {
                   label: t('parent.teamFeesPaid'),
                   value: financials.totalPaid,
-                  color: 'text-emerald-600',
+                  color: 'text-emerald-700 dark:text-emerald-400',
                   show: financials.totalPaid > 0,
                   sign: '-',
                 },
                 {
                   label: t('parent.fundraisingApplied'),
                   value: financials.fundraising,
-                  color: 'text-emerald-600',
+                  color: 'text-emerald-700 dark:text-emerald-400',
                   show: financials.fundraising > 0,
                   sign: '-',
                 },
                 {
                   label: t('parent.sponsorshipsApplied'),
                   value: financials.sponsorships,
-                  color: 'text-violet-600',
+                  color: 'text-violet-700 dark:text-violet-400',
                   show: financials.sponsorships > 0,
                   sign: '-',
                 },
@@ -864,23 +869,18 @@ export default function ParentView({
               ]
                 .filter((r) => r.show)
                 .map((row, i) => (
-                  <div
-                    key={i}
-                    className="flex justify-between items-center py-3 border-b border-slate-50 dark:border-slate-700 last:border-0"
-                  >
-                    <span className="text-sm text-slate-500">{row.label}</span>
-                    <span className={`font-bold text-sm ${row.color}`}>
+                  <div key={i} className="flex justify-between items-center py-3 border-b border-border last:border-0">
+                    <span className="text-sm text-muted-foreground">{row.label}</span>
+                    <span className={`font-semibold text-sm ${row.color}`}>
                       {row.sign}
                       {formatMoney(row.value)}
                     </span>
                   </div>
                 ))}
-              <div className="flex justify-between items-center pt-3 mt-1 border-t-2 border-slate-200 dark:border-slate-700">
-                <span className="text-sm font-black text-slate-800 dark:text-white">
-                  {t('parent.remainingBalance')}
-                </span>
+              <div className="flex justify-between items-center pt-3 mt-1 border-t-2 border-border">
+                <span className="text-sm font-bold text-foreground">{t('parent.remainingBalance')}</span>
                 <span
-                  className={`text-lg font-black ${financials.remainingBalance <= 0 ? 'text-emerald-600' : 'text-red-500'}`}
+                  className={`text-lg font-bold ${financials.remainingBalance <= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}
                 >
                   {financials.remainingBalance <= 0 ? formatMoney(0) : formatMoney(financials.remainingBalance)}
                 </span>
@@ -889,50 +889,52 @@ export default function ParentView({
           </div>
 
           {/* Transactions */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden">
-            <div className="p-5 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="font-bold text-slate-800 dark:text-white text-xs uppercase tracking-widest flex items-center gap-2">
-                <Receipt size={14} className="text-slate-400" /> {t('parent.transactions')} ({playerTransactions.length}
-                )
+          <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-border">
+              <h3 className="font-semibold text-foreground text-xs flex items-center gap-2">
+                <Receipt size={14} className="text-muted-foreground" /> {t('parent.transactions')} (
+                {playerTransactions.length})
               </h3>
             </div>
 
             {playerTransactions.length === 0 ? (
-              <div className="p-10 text-center text-slate-400 font-bold text-sm">{t('parent.noTransactions')}</div>
+              <div className="p-10 text-center text-muted-foreground font-semibold text-sm">
+                {t('parent.noTransactions')}
+              </div>
             ) : (
-              <div className="divide-y divide-slate-50 dark:divide-slate-700 max-h-[400px] overflow-y-auto">
+              <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
                 {playerTransactions.map((tx) => {
                   const catLabel = CATEGORY_LABELS[tx.category] || tx.category || '';
-                  const catColor = CATEGORY_COLORS[tx.category] || 'text-slate-500';
+                  const catColor = CATEGORY_COLORS[tx.category] || 'text-muted-foreground';
                   const isPositive = tx.amount > 0;
 
                   return (
                     <div
                       key={tx.id}
-                      className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors"
+                      className="flex items-center gap-3 px-5 py-3 hover:bg-background/50 transition-colors"
                     >
                       <div
                         className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                          isPositive ? 'bg-emerald-50 dark:bg-emerald-900/30' : 'bg-slate-50 dark:bg-slate-800'
+                          isPositive ? 'bg-emerald-50 dark:bg-emerald-900/30' : 'bg-background'
                         }`}
                       >
                         {isPositive ? (
-                          <TrendingUp size={14} className="text-emerald-500" />
+                          <TrendingUp size={14} className="text-emerald-700 dark:text-emerald-400" />
                         ) : (
-                          <Receipt size={14} className="text-slate-400" />
+                          <Receipt size={14} className="text-muted-foreground" />
                         )}
                       </div>
                       <div className="flex-grow min-w-0">
-                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">{tx.title}</p>
+                        <p className="text-sm font-semibold text-foreground truncate">{tx.title}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className={`text-[9px] font-black uppercase ${catColor}`}>{catLabel}</span>
-                          <span className="text-[10px] text-slate-400">
+                          <span className={`text-xs font-bold uppercase ${catColor}`}>{catLabel}</span>
+                          <span className="text-xs text-muted-foreground">
                             {tx.date?.seconds ? new Date(tx.date.seconds * 1000).toLocaleDateString() : ''}
                           </span>
                         </div>
                       </div>
                       <span
-                        className={`font-black text-sm shrink-0 ${isPositive ? 'text-emerald-600' : 'text-slate-700 dark:text-slate-300'}`}
+                        className={`font-bold text-sm shrink-0 ${isPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground'}`}
                       >
                         {isPositive ? '+' : ''}
                         {formatMoney(tx.amount)}

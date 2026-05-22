@@ -398,14 +398,14 @@ export default function SeasonEvaluationView({
       {/* Header */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-            <ClipboardCheck size={22} className="text-blue-500" />
+          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <ClipboardCheck size={22} className="text-blue-700 dark:text-blue-400" />
             {t('seasonEval.title', 'Season Evaluations')}
           </h2>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {selectedSeason} — {completedCount}/{activePlayers.length} {t('seasonEval.completed', 'completed')}
             {customRubric && (
-              <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
+              <span className="ml-2 px-1.5 py-0.5 rounded text-xs font-semibold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
                 Custom rubric
               </span>
             )}
@@ -415,7 +415,7 @@ export default function SeasonEvaluationView({
           {canManageRubric && (
             <button
               onClick={() => setShowRubricEditor(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border text-foreground text-xs font-semibold rounded-lg hover:bg-background transition-colors"
               title="Add, remove, or rename sections/questions"
             >
               <Settings size={14} />
@@ -425,7 +425,7 @@ export default function SeasonEvaluationView({
           {canEvaluate && clubId && (
             <button
               onClick={handleOpenGuestPicker}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border text-foreground text-xs font-semibold rounded-lg hover:bg-background transition-colors"
               title="Evaluate a player from another team in the club"
             >
               <UserPlus size={14} />
@@ -436,7 +436,7 @@ export default function SeasonEvaluationView({
             <button
               onClick={handleSaveAll}
               disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-xs font-black rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
               <Save size={14} />
               {t('seasonEval.saveAll', 'Save All')}
@@ -447,7 +447,7 @@ export default function SeasonEvaluationView({
 
       {/* Read-only banner for non-coaches */}
       {!canEvaluate && (
-        <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-xs text-amber-800 dark:text-amber-200">
+        <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3 text-xs text-amber-800 dark:text-amber-200">
           <Lock size={14} className="shrink-0" />
           <span>
             {t(
@@ -459,7 +459,7 @@ export default function SeasonEvaluationView({
       )}
 
       {/* Progress */}
-      <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
         <div
           className="h-full bg-blue-500 rounded-full transition-all duration-300"
           style={{ width: `${activePlayers.length > 0 ? (completedCount / activePlayers.length) * 100 : 0}%` }}
@@ -468,17 +468,17 @@ export default function SeasonEvaluationView({
 
       {/* Coach Selector */}
       {canEvaluate && teamStaff.length > 0 && (
-        <div className="flex items-center gap-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2.5">
-          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest shrink-0">
+        <div className="flex items-center gap-3 bg-card rounded-lg border border-border px-4 py-2.5">
+          <span className="text-xs font-bold text-muted-foreground shrink-0">
             {t('seasonEval.evaluatingAs', 'Evaluating as')}
           </span>
           <select
             value={selectedEvaluatorId || ''}
             onChange={(e) => setSelectedEvaluatorId(e.target.value)}
-            className="flex-1 bg-transparent border-none text-sm font-bold text-blue-600 dark:text-blue-400 focus:ring-0 cursor-pointer"
+            className="flex-1 bg-transparent border-none text-sm font-semibold text-blue-600 dark:text-blue-400 focus:ring-0 cursor-pointer"
           >
             {teamStaff.map((s) => (
-              <option key={s.userId} value={s.userId} className="text-slate-900 dark:text-white">
+              <option key={s.userId} value={s.userId} className="text-foreground">
                 {s.displayName} ({s.role.replace('_', ' ')})
               </option>
             ))}
@@ -489,7 +489,7 @@ export default function SeasonEvaluationView({
       {/* Rating Legend */}
       <div className="flex flex-wrap gap-2">
         {Object.entries(RATING_LABELS).map(([val, info]) => (
-          <span key={val} className={`px-2 py-1 rounded-lg text-[10px] font-bold ${info.color}`}>
+          <span key={val} className={`px-2 py-1 rounded-lg text-xs font-semibold ${info.color}`}>
             {val} = {info.label}
           </span>
         ))}
@@ -508,8 +508,8 @@ export default function SeasonEvaluationView({
           return (
             <div
               key={player.id}
-              className={`bg-white dark:bg-slate-900 rounded-2xl border transition-all ${
-                isSaved ? 'border-emerald-200 dark:border-emerald-800' : 'border-slate-200 dark:border-slate-700'
+              className={`bg-card rounded-lg border transition-all ${
+                isSaved ? 'border-emerald-200 dark:border-emerald-800' : 'border-border'
               }`}
             >
               {/* Player Header */}
@@ -520,29 +520,29 @@ export default function SeasonEvaluationView({
                 <JerseyBadge number={player.jerseyNumber} size="sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                    <p className="font-semibold text-sm text-foreground truncate">
                       {player.firstName} {player.lastName}
                     </p>
                     {ageGroup && (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                      <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
                         {ageGroup}
                       </span>
                     )}
                     {isSaved && (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 flex items-center gap-0.5">
+                      <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 flex items-center gap-0.5">
                         <Check size={10} /> Saved
                       </span>
                     )}
                     {player.isGuest && (
                       <span
-                        className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300"
+                        className="px-1.5 py-0.5 rounded text-xs font-semibold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300"
                         title={player.teamName ? `Rostered on ${player.teamName}` : 'Guest player'}
                       >
                         Guest{player.teamName ? ` · ${player.teamName}` : ''}
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     {ratedCount}/{totalSkills} rated
                     {ev.overallRating && ` · Overall: ${ev.overallRating}/4`}
                     {coachCount > 0 && ` · ${coachCount} eval${coachCount > 1 ? 's' : ''}`}
@@ -550,28 +550,26 @@ export default function SeasonEvaluationView({
                 </div>
                 {ev.overallRating && (
                   <span
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black ${
-                      RATING_LABELS[Math.round(ev.overallRating)]?.color || 'bg-slate-200 text-slate-600'
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
+                      RATING_LABELS[Math.round(ev.overallRating)]?.color || 'bg-muted text-foreground'
                     }`}
                   >
                     {ev.overallRating}
                   </span>
                 )}
                 {isExpanded ? (
-                  <ChevronDown size={16} className="text-slate-400" />
+                  <ChevronDown size={16} className="text-muted-foreground" />
                 ) : (
-                  <ChevronRight size={16} className="text-slate-400" />
+                  <ChevronRight size={16} className="text-muted-foreground" />
                 )}
               </button>
 
               {/* Expanded Evaluation Form */}
               {isExpanded && (
-                <div className="px-4 pb-4 space-y-5 border-t border-slate-100 dark:border-slate-800 pt-4">
+                <div className="px-4 pb-4 space-y-5 border-t border-border pt-4">
                   {rubricSections.map((section) => (
                     <div key={section.key} className="space-y-3">
-                      <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 pb-1">
-                        {section.label}
-                      </h4>
+                      <h4 className="text-sm font-bold text-foreground border-b border-border pb-1">{section.label}</h4>
                       {section.groups.map((group) => {
                         const groupScores = group.skills.map((s) => ev.ratings[s.key]).filter((v) => v > 0);
                         const groupAvg =
@@ -579,12 +577,12 @@ export default function SeasonEvaluationView({
                             ? Math.round((groupScores.reduce((a, b) => a + b, 0) / groupScores.length) * 10) / 10
                             : null;
                         return (
-                          <div key={group.key} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 space-y-2">
+                          <div key={group.key} className="bg-background rounded-lg p-3 space-y-2">
                             <div className="flex items-center justify-between">
-                              <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{group.label}</p>
+                              <p className="text-xs font-semibold text-foreground">{group.label}</p>
                               {groupAvg && (
                                 <span
-                                  className={`px-1.5 py-0.5 rounded text-[10px] font-black ${RATING_LABELS[Math.round(groupAvg)]?.color || 'bg-slate-200 text-slate-600'}`}
+                                  className={`px-1.5 py-0.5 rounded text-xs font-bold ${RATING_LABELS[Math.round(groupAvg)]?.color || 'bg-muted text-foreground'}`}
                                 >
                                   {groupAvg}
                                 </span>
@@ -592,19 +590,17 @@ export default function SeasonEvaluationView({
                             </div>
                             {group.skills.map((skill) => (
                               <div key={skill.key} className="flex items-center gap-2">
-                                <p className="flex-1 text-[11px] text-slate-600 dark:text-slate-400 leading-tight min-w-0">
-                                  {skill.label}
-                                </p>
+                                <p className="flex-1 text-xs text-foreground leading-tight min-w-0">{skill.label}</p>
                                 <div className="flex gap-1 shrink-0">
                                   {[1, 2, 3, 4].map((val) => (
                                     <button
                                       key={val}
                                       onClick={() => canEvaluate && setRating(player.id, skill.key, val)}
                                       disabled={!canEvaluate}
-                                      className={`w-7 h-7 rounded-lg text-[10px] font-bold transition-all ${
+                                      className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all ${
                                         ev.ratings[skill.key] === val
                                           ? RATING_LABELS[val].color
-                                          : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 hover:bg-slate-300 dark:hover:bg-slate-600'
+                                          : 'bg-muted text-muted-foreground hover:bg-slate-300'
                                       } ${!canEvaluate ? 'cursor-not-allowed opacity-60' : ''}`}
                                     >
                                       {val}
@@ -621,7 +617,7 @@ export default function SeasonEvaluationView({
 
                   {/* Coach's Comments */}
                   <div>
-                    <p className="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">
+                    <p className="text-xs font-semibold text-foreground mb-1.5">
                       {t('seasonEval.coachNotes', "Coach's Comments")}
                     </p>
                     <textarea
@@ -633,7 +629,7 @@ export default function SeasonEvaluationView({
                         'seasonEval.notesPlaceholder',
                         'Strengths, areas for improvement, overall assessment...',
                       )}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:opacity-60"
+                      className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring resize-none disabled:opacity-60"
                     />
                   </div>
 
@@ -643,7 +639,7 @@ export default function SeasonEvaluationView({
                       <button
                         onClick={() => handleSavePlayer(player.id)}
                         disabled={saving}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors disabled:opacity-50"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
                       >
                         <Save size={14} />
                         {t('seasonEval.saveEval', 'Save Evaluation')}
@@ -652,7 +648,7 @@ export default function SeasonEvaluationView({
                     <button
                       onClick={() => handleGeneratePdf(player)}
                       disabled={saving || !ev.overallRating}
-                      className={`${canEvaluate ? '' : 'flex-1'} flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold transition-colors disabled:opacity-50`}
+                      className={`${canEvaluate ? '' : 'flex-1'} flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-muted text-foreground hover:bg-muted text-xs font-semibold transition-colors disabled:opacity-50`}
                     >
                       <FileText size={14} />
                       {t('seasonEval.saveToDocuments', 'Save to Documents')}
@@ -660,7 +656,7 @@ export default function SeasonEvaluationView({
                     {player.isGuest && canEvaluate && !isSaved && (
                       <button
                         onClick={() => handleRemoveGuest(player.id)}
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-xs font-bold transition-colors"
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-xs font-semibold transition-colors"
                         title="Remove guest from list"
                       >
                         <X size={14} />
@@ -675,39 +671,39 @@ export default function SeasonEvaluationView({
       </div>
 
       {activePlayers.length === 0 && (
-        <div className="text-center py-12 text-slate-400 dark:text-slate-500 text-sm">
+        <div className="text-center py-12 text-muted-foreground text-sm">
           {t('seasonEval.noPlayers', 'No active players to evaluate.')}
         </div>
       )}
 
       {showGuestPicker && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="bg-card rounded-lg max-w-lg w-full max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                <h3 className="text-base font-bold text-foreground">
                   {t('seasonEval.pickGuestTitle', 'Add Guest Player')}
                 </h3>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {t('seasonEval.pickGuestHint', 'Players from other teams in the club')}
                 </p>
               </div>
               <button
                 onClick={() => setShowGuestPicker(false)}
-                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground"
               >
                 <X size={16} />
               </button>
             </div>
-            <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-xl px-3 py-2">
-                <Search size={14} className="text-slate-400" />
+            <div className="p-4 border-b border-border">
+              <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
+                <Search size={14} className="text-muted-foreground" />
                 <input
                   type="text"
                   value={guestPickerSearch}
                   onChange={(e) => setGuestPickerSearch(e.target.value)}
                   placeholder={t('common.search', 'Search...')}
-                  className="flex-1 bg-transparent border-none text-sm text-slate-900 dark:text-white focus:ring-0 focus:outline-none"
+                  className="flex-1 bg-transparent border-none text-sm text-foreground focus:ring-0 focus:outline-none"
                   autoFocus
                 />
               </div>
@@ -732,7 +728,7 @@ export default function SeasonEvaluationView({
                     });
                   if (list.length === 0) {
                     return (
-                      <div className="text-center py-8 text-sm text-slate-400 dark:text-slate-500">
+                      <div className="text-center py-8 text-sm text-muted-foreground">
                         {t('seasonEval.noGuestMatches', 'No matching club players.')}
                       </div>
                     );
@@ -741,19 +737,19 @@ export default function SeasonEvaluationView({
                     <button
                       key={p.id}
                       onClick={() => handleAddGuest(p)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition-colors"
+                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted text-left transition-colors"
                     >
                       <JerseyBadge number={p.jerseyNumber} size="sm" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                        <p className="font-semibold text-sm text-foreground truncate">
                           {p.firstName} {p.lastName}
                         </p>
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+                        <p className="text-xs text-muted-foreground truncate">
                           {p.teamName || t('seasonEval.noTeam', 'No team')}
                           {p.teamAgeGroup ? ` · ${p.teamAgeGroup}` : ''}
                         </p>
                       </div>
-                      <UserPlus size={14} className="text-blue-500 shrink-0" />
+                      <UserPlus size={14} className="text-blue-700 dark:text-blue-400 shrink-0" />
                     </button>
                   ));
                 })()

@@ -98,12 +98,12 @@ export default function EvaluationSessionList({
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <p className="text-sm text-muted-foreground">
           {sessions.length} {tp('evaluations.session', sessions.length)}
         </p>
         <button
           onClick={openModal}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
         >
           <Plus size={16} />
           {t('evaluations.newSession', 'New Session')}
@@ -112,14 +112,14 @@ export default function EvaluationSessionList({
 
       {/* Session Cards */}
       {sessions.length === 0 ? (
-        <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center mx-auto mb-4">
+        <div className="text-center py-16 bg-card rounded-lg border border-border">
+          <div className="w-14 h-14 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center mx-auto mb-4">
             <Users size={24} className="text-indigo-400 dark:text-indigo-300" />
           </div>
-          <p className="text-slate-600 dark:text-slate-300 font-semibold mb-1">
+          <p className="text-foreground font-medium mb-1">
             {t('evaluations.noSessions', 'No evaluation sessions yet')}
           </p>
-          <p className="text-sm text-slate-400 dark:text-slate-500">
+          <p className="text-sm text-muted-foreground">
             {t('evaluations.noSessionsHint', 'Create a session to start evaluating players.')}
           </p>
         </div>
@@ -130,7 +130,7 @@ export default function EvaluationSessionList({
             return (
               <div
                 key={session.id}
-                className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
+                className="group bg-card rounded-lg border border-border hover:border-indigo-300 dark:hover:border-indigo-600 transition-colors"
               >
                 <div className="flex items-center gap-4 p-4">
                   {/* Main content - clickable */}
@@ -140,12 +140,12 @@ export default function EvaluationSessionList({
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-slate-900 dark:text-white truncate">{session.name}</h3>
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${status.bg}`}>
+                        <h3 className="font-medium text-foreground truncate">{session.name}</h3>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${status.bg}`}>
                           {t(`evaluations.status.${session.status}`, status.label)}
                         </span>
                       </div>
-                      <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         {session.createdAt && (
                           <span className="flex items-center gap-1">
                             <Calendar size={12} />
@@ -160,7 +160,7 @@ export default function EvaluationSessionList({
                     </div>
                     <ChevronRight
                       size={18}
-                      className="text-slate-300 dark:text-slate-600 group-hover:text-indigo-400 transition-colors shrink-0"
+                      className="text-muted-foreground group-hover:text-indigo-400 transition-colors shrink-0"
                     />
                   </button>
 
@@ -170,7 +170,7 @@ export default function EvaluationSessionList({
                       e.stopPropagation();
                       handleDelete(session);
                     }}
-                    className="p-2 rounded-lg text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
+                    className="p-2 rounded-lg text-muted-foreground hover:text-red-700 dark:text-red-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"
                     title={t('evaluations.delete', 'Delete session')}
                   >
                     <Trash2 size={16} />
@@ -189,15 +189,13 @@ export default function EvaluationSessionList({
           <div className="absolute inset-0 bg-black/50" onClick={closeModal} />
 
           {/* Modal */}
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700">
+          <div className="relative w-full max-w-md bg-card rounded-lg shadow-md border border-border">
             {/* Modal header */}
-            <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                {t('evaluations.newSession', 'New Session')}
-              </h3>
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <h3 className="text-lg font-semibold text-foreground">{t('evaluations.newSession', 'New Session')}</h3>
               <button
                 onClick={closeModal}
-                className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
                 <X size={18} />
               </button>
@@ -207,8 +205,9 @@ export default function EvaluationSessionList({
             <form onSubmit={handleCreate} className="p-5 space-y-4">
               {/* Name */}
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  {t('evaluations.sessionName', 'Session Name')} <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  {t('evaluations.sessionName', 'Session Name')}{' '}
+                  <span className="text-red-700 dark:text-red-400">*</span>
                 </label>
                 <input
                   type="text"
@@ -216,13 +215,13 @@ export default function EvaluationSessionList({
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder={t('evaluations.sessionNamePlaceholder', 'e.g. Spring 2026 Tryouts')}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   {t('evaluations.description', 'Description')}
                 </label>
                 <textarea
@@ -230,19 +229,19 @@ export default function EvaluationSessionList({
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   rows={2}
                   placeholder={t('evaluations.descriptionPlaceholder', 'Optional session notes...')}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm resize-none"
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm resize-none"
                 />
               </div>
 
               {/* Season picker */}
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   {t('evaluations.season', 'Season')}
                 </label>
                 <select
                   value={form.seasonId}
                   onChange={(e) => setForm((f) => ({ ...f, seasonId: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                 >
                   <option value="">{t('evaluations.noSeason', '-- No season --')}</option>
                   {(seasons || []).map((s) => (
@@ -255,7 +254,7 @@ export default function EvaluationSessionList({
 
               {/* Score scale */}
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   {t('evaluations.scoreScale', 'Score Scale')}
                 </label>
                 <div className="flex items-center gap-6">
@@ -266,9 +265,9 @@ export default function EvaluationSessionList({
                       value={5}
                       checked={form.scoreScale === 5}
                       onChange={() => setForm((f) => ({ ...f, scoreScale: 5 }))}
-                      className="text-indigo-600 focus:ring-indigo-500"
+                      className="text-indigo-700 dark:text-indigo-400 focus:ring-indigo-500"
                     />
-                    <span className="text-sm text-slate-700 dark:text-slate-300">1 – 5</span>
+                    <span className="text-sm text-foreground">1 – 5</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -277,9 +276,9 @@ export default function EvaluationSessionList({
                       value={10}
                       checked={form.scoreScale === 10}
                       onChange={() => setForm((f) => ({ ...f, scoreScale: 10 }))}
-                      className="text-indigo-600 focus:ring-indigo-500"
+                      className="text-indigo-700 dark:text-indigo-400 focus:ring-indigo-500"
                     />
-                    <span className="text-sm text-slate-700 dark:text-slate-300">1 – 10</span>
+                    <span className="text-sm text-foreground">1 – 10</span>
                   </label>
                 </div>
               </div>
@@ -289,14 +288,14 @@ export default function EvaluationSessionList({
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors"
                 >
                   {t('common.cancel', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={saving || !form.name.trim()}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
+                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
                 >
                   {saving ? t('common.saving', 'Saving...') : t('evaluations.createSession', 'Create Session')}
                 </button>

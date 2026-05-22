@@ -37,10 +37,10 @@ export default function OnboardingChecklist({ hasPlayers, hasSeason, hasBudget, 
   if (completedCount === steps.length) return null; // All done — don't show
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-5 space-y-4">
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-5 space-y-4">
       <div>
-        <h3 className="text-sm font-black text-blue-800 dark:text-blue-300">Getting Started</h3>
-        <p className="text-[11px] text-blue-600 dark:text-blue-400 mt-0.5">
+        <h3 className="text-sm font-bold text-blue-800 dark:text-blue-300">Getting Started</h3>
+        <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
           Complete these steps to set up your team. {completedCount}/{steps.length} done.
         </p>
       </div>
@@ -58,10 +58,10 @@ export default function OnboardingChecklist({ hasPlayers, hasSeason, hasBudget, 
             key={i}
             onClick={step.action}
             disabled={step.done}
-            className={`w-full flex items-start gap-3 p-3 rounded-xl text-left transition-all ${
+            className={`w-full flex items-start gap-3 p-3 rounded-lg text-left transition-all ${
               step.done
-                ? 'bg-white/50 dark:bg-slate-800/50'
-                : 'bg-white dark:bg-slate-900 hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-blue-100 dark:border-blue-800'
+                ? 'bg-white/50'
+                : 'bg-card hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-blue-100 dark:border-blue-800'
             }`}
           >
             <div
@@ -75,11 +75,11 @@ export default function OnboardingChecklist({ hasPlayers, hasSeason, hasBudget, 
             </div>
             <div>
               <p
-                className={`text-sm font-bold ${step.done ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-800 dark:text-white'}`}
+                className={`text-sm font-semibold ${step.done ? 'text-muted-foreground line-through' : 'text-foreground'}`}
               >
                 {step.label}
               </p>
-              {!step.done && <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{step.hint}</p>}
+              {!step.done && <p className="text-xs text-muted-foreground mt-0.5">{step.hint}</p>}
             </div>
           </button>
         ))}

@@ -309,11 +309,11 @@ export default function RosterManagement({
   };
 
   const SortIcon = ({ field }) => {
-    if (sortField !== field) return <ChevronDown size={10} className="text-slate-300 dark:text-slate-600" />;
+    if (sortField !== field) return <ChevronDown size={10} className="text-muted-foreground" />;
     return sortDir === 'asc' ? (
-      <ChevronUp size={10} className="text-blue-600" />
+      <ChevronUp size={10} className="text-blue-700 dark:text-blue-400" />
     ) : (
-      <ChevronDown size={10} className="text-blue-600" />
+      <ChevronDown size={10} className="text-blue-700 dark:text-blue-400" />
     );
   };
 
@@ -322,10 +322,10 @@ export default function RosterManagement({
       {/* ── HEADER ── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-            <Users size={22} className="text-blue-600" /> Roster Management
+          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Users size={22} className="text-blue-700 dark:text-blue-400" /> Roster Management
           </h2>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Manage all players, contacts, and season enrollment for {selectedTeam?.name || 'your team'}.
           </p>
         </div>
@@ -333,19 +333,19 @@ export default function RosterManagement({
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-foreground bg-card border border-border rounded-lg hover:bg-background transition-all"
             >
               <Download size={14} /> Export
             </button>
             <button
               onClick={() => setShowBulkUpload(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-foreground bg-card border border-border rounded-lg hover:bg-background transition-all"
             >
               <Upload size={14} /> {t('rosterMgmt.bulkUpload')}
             </button>
             <button
               onClick={onAddPlayer}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-black text-white bg-slate-900 dark:bg-blue-600 rounded-xl hover:bg-slate-800 dark:hover:bg-blue-700 transition-all shadow-sm dark:shadow-none"
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-accent-foreground bg-accent dark:bg-blue-600 rounded-lg hover:bg-accent/90 dark:hover:bg-blue-700 transition-all shadow-sm"
             >
               <Plus size={14} /> {t('rosterMgmt.addPlayer')}
             </button>
@@ -355,46 +355,46 @@ export default function RosterManagement({
 
       {/* ── STATS ROW ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none text-center">
-          <p className="text-2xl font-black text-slate-800 dark:text-white">{activePlayers.length}</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase">Active</p>
+        <div className="bg-card p-4 rounded-lg border border-border shadow-sm text-center">
+          <p className="text-2xl font-bold text-foreground">{activePlayers.length}</p>
+          <p className="text-xs font-semibold text-muted-foreground">Active</p>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none text-center">
-          <p className="text-2xl font-black text-blue-600">{enrolledInSeason}</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase">In {selectedSeason}</p>
+        <div className="bg-card p-4 rounded-lg border border-border shadow-sm text-center">
+          <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{enrolledInSeason}</p>
+          <p className="text-xs font-semibold text-muted-foreground">In {selectedSeason}</p>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none text-center">
+        <div className="bg-card p-4 rounded-lg border border-border shadow-sm text-center">
           <p
-            className={`text-2xl font-black ${compliantCount === activePlayers.length ? 'text-emerald-600' : 'text-amber-600'}`}
+            className={`text-2xl font-bold ${compliantCount === activePlayers.length ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}
           >
             {compliantCount}/{activePlayers.length}
           </p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase">Compliant</p>
+          <p className="text-xs font-semibold text-muted-foreground">Compliant</p>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none text-center">
-          <p className="text-2xl font-black text-slate-400 dark:text-slate-500">{archivedPlayers.length}</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase">Archived</p>
+        <div className="bg-card p-4 rounded-lg border border-border shadow-sm text-center">
+          <p className="text-2xl font-bold text-muted-foreground">{archivedPlayers.length}</p>
+          <p className="text-xs font-semibold text-muted-foreground">Archived</p>
         </div>
       </div>
 
       {/* ── SEARCH + FILTERS ── */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none overflow-hidden">
+      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         <div className="p-4 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-grow">
-            <Search className="absolute left-3 top-2.5 text-slate-300 dark:text-slate-600" size={16} />
+            <Search className="absolute left-3 top-2.5 text-muted-foreground" size={16} />
             <input
               type="text"
               placeholder={t('rosterMgmt.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-ring outline-none"
             />
           </div>
           <div className="flex gap-2 items-center">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 outline-none"
+              className="text-xs font-semibold text-foreground bg-background border border-border rounded-lg px-3 py-2 outline-none"
             >
               <option value="active">{t('common.active')}</option>
               <option value="archived">{t('common.archived')}</option>
@@ -403,7 +403,7 @@ export default function RosterManagement({
             <select
               value={complianceFilter}
               onChange={(e) => setComplianceFilter(e.target.value)}
-              className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 outline-none"
+              className="text-xs font-semibold text-foreground bg-background border border-border rounded-lg px-3 py-2 outline-none"
             >
               <option value="all">{t('common.all')}</option>
               <option value="compliant">{t('rosterMgmt.compliant')}</option>
@@ -413,7 +413,7 @@ export default function RosterManagement({
         </div>
 
         {/* ── TABLE HEADER ── */}
-        <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800 border-y border-slate-100 dark:border-slate-700 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2 bg-background border-y border-border text-xs font-semibold text-muted-foreground">
           <div
             className="col-span-1 flex items-center gap-1 cursor-pointer select-none"
             onClick={() => handleSort('jerseyNumber')}
@@ -434,7 +434,7 @@ export default function RosterManagement({
 
         {/* ── PLAYER ROWS ── */}
         {filteredPlayers.length === 0 ? (
-          <div className="py-12 text-center text-slate-400 dark:text-slate-500 font-bold italic">
+          <div className="py-12 text-center text-muted-foreground font-semibold italic">
             {searchTerm
               ? 'No players match your search.'
               : statusFilter === 'archived'
@@ -442,7 +442,7 @@ export default function RosterManagement({
                 : 'No players on this roster yet.'}
           </div>
         ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-700">
+          <div className="divide-y divide-border">
             {pagedPlayers.map((player) => {
               const isExpanded = expandedPlayerId === player.id;
               const isCompliant = player.medicalRelease && player.reePlayerWaiver;
@@ -453,7 +453,7 @@ export default function RosterManagement({
                 <div key={player.id} className={`${isArchived ? 'opacity-60' : ''}`}>
                   {/* ── Main Row ── */}
                   <div
-                    className={`grid grid-cols-1 md:grid-cols-12 gap-2 px-4 py-3 items-center cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition-colors ${isExpanded ? 'bg-blue-50/30 dark:bg-blue-900/20' : ''}`}
+                    className={`grid grid-cols-1 md:grid-cols-12 gap-2 px-4 py-3 items-center cursor-pointer hover:bg-background/80 transition-colors ${isExpanded ? 'bg-blue-50/30 dark:bg-blue-900/20' : ''}`}
                     onClick={() => setExpandedPlayerId(isExpanded ? null : player.id)}
                   >
                     {/* Jersey */}
@@ -475,22 +475,22 @@ export default function RosterManagement({
                         />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-slate-800 dark:text-white truncate flex items-center gap-2">
+                        <p className="text-sm font-semibold text-foreground truncate flex items-center gap-2">
                           {player.lastName}, {player.firstName}
                           {player.birthdate && getUSAgeGroup(player.birthdate, selectedSeason) && (
-                            <span className="text-[9px] font-black bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
+                            <span className="text-xs font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full">
                               {getUSAgeGroup(player.birthdate, selectedSeason)}
                             </span>
                           )}
                         </p>
                         {player.birthdate && (
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                          <p className="text-xs text-muted-foreground">
                             {t('playerForm.age')} {getAge(player.birthdate)} &middot; DOB{' '}
                             {new Date(player.birthdate).toLocaleDateString()}
                           </p>
                         )}
                         {isArchived && (
-                          <span className="text-[8px] font-black bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded uppercase">
+                          <span className="text-xs font-bold bg-muted text-muted-foreground px-1.5 py-0.5 rounded uppercase">
                             Archived
                           </span>
                         )}
@@ -502,28 +502,30 @@ export default function RosterManagement({
                       {player.guardians?.length > 0 ? (
                         <div className="space-y-0.5">
                           {player.guardians.slice(0, 2).map((g, i) => (
-                            <p key={i} className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                              <span className="font-bold text-slate-600 dark:text-slate-300">{g.name}</span>
-                              {g.email && <span className="text-slate-400 dark:text-slate-500"> · {g.email}</span>}
+                            <p key={i} className="text-xs text-muted-foreground truncate">
+                              <span className="font-semibold text-foreground">{g.name}</span>
+                              {g.email && <span className="text-muted-foreground"> · {g.email}</span>}
                             </p>
                           ))}
                           {player.guardians.length > 2 && (
-                            <p className="text-[10px] text-blue-500 font-bold">+{player.guardians.length - 2} more</p>
+                            <p className="text-xs text-blue-700 dark:text-blue-400 font-semibold">
+                              +{player.guardians.length - 2} more
+                            </p>
                           )}
                         </div>
                       ) : (
-                        <p className="text-[11px] text-slate-300 dark:text-slate-600 italic">No contacts</p>
+                        <p className="text-xs text-muted-foreground italic">No contacts</p>
                       )}
                     </div>
 
                     {/* Compliance (desktop) */}
                     <div className="hidden md:flex col-span-2 items-center gap-1.5">
                       {isCompliant ? (
-                        <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-lg">
+                        <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-lg">
                           <ShieldCheck size={12} /> Complete
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded-lg">
+                        <span className="flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded-lg">
                           <AlertCircle size={12} />
                           {!player.medicalRelease && !player.reePlayerWaiver ? '2 missing' : '1 missing'}
                         </span>
@@ -536,44 +538,44 @@ export default function RosterManagement({
                         enrolledSeasons.map((sid) => (
                           <span
                             key={sid}
-                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${sid === selectedSeason ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}
+                            className={`text-xs font-semibold px-1.5 py-0.5 rounded ${sid === selectedSeason ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-muted text-muted-foreground'}`}
                           >
                             {sid}
                           </span>
                         ))
                       ) : (
-                        <span className="text-[10px] text-slate-300 dark:text-slate-600 italic">None</span>
+                        <span className="text-xs text-muted-foreground italic">None</span>
                       )}
                     </div>
 
                     {/* Expand indicator */}
                     <div className="hidden md:flex col-span-1 justify-end">
                       {isExpanded ? (
-                        <ChevronUp size={14} className="text-blue-500" />
+                        <ChevronUp size={14} className="text-blue-700 dark:text-blue-400" />
                       ) : (
-                        <ChevronDown size={14} className="text-slate-300 dark:text-slate-600" />
+                        <ChevronDown size={14} className="text-muted-foreground" />
                       )}
                     </div>
                   </div>
 
                   {/* ── Expanded Detail Panel ── */}
                   {isExpanded && (
-                    <div className="bg-slate-50/50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-700 p-4 md:px-6 space-y-4">
+                    <div className="bg-background/50 border-t border-border p-4 md:px-6 space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {/* ── Contacts Section ── */}
-                        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                        <div className="bg-card rounded-lg border border-border p-4">
+                          <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
                             <UserPlus size={12} /> Guardians / Contacts
                           </h4>
                           {player.guardians?.length > 0 ? (
                             <div className="space-y-3">
                               {player.guardians.map((g, i) => (
                                 <div key={g.id || i} className="space-y-1">
-                                  <p className="text-sm font-bold text-slate-800 dark:text-white">{g.name}</p>
+                                  <p className="text-sm font-semibold text-foreground">{g.name}</p>
                                   {g.email && (
                                     <a
                                       href={`mailto:${g.email}`}
-                                      className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800"
+                                      className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-400 hover:text-blue-800"
                                     >
                                       <Mail size={11} /> {g.email}
                                     </a>
@@ -581,7 +583,7 @@ export default function RosterManagement({
                                   {g.phone && (
                                     <a
                                       href={`tel:${g.phone}`}
-                                      className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
                                     >
                                       <Phone size={11} /> {g.phone}
                                     </a>
@@ -590,22 +592,22 @@ export default function RosterManagement({
                               ))}
                             </div>
                           ) : (
-                            <p className="text-xs text-slate-400 dark:text-slate-500 italic">No guardians on file.</p>
+                            <p className="text-xs text-muted-foreground italic">No guardians on file.</p>
                           )}
                         </div>
 
                         {/* ── Compliance Section ── */}
-                        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                        <div className="bg-card rounded-lg border border-border p-4">
+                          <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
                             <Shield size={12} /> Compliance
                           </h4>
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
                               <div>
-                                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                                <span className="text-xs font-semibold text-foreground">
                                   {t('medical.medicalRelease')}
                                 </span>
-                                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                                <p className="text-xs text-muted-foreground mt-0.5">
                                   {player.medicalRelease
                                     ? t('parent.completedOnFile')
                                     : t('parent.requiredNotSubmitted')}
@@ -616,7 +618,7 @@ export default function RosterManagement({
                                   e.stopPropagation();
                                   setMedicalPlayer(player);
                                 }}
-                                className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-colors ${
+                                className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
                                   player.medicalRelease
                                     ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/60'
                                     : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/60'
@@ -628,23 +630,21 @@ export default function RosterManagement({
                               </button>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                                ReePlayer Waiver
-                              </span>
+                              <span className="text-xs font-semibold text-foreground">ReePlayer Waiver</span>
                               {canEdit ? (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleComplianceToggle(player.id, 'reePlayerWaiver', player.reePlayerWaiver);
                                   }}
-                                  className={`w-8 h-5 rounded-full transition-colors relative ${player.reePlayerWaiver ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                  className={`w-8 h-5 rounded-full transition-colors relative ${player.reePlayerWaiver ? 'bg-emerald-500' : 'bg-slate-300'}`}
                                 >
                                   <div
-                                    className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${player.reePlayerWaiver ? 'translate-x-3.5' : 'translate-x-0.5'}`}
+                                    className={`absolute top-0.5 w-4 h-4 bg-card rounded-full shadow transition-transform ${player.reePlayerWaiver ? 'translate-x-3.5' : 'translate-x-0.5'}`}
                                   />
                                 </button>
                               ) : player.reePlayerWaiver ? (
-                                <ShieldCheck size={16} className="text-emerald-500" />
+                                <ShieldCheck size={16} className="text-emerald-700 dark:text-emerald-400" />
                               ) : (
                                 <ShieldX size={16} className="text-red-400" />
                               )}
@@ -653,8 +653,8 @@ export default function RosterManagement({
                         </div>
 
                         {/* ── Season Enrollment Section ── */}
-                        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                        <div className="bg-card rounded-lg border border-border p-4">
+                          <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
                             <Calendar size={12} /> {t('rosterMgmt.seasonEnrollment')}
                           </h4>
                           <div className="space-y-2">
@@ -663,11 +663,11 @@ export default function RosterManagement({
                               return (
                                 <div key={s.id} className="flex items-center justify-between">
                                   <span
-                                    className={`text-xs font-bold ${isEnrolled ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}
+                                    className={`text-xs font-semibold ${isEnrolled ? 'text-foreground' : 'text-muted-foreground'}`}
                                   >
                                     {s.id}
                                     {s.id === selectedSeason && (
-                                      <span className="text-[8px] text-blue-500 ml-1">(current)</span>
+                                      <span className="text-xs text-blue-700 dark:text-blue-400 ml-1">(current)</span>
                                     )}
                                   </span>
                                   {canEdit ? (
@@ -677,16 +677,16 @@ export default function RosterManagement({
                                         handleSeasonToggle(player.id, s.id, isEnrolled);
                                       }}
                                       disabled={isSaving}
-                                      className={`w-8 h-5 rounded-full transition-colors relative ${isEnrolled ? 'bg-blue-500' : 'bg-slate-300 dark:bg-slate-600'} disabled:opacity-50`}
+                                      className={`w-8 h-5 rounded-full transition-colors relative ${isEnrolled ? 'bg-blue-500' : 'bg-slate-300'} disabled:opacity-50`}
                                     >
                                       <div
-                                        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isEnrolled ? 'translate-x-3.5' : 'translate-x-0.5'}`}
+                                        className={`absolute top-0.5 w-4 h-4 bg-card rounded-full shadow transition-transform ${isEnrolled ? 'translate-x-3.5' : 'translate-x-0.5'}`}
                                       />
                                     </button>
                                   ) : isEnrolled ? (
-                                    <Check size={14} className="text-blue-500" />
+                                    <Check size={14} className="text-blue-700 dark:text-blue-400" />
                                   ) : (
-                                    <X size={14} className="text-slate-300 dark:text-slate-600" />
+                                    <X size={14} className="text-muted-foreground" />
                                   )}
                                 </div>
                               );
@@ -696,37 +696,33 @@ export default function RosterManagement({
                       </div>
 
                       {/* ── Documents Section ── */}
-                      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                      <div className="bg-card rounded-lg border border-border p-4">
+                        <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
                           <FolderOpen size={12} /> {t('parent.documents')}{' '}
                           {playerDocs[player.id] ? `(${playerDocs[player.id].length})` : ''}
                         </h4>
                         {docsLoading === player.id ? (
-                          <p className="text-xs text-slate-300 dark:text-slate-600 font-bold animate-pulse py-2">
+                          <p className="text-xs text-muted-foreground font-semibold animate-pulse py-2">
                             {t('common.loading')}...
                           </p>
                         ) : !playerDocs[player.id] || playerDocs[player.id].length === 0 ? (
-                          <p className="text-xs text-slate-400 dark:text-slate-500 italic py-2">
-                            {t('parent.noDocuments')}
-                          </p>
+                          <p className="text-xs text-muted-foreground italic py-2">{t('parent.noDocuments')}</p>
                         ) : (
                           <div className="space-y-1.5">
                             {playerDocs[player.id].map((doc) => (
                               <div
                                 key={doc.id}
-                                className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700"
+                                className="flex items-center gap-2 p-2 bg-background rounded-lg border border-border"
                               >
-                                <FileText size={13} className="text-slate-400 shrink-0" />
+                                <FileText size={13} className="text-muted-foreground shrink-0" />
                                 <div className="flex-grow min-w-0">
-                                  <p className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">
-                                    {doc.title}
-                                  </p>
+                                  <p className="text-xs font-semibold text-foreground truncate">{doc.title}</p>
                                   <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-[8px] font-black text-slate-400 uppercase">
+                                    <span className="text-xs font-bold text-muted-foreground uppercase">
                                       {DOC_TYPE_LABELS[doc.docType] || doc.docType}
                                     </span>
                                     <span
-                                      className={`text-[8px] font-black uppercase px-1 py-0.5 rounded ${STATUS_COLORS[doc.status] || 'bg-slate-100 text-slate-500'}`}
+                                      className={`text-xs font-bold uppercase px-1 py-0.5 rounded ${STATUS_COLORS[doc.status] || 'bg-muted text-muted-foreground'}`}
                                     >
                                       {doc.status}
                                     </span>
@@ -738,7 +734,7 @@ export default function RosterManagement({
                                       e.stopPropagation();
                                       handleViewDoc(doc.filePath);
                                     }}
-                                    className="p-1 text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                    className="p-1 text-muted-foreground hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-400 transition-colors"
                                     title={t('common.view')}
                                   >
                                     <Eye size={13} />
@@ -749,7 +745,7 @@ export default function RosterManagement({
                                         e.stopPropagation();
                                         handleDeleteDoc(doc);
                                       }}
-                                      className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                                      className="p-1 text-muted-foreground hover:text-red-700 dark:text-red-400 dark:hover:text-red-400 transition-colors"
                                       title={t('common.delete')}
                                     >
                                       <Trash2 size={12} />
@@ -764,13 +760,13 @@ export default function RosterManagement({
 
                       {/* ── Action Buttons ── */}
                       {canEdit && (
-                        <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                        <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               onEditPlayer(player);
                             }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
                           >
                             <Edit size={12} /> Edit Player
                           </button>
@@ -779,7 +775,7 @@ export default function RosterManagement({
                               e.stopPropagation();
                               onViewPlayer(player);
                             }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-foreground bg-muted rounded-lg hover:bg-muted transition-colors"
                           >
                             <Users size={12} /> Full Profile
                           </button>
@@ -789,7 +785,7 @@ export default function RosterManagement({
                                 e.stopPropagation();
                                 onViewAsParent(player);
                               }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/50 transition-colors"
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/50 transition-colors"
                             >
                               <Eye size={12} /> {t('impersonation.viewAsParent')}
                             </button>
@@ -799,7 +795,7 @@ export default function RosterManagement({
                               e.stopPropagation();
                               handleArchiveRestore(player);
                             }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
                               isArchived
                                 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
                                 : 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50'
@@ -826,8 +822,8 @@ export default function RosterManagement({
         )}
 
         {/* ── Footer count + pagination ── */}
-        <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
-          <span className="text-[10px] font-bold text-slate-400">
+        <div className="px-4 py-3 bg-background border-t border-border flex items-center justify-between">
+          <span className="text-xs font-semibold text-muted-foreground">
             Showing {Math.min((currentPage - 1) * ROSTER_PAGE_SIZE + 1, filteredPlayers.length)}–
             {Math.min(currentPage * ROSTER_PAGE_SIZE, filteredPlayers.length)} of {filteredPlayers.length}{' '}
             {tp('common.player', filteredPlayers.length)}
@@ -837,17 +833,17 @@ export default function RosterManagement({
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="px-2 py-1 text-xs font-bold text-slate-500 dark:text-slate-400 disabled:opacity-30 hover:text-blue-500 transition-colors"
+                className="px-2 py-1 text-xs font-semibold text-muted-foreground disabled:opacity-30 hover:text-blue-700 dark:text-blue-400 transition-colors"
               >
                 ‹ Prev
               </button>
-              <span className="text-[10px] font-bold text-slate-400">
+              <span className="text-xs font-semibold text-muted-foreground">
                 {currentPage} / {totalRosterPages}
               </span>
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalRosterPages, p + 1))}
                 disabled={currentPage === totalRosterPages}
-                className="px-2 py-1 text-xs font-bold text-slate-500 dark:text-slate-400 disabled:opacity-30 hover:text-blue-500 transition-colors"
+                className="px-2 py-1 text-xs font-semibold text-muted-foreground disabled:opacity-30 hover:text-blue-700 dark:text-blue-400 transition-colors"
               >
                 Next ›
               </button>
