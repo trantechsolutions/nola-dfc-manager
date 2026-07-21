@@ -37,6 +37,7 @@ export default {
     txDeleted: 'Transacción eliminada',
     fundsDistributed: '¡Fondos Distribuidos!',
     distributionReverted: 'Distribución Revertida.',
+    distributionMethodSaved: 'Método de distribución actualizado.',
     importSuccess: '¡{{n}} transacciones importadas!',
     importFailed: 'Error en importación',
     syncedEvents: '{{n}} eventos sincronizados.',

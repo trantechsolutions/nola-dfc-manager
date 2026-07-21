@@ -267,16 +267,16 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
           {/* Compliance Alerts */}
           {(totals.totalMissingMedical > 0 || totals.totalMissingReeplayer > 0) && (
             <div className="bg-gradient-to-r from-amber-50 to-red-50 dark:from-amber-900/20 dark:to-red-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-5">
-              <h3 className="font-bold text-amber-800 text-sm flex items-center gap-2 mb-3">
+              <h3 className="font-bold text-amber-800 dark:text-amber-300 text-sm flex items-center gap-2 mb-3">
                 <AlertTriangle size={16} className="text-amber-700 dark:text-amber-400" /> Missing Compliance — All
                 Teams
               </h3>
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-white/70 rounded-lg p-3 text-center">
+                <div className="bg-card border border-border rounded-lg p-3 text-center">
                   <p className="text-xl font-bold text-red-700 dark:text-red-400">{totals.totalMissingMedical}</p>
                   <p className="text-xs font-semibold text-muted-foreground">Missing Medical Release</p>
                 </div>
-                <div className="bg-white/70 rounded-lg p-3 text-center">
+                <div className="bg-card border border-border rounded-lg p-3 text-center">
                   <p className="text-xl font-bold text-red-700 dark:text-red-400">{totals.totalMissingReeplayer}</p>
                   <p className="text-xs font-semibold text-muted-foreground">Missing ReePlayer Waiver</p>
                 </div>
@@ -287,7 +287,7 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
                   const d = teamData[team.id] || {};
                   if (!d.missingCompliance?.length) return null;
                   return (
-                    <div key={team.id} className="bg-white/70 rounded-lg p-3">
+                    <div key={team.id} className="bg-card border border-border rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: team.colorPrimary }} />
                         <span className="text-xs font-semibold text-foreground">{team.name}</span>
@@ -299,7 +299,7 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
                         {d.missingCompliance.slice(0, 6).map((p, i) => (
                           <span
                             key={i}
-                            className="inline-flex items-center gap-1 text-xs font-semibold bg-card border border-border px-2 py-0.5 rounded"
+                            className="inline-flex items-center gap-1 text-xs font-semibold bg-background border border-border px-2 py-0.5 rounded"
                           >
                             <span className="text-foreground">
                               #{p.jersey || '?'} {p.name}

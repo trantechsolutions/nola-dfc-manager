@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Shield, Users, Save, UserPlus, X, CheckCircle2 } from 'lucide-react';
+import { Building2, Shield, Users, Save, UserPlus, X, CheckCircle2, CalendarDays } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { ALL_ROLES, CLUB_ROLES } from '../../utils/roles';
 
@@ -8,6 +8,38 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
   const [isSaving, setIsSaving] = useState(false);
   const [allRoles, setAllRoles] = useState([]);
   const [loadingRoles, setLoadingRoles] = useState(true);
+
+  // Default season
+  const [seasons, setSeasons] = useState([]);
+  const [defaultSeason, setDefaultSeason] = useState(club?.settings?.defaultSeason || '');
+  const [isSavingSeason, setIsSavingSeason] = useState(false);
+
+  // Keep the selection in sync when the club context refreshes
+  useEffect(() => {
+    setDefaultSeason(club?.settings?.defaultSeason || '');
+  }, [club?.settings?.defaultSeason]);
+
+  // Load the season list for the picker
+  useEffect(() => {
+    supabaseService
+      .getAllSeasons()
+      .then((data) => setSeasons(data || []))
+      .catch((e) => console.error('Failed to load seasons', e));
+  }, []);
+
+  const handleSaveDefaultSeason = async () => {
+    setIsSavingSeason(true);
+    try {
+      const settings = { ...(club?.settings || {}), defaultSeason: defaultSeason || null };
+      await supabaseService.updateClub(club.id, { settings });
+      if (refreshContext) await refreshContext();
+      if (showToast) showToast('Default season saved.');
+    } catch (e) {
+      if (showToast) showToast('Save failed.', true);
+    } finally {
+      setIsSavingSeason(false);
+    }
+  };
 
   // Club-level role invite
   const [showInvite, setShowInvite] = useState(false);
@@ -136,6 +168,41 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
             className="flex items-center gap-1.5 px-4 py-2 bg-accent text-accent-foreground text-xs font-bold rounded-lg hover:bg-accent/90 disabled:opacity-50"
           >
             <Save size={14} /> Save Changes
+          </button>
+        </div>
+      </div>
+
+      {/* Default Season */}
+      <div className="bg-card p-5 rounded-lg border border-border shadow-sm">
+        <h3 className="font-bold text-foreground text-sm mb-4 flex items-center gap-2">
+          <CalendarDays size={16} className="text-blue-700 dark:text-blue-400" /> Default Season
+        </h3>
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            The season loaded by default when members open the app. Leave on “Auto (current season)” to pick the active
+            season automatically from the calendar.
+          </p>
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground">Season</label>
+            <select
+              value={defaultSeason}
+              onChange={(e) => setDefaultSeason(e.target.value)}
+              className="w-full border border-border rounded-lg p-3 font-semibold text-sm outline-none focus:ring-2 focus:ring-ring mt-1 bg-card"
+            >
+              <option value="">Auto (current season)</option>
+              {seasons.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name || s.id}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={handleSaveDefaultSeason}
+            disabled={isSavingSeason}
+            className="flex items-center gap-1.5 px-4 py-2 bg-accent text-accent-foreground text-xs font-bold rounded-lg hover:bg-accent/90 disabled:opacity-50"
+          >
+            <Save size={14} /> Save Default Season
           </button>
         </div>
       </div>

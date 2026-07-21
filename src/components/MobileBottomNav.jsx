@@ -1,6 +1,5 @@
 import { LayoutDashboard, Users, Calendar, Plus, ReceiptText } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
-import { isSingleTeamMode } from '../utils/singleTeamMode';
 import { useNavigation } from '../context/NavigationContext';
 
 export default function MobileBottomNav() {
@@ -15,9 +14,9 @@ export default function MobileBottomNav() {
     setShowTxForm,
     isClubAdmin,
     clubNavItems,
+    singleTeam,
   } = useNavigation();
   const { t } = useT();
-  const singleTeam = isSingleTeamMode();
 
   return (
     <>

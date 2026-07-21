@@ -4,10 +4,10 @@
 // CRITICAL: team_seasons is the authoritative source for budget data per team.
 // The global seasons table is a fallback for shared metadata only.
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { supabaseService } from '../services/supabaseService';
 
-export const useSoccerYear = (user, teamId = null) => {
+export const useSoccerYear = (user, teamId = null, defaultSeason = null) => {
   const [seasons, setSeasons] = useState([]);
   const [teamSeasons, setTeamSeasons] = useState([]);
   // Compute current season dynamically: Aug-Jul cycle
@@ -19,6 +19,17 @@ export const useSoccerYear = (user, teamId = null) => {
     return month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
   });
   const [loading, setLoading] = useState(true);
+
+  // ── Apply the club's admin-configured default season once, on load ──
+  // The club (and its settings) resolve asynchronously after this hook mounts,
+  // so we seed the date-computed value first and override it once the default
+  // arrives. Applied a single time so it never clobbers a user's manual pick.
+  const defaultAppliedRef = useRef(false);
+  useEffect(() => {
+    if (defaultAppliedRef.current || !defaultSeason) return;
+    defaultAppliedRef.current = true;
+    setSelectedSeason(defaultSeason);
+  }, [defaultSeason]);
 
   // ── Fetch seasons + team seasons ──
   const fetchSeasons = useCallback(async () => {
@@ -74,6 +85,9 @@ export const useSoccerYear = (user, teamId = null) => {
 
         // ── Finalization: ONLY from team_seasons ──
         isFinalized: currentTeamSeason.isFinalized || false,
+
+        // ── Fundraising distribution method (per team-season) ──
+        distributionMethod: currentTeamSeason.distributionMethod || 'waterfall',
 
         // ── Budget numbers: team_seasons is authoritative ──
         // Use team_season value first. Only fall back to global if team_season is null.

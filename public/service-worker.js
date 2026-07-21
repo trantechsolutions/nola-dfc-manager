@@ -50,10 +50,10 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data.json();
   } catch {
-    payload = { title: 'Team Manager', body: event.data.text(), url: '/' };
+    payload = { title: 'Touchline', body: event.data.text(), url: '/' };
   }
 
-  const { title = 'Team Manager', body = '', url = '/', icon, badge } = payload;
+  const { title = 'Touchline', body = '', url = '/', icon, badge } = payload;
 
   const options = {
     body,

@@ -30,8 +30,8 @@ import { useT } from '../../i18n/I18nContext';
 import { CATEGORY_LABELS } from '../../utils/constants';
 import { exportInsightsPDF } from '../../utils/exportUtils';
 
-const GEMINI_MODEL = 'gemini-2.0-flash-lite';
-const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GROK_MODEL = 'grok-4.5';
+const GROK_ENDPOINT = 'https://api.x.ai/v1/chat/completions';
 
 export default function InsightsView({
   transactions,
@@ -47,7 +47,7 @@ export default function InsightsView({
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showApiSetup, setShowApiSetup] = useState(false);
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('grok_api_key') || '');
   const [expandedPanel, setExpandedPanel] = useState(null);
   const [expandedGroup, setExpandedGroup] = useState(null);
   const chatEndRef = useRef(null);
@@ -259,28 +259,32 @@ ${playerSummary}`;
     setIsLoading(true);
     try {
       const history = [...messages, userMsg].map((m) => ({
-        role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.content }],
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.content,
       }));
-      const response = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
+      const response = await fetch(GROK_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: buildSystemPrompt() }] },
-          contents: history,
-          generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+          model: GROK_MODEL,
+          messages: [{ role: 'system', content: buildSystemPrompt() }, ...history],
+          temperature: 0.7,
+          max_tokens: 1024,
         }),
       });
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error?.message || `API error: ${response.status}`);
+        throw new Error(err.error?.message || err.error || `API error: ${response.status}`);
       }
       const data = await response.json();
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response.",
+          content: data.choices?.[0]?.message?.content || "Sorry, I couldn't generate a response.",
         },
       ]);
     } catch (err) {
@@ -304,8 +308,8 @@ ${playerSummary}`;
 
   const saveApiKey = (key) => {
     setApiKey(key);
-    if (key) localStorage.setItem('gemini_api_key', key);
-    else localStorage.removeItem('gemini_api_key');
+    if (key) localStorage.setItem('grok_api_key', key);
+    else localStorage.removeItem('grok_api_key');
   };
   const togglePanel = (id) => setExpandedPanel((prev) => (prev === id ? null : id));
   const a = analytics;
@@ -707,12 +711,12 @@ ${playerSummary}`;
               <p className="text-xs text-foreground">
                 {t('insights.apiKeyHelp')}{' '}
                 <a
-                  href="https://aistudio.google.com/apikey"
+                  href="https://console.x.ai"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-700 dark:text-blue-400 font-semibold underline"
                 >
-                  Google AI Studio
+                  xAI Console
                 </a>
                 .
               </p>

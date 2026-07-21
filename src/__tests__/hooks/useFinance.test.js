@@ -34,8 +34,12 @@ const buildHook = (overrides = {}) => {
   const isBudgetLocked = overrides.locked ?? true;
   const playerFinancialsMap = overrides.financials ?? {};
 
+  // A method override surfaces via currentSeasonData (the 5th arg), mirroring how
+  // useSoccerYear feeds team_seasons.distribution_method into the hook.
+  const currentSeasonData = overrides.method ? { distributionMethod: overrides.method } : null;
+
   const { result } = renderHook(() =>
-    useFinance(SEASON, seasonalPlayers, isBudgetLocked, TEAM_SEASON_ID, null, playerFinancialsMap),
+    useFinance(SEASON, seasonalPlayers, isBudgetLocked, TEAM_SEASON_ID, currentSeasonData, playerFinancialsMap),
   );
 
   return result.current;
@@ -232,6 +236,110 @@ describe('handleWaterfallCredit', () => {
     await handleWaterfallCredit(100, 'Manual Credit', null, null);
 
     expect(supabaseService.updateTransaction).not.toHaveBeenCalled();
+  });
+});
+
+// ── distribution methods ──────────────────────────────────────────────────────
+describe('handleWaterfallCredit — per-team methods', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    supabaseService.addTransaction.mockResolvedValue({ id: 'new-tx' });
+    supabaseService.updateTransaction.mockResolvedValue({});
+  });
+
+  // DIRECT: only the linked player is credited; the rest goes to the team pot.
+  it('direct: credits only the linked player, overflow to team pot', async () => {
+    const p1 = makePlayer('p1'); // source — balance 100
+    const p2 = makePlayer('p2'); // teammate — balance 200, should get nothing
+
+    supabaseService.getPlayerFinancials.mockResolvedValue({
+      p1: makeFinancials(100),
+      p2: makeFinancials(200),
+    });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1, p2], method: 'direct' });
+    await handleWaterfallCredit(300, 'Sponsor', 'p1', 'orig-tx');
+
+    const calls = supabaseService.addTransaction.mock.calls.map((c) => c[0]);
+    expect(calls.find((c) => c.playerId === 'p1')?.amount).toBe(100);
+    expect(calls.find((c) => c.playerId === 'p2')).toBeUndefined();
+    expect(calls.find((c) => c.playerId === null)?.amount).toBeCloseTo(200, 1);
+  });
+
+  // EVEN_SPLIT: ignore the linked player's cap; split equally across the pool.
+  it('even_split: splits equally and ignores the primary-player cap', async () => {
+    const p1 = makePlayer('p1'); // passed as source but treated as a normal member
+    const p2 = makePlayer('p2');
+
+    supabaseService.getPlayerFinancials.mockResolvedValue({
+      p1: makeFinancials(500),
+      p2: makeFinancials(500),
+    });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1, p2], method: 'even_split' });
+    await handleWaterfallCredit(200, 'Fundraiser', 'p1', 'orig-tx');
+
+    const calls = supabaseService.addTransaction.mock.calls.map((c) => c[0]);
+    // Source is NOT capped to its full balance — it gets an equal 100, not 200.
+    expect(calls.find((c) => c.playerId === 'p1')?.amount).toBeCloseTo(100, 1);
+    expect(calls.find((c) => c.playerId === 'p2')?.amount).toBeCloseTo(100, 1);
+    expect(calls.find((c) => c.playerId === null)).toBeUndefined();
+  });
+
+  it('even_split: still excludes fee-waived and non-buy-in players', async () => {
+    const p1 = makePlayer('p1');
+    const p2 = makePlayer('p2', { feeWaived: true });
+    const p3 = makePlayer('p3', { buyIn: false });
+
+    supabaseService.getPlayerFinancials.mockResolvedValue({
+      p1: makeFinancials(500),
+      p2: makeFinancials(500),
+      p3: makeFinancials(500),
+    });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1, p2, p3], method: 'even_split' });
+    await handleWaterfallCredit(100, 'Fundraiser', '', 'orig-tx');
+
+    const calls = supabaseService.addTransaction.mock.calls.map((c) => c[0]);
+    expect(calls.find((c) => c.playerId === 'p2')).toBeUndefined();
+    expect(calls.find((c) => c.playerId === 'p3')).toBeUndefined();
+    expect(calls.find((c) => c.playerId === 'p1')?.amount).toBeCloseTo(100, 1);
+  });
+
+  // TEAM_POT: no player credit at all — everything lands in the pot.
+  it('team_pot: sends the entire amount to the team pot, no player credit', async () => {
+    const p1 = makePlayer('p1');
+
+    supabaseService.getPlayerFinancials.mockResolvedValue({
+      p1: makeFinancials(300), // player owes money but pot method ignores it
+    });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1], method: 'team_pot' });
+    await handleWaterfallCredit(250, 'Sponsor', 'p1', 'orig-tx');
+
+    const calls = supabaseService.addTransaction.mock.calls.map((c) => c[0]);
+    expect(calls.find((c) => c.playerId === 'p1')).toBeUndefined();
+    const poolTx = calls.find((c) => c.playerId === null);
+    expect(poolTx?.amount).toBeCloseTo(250, 1);
+    expect(poolTx.title).toContain('Team Pool Overflow');
+  });
+
+  // An explicit unknown/undefined method falls back to waterfall behavior.
+  it('defaults to waterfall when method is unset', async () => {
+    const p1 = makePlayer('p1'); // source — balance 100
+    const p2 = makePlayer('p2'); // pool — balance 200
+
+    supabaseService.getPlayerFinancials.mockResolvedValue({
+      p1: makeFinancials(100),
+      p2: makeFinancials(200),
+    });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1, p2] }); // no method → waterfall
+    await handleWaterfallCredit(300, 'Sponsor', 'p1', 'orig-tx');
+
+    const calls = supabaseService.addTransaction.mock.calls.map((c) => c[0]);
+    expect(calls.find((c) => c.playerId === 'p1')?.amount).toBe(100);
+    expect(calls.find((c) => c.playerId === 'p2')?.amount).toBeCloseTo(200, 1);
   });
 });
 

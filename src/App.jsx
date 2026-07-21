@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Routes, Route } from 'react-router-dom';
 import { supabase } from './supabase';
@@ -56,7 +56,8 @@ import { PERMISSIONS } from './utils/roles';
 import { useCategoryManager } from './hooks/useCategoryManager';
 import { useAccounts } from './hooks/useAccounts';
 import { useBookBalance } from './hooks/useBookBalance';
-import { isSingleTeamMode } from './utils/singleTeamMode';
+import { useAppSettings } from './hooks/useAppSettings';
+import { resolveSingleTeamMode, setAdminOverride } from './utils/singleTeamMode';
 
 function App() {
   const navigate = useNavigate();
@@ -87,6 +88,38 @@ function App() {
     loading: contextLoading,
     refreshContext,
   } = useTeamContext(user);
+
+  // ── APP-WIDE SETTINGS (single-team mode, etc.) ──
+  const { settings: appSettings, settingsLoading, saveSetting } = useAppSettings(user);
+  const singleTeamEnabled = appSettings?.single_team_mode === true;
+
+  // Toggle single-team mode app-wide. Also sets a local browser override so the
+  // admin flipping it on keeps full mode (and access to this admin panel).
+  const handleToggleSingleTeam = useCallback(
+    async (next) => {
+      await saveSetting('single_team_mode', next);
+      setAdminOverride(next);
+    },
+    [saveSetting],
+  );
+
+  // Hide the Evaluations tab app-wide.
+  const evaluationsHidden = appSettings?.hide_evaluations === true;
+  const handleToggleHideEvaluations = useCallback(
+    async (next) => {
+      await saveSetting('hide_evaluations', next);
+    },
+    [saveSetting],
+  );
+
+  // Hide the Insights tab app-wide.
+  const insightsHidden = appSettings?.hide_insights === true;
+  const handleToggleHideInsights = useCallback(
+    async (next) => {
+      await saveSetting('hide_insights', next);
+    },
+    [saveSetting],
+  );
 
   const {
     showPlayerForm,
@@ -139,7 +172,7 @@ function App() {
     currentSeasonData,
     currentTeamSeason,
     refreshSeasons,
-  } = useSoccerYear(user, effectiveTeamId);
+  } = useSoccerYear(user, effectiveTeamId, club?.settings?.defaultSeason || null);
 
   const {
     players,
@@ -238,6 +271,14 @@ function App() {
     currentSeasonData,
     playerFinancials,
   );
+
+  // Persist a new per-team distribution method, then refresh so currentSeasonData
+  // (and therefore the distribution engine) picks it up.
+  const handleSetDistributionMethod = async (method) => {
+    if (!teamSeasonId) return;
+    await supabaseService.setDistributionMethod(teamSeasonId, method);
+    await refreshSeasons();
+  };
 
   const { handleSavePlayer, handleArchivePlayer, handleToggleWaiveFee } = usePlayerManager(
     fetchData,
@@ -370,7 +411,7 @@ function App() {
   };
 
   // ── LOADING STATES ──
-  if (loading || contextLoading)
+  if (loading || contextLoading || settingsLoading)
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-3">
@@ -406,7 +447,7 @@ function App() {
   }
 
   // ── NAV ──
-  const singleTeam = isSingleTeamMode();
+  const singleTeam = resolveSingleTeamMode(appSettings);
 
   const appNavItems =
     isSuperAdmin && !singleTeam ? [{ id: 'app-admin', label: 'App Admin', icon: Shield, section: 'app' }] : [];
@@ -449,8 +490,10 @@ function App() {
         ...(can(PERMISSIONS.TEAM_VIEW_ROSTER) || can(PERMISSIONS.TEAM_MANAGE_USERS)
           ? [{ id: 'people', label: t('nav.players'), icon: Users }]
           : []),
-        ...(can(PERMISSIONS.TEAM_VIEW_INSIGHTS) ? [{ id: 'insights', label: t('nav.insights'), icon: Sparkles }] : []),
-        ...(can(PERMISSIONS.TEAM_VIEW_ROSTER)
+        ...(can(PERMISSIONS.TEAM_VIEW_INSIGHTS) && !insightsHidden
+          ? [{ id: 'insights', label: t('nav.insights'), icon: Sparkles }]
+          : []),
+        ...(can(PERMISSIONS.TEAM_VIEW_ROSTER) && !evaluationsHidden
           ? [{ id: 'season-evaluations', label: t('nav.evaluations', 'Evaluations'), icon: ClipboardCheck }]
           : []),
         ...(can(PERMISSIONS.TEAM_EDIT_SCHEDULE)
@@ -495,6 +538,7 @@ function App() {
     canEditLedger,
     setTxToEdit,
     setShowTxForm,
+    singleTeam,
   };
 
   const dataContextValue = {
@@ -521,6 +565,7 @@ function App() {
     calculatePlayerFinancials,
     handleWaterfallCredit,
     revertWaterfall,
+    handleSetDistributionMethod,
   };
 
   const scheduleContextValue = {
@@ -642,6 +687,13 @@ function App() {
                     showConfirm={showConfirm}
                     navigate={navigate}
                     bookBalance={bookBalance}
+                    singleTeam={singleTeam}
+                    singleTeamEnabled={singleTeamEnabled}
+                    onToggleSingleTeam={handleToggleSingleTeam}
+                    evaluationsHidden={evaluationsHidden}
+                    onToggleHideEvaluations={handleToggleHideEvaluations}
+                    insightsHidden={insightsHidden}
+                    onToggleHideInsights={handleToggleHideInsights}
                   />
                 </main>
 

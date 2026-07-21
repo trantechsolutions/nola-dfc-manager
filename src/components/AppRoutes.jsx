@@ -3,7 +3,6 @@ import { Suspense, lazy } from 'react';
 import { Settings } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { PERMISSIONS } from '../utils/roles';
-import { isSingleTeamMode } from '../utils/singleTeamMode';
 import { supabaseService } from '../services/supabaseService';
 import { useData } from '../context/DataContext';
 import { useFinanceContext } from '../context/FinanceContext';
@@ -59,6 +58,15 @@ export default function AppRoutes({
   effectiveIsStaff,
   can,
   refreshContext,
+
+  // App-wide settings / single-team mode
+  singleTeam,
+  singleTeamEnabled,
+  onToggleSingleTeam,
+  evaluationsHidden,
+  onToggleHideEvaluations,
+  insightsHidden,
+  onToggleHideInsights,
 
   // Season
   seasons,
@@ -134,7 +142,6 @@ export default function AppRoutes({
   navigate,
 }) {
   const { t } = useT();
-  const singleTeam = isSingleTeamMode();
 
   const {
     players,
@@ -152,8 +159,14 @@ export default function AppRoutes({
 
   const { isReadOnly, guardedAction } = useImpersonationGuard(user);
 
-  const { teamBalance, totalExpenses, calculatePlayerFinancials, handleWaterfallCredit, revertWaterfall } =
-    useFinanceContext();
+  const {
+    teamBalance,
+    totalExpenses,
+    calculatePlayerFinancials,
+    handleWaterfallCredit,
+    revertWaterfall,
+    handleSetDistributionMethod,
+  } = useFinanceContext();
 
   const {
     events,
@@ -182,6 +195,13 @@ export default function AppRoutes({
                       refreshContext();
                       navigate('/club-overview');
                     }}
+                    currentUserId={user?.id}
+                    singleTeamEnabled={singleTeamEnabled}
+                    onToggleSingleTeam={onToggleSingleTeam}
+                    evaluationsHidden={evaluationsHidden}
+                    onToggleHideEvaluations={onToggleHideEvaluations}
+                    insightsHidden={insightsHidden}
+                    onToggleHideInsights={onToggleHideInsights}
                     showToast={showToast}
                     showConfirm={showConfirm}
                   />
@@ -390,7 +410,7 @@ export default function AppRoutes({
               />
             )}
 
-            {effectiveIsStaff && (
+            {effectiveIsStaff && !evaluationsHidden && (
               <Route
                 path="/season-evaluations"
                 element={
@@ -534,6 +554,17 @@ export default function AppRoutes({
                                         showToast(t('toast.distributionReverted'));
                                       }
                                     : null,
+                                distributionMethod: currentSeasonData?.distributionMethod || 'waterfall',
+                                onSetDistributionMethod: can(PERMISSIONS.TEAM_EDIT_SPONSORS)
+                                  ? async (method) => {
+                                      try {
+                                        await handleSetDistributionMethod(method);
+                                        showToast(t('toast.distributionMethodSaved'));
+                                      } catch (error) {
+                                        showToast(error.message, true);
+                                      }
+                                    }
+                                  : null,
                                 seasonalPlayers,
                                 seasons,
                               }
@@ -628,7 +659,7 @@ export default function AppRoutes({
                   />
                 )}
 
-                {can(PERMISSIONS.TEAM_VIEW_INSIGHTS) && (
+                {can(PERMISSIONS.TEAM_VIEW_INSIGHTS) && !insightsHidden && (
                   <Route
                     path="/insights"
                     element={
@@ -748,7 +779,7 @@ export default function AppRoutes({
 
       {toast && (
         <div
-          className={`fixed bottom-24 left-1/2 -translate-x-1/2 text-white px-6 py-4 rounded-lg shadow-md font-bold z-[200] border-2 flex items-center gap-3 ${toast.isError ? 'bg-red-600 border-red-400' : 'bg-foreground border-border'}`}
+          className={`fixed bottom-24 left-1/2 -translate-x-1/2 px-6 py-4 rounded-lg shadow-md font-bold z-[200] border-2 flex items-center gap-3 ${toast.isError ? 'bg-red-600 border-red-400 text-white' : 'bg-foreground border-border text-background'}`}
         >
           {toast.isError && <Settings size={20} className="animate-spin" />}
           <span>{toast.msg}</span>

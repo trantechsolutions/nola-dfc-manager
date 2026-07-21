@@ -1,6 +1,5 @@
 import { Globe, LogOut, Menu } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
-import { isSingleTeamMode } from '../utils/singleTeamMode';
 import { useNavigation } from '../context/NavigationContext';
 
 export default function MobileHeader() {
@@ -17,9 +16,9 @@ export default function MobileHeader() {
     ThemeIcon,
     setMobileMenuOpen,
     supabase,
+    singleTeam,
   } = useNavigation();
   const { t } = useT();
-  const singleTeam = isSingleTeamMode();
 
   return (
     <header className="md:hidden bg-card border-b border-border p-4 sticky top-0 z-40">
@@ -29,7 +28,7 @@ export default function MobileHeader() {
             <Menu size={20} />
           </button>
           <div>
-            <h1 className="font-bold text-foreground text-sm">{club?.name || 'Team Manager'}</h1>
+            <h1 className="font-bold text-foreground text-sm">{club?.name || 'Touchline'}</h1>
             {selectedTeam && (
               <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">{selectedTeam.name}</p>
             )}

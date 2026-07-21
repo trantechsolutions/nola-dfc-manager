@@ -37,6 +37,7 @@ export default {
     txDeleted: 'Transaction deleted',
     fundsDistributed: 'Funds Distributed!',
     distributionReverted: 'Distribution Reverted.',
+    distributionMethodSaved: 'Distribution method updated.',
     importSuccess: '{{n}} transactions imported!',
     importFailed: 'Import failed',
     syncedEvents: 'Synced {{n}} events to database.',

@@ -60,6 +60,29 @@ export const userService = {
     });
   },
 
+  getSuperAdmins: async () => {
+    const { data, error } = await supabase.from('user_roles').select('id, user_id').eq('role', 'super_admin');
+    if (error) throw error;
+    const userIds = [...new Set((data || []).map((r) => r.user_id))];
+    let profileMap = {};
+    if (userIds.length > 0) {
+      try {
+        const profiles = await userService.getUserProfiles(userIds);
+        profiles.forEach((p) => {
+          profileMap[p.userId] = p;
+        });
+      } catch (e) {
+        console.warn('Could not fetch super admin profiles:', e.message);
+      }
+    }
+    return (data || []).map((r) => ({
+      id: r.id,
+      userId: r.user_id,
+      email: profileMap[r.user_id]?.email || null,
+      displayName: profileMap[r.user_id]?.displayName || null,
+    }));
+  },
+
   assignRole: async (userId, role, { clubId, teamId } = {}) => {
     const row = { user_id: userId, role };
     if (clubId) row.club_id = clubId;

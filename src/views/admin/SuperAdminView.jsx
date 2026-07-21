@@ -1,9 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Building2, Plus, Trash2, Users, X, Shield } from 'lucide-react';
+import { Building2, Plus, Trash2, Users, X, Shield, UserPlus, Layers, ClipboardCheck, Sparkles } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
 
-export default function SuperAdminView({ onSelectClub, showToast, showConfirm }) {
+export default function SuperAdminView({
+  onSelectClub,
+  showToast,
+  showConfirm,
+  currentUserId,
+  singleTeamEnabled = false,
+  onToggleSingleTeam,
+  evaluationsHidden = false,
+  onToggleHideEvaluations,
+  insightsHidden = false,
+  onToggleHideInsights,
+}) {
   const { t } = useT();
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,6 +22,123 @@ export default function SuperAdminView({ onSelectClub, showToast, showConfirm })
   const [newClubName, setNewClubName] = useState('');
   const [newClubSlug, setNewClubSlug] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Super admins
+  const [superAdmins, setSuperAdmins] = useState([]);
+  const [loadingSAs, setLoadingSAs] = useState(true);
+  const [saEmail, setSaEmail] = useState('');
+  const [saSaving, setSaSaving] = useState(false);
+
+  // Single-team mode
+  const [stmSaving, setStmSaving] = useState(false);
+
+  // Hide evaluations
+  const [evalSaving, setEvalSaving] = useState(false);
+
+  // Hide insights
+  const [insightsSaving, setInsightsSaving] = useState(false);
+
+  const fetchSuperAdmins = async () => {
+    setLoadingSAs(true);
+    try {
+      const data = await supabaseService.getSuperAdmins();
+      setSuperAdmins(data);
+    } catch (e) {
+      console.error('Failed to fetch super admins:', e);
+    } finally {
+      setLoadingSAs(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSuperAdmins();
+  }, []);
+
+  const handleAssignSuperAdmin = async () => {
+    const email = saEmail.trim().toLowerCase();
+    if (!email) return;
+    if (superAdmins.some((sa) => (sa.email || '').toLowerCase() === email)) {
+      if (showToast) showToast('That user is already a super admin.', true);
+      return;
+    }
+    setSaSaving(true);
+    try {
+      await supabaseService.assignRoleByEmail(email, 'super_admin', {});
+      setSaEmail('');
+      await fetchSuperAdmins();
+      if (showToast) showToast('Super admin assigned.');
+    } catch (e) {
+      const msg = /duplicate/i.test(e.message || '')
+        ? 'That user is already a super admin.'
+        : e.message || 'Assignment failed.';
+      if (showToast) showToast(msg, true);
+    } finally {
+      setSaSaving(false);
+    }
+  };
+
+  const handleRevokeSuperAdmin = async (sa) => {
+    if (sa.userId === currentUserId) {
+      if (showToast) showToast('You cannot revoke your own super admin access.', true);
+      return;
+    }
+    if (superAdmins.length <= 1) {
+      if (showToast) showToast('Cannot remove the last super admin.', true);
+      return;
+    }
+    const label = sa.email || sa.displayName || 'this user';
+    const ok = await showConfirm(`Revoke super admin access for ${label}?`);
+    if (!ok) return;
+    try {
+      await supabaseService.revokeRole(sa.id);
+      setSuperAdmins((prev) => prev.filter((x) => x.id !== sa.id));
+      if (showToast) showToast('Super admin revoked.');
+    } catch (e) {
+      if (showToast) showToast('Failed to revoke.', true);
+    }
+  };
+
+  const handleToggleStm = async () => {
+    if (!onToggleSingleTeam) return;
+    const next = !singleTeamEnabled;
+    setStmSaving(true);
+    try {
+      await onToggleSingleTeam(next);
+      if (showToast) showToast(next ? 'Single-team mode enabled.' : 'Single-team mode disabled.');
+    } catch (e) {
+      if (showToast) showToast('Failed to update single-team mode.', true);
+    } finally {
+      setStmSaving(false);
+    }
+  };
+
+  const handleToggleHideEvals = async () => {
+    if (!onToggleHideEvaluations) return;
+    const next = !evaluationsHidden;
+    setEvalSaving(true);
+    try {
+      await onToggleHideEvaluations(next);
+      if (showToast) showToast(next ? 'Evaluations tab hidden.' : 'Evaluations tab shown.');
+    } catch (e) {
+      if (showToast) showToast('Failed to update evaluations visibility.', true);
+    } finally {
+      setEvalSaving(false);
+    }
+  };
+
+  const handleToggleHideInsights = async () => {
+    if (!onToggleHideInsights) return;
+    const next = !insightsHidden;
+    setInsightsSaving(true);
+    try {
+      await onToggleHideInsights(next);
+      if (showToast) showToast(next ? 'Insights tab hidden.' : 'Insights tab shown.');
+    } catch (e) {
+      if (showToast) showToast('Failed to update insights visibility.', true);
+    } finally {
+      setInsightsSaving(false);
+    }
+  };
 
   const fetchClubs = async () => {
     try {
@@ -90,6 +218,169 @@ export default function SuperAdminView({ onSelectClub, showToast, showConfirm })
         >
           <Plus size={14} /> New Club
         </button>
+      </div>
+
+      {/* Single-Team Mode */}
+      <div className="bg-card rounded-lg border border-border p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-bold text-foreground text-sm flex items-center gap-2">
+              <Layers size={16} className="text-violet-700 dark:text-violet-400" /> Single-Team Mode
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-md">
+              Hides all club and app-admin UI so the app presents as a single team. Applies to every user. You keep full
+              access on this browser after enabling it (use <span className="font-mono">?admin=1</span> to restore it
+              elsewhere).
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={singleTeamEnabled}
+            onClick={handleToggleStm}
+            disabled={stmSaving || !onToggleSingleTeam}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-violet-500 ${
+              singleTeamEnabled ? 'bg-violet-600' : 'bg-muted'
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                singleTeamEnabled ? 'translate-x-5' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Hide Evaluations */}
+      <div className="bg-card rounded-lg border border-border p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-bold text-foreground text-sm flex items-center gap-2">
+              <ClipboardCheck size={16} className="text-violet-700 dark:text-violet-400" /> Hide Evaluations Tab
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-md">
+              Removes the Evaluations tab from every team's navigation across the app. Existing evaluation data is kept
+              — this only hides the tab.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={evaluationsHidden}
+            onClick={handleToggleHideEvals}
+            disabled={evalSaving || !onToggleHideEvaluations}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-violet-500 ${
+              evaluationsHidden ? 'bg-violet-600' : 'bg-muted'
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                evaluationsHidden ? 'translate-x-5' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Hide Insights */}
+      <div className="bg-card rounded-lg border border-border p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-bold text-foreground text-sm flex items-center gap-2">
+              <Sparkles size={16} className="text-violet-700 dark:text-violet-400" /> Hide Insights Tab
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-md">
+              Removes the Insights tab from every team's navigation across the app. Underlying financial and roster data
+              is unaffected — this only hides the tab.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={insightsHidden}
+            onClick={handleToggleHideInsights}
+            disabled={insightsSaving || !onToggleHideInsights}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-violet-500 ${
+              insightsHidden ? 'bg-violet-600' : 'bg-muted'
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                insightsHidden ? 'translate-x-5' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Super Admins */}
+      <div className="bg-card rounded-lg border border-border p-5">
+        <h3 className="font-bold text-foreground text-sm flex items-center gap-2 mb-1">
+          <Shield size={16} className="text-violet-700 dark:text-violet-400" /> Super Admins
+        </h3>
+        <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+          Super admins have full access to the entire app — every club, team, and setting. The user must already have an
+          account.
+        </p>
+
+        <div className="flex gap-2 mb-4">
+          <input
+            type="email"
+            placeholder="admin@example.com"
+            value={saEmail}
+            onChange={(e) => setSaEmail(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleAssignSuperAdmin();
+            }}
+            className="flex-grow border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500"
+          />
+          <button
+            onClick={handleAssignSuperAdmin}
+            disabled={saSaving || !saEmail.trim()}
+            className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-lg hover:bg-violet-700 disabled:opacity-50"
+          >
+            <UserPlus size={14} /> Add
+          </button>
+        </div>
+
+        {loadingSAs ? (
+          <p className="text-xs text-muted-foreground animate-pulse py-2">Loading…</p>
+        ) : superAdmins.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic py-2">No super admins yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {superAdmins.map((sa) => {
+              const isSelf = sa.userId === currentUserId;
+              const isLast = superAdmins.length <= 1;
+              return (
+                <div key={sa.id} className="flex items-center justify-between bg-background p-3 rounded-lg">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-foreground truncate">
+                      {sa.displayName || sa.email || sa.userId.slice(0, 12) + '…'}
+                      {isSelf && <span className="ml-2 text-violet-700 dark:text-violet-400">(you)</span>}
+                    </p>
+                    {sa.email && sa.displayName && <p className="text-xs text-muted-foreground truncate">{sa.email}</p>}
+                  </div>
+                  <button
+                    onClick={() => handleRevokeSuperAdmin(sa)}
+                    disabled={isSelf || isLast}
+                    title={
+                      isSelf
+                        ? 'You cannot revoke your own access'
+                        : isLast
+                          ? 'Cannot remove the last super admin'
+                          : 'Revoke'
+                    }
+                    className="p-2 text-muted-foreground hover:text-red-700 dark:hover:text-red-400 rounded-lg transition-colors disabled:opacity-30 disabled:hover:text-muted-foreground"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Club Cards */}

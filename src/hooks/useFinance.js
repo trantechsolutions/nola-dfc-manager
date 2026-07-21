@@ -48,10 +48,19 @@ export const useFinance = (
     [playerFinancialsMap, isBudgetLocked],
   );
 
-  // ── WATERFALL DISTRIBUTION ──
+  // ── DISTRIBUTION ENGINE ──
+  // The per-team method (from team_seasons.distribution_method) decides how a
+  // sponsor/fundraiser credit lands on player balances. All methods share the
+  // same transaction-writing tail; they differ only in how `creditsToApply` and
+  // the leftover `remainingAmount` (which overflows to the team pot) are built.
+  //   waterfall  – linked player first, overflow splits to teammates, rest to pot
+  //   direct     – linked player only; anything over their balance → pot
+  //   even_split – ignore the linked player; split equally across all buy-in players
+  //   team_pot   – everything → pot, no player credit
   const handleWaterfallCredit = async (totalAmount, title, sourcePlayerId, originalTxId, category = 'SPO') => {
     if (!isBudgetLocked) throw new Error('Budget must be finalized before distributing funds.');
 
+    const method = currentSeasonData?.distributionMethod || 'waterfall';
     const batchId = `waterfall_${Date.now()}`;
     let remainingAmount = parseFloat(totalAmount);
     const today = new Date().toISOString().split('T')[0];
@@ -63,8 +72,9 @@ export const useFinance = (
     // Helper: check if a player has bought in to fundraising for this season
     const hasBuyIn = (player) => player.seasonProfiles?.[selectedSeason]?.fundraiserBuyIn === true;
 
-    // 1. PRIMARY PLAYER CAP (only if they have buy-in)
-    if (sourcePlayerId) {
+    // Cap the linked player at their remaining balance (only if they have buy-in).
+    const applyPrimaryCap = () => {
+      if (!sourcePlayerId) return;
       const primaryPlayer = seasonalPlayers.find((p) => p.id === sourcePlayerId);
       if (primaryPlayer && hasBuyIn(primaryPlayer)) {
         const primaryStats = freshFinancials[sourcePlayerId];
@@ -76,18 +86,22 @@ export const useFinance = (
           }
         }
       }
-    }
+    };
 
-    // 2. DISTRIBUTE REMAINDER TO POOL (only players with buy-in, not fee-waived)
-    if (remainingAmount > 0.01) {
-      let pool = seasonalPlayers
-        .filter((p) => p.id !== sourcePlayerId && !p.seasonProfiles?.[selectedSeason]?.feeWaived && hasBuyIn(p))
-        .map((p) => ({
-          id: p.id,
-          currentBalance: freshFinancials[p.id]?.remainingBalance || 0,
-        }))
+    // Eligible pool: buy-in, non-fee-waived players with a positive balance.
+    const buildPool = ({ excludeSource }) =>
+      seasonalPlayers
+        .filter(
+          (p) =>
+            (excludeSource ? p.id !== sourcePlayerId : true) &&
+            !p.seasonProfiles?.[selectedSeason]?.feeWaived &&
+            hasBuyIn(p),
+        )
+        .map((p) => ({ id: p.id, currentBalance: freshFinancials[p.id]?.remainingBalance || 0 }))
         .filter((p) => p.currentBalance > 0);
 
+    // Split the remaining amount evenly across the pool, capped at each balance.
+    const evenSplitPool = (pool) => {
       while (remainingAmount > 0.01 && pool.length > 0) {
         const splitAmt = remainingAmount / pool.length;
         let roundDist = 0;
@@ -102,6 +116,21 @@ export const useFinance = (
         remainingAmount -= roundDist;
         if (roundDist < 0.01) break;
       }
+    };
+
+    // ── STRATEGY DISPATCH ──
+    if (method === 'team_pot') {
+      // No player credit — the full amount overflows to the team pot below.
+    } else if (method === 'direct') {
+      // Only the linked player benefits; the rest overflows to the pot.
+      applyPrimaryCap();
+    } else if (method === 'even_split') {
+      // Everyone shares equally — the linked player is just another pool member.
+      if (remainingAmount > 0.01) evenSplitPool(buildPool({ excludeSource: false }));
+    } else {
+      // waterfall (default): linked player first, then overflow splits to teammates.
+      applyPrimaryCap();
+      if (remainingAmount > 0.01) evenSplitPool(buildPool({ excludeSource: true }));
     }
 
     const promises = [];

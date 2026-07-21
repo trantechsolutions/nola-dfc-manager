@@ -33,10 +33,20 @@ supabase*.json
 supabase*.md
 
 # Claude Code
-.claude/
+# Ignore .claude/ by default, but track the team agent definitions — they're generic
+# and worth versioning. Note: a bare `.claude/` would make the negations below
+# unreachable (git won't descend into an excluded directory), hence `.claude/*`.
+.claude/*
+!.claude/agents/
+!.claude/team-context.md
+
+# Never track team data — guardian emails/phones for minors' families, consent records.
+.claude/team-data/
 CLAUDE.md
 
 # Test artifacts
 test-results/
 playwright-report/
 .e2e-seed-state.json
+
+.claude

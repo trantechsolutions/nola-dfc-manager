@@ -44,7 +44,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="bg-card p-8 rounded-lg shadow-md w-full max-w-md">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-foreground tracking-tight">Team Manager</h2>
+          <h2 className="text-3xl font-bold text-foreground tracking-tight">Touchline</h2>
           <p className="text-muted-foreground font-medium">
             {isRegistering ? t('auth.createAccount') : t('auth.managerPortal')}
           </p>

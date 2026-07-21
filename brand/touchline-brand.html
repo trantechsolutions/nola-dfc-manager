@@ -1,0 +1,275 @@
+<title>Touchline — Brand Mark</title>
+<style>
+  :root {
+    --bg: #FBF7F4;
+    --surface: #FFFFFF;
+    --ink: #23140F;
+    --muted: #6B564E;
+    --line: #EADFD8;
+    --terra: #B84A38;
+    --terra-deep: #A5382B;
+    --terra-lite: #D26A4F;
+    --slate: #0F172A;
+    --slate-2: #1B2438;
+    --accent-ink: #FFF6F2;
+    --radius: 18px;
+    --maxw: 1060px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #120D0B;
+      --surface: #1C1512;
+      --ink: #F6ECE7;
+      --muted: #B79E95;
+      --line: #322622;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #FBF7F4; --surface: #FFFFFF; --ink: #23140F; --muted: #6B564E; --line: #EADFD8;
+  }
+  :root[data-theme="dark"] {
+    --bg: #120D0B; --surface: #1C1512; --ink: #F6ECE7; --muted: #B79E95; --line: #322622;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: clamp(28px, 5vw, 72px) clamp(20px, 5vw, 48px); }
+
+  .eyebrow {
+    font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--terra); font-weight: 700; margin: 0 0 18px;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    background: var(--slate);
+    border-radius: var(--radius);
+    padding: clamp(32px, 6vw, 64px);
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 40px;
+    align-items: center;
+    color: var(--accent-ink);
+    overflow: hidden;
+    position: relative;
+  }
+  .hero::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(120% 90% at 100% 0%, rgba(210,106,79,0.20), transparent 55%);
+    pointer-events: none;
+  }
+  .hero .wordmark {
+    font-size: clamp(52px, 10vw, 104px);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 0.95;
+    margin: 0 0 20px;
+  }
+  .hero .wordmark b { color: var(--terra-lite); font-weight: 800; }
+  .hero .tag {
+    font-size: clamp(16px, 2.2vw, 21px);
+    color: #C9CEDA; margin: 0; max-width: 34ch;
+  }
+  .hero .mark { width: clamp(150px, 26vw, 232px); height: auto; filter: drop-shadow(0 24px 48px rgba(0,0,0,0.45)); }
+  @media (max-width: 720px) {
+    .hero { grid-template-columns: 1fr; text-align: left; }
+    .hero .mark { width: 160px; order: -1; }
+  }
+
+  /* ---------- SECTIONS ---------- */
+  section { margin-top: clamp(40px, 7vw, 76px); }
+  h2 { font-size: clamp(22px, 3vw, 30px); letter-spacing: -0.02em; margin: 0 0 8px; text-wrap: balance; }
+  .lede { color: var(--muted); margin: 0 0 28px; max-width: 62ch; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .swatch-canvas {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 44px;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 240px;
+  }
+  .on-dark { background: var(--slate); }
+  .on-light { background: #FFFFFF; }
+  .swatch-canvas .mark { width: 150px; height: auto; }
+  .canvas-label { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 14px 2px 0; font-weight: 600; }
+
+  /* favicon strip */
+  .favi { display: flex; align-items: flex-end; gap: 30px; flex-wrap: wrap; padding: 32px 40px; background: var(--slate); border-radius: var(--radius); }
+  .favi figure { margin: 0; text-align: center; }
+  .favi .cap { display: block; color: #8C93A4; font-size: 11px; margin-top: 10px; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
+
+  /* palette */
+  .palette { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  @media (max-width: 640px) { .palette { grid-template-columns: repeat(2, 1fr); } }
+  .chip { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+  .chip .fill { height: 92px; }
+  .chip .meta { padding: 10px 12px; background: var(--surface); }
+  .chip .nm { font-weight: 700; font-size: 13px; }
+  .chip .hx { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+
+  /* rationale + names */
+  .cols { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 28px; }
+  @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px 28px; }
+  .card h3 { margin: 0 0 12px; font-size: 17px; letter-spacing: -0.01em; }
+  .reasons { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+  .reasons li { padding-left: 18px; position: relative; color: var(--ink); }
+  .reasons li::before { content: ""; position: absolute; left: 0; top: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--terra); }
+  .reasons b { display: block; }
+  .reasons span { color: var(--muted); font-size: 14.5px; }
+
+  .names { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .names li { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; padding: 13px 2px; border-bottom: 1px dashed var(--line); }
+  .names li:last-child { border-bottom: 0; }
+  .names .n { font-weight: 700; letter-spacing: -0.01em; }
+  .names .why { color: var(--muted); font-size: 13.5px; text-align: right; }
+
+  footer { margin-top: 64px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+</style>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div>
+      <p class="eyebrow" style="color:var(--terra-lite)">Youth Soccer Club Manager</p>
+      <h1 class="wordmark">Touch<b>line</b></h1>
+      <p class="tag">Run the whole club from the touchline — rosters, seasons, sponsors, and the books, in one place.</p>
+    </div>
+    <!-- primary mark -->
+    <svg class="mark" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Touchline logo">
+      <defs>
+        <linearGradient id="h-bg" x1="128" y1="40" x2="384" y2="472" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#D26A4F"/><stop offset="1" stop-color="#A5382B"/>
+        </linearGradient>
+      </defs>
+      <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#h-bg)"/>
+      <path d="M 181 385.9 A 150 150 0 1 1 331 385.9" fill="none" stroke="#FFF6F2" stroke-width="20" stroke-linecap="round" opacity="0.95"/>
+      <circle cx="256" cy="256" r="118" fill="#FFFFFF"/>
+      <g stroke="#A5382B" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <path d="M256 212 L256 150"/><path d="M297.8 242.4 L356.8 223.2"/><path d="M281.9 291.6 L318.3 341.8"/>
+        <path d="M230.1 291.6 L193.7 341.8"/><path d="M214.2 242.4 L155.2 223.2"/>
+        <path d="M256 212 L297.8 242.4 L281.9 291.6 L230.1 291.6 L214.2 242.4 Z" fill="#A5382B"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- MARK ON GROUNDS -->
+  <section>
+    <p class="eyebrow">The Mark</p>
+    <h2>A soccer ball, wrapped in a tracking ring</h2>
+    <p class="lede">The ball says the sport at a glance. The open ring around it is the layer the app adds — the season, the money, the roster being tracked and closed out. It reads the same on a login screen or a 16&nbsp;px browser tab.</p>
+    <div class="grid-2">
+      <div>
+        <div class="swatch-canvas on-dark">
+          <svg class="mark" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Touchline logo on dark">
+            <defs><linearGradient id="d-bg" x1="128" y1="40" x2="384" y2="472" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#D26A4F"/><stop offset="1" stop-color="#A5382B"/></linearGradient></defs>
+            <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#d-bg)"/>
+            <path d="M 181 385.9 A 150 150 0 1 1 331 385.9" fill="none" stroke="#FFF6F2" stroke-width="20" stroke-linecap="round" opacity="0.95"/>
+            <circle cx="256" cy="256" r="118" fill="#FFFFFF"/>
+            <g stroke="#A5382B" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none">
+              <path d="M256 212 L256 150"/><path d="M297.8 242.4 L356.8 223.2"/><path d="M281.9 291.6 L318.3 341.8"/><path d="M230.1 291.6 L193.7 341.8"/><path d="M214.2 242.4 L155.2 223.2"/>
+              <path d="M256 212 L297.8 242.4 L281.9 291.6 L230.1 291.6 L214.2 242.4 Z" fill="#A5382B"/>
+            </g>
+          </svg>
+        </div>
+        <p class="canvas-label">On slate — app splash / sidebar</p>
+      </div>
+      <div>
+        <div class="swatch-canvas on-light">
+          <svg class="mark" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Touchline logo on light">
+            <defs><linearGradient id="l-bg" x1="128" y1="40" x2="384" y2="472" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#D26A4F"/><stop offset="1" stop-color="#A5382B"/></linearGradient></defs>
+            <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#l-bg)"/>
+            <path d="M 181 385.9 A 150 150 0 1 1 331 385.9" fill="none" stroke="#FFF6F2" stroke-width="20" stroke-linecap="round" opacity="0.95"/>
+            <circle cx="256" cy="256" r="118" fill="#FFFFFF"/>
+            <g stroke="#A5382B" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none">
+              <path d="M256 212 L256 150"/><path d="M297.8 242.4 L356.8 223.2"/><path d="M281.9 291.6 L318.3 341.8"/><path d="M230.1 291.6 L193.7 341.8"/><path d="M214.2 242.4 L155.2 223.2"/>
+              <path d="M256 212 L297.8 242.4 L281.9 291.6 L230.1 291.6 L214.2 242.4 Z" fill="#A5382B"/>
+            </g>
+          </svg>
+        </div>
+        <p class="canvas-label">On white — light theme / print</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAVICON SCALE -->
+  <section>
+    <p class="eyebrow">Holds Up Small</p>
+    <h2>Favicon &amp; home-screen sizes</h2>
+    <p class="lede">Same paths, no redraw. The pentagon and ring stay legible down to a browser tab.</p>
+    <div class="favi">
+      <figure>
+        <svg width="96" height="96" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="f96" x1="128" y1="40" x2="384" y2="472" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#D26A4F"/><stop offset="1" stop-color="#A5382B"/></linearGradient></defs><rect x="16" y="16" width="480" height="480" rx="116" fill="url(#f96)"/><path d="M 181 385.9 A 150 150 0 1 1 331 385.9" fill="none" stroke="#FFF6F2" stroke-width="20" stroke-linecap="round"/><circle cx="256" cy="256" r="118" fill="#fff"/><g stroke="#A5382B" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M256 212 L256 150"/><path d="M297.8 242.4 L356.8 223.2"/><path d="M281.9 291.6 L318.3 341.8"/><path d="M230.1 291.6 L193.7 341.8"/><path d="M214.2 242.4 L155.2 223.2"/><path d="M256 212 L297.8 242.4 L281.9 291.6 L230.1 291.6 L214.2 242.4 Z" fill="#A5382B"/></g></svg>
+        <span class="cap">96</span>
+      </figure>
+      <figure>
+        <svg width="48" height="48" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="f48" x1="128" y1="40" x2="384" y2="472" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#D26A4F"/><stop offset="1" stop-color="#A5382B"/></linearGradient></defs><rect x="16" y="16" width="480" height="480" rx="116" fill="url(#f48)"/><path d="M 181 385.9 A 150 150 0 1 1 331 385.9" fill="none" stroke="#FFF6F2" stroke-width="20" stroke-linecap="round"/><circle cx="256" cy="256" r="118" fill="#fff"/><g stroke="#A5382B" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M256 212 L256 150"/><path d="M297.8 242.4 L356.8 223.2"/><path d="M281.9 291.6 L318.3 341.8"/><path d="M230.1 291.6 L193.7 341.8"/><path d="M214.2 242.4 L155.2 223.2"/><path d="M256 212 L297.8 242.4 L281.9 291.6 L230.1 291.6 L214.2 242.4 Z" fill="#A5382B"/></g></svg>
+        <span class="cap">48</span>
+      </figure>
+      <figure>
+        <svg width="32" height="32" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="f32" x1="128" y1="40" x2="384" y2="472" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#D26A4F"/><stop offset="1" stop-color="#A5382B"/></linearGradient></defs><rect x="16" y="16" width="480" height="480" rx="116" fill="url(#f32)"/><path d="M 181 385.9 A 150 150 0 1 1 331 385.9" fill="none" stroke="#FFF6F2" stroke-width="20" stroke-linecap="round"/><circle cx="256" cy="256" r="118" fill="#fff"/><g stroke="#A5382B" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M256 212 L256 150"/><path d="M297.8 242.4 L356.8 223.2"/><path d="M281.9 291.6 L318.3 341.8"/><path d="M230.1 291.6 L193.7 341.8"/><path d="M214.2 242.4 L155.2 223.2"/><path d="M256 212 L297.8 242.4 L281.9 291.6 L230.1 291.6 L214.2 242.4 Z" fill="#A5382B"/></g></svg>
+        <span class="cap">32</span>
+      </figure>
+      <figure>
+        <svg width="16" height="16" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="f16" x1="128" y1="40" x2="384" y2="472" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#D26A4F"/><stop offset="1" stop-color="#A5382B"/></linearGradient></defs><rect x="16" y="16" width="480" height="480" rx="116" fill="url(#f16)"/><path d="M 181 385.9 A 150 150 0 1 1 331 385.9" fill="none" stroke="#FFF6F2" stroke-width="20" stroke-linecap="round"/><circle cx="256" cy="256" r="118" fill="#fff"/><g stroke="#A5382B" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M256 212 L256 150"/><path d="M297.8 242.4 L356.8 223.2"/><path d="M281.9 291.6 L318.3 341.8"/><path d="M230.1 291.6 L193.7 341.8"/><path d="M214.2 242.4 L155.2 223.2"/><path d="M256 212 L297.8 242.4 L281.9 291.6 L230.1 291.6 L214.2 242.4 Z" fill="#A5382B"/></g></svg>
+        <span class="cap">16</span>
+      </figure>
+    </div>
+  </section>
+
+  <!-- PALETTE -->
+  <section>
+    <p class="eyebrow">Palette</p>
+    <h2>Built on the app's own colors</h2>
+    <p class="lede">The terracotta is lifted straight from the current theme (<code>oklch(0.55 0.15 25)</code>); slate is the existing PWA theme color. Nothing new to reconcile.</p>
+    <div class="palette">
+      <div class="chip"><div class="fill" style="background:#D26A4F"></div><div class="meta"><div class="nm">Coral</div><div class="hx">#D26A4F</div></div></div>
+      <div class="chip"><div class="fill" style="background:#B84A38"></div><div class="meta"><div class="nm">Terracotta</div><div class="hx">#B84A38</div></div></div>
+      <div class="chip"><div class="fill" style="background:#A5382B"></div><div class="meta"><div class="nm">Clay</div><div class="hx">#A5382B</div></div></div>
+      <div class="chip"><div class="fill" style="background:#0F172A"></div><div class="meta"><div class="nm">Slate</div><div class="hx">#0F172A</div></div></div>
+      <div class="chip"><div class="fill" style="background:#FFF6F2;border-bottom:1px solid var(--line)"></div><div class="meta"><div class="nm">Chalk</div><div class="hx">#FFF6F2</div></div></div>
+    </div>
+  </section>
+
+  <!-- WHY + ALTERNATES -->
+  <section>
+    <p class="eyebrow">The Name</p>
+    <h2>Why "Touchline"</h2>
+    <div class="cols">
+      <div class="card">
+        <ul class="reasons">
+          <li><b>It's where the manager stands.</b><span>The touchline is the sideline a coach runs the match from — the exact vantage this app puts a club director in.</span></li>
+          <li><b>It's unmistakably soccer.</b><span>A specific pitch term, not a generic "team" word — it stakes out the sport without spelling it out.</span></li>
+          <li><b>It carries "staying in touch."</b><span>Parents, sponsors, treasurer — the double meaning fits a comms-and-money hub.</span></li>
+          <li><b>One word, easy to own.</b><span>Short, no awkward spelling, works as an app name and a home-screen label.</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>If you'd rather see options</h3>
+        <ul class="names">
+          <li><span class="n">Touchline</span><span class="why">recommended</span></li>
+          <li><span class="n">Sideline</span><span class="why">plainer, friendlier</span></li>
+          <li><span class="n">Kickoff HQ</span><span class="why">energetic, ops-forward</span></li>
+          <li><span class="n">Corner Flag</span><span class="why">playful, crest-ready</span></li>
+          <li><span class="n">ClubHouse</span><span class="why">warm, community feel</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Touchline — youth soccer club manager</span>
+    <span>Terracotta / Slate · soccer-ball &amp; tracking-ring mark</span>
+  </footer>
+</div>

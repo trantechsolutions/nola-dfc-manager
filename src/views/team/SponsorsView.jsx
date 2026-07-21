@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Award,
   UserCheck,
@@ -11,7 +11,67 @@ import {
   ChevronDown,
   Zap,
   Loader2,
+  SlidersHorizontal,
 } from 'lucide-react';
+
+// Per-team distribution strategies. `usesSource` = whether a linked/primary
+// player is meaningful for this method (drives the modal's source dropdown).
+// `example` = how the shared worked scenario (see GUIDE_SCENARIO) splits under
+// this method, used by the comparison guide.
+const DISTRIBUTION_METHODS = [
+  {
+    value: 'waterfall',
+    label: 'Waterfall',
+    blurb:
+      'Credit the linked player first, then overflow splits across teammates, with any remainder going to the team pot.',
+    usesSource: true,
+    example: [
+      { label: 'Player A', value: '$200' },
+      { label: 'Player B', value: '$50' },
+      { label: 'Player C', value: '$50' },
+      { label: 'Team Pot', value: '$0', muted: true },
+    ],
+  },
+  {
+    value: 'direct',
+    label: 'Direct to Player',
+    blurb: 'Only the linked player is credited. Anything above their remaining balance goes to the team pot.',
+    usesSource: true,
+    example: [
+      { label: 'Player A', value: '$200' },
+      { label: 'Player B', value: '$0', muted: true },
+      { label: 'Player C', value: '$0', muted: true },
+      { label: 'Team Pot', value: '$100' },
+    ],
+  },
+  {
+    value: 'even_split',
+    label: 'Even Split',
+    blurb: 'Split equally across all buy-in players, regardless of who brought the funds in.',
+    usesSource: false,
+    example: [
+      { label: 'Player A', value: '$100' },
+      { label: 'Player B', value: '$100' },
+      { label: 'Player C', value: '$100' },
+      { label: 'Team Pot', value: '$0', muted: true },
+    ],
+  },
+  {
+    value: 'team_pot',
+    label: 'Team Pot',
+    blurb: 'Everything goes straight to the team pot. No individual player is credited.',
+    usesSource: false,
+    example: [
+      { label: 'Player A', value: '$0', muted: true },
+      { label: 'Player B', value: '$0', muted: true },
+      { label: 'Player C', value: '$0', muted: true },
+      { label: 'Team Pot', value: '$300' },
+    ],
+  },
+];
+
+// The illustrative scenario the guide's per-method examples are computed from.
+const GUIDE_SCENARIO = '$300 raised, linked to Player A (owes $200); teammates B & C each owe $200.';
 
 export default function SponsorsView({
   transactions,
@@ -22,6 +82,8 @@ export default function SponsorsView({
   seasonalPlayers,
   seasons,
   currentSeasonData,
+  distributionMethod = 'waterfall',
+  onSetDistributionMethod,
 }) {
   const [showDistribute, setShowDistribute] = useState(false);
   const [distAmount, setDistAmount] = useState('');
@@ -33,6 +95,30 @@ export default function SponsorsView({
   const [expandedPlayerId, setExpandedPlayerId] = useState(null);
   const [isDistributingAll, setIsDistributingAll] = useState(false);
   const [distributeAllProgress, setDistributeAllProgress] = useState({ current: 0, total: 0, currentTitle: '' });
+  const [isSavingMethod, setIsSavingMethod] = useState(false);
+  // Draft selection — the guide lets you switch methods without persisting.
+  // Only "Save" commits. Re-syncs to the saved value once a save lands (or if
+  // the persisted method changes elsewhere).
+  const [draftMethod, setDraftMethod] = useState(distributionMethod);
+  useEffect(() => {
+    setDraftMethod(distributionMethod);
+  }, [distributionMethod]);
+
+  // activeMethod reflects the SAVED method — it drives the distribution modal and
+  // the actual engine, which always uses the persisted value, not the draft.
+  const activeMethod = DISTRIBUTION_METHODS.find((m) => m.value === distributionMethod) || DISTRIBUTION_METHODS[0];
+  const methodUsesSource = activeMethod.usesSource;
+  const isMethodDirty = draftMethod !== distributionMethod;
+
+  const handleSaveMethod = async () => {
+    if (!onSetDistributionMethod || !isMethodDirty) return;
+    setIsSavingMethod(true);
+    try {
+      await onSetDistributionMethod(draftMethod);
+    } finally {
+      setIsSavingMethod(false);
+    }
+  };
 
   // FIX: Use the merged currentSeasonData (which includes team_season finalization)
   // instead of re-deriving from the global seasons array.
@@ -107,7 +193,7 @@ export default function SponsorsView({
     if (sortedUndistributed.length === 0) return;
 
     const confirmed = window.confirm(
-      `This will sequentially distribute ${sortedUndistributed.length} pending fund(s) using the Waterfall Engine (Sponsorships first, then Fundraising).\n\nEach transaction will credit its linked player first, then overflow to the team.\n\nProceed?`,
+      `This will sequentially distribute ${sortedUndistributed.length} pending fund(s) using the "${activeMethod.label}" method (Sponsorships first, then Fundraising).\n\n${activeMethod.blurb}\n\nProceed?`,
     );
     if (!confirmed) return;
 
@@ -171,6 +257,108 @@ export default function SponsorsView({
       {/* --- UNDISTRIBUTED VIEW --- */}
       {activeTab === 'undistributed' && (
         <div className="animate-in fade-in duration-300">
+          {/* DISTRIBUTION METHOD GUIDE + SELECTOR */}
+          <div className="bg-card p-5 rounded-lg border border-border shadow-sm mb-6">
+            <div className="flex items-start gap-3 mb-1">
+              <SlidersHorizontal size={18} className="text-blue-700 dark:text-blue-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-bold text-foreground text-sm">Distribution Method</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  How each incoming sponsorship or fundraiser splits across the team.
+                </p>
+              </div>
+            </div>
+
+            {/* Worked-example scenario the cards below are calculated from */}
+            <div className="mt-3 mb-4 bg-background border border-border rounded-lg px-3 py-2 flex items-start gap-2">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-blue-700 dark:text-blue-400 mt-0.5">
+                Example
+              </span>
+              <span className="text-xs text-muted-foreground">{GUIDE_SCENARIO}</span>
+            </div>
+
+            {/* Selectable comparison cards (draft only — nothing saves until "Save") */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {DISTRIBUTION_METHODS.map((m) => {
+                const isSelected = draftMethod === m.value;
+                const isSaved = distributionMethod === m.value;
+                const selectable = !!onSetDistributionMethod;
+                return (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() => selectable && setDraftMethod(m.value)}
+                    disabled={!selectable || isSavingMethod}
+                    className={`text-left p-4 rounded-lg border transition-all ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50/60 dark:bg-blue-900/20 ring-1 ring-blue-500'
+                        : 'border-border bg-card hover:border-blue-300 dark:hover:border-blue-700'
+                    } ${!selectable ? 'cursor-default' : 'cursor-pointer'} ${isSavingMethod ? 'opacity-60' : ''}`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className={`h-4 w-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
+                          isSelected ? 'border-blue-500' : 'border-muted-foreground/40'
+                        }`}
+                      >
+                        {isSelected && <span className="h-2 w-2 rounded-full bg-blue-500" />}
+                      </span>
+                      <span className="font-bold text-foreground text-sm">{m.label}</span>
+                      {isSaved && (
+                        <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400">
+                          Current
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3 ml-6">{m.blurb}</p>
+                    <div className="flex flex-wrap gap-1.5 ml-6">
+                      {m.example.map((chip) => (
+                        <span
+                          key={chip.label}
+                          className={`text-[11px] font-semibold px-2 py-1 rounded ${
+                            chip.muted
+                              ? 'bg-muted text-muted-foreground'
+                              : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                          }`}
+                        >
+                          {chip.label} {chip.value}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Footer: note + explicit Save (nothing persists on switch) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 pt-3 border-t border-border">
+              <p className="text-xs text-muted-foreground">
+                Applies to future distributions only — saving does not rewrite batches you've already distributed.
+              </p>
+              {onSetDistributionMethod && (
+                <button
+                  onClick={handleSaveMethod}
+                  disabled={!isMethodDirty || isSavingMethod}
+                  className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all shrink-0 ${
+                    !isMethodDirty || isSavingMethod
+                      ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20'
+                  }`}
+                >
+                  {isSavingMethod ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Saving...
+                    </>
+                  ) : isMethodDirty ? (
+                    'Save Method'
+                  ) : (
+                    'Saved'
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
             <h3 className="font-bold text-foreground flex items-center gap-2">
               <Lock size={18} className="text-amber-700 dark:text-amber-400" /> Pending Distributions
@@ -413,7 +601,8 @@ export default function SponsorsView({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
           <div className="bg-card rounded-lg p-8 w-full max-w-md shadow-md animate-in zoom-in-95 duration-200">
             <h3 className="text-xl font-bold text-foreground mb-6 flex items-center gap-2">
-              <ArrowDownNarrowWide className="text-emerald-700 dark:text-emerald-400" /> Waterfall Distribution
+              <ArrowDownNarrowWide className="text-emerald-700 dark:text-emerald-400" /> {activeMethod.label}{' '}
+              Distribution
             </h3>
             <div className="space-y-4">
               <div>
@@ -437,26 +626,36 @@ export default function SponsorsView({
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                  Apply Primary Credit To
-                </label>
-                <select
-                  value={sourcePlayerId}
-                  onChange={(e) => setSourcePlayerId(e.target.value)}
-                  className="w-full border border-border rounded-lg p-3 font-semibold text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
-                >
-                  <option value="">Team Pool (Split Evenly)</option>
-                  {seasonalPlayers.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.firstName} {p.lastName}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Any funds exceeding a player's remaining fee will automatically waterfall to the rest of the team.
-                </p>
-              </div>
+              {methodUsesSource ? (
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                    Apply Primary Credit To
+                  </label>
+                  <select
+                    value={sourcePlayerId}
+                    onChange={(e) => setSourcePlayerId(e.target.value)}
+                    className="w-full border border-border rounded-lg p-3 font-semibold text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                  >
+                    <option value="">Team Pool (Split Evenly)</option>
+                    {seasonalPlayers.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.firstName} {p.lastName}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {activeMethod.value === 'waterfall'
+                      ? "Any funds exceeding a player's remaining fee will automatically waterfall to the rest of the team."
+                      : "Any funds exceeding the player's remaining fee will go to the team pot."}
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-background border border-border rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground">{activeMethod.label}:</span> {activeMethod.blurb}
+                  </p>
+                </div>
+              )}
 
               <div className="flex gap-3 pt-4 border-t border-border">
                 <button
@@ -476,7 +675,7 @@ export default function SponsorsView({
                   }}
                   className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all shadow-lg shadow-emerald-600/20"
                 >
-                  Apply Waterfall
+                  Apply {activeMethod.label}
                 </button>
               </div>
             </div>

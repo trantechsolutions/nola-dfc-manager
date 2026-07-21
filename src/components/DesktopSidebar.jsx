@@ -1,7 +1,6 @@
 import { ChevronDown, Globe, LogOut, Settings, GitCommit, Bell } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { useState } from 'react';
-import { isSingleTeamMode } from '../utils/singleTeamMode';
 import { useNavigation } from '../context/NavigationContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { pushService } from '../services/pushService';
@@ -30,6 +29,7 @@ export default function DesktopSidebar() {
     sidebarSettingsOpen,
     setSidebarSettingsOpen,
     supabase,
+    singleTeam,
   } = useNavigation();
   const { t } = useT();
   const [showTeamPicker, setShowTeamPicker] = useState(false);
@@ -38,7 +38,6 @@ export default function DesktopSidebar() {
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [broadcastSending, setBroadcastSending] = useState(false);
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) || teams[0] || null;
-  const singleTeam = isSingleTeamMode();
   const { isSubscribed, isSupported, subscribe } = usePushNotifications();
 
   const handleBroadcast = async () => {
@@ -64,7 +63,7 @@ export default function DesktopSidebar() {
     <aside className="hidden md:flex w-64 bg-sidebar text-sidebar-foreground flex-col sticky top-0 h-screen border-r border-sidebar-border">
       <div className="p-6">
         <h1 className="text-xl font-bold tracking-tighter uppercase text-sidebar-foreground">
-          {club?.name || 'Team Manager'}
+          {club?.name || 'Touchline'}
         </h1>
 
         {!singleTeam && teams.length > 1 && (

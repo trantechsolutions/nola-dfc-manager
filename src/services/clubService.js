@@ -75,15 +75,13 @@ export const clubService = {
   },
 
   getClubForUser: async () => {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('club_id, clubs(*), team_id, teams(club_id, name)')
-      .limit(1);
+    const { data, error } = await supabase.from('user_roles').select('club_id, teams(club_id)').limit(1);
     if (error) throw error;
     if (!data || data.length === 0) return null;
     const row = data[0];
-    const club = row.clubs || (row.teams ? { id: row.teams.club_id } : null);
-    if (!club) return null;
-    return { id: club.id, name: club.name, slug: club.slug };
+    const clubId = row.club_id || row.teams?.club_id || null;
+    if (!clubId) return null;
+    // Fetch the full club so downstream consumers get `settings` (e.g. defaultSeason).
+    return clubService.getClub(clubId);
   },
 };

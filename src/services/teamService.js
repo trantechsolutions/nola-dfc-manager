@@ -117,6 +117,7 @@ export const teamService = {
       isFinalized: ts.is_finalized,
       baseFee: ts.base_fee ? Number(ts.base_fee) : 0,
       bufferPercent: ts.buffer_percent,
+      distributionMethod: ts.distribution_method || 'waterfall',
       expectedRosterSize: ts.expected_roster_size,
       totalProjectedExpenses: ts.total_projected_expenses ? Number(ts.total_projected_expenses) : null,
       totalProjectedIncome: ts.total_projected_income ? Number(ts.total_projected_income) : null,
@@ -139,12 +140,28 @@ export const teamService = {
       isFinalized: data.is_finalized,
       baseFee: data.base_fee ? Number(data.base_fee) : 0,
       bufferPercent: data.buffer_percent,
+      distributionMethod: data.distribution_method || 'waterfall',
       expectedRosterSize: data.expected_roster_size,
       totalProjectedExpenses: data.total_projected_expenses ? Number(data.total_projected_expenses) : null,
       totalProjectedIncome: data.total_projected_income ? Number(data.total_projected_income) : null,
     };
   },
 
+  // Targeted update for the distribution method only. Kept separate from
+  // saveTeamSeason so budget saves/finalization never touch it (and can't
+  // reset it to the default).
+  setDistributionMethod: async (teamSeasonId, method) => {
+    const { error } = await supabase
+      .from('team_seasons')
+      .update({ distribution_method: method })
+      .eq('id', teamSeasonId);
+    if (error) throw error;
+  },
+
+  // NOTE: distribution_method is intentionally NOT written here. saveTeamSeason
+  // upserts the full budget row without knowing the method, so including it
+  // would clobber an existing choice back to the default on every budget save.
+  // Use setDistributionMethod for that column.
   saveTeamSeason: async (teamSeasonData) => {
     const row = {
       team_id: teamSeasonData.teamId,
