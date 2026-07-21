@@ -1,97 +1,69 @@
-import { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import en from './en/index';
-import es from './es/index';
-
-const LOCALES = { en, es };
-const STORAGE_KEY = 'app_locale';
-
-const I18nContext = createContext();
+import { useCallback } from 'react';
+import { useTranslation, I18nextProvider } from 'react-i18next';
+import i18n from './config';
 
 /**
- * Resolve a dot-path key like 'nav.dashboard' from a nested object.
- */
-function resolve(obj, path) {
-  return path.split('.').reduce((o, k) => o?.[k], obj);
-}
-
-/**
- * I18nProvider — wraps the app and provides translation context.
+ * I18nProvider — wraps the app and supplies the i18next instance.
  *
- * Persists locale choice in localStorage.
+ * Translation resolution, interpolation, and locale persistence are all handled
+ * by i18next (see ./config). This provider keeps the same name and children API
+ * the app already mounts in main.jsx.
  */
 export function I18nProvider({ children }) {
-  const [locale, setLocaleState] = useState(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY) || 'en';
-    } catch {
-      return 'en';
-    }
-  });
-
-  const setLocale = useCallback((loc) => {
-    setLocaleState(loc);
-    try {
-      localStorage.setItem(STORAGE_KEY, loc);
-    } catch {
-      /* noop */
-    }
-  }, []);
-
-  const toggleLocale = useCallback(() => {
-    setLocale(locale === 'en' ? 'es' : 'en');
-  }, [locale, setLocale]);
-
-  /**
-   * t('key.path')              — simple lookup
-   * t('key.path', { n: 5 })   — interpolation: replaces {{n}} with 5
-   */
-  const t = useCallback(
-    (key, vars) => {
-      const resolved = resolve(LOCALES[locale], key) ?? resolve(LOCALES.en, key);
-      // If vars is a string, treat it as a fallback for missing keys
-      if (typeof vars === 'string') {
-        return resolved ?? vars;
-      }
-      const str = resolved ?? key;
-      if (!vars || typeof str !== 'string') return str;
-      return str.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? '');
-    },
-    [locale],
-  );
-
-  /**
-   * tp('common.player', count) — plural-aware lookup
-   * Uses key_plural when count !== 1, falls back to key if _plural missing.
-   */
-  const tp = useCallback(
-    (key, count) => {
-      const pluralKey = count === 1 ? key : `${key}_plural`;
-      const resolved =
-        resolve(LOCALES[locale], pluralKey) ??
-        resolve(LOCALES[locale], key) ??
-        resolve(LOCALES.en, pluralKey) ??
-        resolve(LOCALES.en, key);
-      return typeof resolved === 'string' ? resolved : key;
-    },
-    [locale],
-  );
-
-  const value = useMemo(() => ({ locale, setLocale, toggleLocale, t, tp }), [locale, setLocale, toggleLocale, t, tp]);
-
-  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+  return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
 }
 
 /**
  * useT() — access translation function and locale state.
  *
+ * Backed by i18next but preserving the original public API so existing call
+ * sites do not change:
+ *
  * const { t, tp, locale, setLocale, toggleLocale } = useT();
- * t('common.save')              // "Save" or "Guardar"
- * t('roster.count', { n: 5 })  // "5 players"
- * tp('common.player', 1)        // "player" / "jugador"
- * tp('common.player', 3)        // "players" / "jugadores"
+ * t('common.save')                 // "Save" / "Guardar"
+ * t('roster.count', { n: 5 })      // interpolates {{n}}
+ * t('nav.players', 'Players')      // second string arg = fallback/default
+ * tp('common.player', 1)           // "player" / "jugador"
+ * tp('common.player', 3)           // "players" / "jugadores"
+ *
+ * Must call useTranslation() inside the hook so consumers re-render on the
+ * i18next `languageChanged` event — do not read a module-level i18n.t here.
  */
 export function useT() {
-  const ctx = useContext(I18nContext);
-  if (!ctx) throw new Error('useT must be used within I18nProvider');
-  return ctx;
+  const { t: translate, i18n: instance } = useTranslation();
+
+  /**
+   * t('key.path')             — simple lookup
+   * t('key.path', { n: 5 })   — interpolation: replaces {{n}} with 5
+   * t('key.path', 'Fallback') — string second arg used as default value
+   */
+  const t = useCallback(
+    (key, vars) => {
+      if (typeof vars === 'string') return translate(key, { defaultValue: vars });
+      return translate(key, vars || undefined);
+    },
+    [translate],
+  );
+
+  /**
+   * tp('common.player', count) — plural-aware lookup.
+   * Uses `${key}_plural` when count !== 1, falling back to the base key.
+   * Kept as a manual lookup so the existing `_plural` resource suffix works
+   * regardless of i18next's own plural-suffix conventions.
+   */
+  const tp = useCallback(
+    (key, count) => {
+      if (count === 1) return translate(key);
+      return translate(`${key}_plural`, { defaultValue: translate(key) });
+    },
+    [translate],
+  );
+
+  const locale = instance.language;
+
+  const setLocale = useCallback((loc) => instance.changeLanguage(loc), [instance]);
+
+  const toggleLocale = useCallback(() => instance.changeLanguage(instance.language === 'en' ? 'es' : 'en'), [instance]);
+
+  return { locale, setLocale, toggleLocale, t, tp };
 }

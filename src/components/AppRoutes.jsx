@@ -703,8 +703,19 @@ export default function AppRoutes({
             setPlayerToView(null);
           }}
           onToggleCompliance={async (id, field, currentState) => {
-            setPlayerToView((prev) => ({ ...prev, [field]: !currentState }));
-            await supabaseService.updatePlayerField(id, field, !currentState);
+            const next = !currentState;
+            setPlayerToView((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    seasonProfiles: {
+                      ...prev.seasonProfiles,
+                      [selectedSeason]: { ...(prev.seasonProfiles?.[selectedSeason] || {}), [field]: next },
+                    },
+                  }
+                : prev,
+            );
+            await supabaseService.setSeasonCompliance(id, selectedSeason, field, next);
             fetchData();
           }}
           formatMoney={formatMoney}

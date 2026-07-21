@@ -196,4 +196,99 @@ export default {
     bankStatedHint: 'Suma todos tus estados de cuenta bancarios e ingresa el total aquí',
     bankBreakdown: 'Qué cuentas están incluidas',
   },
+
+  sponsors: {
+    tabs: {
+      undistributed: 'Sin distribuir ({{n}})',
+      history: 'Historial de distribución',
+      fundraising: 'Recaudación por jugador',
+    },
+    method: {
+      heading: 'Método de distribución',
+      subtitle: 'Cómo se reparte cada patrocinio o recaudación entre el equipo.',
+      example: 'Ejemplo',
+      scenario: '$300 recaudados, vinculados al Jugador A (debe $200); los compañeros B y C deben $200 cada uno.',
+      current: 'Actual',
+      footnote: 'Se aplica solo a distribuciones futuras — guardar no reescribe los lotes que ya distribuiste.',
+      saving: 'Guardando...',
+      save: 'Guardar método',
+      saved: 'Guardado',
+    },
+    methods: {
+      waterfall: {
+        label: 'Cascada',
+        blurb:
+          'Acredita primero al jugador vinculado, luego el excedente se reparte entre los compañeros y cualquier resto va al bote del equipo.',
+      },
+      direct: {
+        label: 'Directo al jugador',
+        blurb: 'Solo se acredita al jugador vinculado. Todo lo que supere su saldo pendiente va al bote del equipo.',
+      },
+      even_split: {
+        label: 'Reparto equitativo',
+        blurb: 'Se reparte por igual entre todos los jugadores participantes, sin importar quién trajo los fondos.',
+      },
+      team_pot: {
+        label: 'Bote del equipo',
+        blurb: 'Todo va directo al bote del equipo. No se acredita a ningún jugador individual.',
+      },
+    },
+    chip: {
+      playerA: 'Jugador A',
+      playerB: 'Jugador B',
+      playerC: 'Jugador C',
+      teamPot: 'Bote del equipo',
+    },
+    pending: {
+      heading: 'Distribuciones pendientes',
+      distributeAll: 'Distribuir todo ({{n}})',
+      distributing: 'Distribuyendo {{current}}/{{total}}...',
+      finalizeFirst: 'Finaliza el presupuesto primero',
+      processing: 'Procesando',
+      progress: '{{current}} de {{total}}',
+      allDistributed: 'Todos los fondos de patrocinio han sido distribuidos.',
+      sponsorship: 'Patrocinio',
+      fundraising: 'Recaudación',
+      via: 'vía {{name}}',
+      amount: 'Monto:',
+      distribute: 'Distribuir fondos',
+    },
+    alerts: {
+      finalizeRequired: 'El presupuesto debe estar finalizado antes de distribuir fondos.',
+      confirmAll:
+        'Esto distribuirá secuencialmente {{n}} fondo(s) pendiente(s) usando el método "{{method}}" (primero patrocinios, luego recaudación).\n\n{{blurb}}\n\n¿Continuar?',
+      stopped: 'La distribución se detuvo en "{{title}}". {{error}}',
+      checkConsole: 'Revisa la consola para más detalles.',
+    },
+    history: {
+      heading: 'Historial de distribución',
+      colTitle: 'Título / Origen',
+      colBreakdown: 'Desglose en cascada',
+      colTotal: 'Total aplicado',
+      colUndo: 'Deshacer',
+      empty: 'No se encontraron patrocinios ni recaudaciones distribuidas.',
+      teamPool: 'Bote del equipo',
+      recipientWord: 'Destinatario',
+      recipientWord_plural: 'Destinatarios',
+      pending: 'Pendiente',
+      undo: 'Deshacer esta distribución',
+    },
+    rollup: {
+      heading: 'Totales de recaudación por jugador',
+      empty: 'Aún no hay actividad de recaudación registrada para esta temporada.',
+      na: 'N/D',
+    },
+    modal: {
+      heading: 'Distribución {{method}}',
+      source: 'Patrocinador / Origen',
+      total: 'Monto total',
+      applyTo: 'Aplicar crédito principal a',
+      teamPool: 'Bote del equipo (reparto equitativo)',
+      waterfallHelp:
+        'Cualquier fondo que supere el saldo pendiente de un jugador pasará automáticamente en cascada al resto del equipo.',
+      directHelp: 'Cualquier fondo que supere el saldo pendiente del jugador irá al bote del equipo.',
+      cancel: 'Cancelar',
+      apply: 'Aplicar {{method}}',
+    },
+  },
 };

@@ -31,6 +31,8 @@ import {
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup, getAge } from '../../utils/ageGroup';
+import { formatPhone, phoneDigits, phoneHref } from '../../utils/phone';
+import { getCompliance } from '../../utils/compliance';
 import { DOC_TYPE_LABELS, DOC_STATUS_COLORS } from '../../utils/constants';
 import JerseyBadge from '../../components/JerseyBadge';
 import BulkUploadModal from '../../components/BulkUploadModal';
@@ -112,7 +114,7 @@ export default function RosterManagement({
           (d) => d.id !== doc.id && d.docType === 'medical_release' && ['uploaded', 'verified'].includes(d.status),
         );
         if (remaining.length === 0) {
-          await supabaseService.updatePlayerField(doc.playerId, 'medicalRelease', false);
+          await supabaseService.setSeasonCompliance(doc.playerId, selectedSeason, 'medicalRelease', false);
           await refreshData();
         }
       }
@@ -131,19 +133,32 @@ export default function RosterManagement({
     if (statusFilter === 'active') list = list.filter((p) => p.status === 'active');
     else if (statusFilter === 'archived') list = list.filter((p) => p.status === 'archived');
 
-    // Compliance filter
-    if (complianceFilter === 'compliant') list = list.filter((p) => p.medicalRelease && p.reePlayerWaiver);
-    else if (complianceFilter === 'non-compliant') list = list.filter((p) => !p.medicalRelease || !p.reePlayerWaiver);
+    // Compliance filter (per selected season)
+    if (complianceFilter === 'compliant') {
+      list = list.filter((p) => {
+        const c = getCompliance(p, selectedSeason);
+        return c.medicalRelease && c.reePlayerWaiver;
+      });
+    } else if (complianceFilter === 'non-compliant') {
+      list = list.filter((p) => {
+        const c = getCompliance(p, selectedSeason);
+        return !c.medicalRelease || !c.reePlayerWaiver;
+      });
+    }
 
     // Search
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
+      const qDigits = phoneDigits(searchTerm);
       list = list.filter(
         (p) =>
           `${p.firstName} ${p.lastName}`.toLowerCase().includes(q) ||
           (p.jerseyNumber && String(p.jerseyNumber).includes(q)) ||
           p.guardians?.some(
-            (g) => g.name?.toLowerCase().includes(q) || g.email?.toLowerCase().includes(q) || g.phone?.includes(q),
+            (g) =>
+              g.name?.toLowerCase().includes(q) ||
+              g.email?.toLowerCase().includes(q) ||
+              (qDigits && phoneDigits(g.phone).includes(qDigits)),
           ),
       );
     }
@@ -170,7 +185,7 @@ export default function RosterManagement({
     });
 
     return list;
-  }, [players, searchTerm, statusFilter, complianceFilter, sortField, sortDir]);
+  }, [players, searchTerm, statusFilter, complianceFilter, sortField, sortDir, selectedSeason]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -183,7 +198,10 @@ export default function RosterManagement({
   // ── Stats ──
   const activePlayers = players.filter((p) => p.status === 'active');
   const archivedPlayers = players.filter((p) => p.status === 'archived');
-  const compliantCount = activePlayers.filter((p) => p.medicalRelease && p.reePlayerWaiver).length;
+  const compliantCount = activePlayers.filter((p) => {
+    const c = getCompliance(p, selectedSeason);
+    return c.medicalRelease && c.reePlayerWaiver;
+  }).length;
   const enrolledInSeason = activePlayers.filter((p) => p.seasonProfiles?.[selectedSeason]).length;
 
   // ── Season toggle handling ──
@@ -219,7 +237,7 @@ export default function RosterManagement({
   // ── Compliance toggle ──
   const handleComplianceToggle = async (playerId, field, currentValue) => {
     try {
-      await supabaseService.updatePlayerField(playerId, field, !currentValue);
+      await supabaseService.setSeasonCompliance(playerId, selectedSeason, field, !currentValue);
       await refreshData();
     } catch {
       showToast('Failed to update compliance.', true);
@@ -272,6 +290,7 @@ export default function RosterManagement({
     filteredPlayers.forEach((p) => {
       const g1 = p.guardians?.[0] || {};
       const g2 = p.guardians?.[1] || {};
+      const comp = getCompliance(p, selectedSeason);
       rows.push([
         p.firstName,
         p.lastName,
@@ -279,8 +298,8 @@ export default function RosterManagement({
         p.status,
         p.birthdate || '',
         getUSAgeGroup(p.birthdate, selectedSeason) || '',
-        p.medicalRelease ? 'Yes' : 'No',
-        p.reePlayerWaiver ? 'Yes' : 'No',
+        comp.medicalRelease ? 'Yes' : 'No',
+        comp.reePlayerWaiver ? 'Yes' : 'No',
         g1.name || '',
         g1.email || '',
         g1.phone || '',
@@ -445,7 +464,8 @@ export default function RosterManagement({
           <div className="divide-y divide-border">
             {pagedPlayers.map((player) => {
               const isExpanded = expandedPlayerId === player.id;
-              const isCompliant = player.medicalRelease && player.reePlayerWaiver;
+              const comp = getCompliance(player, selectedSeason);
+              const isCompliant = comp.medicalRelease && comp.reePlayerWaiver;
               const enrolledSeasons = Object.keys(player.seasonProfiles || {});
               const isArchived = player.status === 'archived';
 
@@ -527,7 +547,7 @@ export default function RosterManagement({
                       ) : (
                         <span className="flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded-lg">
                           <AlertCircle size={12} />
-                          {!player.medicalRelease && !player.reePlayerWaiver ? '2 missing' : '1 missing'}
+                          {!comp.medicalRelease && !comp.reePlayerWaiver ? '2 missing' : '1 missing'}
                         </span>
                       )}
                     </div>
@@ -582,10 +602,10 @@ export default function RosterManagement({
                                   )}
                                   {g.phone && (
                                     <a
-                                      href={`tel:${g.phone}`}
+                                      href={phoneHref(g.phone)}
                                       className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
                                     >
-                                      <Phone size={11} /> {g.phone}
+                                      <Phone size={11} /> {formatPhone(g.phone)}
                                     </a>
                                   )}
                                 </div>
@@ -608,9 +628,7 @@ export default function RosterManagement({
                                   {t('medical.medicalRelease')}
                                 </span>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                  {player.medicalRelease
-                                    ? t('parent.completedOnFile')
-                                    : t('parent.requiredNotSubmitted')}
+                                  {comp.medicalRelease ? t('parent.completedOnFile') : t('parent.requiredNotSubmitted')}
                                 </p>
                               </div>
                               <button
@@ -619,14 +637,12 @@ export default function RosterManagement({
                                   setMedicalPlayer(player);
                                 }}
                                 className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
-                                  player.medicalRelease
+                                  comp.medicalRelease
                                     ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/60'
                                     : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/60'
                                 }`}
                               >
-                                {player.medicalRelease
-                                  ? t('playerModal.onFile') + ' ✎'
-                                  : t('playerModal.fillOut') + ' →'}
+                                {comp.medicalRelease ? t('playerModal.onFile') + ' ✎' : t('playerModal.fillOut') + ' →'}
                               </button>
                             </div>
                             <div className="flex items-center justify-between">
@@ -635,15 +651,15 @@ export default function RosterManagement({
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleComplianceToggle(player.id, 'reePlayerWaiver', player.reePlayerWaiver);
+                                    handleComplianceToggle(player.id, 'reePlayerWaiver', comp.reePlayerWaiver);
                                   }}
-                                  className={`w-8 h-5 rounded-full transition-colors relative ${player.reePlayerWaiver ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                  className={`w-8 h-5 rounded-full transition-colors relative ${comp.reePlayerWaiver ? 'bg-emerald-500' : 'bg-slate-300'}`}
                                 >
                                   <div
-                                    className={`absolute top-0.5 w-4 h-4 bg-card rounded-full shadow transition-transform ${player.reePlayerWaiver ? 'translate-x-3.5' : 'translate-x-0.5'}`}
+                                    className={`absolute top-0.5 w-4 h-4 bg-card rounded-full shadow transition-transform ${comp.reePlayerWaiver ? 'translate-x-3.5' : 'translate-x-0.5'}`}
                                   />
                                 </button>
-                              ) : player.reePlayerWaiver ? (
+                              ) : comp.reePlayerWaiver ? (
                                 <ShieldCheck size={16} className="text-emerald-700 dark:text-emerald-400" />
                               ) : (
                                 <ShieldX size={16} className="text-red-400" />

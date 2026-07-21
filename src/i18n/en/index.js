@@ -24,6 +24,7 @@ export default {
   accountMgr: finance.accountMgr,
   bulk: finance.bulk,
   bookBalance: finance.bookBalance,
+  sponsors: finance.sponsors,
   playerForm: people.playerForm,
   playerModal: people.playerModal,
   parent: people.parent,

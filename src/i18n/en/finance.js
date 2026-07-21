@@ -195,4 +195,99 @@ export default {
     bankStatedHint: 'Add up all your bank statements and enter the total here',
     bankBreakdown: 'Which accounts are included',
   },
+
+  sponsors: {
+    tabs: {
+      undistributed: 'Undistributed ({{n}})',
+      history: 'Distribution History',
+      fundraising: 'Player Fundraising',
+    },
+    method: {
+      heading: 'Distribution Method',
+      subtitle: 'How each incoming sponsorship or fundraiser splits across the team.',
+      example: 'Example',
+      scenario: '$300 raised, linked to Player A (owes $200); teammates B & C each owe $200.',
+      current: 'Current',
+      footnote: "Applies to future distributions only — saving does not rewrite batches you've already distributed.",
+      saving: 'Saving...',
+      save: 'Save Method',
+      saved: 'Saved',
+    },
+    methods: {
+      waterfall: {
+        label: 'Waterfall',
+        blurb:
+          'Credit the linked player first, then overflow splits across teammates, with any remainder going to the team pot.',
+      },
+      direct: {
+        label: 'Direct to Player',
+        blurb: 'Only the linked player is credited. Anything above their remaining balance goes to the team pot.',
+      },
+      even_split: {
+        label: 'Even Split',
+        blurb: 'Split equally across all buy-in players, regardless of who brought the funds in.',
+      },
+      team_pot: {
+        label: 'Team Pot',
+        blurb: 'Everything goes straight to the team pot. No individual player is credited.',
+      },
+    },
+    chip: {
+      playerA: 'Player A',
+      playerB: 'Player B',
+      playerC: 'Player C',
+      teamPot: 'Team Pot',
+    },
+    pending: {
+      heading: 'Pending Distributions',
+      distributeAll: 'Distribute All ({{n}})',
+      distributing: 'Distributing {{current}}/{{total}}...',
+      finalizeFirst: 'Finalize the budget first',
+      processing: 'Processing',
+      progress: '{{current}} of {{total}}',
+      allDistributed: 'All sponsorship funds have been distributed.',
+      sponsorship: 'Sponsorship',
+      fundraising: 'Fundraising',
+      via: 'via {{name}}',
+      amount: 'Amount:',
+      distribute: 'Distribute Funds',
+    },
+    alerts: {
+      finalizeRequired: 'Budget must be finalized before distributing funds.',
+      confirmAll:
+        'This will sequentially distribute {{n}} pending fund(s) using the "{{method}}" method (Sponsorships first, then Fundraising).\n\n{{blurb}}\n\nProceed?',
+      stopped: 'Distribution stopped at "{{title}}". {{error}}',
+      checkConsole: 'Check the console for details.',
+    },
+    history: {
+      heading: 'Distribution History',
+      colTitle: 'Title / Source',
+      colBreakdown: 'Waterfall Breakdown',
+      colTotal: 'Total Applied',
+      colUndo: 'Undo',
+      empty: 'No distributed sponsorships or fundraising found.',
+      teamPool: 'Team Pool',
+      recipientWord: 'Recipient',
+      recipientWord_plural: 'Recipients',
+      pending: 'Pending',
+      undo: 'Undo this distribution',
+    },
+    rollup: {
+      heading: 'Player Fundraising Totals',
+      empty: 'No fundraising activity recorded for this season yet.',
+      na: 'N/A',
+    },
+    modal: {
+      heading: '{{method}} Distribution',
+      source: 'Sponsor / Source',
+      total: 'Total Amount',
+      applyTo: 'Apply Primary Credit To',
+      teamPool: 'Team Pool (Split Evenly)',
+      waterfallHelp:
+        "Any funds exceeding a player's remaining fee will automatically waterfall to the rest of the team.",
+      directHelp: "Any funds exceeding the player's remaining fee will go to the team pot.",
+      cancel: 'Cancel',
+      apply: 'Apply {{method}}',
+    },
+  },
 };

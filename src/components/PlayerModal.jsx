@@ -4,6 +4,8 @@ import MedicalReleaseForm from './MedicalReleaseForm';
 import { supabaseService } from '../services/supabaseService';
 import { useT } from '../i18n/I18nContext';
 import { getUSAgeGroup, getAge } from '../utils/ageGroup';
+import { formatPhone } from '../utils/phone';
+import { getCompliance } from '../utils/compliance';
 import { DOC_TYPE_LABELS, DOC_STATUS_COLORS } from '../utils/constants';
 
 const STATUS_COLORS = DOC_STATUS_COLORS;
@@ -63,7 +65,7 @@ export default function PlayerModal({
           (d) => d.id !== doc.id && d.docType === 'medical_release' && ['uploaded', 'verified'].includes(d.status),
         );
         if (remaining.length === 0) {
-          await supabaseService.updatePlayerField(player.id, 'medicalRelease', false);
+          await supabaseService.setSeasonCompliance(player.id, selectedSeason, 'medicalRelease', false);
           onRefresh?.();
         }
       }
@@ -87,6 +89,7 @@ export default function PlayerModal({
     feeWaived: false,
   };
   const isWaived = fin.feeWaived || player.seasonProfiles?.[selectedSeason]?.feeWaived === true;
+  const comp = getCompliance(player, selectedSeason);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center p-4 z-50">
@@ -150,12 +153,12 @@ export default function PlayerModal({
                   <button
                     onClick={() => setShowMedicalForm(true)}
                     className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
-                      player.medicalRelease
+                      comp.medicalRelease
                         ? 'bg-emerald-100 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200'
                         : 'bg-red-100 text-red-700 dark:text-red-400 hover:bg-red-200'
                     }`}
                   >
-                    {player.medicalRelease ? t('playerModal.onFile') + ' ✎' : t('playerModal.fillOut') + ' →'}
+                    {comp.medicalRelease ? t('playerModal.onFile') + ' ✎' : t('playerModal.fillOut') + ' →'}
                   </button>
                 </div>
               </div>
@@ -166,11 +169,11 @@ export default function PlayerModal({
                   <p className="text-xs text-muted-foreground mt-0.5">{t('playerModal.reeplayerHelp')}</p>
                 </div>
                 <button
-                  onClick={() => onToggleCompliance(player.id, 'reePlayerWaiver', player.reePlayerWaiver)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${player.reePlayerWaiver ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                  onClick={() => onToggleCompliance(player.id, 'reePlayerWaiver', comp.reePlayerWaiver)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${comp.reePlayerWaiver ? 'bg-emerald-500' : 'bg-slate-300'}`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${player.reePlayerWaiver ? 'translate-x-6' : 'translate-x-1'}`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${comp.reePlayerWaiver ? 'translate-x-6' : 'translate-x-1'}`}
                   />
                 </button>
               </div>
@@ -186,7 +189,7 @@ export default function PlayerModal({
                   <div key={i} className="text-sm">
                     <p className="font-semibold text-foreground">{g.name}</p>
                     {g.email && <p className="text-muted-foreground text-xs">{g.email}</p>}
-                    {g.phone && <p className="text-muted-foreground text-xs">{g.phone}</p>}
+                    {g.phone && <p className="text-muted-foreground text-xs">{formatPhone(g.phone)}</p>}
                   </div>
                 ))}
               </div>

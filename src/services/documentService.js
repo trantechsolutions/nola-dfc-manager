@@ -144,22 +144,30 @@ export const documentService = {
     return data?.signedUrl || null;
   },
 
-  getMedicalForm: async (playerId) => {
-    if (!playerId) return null;
-    const { data, error } = await supabase.from('medical_forms').select('*').eq('player_id', playerId).maybeSingle();
+  // Medical forms are per-season — each year requires its own waiver.
+  getMedicalForm: async (playerId, seasonId) => {
+    if (!playerId || !seasonId) return null;
+    const { data, error } = await supabase
+      .from('medical_forms')
+      .select('*')
+      .eq('player_id', playerId)
+      .eq('season_id', seasonId)
+      .maybeSingle();
     if (error) throw error;
     return data;
   },
 
-  saveMedicalForm: async (playerId, formData, language = 'en') => {
+  saveMedicalForm: async (playerId, seasonId, formData, language = 'en') => {
+    if (!seasonId) throw new Error('A season is required to save a medical form.');
     const row = {
       player_id: playerId,
+      season_id: seasonId,
       data: formData,
       language,
       completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    const { error } = await supabase.from('medical_forms').upsert(row, { onConflict: 'player_id' });
+    const { error } = await supabase.from('medical_forms').upsert(row, { onConflict: 'player_id,season_id' });
     if (error) throw error;
   },
 };

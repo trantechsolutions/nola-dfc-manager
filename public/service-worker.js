@@ -11,6 +11,17 @@ import { ExpirationPlugin } from 'workbox-expiration';
 // Precache all build artefacts (JS, CSS, HTML) injected by vite-plugin-pwa
 precacheAndRoute(self.__WB_MANIFEST || []);
 
+// ── Auto-update ───────────────────────────────────────────────────────────────
+// Activate a freshly-installed SW immediately instead of waiting for every tab
+// to close, and take control of open pages. Paired with the reload-on-update
+// logic in src/registerSW.js, this ships new bundles without a manual cache
+// clear. (Without this, a rebuilt SW stays in "waiting" and keeps serving the
+// stale precache — the reason updated UI didn't reach the screen.)
+self.skipWaiting();
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 // StaleWhileRevalidate for Supabase REST reads — serves cached data instantly
 // while silently refreshing in the background. Only GET requests are cached.
 registerRoute(

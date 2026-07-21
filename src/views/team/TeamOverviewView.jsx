@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup } from '../../utils/ageGroup';
+import { getCompliance } from '../../utils/compliance';
 import JerseyBadge from '../../components/JerseyBadge';
 import { TRACKED_HOLDINGS, HOLDING_LABELS, HOLDING_ICONS } from '../../utils/holdings';
 
@@ -125,12 +126,15 @@ export default function TeamOverviewView({
   const complianceStats = useMemo(
     () => ({
       total: players.length,
-      medical: players.filter((p) => p.medicalRelease).length,
-      reeplayer: players.filter((p) => p.reePlayerWaiver).length,
+      medical: players.filter((p) => getCompliance(p, selectedSeason).medicalRelease).length,
+      reeplayer: players.filter((p) => getCompliance(p, selectedSeason).reePlayerWaiver).length,
       waived: players.filter((p) => p.seasonProfiles?.[selectedSeasonData?.id]?.feeWaived).length,
-      fullyCompliant: players.filter((p) => p.medicalRelease && p.reePlayerWaiver).length,
+      fullyCompliant: players.filter((p) => {
+        const c = getCompliance(p, selectedSeason);
+        return c.medicalRelease && c.reePlayerWaiver;
+      }).length,
     }),
-    [players, selectedSeasonData],
+    [players, selectedSeasonData, selectedSeason],
   );
 
   // Holding balances — group cleared transactions by account, then roll up
@@ -648,8 +652,9 @@ export default function TeamOverviewView({
               ) : (
                 filteredPlayers.map((player) => {
                   const isWaived = player.seasonProfiles?.[selectedSeasonData?.id]?.feeWaived;
-                  const hasMedical = player.medicalRelease;
-                  const hasReeplayer = player.reePlayerWaiver;
+                  const playerCompliance = getCompliance(player, selectedSeason);
+                  const hasMedical = playerCompliance.medicalRelease;
+                  const hasReeplayer = playerCompliance.reePlayerWaiver;
                   const fin = playerFinancials[player.id];
                   const hasBalance = canViewFinancials && fin && fin.remainingBalance > 0 && !isWaived;
                   const paidPct =

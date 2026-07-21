@@ -13,6 +13,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { generateMedicalPdf } from '../utils/generateMedicalPdf';
+import { formatPhoneInput } from '../utils/phone';
 import supabaseService from '../services/supabaseService';
 import { useT } from '../i18n/I18nContext';
 
@@ -76,7 +77,7 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
     setError(null);
 
     supabaseService
-      .getMedicalForm(player.id)
+      .getMedicalForm(player.id, seasonId)
       .then((existing) => {
         if (existing) {
           setFormData({ ...EMPTY_FORM, ...existing.data });
@@ -102,11 +103,14 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
         setExistingForm(null);
       })
       .finally(() => setLoading(false));
-  }, [show, player]);
+  }, [show, player, seasonId]);
 
   if (!show || !player) return null;
 
   const set = (field, value) => setFormData((prev) => ({ ...prev, [field]: value }));
+  // Live-format personal mobile fields only. Work/physician/insurance numbers
+  // are left alone since they commonly carry extensions or 1-800 vanity numbers.
+  const setPhone = (field, value) => set(field, formatPhoneInput(value));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -117,8 +121,8 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
     setSaving(true);
     setError(null);
     try {
-      // 1. Save form data to DB
-      await supabaseService.saveMedicalForm(player.id, formData, lang);
+      // 1. Save form data to DB (per season)
+      await supabaseService.saveMedicalForm(player.id, seasonId, formData, lang);
 
       // 2. Remove any existing medical_release documents (overwrite, not stack)
       try {
@@ -145,8 +149,8 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
         title: `Medical Release - ${player.firstName} ${player.lastName}`,
       });
 
-      // 5. Mark player compliance
-      await supabaseService.updatePlayerField(player.id, 'medical_release', true);
+      // 5. Mark player compliance for this season
+      await supabaseService.setSeasonCompliance(player.id, seasonId, 'medicalRelease', true);
 
       onCompleted?.();
       onClose();
@@ -255,7 +259,7 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
                   label={labels.homePhone}
                   type="tel"
                   value={formData.guardian1HomePhone}
-                  onChange={(v) => set('guardian1HomePhone', v)}
+                  onChange={(v) => setPhone('guardian1HomePhone', v)}
                   required
                 />
                 <Input
@@ -272,7 +276,7 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
                   label={labels.homePhone}
                   type="tel"
                   value={formData.guardian2HomePhone}
-                  onChange={(v) => set('guardian2HomePhone', v)}
+                  onChange={(v) => setPhone('guardian2HomePhone', v)}
                 />
                 <Input
                   label={labels.workPhone}
@@ -294,7 +298,7 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
                     label={labels.homePhone}
                     type="tel"
                     value={formData.emergency1HomePhone}
-                    onChange={(v) => set('emergency1HomePhone', v)}
+                    onChange={(v) => setPhone('emergency1HomePhone', v)}
                   />
                   <Input
                     label={labels.workPhone}
@@ -313,7 +317,7 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
                     label={labels.homePhone}
                     type="tel"
                     value={formData.emergency2HomePhone}
-                    onChange={(v) => set('emergency2HomePhone', v)}
+                    onChange={(v) => setPhone('emergency2HomePhone', v)}
                   />
                   <Input
                     label={labels.workPhone}

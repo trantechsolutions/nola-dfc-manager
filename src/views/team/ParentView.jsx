@@ -24,6 +24,8 @@ import MedicalReleaseForm from '../../components/MedicalReleaseForm';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup, getAge } from '../../utils/ageGroup';
+import { formatPhone, phoneHref } from '../../utils/phone';
+import { getCompliance } from '../../utils/compliance';
 
 import { CATEGORY_LABELS, CATEGORY_TEXT_COLORS as CATEGORY_COLORS, DOC_TYPE_LABELS } from '../../utils/constants';
 import PaymentOptions from '../../components/PaymentOptions';
@@ -256,7 +258,7 @@ export default function ParentView({
           (d) => d.id !== doc.id && d.docType === 'medical_release' && ['uploaded', 'verified'].includes(d.status),
         );
         if (remaining.length === 0) {
-          await supabaseService.updatePlayerField(activePlayer.id, 'medicalRelease', false);
+          await supabaseService.setSeasonCompliance(activePlayer.id, selectedSeason, 'medicalRelease', false);
           onRefresh?.();
         }
       }
@@ -267,10 +269,11 @@ export default function ParentView({
     }
   };
 
-  // ── COMPLIANCE ITEMS ──
+  // ── COMPLIANCE ITEMS (per selected season) ──
+  const parentComp = getCompliance(activePlayer, selectedSeason);
   const complianceItems = [
-    { label: t('medical.medicalRelease'), done: activePlayer.medicalRelease },
-    { label: t('medical.reeplayerWaiver'), done: activePlayer.reePlayerWaiver },
+    { label: t('medical.medicalRelease'), done: parentComp.medicalRelease },
+    { label: t('medical.reeplayerWaiver'), done: parentComp.reePlayerWaiver },
   ];
   const isFullyCompliant = complianceItems.every((c) => c.done);
 
@@ -548,7 +551,7 @@ export default function ParentView({
           {/* Medical Release Form */}
           <div
             className={`p-4 rounded-lg border shadow-sm ${
-              activePlayer.medicalRelease
+              parentComp.medicalRelease
                 ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200'
                 : 'bg-red-50 dark:bg-red-900/30 border-red-200'
             }`}
@@ -556,15 +559,13 @@ export default function ParentView({
             <div className="flex items-center gap-3 mb-3">
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  activePlayer.medicalRelease
-                    ? 'bg-emerald-100 dark:bg-emerald-900/30'
-                    : 'bg-red-100 dark:bg-red-900/30'
+                  parentComp.medicalRelease ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-red-100 dark:bg-red-900/30'
                 }`}
               >
                 <Heart
                   size={18}
                   className={
-                    activePlayer.medicalRelease
+                    parentComp.medicalRelease
                       ? 'text-emerald-700 dark:text-emerald-400'
                       : 'text-red-700 dark:text-red-400'
                   }
@@ -574,25 +575,25 @@ export default function ParentView({
                 <p className="text-sm font-bold text-foreground">{t('parent.medicalForm')}</p>
                 <p
                   className={`text-xs font-medium ${
-                    activePlayer.medicalRelease
+                    parentComp.medicalRelease
                       ? 'text-emerald-700 dark:text-emerald-400'
                       : 'text-red-700 dark:text-red-400'
                   }`}
                 >
-                  {activePlayer.medicalRelease ? t('parent.completedOnFile') : t('parent.requiredNotSubmitted')}
+                  {parentComp.medicalRelease ? t('parent.completedOnFile') : t('parent.requiredNotSubmitted')}
                 </p>
               </div>
             </div>
             <button
               onClick={() => setShowMedicalForm(true)}
               className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
-                activePlayer.medicalRelease
+                parentComp.medicalRelease
                   ? 'bg-card text-foreground hover:bg-background border border-border'
                   : 'bg-red-600 text-white hover:bg-red-700'
               }`}
             >
               <FileText size={13} />
-              {activePlayer.medicalRelease ? t('parent.viewUpdateForm') : t('parent.completeForm')}
+              {parentComp.medicalRelease ? t('parent.viewUpdateForm') : t('parent.completeForm')}
             </button>
           </div>
 
@@ -811,10 +812,10 @@ export default function ParentView({
                       <span className="text-sm text-foreground">{g.name}</span>
                       {g.phone && (
                         <a
-                          href={`tel:${g.phone}`}
+                          href={phoneHref(g.phone)}
                           className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800"
                         >
-                          {g.phone}
+                          {formatPhone(g.phone)}
                         </a>
                       )}
                     </div>

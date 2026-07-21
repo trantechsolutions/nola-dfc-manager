@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Users, Search, ArrowRightLeft, UserPlus, Archive, RotateCcw, X, Plus, Edit } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { getUSAgeGroup } from '../../utils/ageGroup';
+import { formatPhoneInput } from '../../utils/phone';
 import { useT } from '../../i18n/I18nContext';
 import PlayerFormModal from '../../components/PlayerFormModal';
 
@@ -548,7 +549,7 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                       type="tel"
                       placeholder="Phone"
                       value={addForm.guardianPhone}
-                      onChange={(e) => setAddForm((f) => ({ ...f, guardianPhone: e.target.value }))}
+                      onChange={(e) => setAddForm((f) => ({ ...f, guardianPhone: formatPhoneInput(e.target.value) }))}
                       className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>

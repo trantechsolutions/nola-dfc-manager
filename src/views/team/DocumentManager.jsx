@@ -19,6 +19,7 @@ import {
 import { supabaseService } from '../../services/supabaseService';
 import { ALL_ROLES } from '../../utils/roles';
 import { DOC_TYPES, DOC_STATUS_COLORS } from '../../utils/constants';
+import { getCompliance } from '../../utils/compliance';
 
 const STATUS_COLORS = DOC_STATUS_COLORS;
 
@@ -74,7 +75,7 @@ export default function DocumentManager({
       const hasMedical = playerDocs.some(
         (d) => d.docType === 'medical_release' && ['uploaded', 'verified'].includes(d.status),
       );
-      const hasReeplayer = p.reePlayerWaiver === true;
+      const hasReeplayer = getCompliance(p, selectedSeason).reePlayerWaiver;
       map[p.id] = {
         hasMedical,
         hasReeplayer,
@@ -84,16 +85,16 @@ export default function DocumentManager({
       };
     });
     return map;
-  }, [players, documents]);
+  }, [players, documents, selectedSeason]);
 
   const compliantCount = Object.values(playerCompliance).filter((c) => c.isComplete).length;
   const missingMedical = Object.values(playerCompliance).filter((c) => !c.hasMedical).length;
-  const missingReeplayer = players.filter((p) => !p.reePlayerWaiver).length;
+  const missingReeplayer = players.filter((p) => !getCompliance(p, selectedSeason).reePlayerWaiver).length;
 
-  // Sync player.medicalRelease boolean from document state
+  // Sync the season's medical-release flag from document state
   const syncWaiverStatus = async (playerId, status) => {
     try {
-      await supabaseService.updatePlayerField(playerId, 'medicalRelease', status);
+      await supabaseService.setSeasonCompliance(playerId, selectedSeason, 'medicalRelease', status);
       if (onPlayerUpdate) onPlayerUpdate();
     } catch (e) {
       console.error('Waiver sync failed', e);

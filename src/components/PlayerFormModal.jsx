@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Archive } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { getUSAgeGroup, getAge } from '../utils/ageGroup';
+import { formatPhoneInput } from '../utils/phone';
 
 export default function PlayerFormModal({
   show,
@@ -239,7 +240,7 @@ export default function PlayerFormModal({
                       type="tel"
                       placeholder={t('playerForm.phoneNumber')}
                       value={guardian.phone}
-                      onChange={(e) => handleGuardianChange(index, 'phone', e.target.value)}
+                      onChange={(e) => handleGuardianChange(index, 'phone', formatPhoneInput(e.target.value))}
                       className="w-full border border-border rounded md p-1.5 text-sm focus:ring-1 focus:ring-ring outline-none"
                     />
                   </div>

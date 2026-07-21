@@ -1,6 +1,7 @@
 import { supabase } from '../supabase';
 import { logAuditEvent } from './auditService';
 import { pushService } from './pushService';
+import { formatPhone } from '../utils/phone';
 
 export const playerService = {
   getAllPlayers: async () => {
@@ -17,8 +18,6 @@ export const playerService = {
       jerseyNumber: p.jersey_number,
       birthdate: p.birthdate ? p.birthdate.slice(0, 10) : null,
       status: p.status,
-      medicalRelease: p.medical_release,
-      reePlayerWaiver: p.reeplayer_waiver,
       clubId: p.club_id,
       teamId: p.team_id,
       guardians: (p.guardians || []).map((g) => ({
@@ -34,6 +33,8 @@ export const playerService = {
           status: ps.status,
           teamSeasonId: ps.team_season_id,
           fundraiserBuyIn: ps.fundraiser_buyin ?? false,
+          medicalRelease: ps.medical_release === true,
+          reePlayerWaiver: ps.reeplayer_waiver === true,
         };
         return acc;
       }, {}),
@@ -51,8 +52,6 @@ export const playerService = {
         birthdate: playerData.birthdate || null,
         gender: playerData.gender || null,
         status: playerData.status || 'active',
-        medical_release: playerData.medicalRelease || false,
-        reeplayer_waiver: playerData.reePlayerWaiver || false,
         ...(playerData.clubId ? { club_id: playerData.clubId } : {}),
         ...(playerData.teamId ? { team_id: playerData.teamId } : {}),
       })
@@ -69,7 +68,7 @@ export const playerService = {
             player_id: player.id,
             name: g.name,
             email: g.email?.toLowerCase().trim() || null,
-            phone: g.phone || null,
+            phone: formatPhone(g.phone) || null,
           }));
         if (guardianRows.length > 0) {
           const { error: gErr } = await supabase.from('guardians').insert(guardianRows);
@@ -84,6 +83,8 @@ export const playerService = {
           season_id: seasonId,
           fee_waived: profile.feeWaived ?? false,
           status: profile.status || 'active',
+          medical_release: profile.medicalRelease ?? false,
+          reeplayer_waiver: profile.reePlayerWaiver ?? false,
           ...(profile.teamSeasonId ? { team_season_id: profile.teamSeasonId } : {}),
         }));
         if (seasonRows.length > 0) {
@@ -136,7 +137,7 @@ export const playerService = {
           player_id: playerId,
           name: g.name,
           email: g.email?.toLowerCase().trim() || null,
-          phone: g.phone || null,
+          phone: formatPhone(g.phone) || null,
         }));
       if (guardianRows.length > 0) {
         const { error: gErr } = await supabase.from('guardians').insert(guardianRows);
@@ -153,6 +154,10 @@ export const playerService = {
             season_id: seasonId,
             fee_waived: profile.feeWaived ?? false,
             status: profile.status || 'active',
+            // Only touch compliance when the caller explicitly provides it, so a
+            // routine player edit never resets a season's waiver status.
+            ...('medicalRelease' in profile ? { medical_release: profile.medicalRelease } : {}),
+            ...('reePlayerWaiver' in profile ? { reeplayer_waiver: profile.reePlayerWaiver } : {}),
             ...(profile.teamSeasonId ? { team_season_id: profile.teamSeasonId } : {}),
           },
           { onConflict: 'player_id,season_id' },
@@ -176,10 +181,10 @@ export const playerService = {
     });
   },
 
+  // Update a non-compliance, player-level field (e.g. status). Compliance flags
+  // are per-season — use setSeasonCompliance instead.
   updatePlayerField: async (playerId, field, value) => {
     const fieldMap = {
-      medicalRelease: 'medical_release',
-      reePlayerWaiver: 'reeplayer_waiver',
       status: 'status',
     };
     const dbField = fieldMap[field] || field;
@@ -189,8 +194,7 @@ export const playerService = {
       .eq('id', playerId);
     if (error) throw error;
 
-    // Fire-and-forget audit log + compliance notification to parent
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         logAuditEvent({
           tableName: 'players',
@@ -201,45 +205,69 @@ export const playerService = {
           metadata: { field, value },
         });
       }
+    });
+  },
 
-      // Notify parent when a compliance document is updated
-      const complianceFields = ['medicalRelease', 'reePlayerWaiver'];
-      if (complianceFields.includes(field)) {
-        try {
-          const { data: player } = await supabase
-            .from('players')
-            .select('first_name, last_name, guardians(email)')
-            .eq('id', playerId)
-            .single();
+  // Per-season compliance (medical release / ReePlayer waiver) lives on
+  // player_seasons — each season needs its own waiver. `field` is the camelCase
+  // key ('medicalRelease' | 'reePlayerWaiver').
+  setSeasonCompliance: async (playerId, seasonId, field, value) => {
+    if (!seasonId) throw new Error('A season is required to update compliance.');
+    const dbField = field === 'reePlayerWaiver' ? 'reeplayer_waiver' : 'medical_release';
+    const { error } = await supabase
+      .from('player_seasons')
+      .update({ [dbField]: value })
+      .eq('player_id', playerId)
+      .eq('season_id', seasonId);
+    if (error) throw error;
 
-          if (player) {
-            const guardianEmails = (player.guardians || []).map((g) => g.email?.toLowerCase()).filter(Boolean);
+    // Fire-and-forget audit log + compliance notification to parent
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        logAuditEvent({
+          tableName: 'player_seasons',
+          recordId: playerId,
+          action: 'update',
+          changedBy: user.id,
+          newData: { [dbField]: value, season_id: seasonId },
+          metadata: { field, value, seasonId },
+        });
+      }
 
-            if (guardianEmails.length > 0) {
-              const { data: profiles } = await supabase
-                .from('user_profiles')
-                .select('user_id')
-                .in('email', guardianEmails);
+      try {
+        const { data: player } = await supabase
+          .from('players')
+          .select('first_name, last_name, guardians(email)')
+          .eq('id', playerId)
+          .single();
 
-              const userIds = (profiles || []).map((p) => p.user_id);
-              if (userIds.length > 0) {
-                const label = field === 'medicalRelease' ? 'Medical Release' : 'Player Waiver';
-                const status = value ? 'approved' : 'flagged';
-                pushService
-                  .notifyUsers({
-                    userIds,
-                    eventType: 'compliance',
-                    title: `${player.first_name} ${player.last_name} — ${label}`,
-                    body: `${label} has been ${status}.`,
-                    url: '/dashboard',
-                  })
-                  .catch(() => {});
-              }
+        if (player) {
+          const guardianEmails = (player.guardians || []).map((g) => g.email?.toLowerCase()).filter(Boolean);
+
+          if (guardianEmails.length > 0) {
+            const { data: profiles } = await supabase
+              .from('user_profiles')
+              .select('user_id')
+              .in('email', guardianEmails);
+
+            const userIds = (profiles || []).map((p) => p.user_id);
+            if (userIds.length > 0) {
+              const label = field === 'medicalRelease' ? 'Medical Release' : 'Player Waiver';
+              const status = value ? 'approved' : 'flagged';
+              pushService
+                .notifyUsers({
+                  userIds,
+                  eventType: 'compliance',
+                  title: `${player.first_name} ${player.last_name} — ${label}`,
+                  body: `${label} has been ${status} for ${seasonId}.`,
+                  url: '/dashboard',
+                })
+                .catch(() => {});
             }
           }
-        } catch {
-          // Non-fatal — push notification failure should not break the update
         }
+      } catch {
+        // Non-fatal — push notification failure should not break the update
       }
     });
   },
@@ -295,8 +323,6 @@ export const playerService = {
       birthdate: p.birthdate,
       gender: p.gender,
       status: p.status,
-      medicalRelease: p.medical_release,
-      reePlayerWaiver: p.reeplayer_waiver,
       clubId: p.club_id,
       teamId: p.team_id,
       guardians: (p.guardians || []).map((g) => ({ id: g.id, name: g.name, email: g.email, phone: g.phone })),
@@ -306,6 +332,8 @@ export const playerService = {
           status: ps.status,
           teamSeasonId: ps.team_season_id,
           fundraiserBuyIn: ps.fundraiser_buyin ?? false,
+          medicalRelease: ps.medical_release === true,
+          reePlayerWaiver: ps.reeplayer_waiver === true,
         };
         return acc;
       }, {}),
@@ -327,7 +355,6 @@ export const playerService = {
       birthdate: p.birthdate,
       gender: p.gender,
       status: p.status,
-      medicalRelease: p.medical_release,
       clubId: p.club_id,
       teamId: p.team_id,
       teamName: p.teams?.name || null,
@@ -354,8 +381,6 @@ export const playerService = {
           birthdate: p.birthdate,
           gender: p.gender,
           status: p.status,
-          medicalRelease: p.medical_release,
-          reePlayerWaiver: p.reeplayer_waiver,
           clubId: p.club_id,
           teamId: p.team_id,
           guardians: (p.guardians || []).map((gu) => ({ id: gu.id, name: gu.name, email: gu.email, phone: gu.phone })),
@@ -365,6 +390,8 @@ export const playerService = {
               status: ps.status,
               teamSeasonId: ps.team_season_id,
               fundraiserBuyIn: ps.fundraiser_buyin ?? false,
+              medicalRelease: ps.medical_release === true,
+              reePlayerWaiver: ps.reeplayer_waiver === true,
             };
             return acc;
           }, {}),

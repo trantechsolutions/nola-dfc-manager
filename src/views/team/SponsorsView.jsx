@@ -13,65 +13,56 @@ import {
   Loader2,
   SlidersHorizontal,
 } from 'lucide-react';
+import { useT } from '../../i18n/I18nContext';
 
 // Per-team distribution strategies. `usesSource` = whether a linked/primary
 // player is meaningful for this method (drives the modal's source dropdown).
-// `example` = how the shared worked scenario (see GUIDE_SCENARIO) splits under
-// this method, used by the comparison guide.
+// `example` = how the shared worked scenario (see sponsors.method.scenario)
+// splits under this method, used by the comparison guide. Labels and blurbs are
+// resolved from i18n at render via `sponsors.methods.<value>`; chip labels via
+// `sponsors.chip.<chipKey>`.
 const DISTRIBUTION_METHODS = [
   {
     value: 'waterfall',
-    label: 'Waterfall',
-    blurb:
-      'Credit the linked player first, then overflow splits across teammates, with any remainder going to the team pot.',
     usesSource: true,
     example: [
-      { label: 'Player A', value: '$200' },
-      { label: 'Player B', value: '$50' },
-      { label: 'Player C', value: '$50' },
-      { label: 'Team Pot', value: '$0', muted: true },
+      { chipKey: 'playerA', value: '$200' },
+      { chipKey: 'playerB', value: '$50' },
+      { chipKey: 'playerC', value: '$50' },
+      { chipKey: 'teamPot', value: '$0', muted: true },
     ],
   },
   {
     value: 'direct',
-    label: 'Direct to Player',
-    blurb: 'Only the linked player is credited. Anything above their remaining balance goes to the team pot.',
     usesSource: true,
     example: [
-      { label: 'Player A', value: '$200' },
-      { label: 'Player B', value: '$0', muted: true },
-      { label: 'Player C', value: '$0', muted: true },
-      { label: 'Team Pot', value: '$100' },
+      { chipKey: 'playerA', value: '$200' },
+      { chipKey: 'playerB', value: '$0', muted: true },
+      { chipKey: 'playerC', value: '$0', muted: true },
+      { chipKey: 'teamPot', value: '$100' },
     ],
   },
   {
     value: 'even_split',
-    label: 'Even Split',
-    blurb: 'Split equally across all buy-in players, regardless of who brought the funds in.',
     usesSource: false,
     example: [
-      { label: 'Player A', value: '$100' },
-      { label: 'Player B', value: '$100' },
-      { label: 'Player C', value: '$100' },
-      { label: 'Team Pot', value: '$0', muted: true },
+      { chipKey: 'playerA', value: '$100' },
+      { chipKey: 'playerB', value: '$100' },
+      { chipKey: 'playerC', value: '$100' },
+      { chipKey: 'teamPot', value: '$0', muted: true },
     ],
   },
   {
     value: 'team_pot',
-    label: 'Team Pot',
-    blurb: 'Everything goes straight to the team pot. No individual player is credited.',
     usesSource: false,
     example: [
-      { label: 'Player A', value: '$0', muted: true },
-      { label: 'Player B', value: '$0', muted: true },
-      { label: 'Player C', value: '$0', muted: true },
-      { label: 'Team Pot', value: '$300' },
+      { chipKey: 'playerA', value: '$0', muted: true },
+      { chipKey: 'playerB', value: '$0', muted: true },
+      { chipKey: 'playerC', value: '$0', muted: true },
+      { chipKey: 'teamPot', value: '$300' },
     ],
   },
 ];
-
-// The illustrative scenario the guide's per-method examples are computed from.
-const GUIDE_SCENARIO = '$300 raised, linked to Player A (owes $200); teammates B & C each owe $200.';
 
 export default function SponsorsView({
   transactions,
@@ -85,6 +76,12 @@ export default function SponsorsView({
   distributionMethod = 'waterfall',
   onSetDistributionMethod,
 }) {
+  const { t, tp } = useT();
+
+  // Method label/blurb live in i18n, keyed by the method's stable `value`.
+  const methodLabel = (value) => t(`sponsors.methods.${value}.label`);
+  const methodBlurb = (value) => t(`sponsors.methods.${value}.blurb`);
+
   const [showDistribute, setShowDistribute] = useState(false);
   const [distAmount, setDistAmount] = useState('');
   const [distTitle, setDistTitle] = useState('');
@@ -149,7 +146,7 @@ export default function SponsorsView({
     }
     groupedHistoryMap[tx.waterfallBatchId].totalAmount += Number(tx.amount || 0);
     groupedHistoryMap[tx.waterfallBatchId].recipients.push({
-      name: tx.playerName || 'Team Pool',
+      name: tx.playerName || t('sponsors.history.teamPool'),
       amount: Number(tx.amount || 0),
     });
   });
@@ -187,13 +184,17 @@ export default function SponsorsView({
 
   const handleDistributeAll = async () => {
     if (!isBudgetLocked) {
-      alert('Budget must be finalized before distributing funds.');
+      alert(t('sponsors.alerts.finalizeRequired'));
       return;
     }
     if (sortedUndistributed.length === 0) return;
 
     const confirmed = window.confirm(
-      `This will sequentially distribute ${sortedUndistributed.length} pending fund(s) using the "${activeMethod.label}" method (Sponsorships first, then Fundraising).\n\n${activeMethod.blurb}\n\nProceed?`,
+      t('sponsors.alerts.confirmAll', {
+        n: sortedUndistributed.length,
+        method: methodLabel(activeMethod.value),
+        blurb: methodBlurb(activeMethod.value),
+      }),
     );
     if (!confirmed) return;
 
@@ -210,7 +211,10 @@ export default function SponsorsView({
     } catch (err) {
       console.error('Distribute All failed at item:', distributeAllProgress.current, err);
       alert(
-        `Distribution stopped at "${distributeAllProgress.currentTitle}". ${err.message || 'Check the console for details.'}`,
+        t('sponsors.alerts.stopped', {
+          title: distributeAllProgress.currentTitle,
+          error: err.message || t('sponsors.alerts.checkConsole'),
+        }),
       );
     } finally {
       setIsDistributingAll(false);
@@ -230,7 +234,7 @@ export default function SponsorsView({
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          Undistributed ({undistributedSponsors.length})
+          {t('sponsors.tabs.undistributed', { n: undistributedSponsors.length })}
         </button>
         <button
           onClick={() => setActiveTab('distributed')}
@@ -240,7 +244,7 @@ export default function SponsorsView({
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          Distribution History
+          {t('sponsors.tabs.history')}
         </button>
         <button
           onClick={() => setActiveTab('fundraising')}
@@ -250,7 +254,7 @@ export default function SponsorsView({
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          Player Fundraising
+          {t('sponsors.tabs.fundraising')}
         </button>
       </div>
 
@@ -262,19 +266,17 @@ export default function SponsorsView({
             <div className="flex items-start gap-3 mb-1">
               <SlidersHorizontal size={18} className="text-blue-700 dark:text-blue-400 mt-0.5 shrink-0" />
               <div>
-                <p className="font-bold text-foreground text-sm">Distribution Method</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  How each incoming sponsorship or fundraiser splits across the team.
-                </p>
+                <p className="font-bold text-foreground text-sm">{t('sponsors.method.heading')}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t('sponsors.method.subtitle')}</p>
               </div>
             </div>
 
             {/* Worked-example scenario the cards below are calculated from */}
             <div className="mt-3 mb-4 bg-background border border-border rounded-lg px-3 py-2 flex items-start gap-2">
               <span className="text-[11px] font-bold uppercase tracking-wide text-blue-700 dark:text-blue-400 mt-0.5">
-                Example
+                {t('sponsors.method.example')}
               </span>
-              <span className="text-xs text-muted-foreground">{GUIDE_SCENARIO}</span>
+              <span className="text-xs text-muted-foreground">{t('sponsors.method.scenario')}</span>
             </div>
 
             {/* Selectable comparison cards (draft only — nothing saves until "Save") */}
@@ -303,25 +305,25 @@ export default function SponsorsView({
                       >
                         {isSelected && <span className="h-2 w-2 rounded-full bg-blue-500" />}
                       </span>
-                      <span className="font-bold text-foreground text-sm">{m.label}</span>
+                      <span className="font-bold text-foreground text-sm">{methodLabel(m.value)}</span>
                       {isSaved && (
                         <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400">
-                          Current
+                          {t('sponsors.method.current')}
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mb-3 ml-6">{m.blurb}</p>
+                    <p className="text-xs text-muted-foreground mb-3 ml-6">{methodBlurb(m.value)}</p>
                     <div className="flex flex-wrap gap-1.5 ml-6">
                       {m.example.map((chip) => (
                         <span
-                          key={chip.label}
+                          key={chip.chipKey}
                           className={`text-[11px] font-semibold px-2 py-1 rounded ${
                             chip.muted
                               ? 'bg-muted text-muted-foreground'
                               : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
                           }`}
                         >
-                          {chip.label} {chip.value}
+                          {t(`sponsors.chip.${chip.chipKey}`)} {chip.value}
                         </span>
                       ))}
                     </div>
@@ -332,9 +334,7 @@ export default function SponsorsView({
 
             {/* Footer: note + explicit Save (nothing persists on switch) */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 pt-3 border-t border-border">
-              <p className="text-xs text-muted-foreground">
-                Applies to future distributions only — saving does not rewrite batches you've already distributed.
-              </p>
+              <p className="text-xs text-muted-foreground">{t('sponsors.method.footnote')}</p>
               {onSetDistributionMethod && (
                 <button
                   onClick={handleSaveMethod}
@@ -347,12 +347,12 @@ export default function SponsorsView({
                 >
                   {isSavingMethod ? (
                     <>
-                      <Loader2 size={16} className="animate-spin" /> Saving...
+                      <Loader2 size={16} className="animate-spin" /> {t('sponsors.method.saving')}
                     </>
                   ) : isMethodDirty ? (
-                    'Save Method'
+                    t('sponsors.method.save')
                   ) : (
-                    'Saved'
+                    t('sponsors.method.saved')
                   )}
                 </button>
               )}
@@ -361,7 +361,7 @@ export default function SponsorsView({
 
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
             <h3 className="font-bold text-foreground flex items-center gap-2">
-              <Lock size={18} className="text-amber-700 dark:text-amber-400" /> Pending Distributions
+              <Lock size={18} className="text-amber-700 dark:text-amber-400" /> {t('sponsors.pending.heading')}
             </h3>
             {undistributedSponsors.length > 1 && (
               <button
@@ -374,16 +374,19 @@ export default function SponsorsView({
                       ? 'bg-amber-500 text-white cursor-wait'
                       : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
                 }`}
-                title={!isBudgetLocked ? 'Finalize the budget first' : ''}
+                title={!isBudgetLocked ? t('sponsors.pending.finalizeFirst') : ''}
               >
                 {isDistributingAll ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    Distributing {distributeAllProgress.current}/{distributeAllProgress.total}...
+                    {t('sponsors.pending.distributing', {
+                      current: distributeAllProgress.current,
+                      total: distributeAllProgress.total,
+                    })}
                   </>
                 ) : (
                   <>
-                    <Zap size={16} /> Distribute All ({undistributedSponsors.length})
+                    <Zap size={16} /> {t('sponsors.pending.distributeAll', { n: undistributedSponsors.length })}
                   </>
                 )}
               </button>
@@ -394,9 +397,12 @@ export default function SponsorsView({
           {isDistributingAll && (
             <div className="mb-4 bg-card p-4 rounded-lg border border-amber-200 dark:border-amber-700 shadow-sm animate-in fade-in duration-200">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-semibold text-muted-foreground">Processing</span>
+                <span className="text-xs font-semibold text-muted-foreground">{t('sponsors.pending.processing')}</span>
                 <span className="text-xs font-bold text-foreground">
-                  {distributeAllProgress.current} of {distributeAllProgress.total}
+                  {t('sponsors.pending.progress', {
+                    current: distributeAllProgress.current,
+                    total: distributeAllProgress.total,
+                  })}
                 </span>
               </div>
               <div className="h-2.5 bg-muted rounded-full overflow-hidden">
@@ -414,7 +420,7 @@ export default function SponsorsView({
           <div className="grid grid-cols-1 gap-4">
             {undistributedSponsors.length === 0 ? (
               <div className="bg-background p-12 rounded-lg border border-border text-center text-muted-foreground font-semibold italic">
-                All sponsorship funds have been distributed.
+                {t('sponsors.pending.allDistributed')}
               </div>
             ) : (
               sortedUndistributed.map((tx) => (
@@ -431,15 +437,18 @@ export default function SponsorsView({
                             : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
                         }`}
                       >
-                        {tx.category === 'SPO' ? 'Sponsorship' : 'Fundraising'}
+                        {tx.category === 'SPO' ? t('sponsors.pending.sponsorship') : t('sponsors.pending.fundraising')}
                       </span>
                       {tx.playerName && (
-                        <span className="text-xs font-semibold text-muted-foreground">via {tx.playerName}</span>
+                        <span className="text-xs font-semibold text-muted-foreground">
+                          {t('sponsors.pending.via', { name: tx.playerName })}
+                        </span>
                       )}
                     </div>
                     <p className="font-bold text-foreground text-lg">{tx.title}</p>
                     <p className="text-sm font-semibold text-muted-foreground mt-1">
-                      Amount: <span className="text-emerald-700 dark:text-emerald-400">{formatMoney(tx.amount)}</span>
+                      {t('sponsors.pending.amount')}{' '}
+                      <span className="text-emerald-700 dark:text-emerald-400">{formatMoney(tx.amount)}</span>
                     </p>
                   </div>
                   <button
@@ -453,7 +462,7 @@ export default function SponsorsView({
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors shadow-md"
                   >
-                    Distribute Funds
+                    {t('sponsors.pending.distribute')}
                   </button>
                 </div>
               ))
@@ -466,24 +475,25 @@ export default function SponsorsView({
       {activeTab === 'distributed' && (
         <div className="animate-in fade-in duration-300">
           <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
-            <CheckCircle2 size={18} className="text-emerald-700 dark:text-emerald-400" /> Distribution History
+            <CheckCircle2 size={18} className="text-emerald-700 dark:text-emerald-400" />{' '}
+            {t('sponsors.history.heading')}
           </h3>
           <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-background border-b border-border">
                   <tr className="text-xs font-semibold text-muted-foreground">
-                    <th className="px-6 py-4">Title / Source</th>
-                    <th className="px-6 py-4">Waterfall Breakdown</th>
-                    <th className="px-6 py-4 text-right">Total Applied</th>
-                    <th className="px-6 py-4 text-center">Undo</th>
+                    <th className="px-6 py-4">{t('sponsors.history.colTitle')}</th>
+                    <th className="px-6 py-4">{t('sponsors.history.colBreakdown')}</th>
+                    <th className="px-6 py-4 text-right">{t('sponsors.history.colTotal')}</th>
+                    <th className="px-6 py-4 text-center">{t('sponsors.history.colUndo')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {historyList.length === 0 ? (
                     <tr>
                       <td colSpan="4" className="px-6 py-12 text-center text-muted-foreground font-semibold italic">
-                        No distributed sponsorships or fundraising found.
+                        {t('sponsors.history.empty')}
                       </td>
                     </tr>
                   ) : (
@@ -492,13 +502,15 @@ export default function SponsorsView({
                         <td className="px-6 py-4 align-top">
                           <p className="font-semibold text-foreground text-sm">{group.title}</p>
                           <p className="text-xs text-muted-foreground font-medium mt-1">
-                            {group.date?.seconds ? new Date(group.date.seconds * 1000).toLocaleDateString() : 'Pending'}
+                            {group.date?.seconds
+                              ? new Date(group.date.seconds * 1000).toLocaleDateString()
+                              : t('sponsors.history.pending')}
                           </p>
                         </td>
                         <td className="px-6 py-4 align-top">
                           <div className="flex flex-col gap-2">
                             <span className="text-xs font-bold px-2 py-1 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 w-fit">
-                              {group.recipients.length} Recipient{group.recipients.length !== 1 && 's'}
+                              {group.recipients.length} {tp('sponsors.history.recipientWord', group.recipients.length)}
                             </span>
                             <div className="text-xs text-muted-foreground space-y-1">
                               {group.recipients.map((r, i) => (
@@ -520,7 +532,7 @@ export default function SponsorsView({
                           <button
                             onClick={() => onReset(group.batchId, group.originalTxId)}
                             className="text-muted-foreground hover:text-red-700 dark:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30"
-                            title="Undo this distribution"
+                            title={t('sponsors.history.undo')}
                           >
                             <Undo2 size={16} />
                           </button>
@@ -539,12 +551,12 @@ export default function SponsorsView({
       {activeTab === 'fundraising' && (
         <div className="animate-in fade-in duration-300">
           <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
-            <TrendingUp size={18} className="text-blue-700 dark:text-blue-400" /> Player Fundraising Totals
+            <TrendingUp size={18} className="text-blue-700 dark:text-blue-400" /> {t('sponsors.rollup.heading')}
           </h3>
           <div className="space-y-3">
             {fundraisingByPlayer.length === 0 ? (
               <div className="bg-background p-12 rounded-lg border border-border text-center text-muted-foreground font-semibold italic">
-                No fundraising activity recorded for this season yet.
+                {t('sponsors.rollup.empty')}
               </div>
             ) : (
               fundraisingByPlayer.map((player) => (
@@ -578,7 +590,9 @@ export default function SponsorsView({
                             <tr key={tx.id} className="border-b border-border/50 last:border-0">
                               <td className="py-3 px-2 font-semibold text-foreground">{tx.title}</td>
                               <td className="py-3 px-2 text-muted-foreground text-xs font-medium">
-                                {tx.date?.seconds ? new Date(tx.date.seconds * 1000).toLocaleDateString() : 'N/A'}
+                                {tx.date?.seconds
+                                  ? new Date(tx.date.seconds * 1000).toLocaleDateString()
+                                  : t('sponsors.rollup.na')}
                               </td>
                               <td className="py-3 px-2 text-right font-bold text-emerald-700 dark:text-emerald-400">
                                 {formatMoney(tx.amount)}
@@ -601,12 +615,14 @@ export default function SponsorsView({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
           <div className="bg-card rounded-lg p-8 w-full max-w-md shadow-md animate-in zoom-in-95 duration-200">
             <h3 className="text-xl font-bold text-foreground mb-6 flex items-center gap-2">
-              <ArrowDownNarrowWide className="text-emerald-700 dark:text-emerald-400" /> {activeMethod.label}{' '}
-              Distribution
+              <ArrowDownNarrowWide className="text-emerald-700 dark:text-emerald-400" />{' '}
+              {t('sponsors.modal.heading', { method: methodLabel(activeMethod.value) })}
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Sponsor / Source</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                  {t('sponsors.modal.source')}
+                </label>
                 <input
                   type="text"
                   value={distTitle}
@@ -615,7 +631,9 @@ export default function SponsorsView({
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1">Total Amount</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                  {t('sponsors.modal.total')}
+                </label>
                 <div className="relative">
                   <span className="absolute left-4 top-3 text-muted-foreground font-semibold">$</span>
                   <input
@@ -629,14 +647,14 @@ export default function SponsorsView({
               {methodUsesSource ? (
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground mb-1">
-                    Apply Primary Credit To
+                    {t('sponsors.modal.applyTo')}
                   </label>
                   <select
                     value={sourcePlayerId}
                     onChange={(e) => setSourcePlayerId(e.target.value)}
                     className="w-full border border-border rounded-lg p-3 font-semibold text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                   >
-                    <option value="">Team Pool (Split Evenly)</option>
+                    <option value="">{t('sponsors.modal.teamPool')}</option>
                     {seasonalPlayers.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.firstName} {p.lastName}
@@ -645,14 +663,15 @@ export default function SponsorsView({
                   </select>
                   <p className="text-xs text-muted-foreground mt-2">
                     {activeMethod.value === 'waterfall'
-                      ? "Any funds exceeding a player's remaining fee will automatically waterfall to the rest of the team."
-                      : "Any funds exceeding the player's remaining fee will go to the team pot."}
+                      ? t('sponsors.modal.waterfallHelp')
+                      : t('sponsors.modal.directHelp')}
                   </p>
                 </div>
               ) : (
                 <div className="bg-background border border-border rounded-lg p-3">
                   <p className="text-xs text-muted-foreground">
-                    <span className="font-semibold text-foreground">{activeMethod.label}:</span> {activeMethod.blurb}
+                    <span className="font-semibold text-foreground">{methodLabel(activeMethod.value)}:</span>{' '}
+                    {methodBlurb(activeMethod.value)}
                   </p>
                 </div>
               )}
@@ -665,7 +684,7 @@ export default function SponsorsView({
                   }}
                   className="flex-1 py-3 font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t('sponsors.modal.cancel')}
                 </button>
                 <button
                   onClick={() => {
@@ -675,7 +694,7 @@ export default function SponsorsView({
                   }}
                   className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all shadow-lg shadow-emerald-600/20"
                 >
-                  Apply {activeMethod.label}
+                  {t('sponsors.modal.apply', { method: methodLabel(activeMethod.value) })}
                 </button>
               </div>
             </div>

@@ -5,8 +5,11 @@ import { I18nProvider } from './i18n/I18nContext';
 import { ThemeProvider } from './theme/ThemeContext';
 import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary';
+import { registerServiceWorker } from './registerSW';
 import '@fontsource-variable/geist';
 import './index.css';
+
+registerServiceWorker();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

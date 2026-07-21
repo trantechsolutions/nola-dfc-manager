@@ -13,6 +13,7 @@ import {
   CalendarRange,
 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
+import { getCompliance } from '../../utils/compliance';
 import { useT } from '../../i18n/I18nContext';
 import ClubCalendarView from './ClubCalendarView';
 
@@ -37,22 +38,31 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
             ]);
             const seasonPlayers = players.filter((p) => p.seasonProfiles?.[selectedSeason]);
 
-            const medical = seasonPlayers.filter((p) => p.medicalRelease).length;
-            const reeplayer = seasonPlayers.filter((p) => p.reePlayerWaiver).length;
-            const fullyCompliant = seasonPlayers.filter((p) => p.medicalRelease && p.reePlayerWaiver).length;
+            const medical = seasonPlayers.filter((p) => getCompliance(p, selectedSeason).medicalRelease).length;
+            const reeplayer = seasonPlayers.filter((p) => getCompliance(p, selectedSeason).reePlayerWaiver).length;
+            const fullyCompliant = seasonPlayers.filter((p) => {
+              const c = getCompliance(p, selectedSeason);
+              return c.medicalRelease && c.reePlayerWaiver;
+            }).length;
 
             const docsUploaded = docs.length;
             const docsVerified = docs.filter((d) => d.status === 'verified').length;
             const docsPending = docs.filter((d) => d.status === 'uploaded').length;
 
             const missingCompliance = seasonPlayers
-              .filter((p) => !p.medicalRelease || !p.reePlayerWaiver)
-              .map((p) => ({
-                name: `${p.firstName} ${p.lastName}`,
-                jersey: p.jerseyNumber,
-                missingMedical: !p.medicalRelease,
-                missingReeplayer: !p.reePlayerWaiver,
-              }));
+              .filter((p) => {
+                const c = getCompliance(p, selectedSeason);
+                return !c.medicalRelease || !c.reePlayerWaiver;
+              })
+              .map((p) => {
+                const c = getCompliance(p, selectedSeason);
+                return {
+                  name: `${p.firstName} ${p.lastName}`,
+                  jersey: p.jerseyNumber,
+                  missingMedical: !c.medicalRelease,
+                  missingReeplayer: !c.reePlayerWaiver,
+                };
+              });
 
             data[team.id] = {
               playerCount: seasonPlayers.length,
