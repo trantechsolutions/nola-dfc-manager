@@ -7,13 +7,13 @@ import {
 } from '../../utils/seasonUtils';
 
 describe('getSeasonDateRange', () => {
-  it('returns Aug 1 to Jul 31 for a season', () => {
+  it('returns Jul 1 to Jun 30 for a season', () => {
     const range = getSeasonDateRange('2025-2026');
-    expect(range.start.getMonth()).toBe(7); // August = 7
+    expect(range.start.getMonth()).toBe(6); // July = 6
     expect(range.start.getDate()).toBe(1);
     expect(range.start.getFullYear()).toBe(2025);
-    expect(range.end.getMonth()).toBe(6); // July = 6
-    expect(range.end.getDate()).toBe(31);
+    expect(range.end.getMonth()).toBe(5); // June = 5
+    expect(range.end.getDate()).toBe(30);
     expect(range.end.getFullYear()).toBe(2026);
   });
 
@@ -48,8 +48,8 @@ describe('getSeasonForDate', () => {
 
   it('returns null for a date outside all seasons', () => {
     const seasonIds = ['2025-2026'];
-    // July 2025 is before Aug 1 2025, outside 2025-2026
-    const result = getSeasonForDate('2025-07-15', seasonIds);
+    // June 2025 is before Jul 1 2025, outside 2025-2026 (belongs to 2024-2025)
+    const result = getSeasonForDate('2025-06-15', seasonIds);
     expect(result).toBeNull();
   });
 

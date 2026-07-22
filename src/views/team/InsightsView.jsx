@@ -211,7 +211,7 @@ Season: ${selectedSeason} (${seasonRange.start.toLocaleDateString()} to ${season
 Be concise, practical, specific with dollar amounts. No markdown headers. Under 300 words.
 
 SEASON TIMING:
-- Season runs: August ${selectedSeason.split('-')[0]} to May ${selectedSeason.split('-')[1]}
+- Season runs: July ${selectedSeason.split('-')[0]} to June ${selectedSeason.split('-')[1]}
 - Current date: ${new Date().toLocaleDateString()}
 - Season ${a.seasonStatus} (${a.seasonProgress}% through)
 
@@ -322,7 +322,7 @@ ${playerSummary}`;
         <div>
           <h2 className="text-2xl font-bold text-foreground">{t('insights.title')}</h2>
           <p className="text-xs text-muted-foreground font-semibold mt-0.5">
-            {selectedSeason} (Aug {selectedSeason.split('-')[0]} – May {selectedSeason.split('-')[1]}) ·{' '}
+            {selectedSeason} (Jul {selectedSeason.split('-')[0]} – Jun {selectedSeason.split('-')[1]}) ·{' '}
             {seasonEvents.upcoming.length + seasonEvents.past.length} events ·{' '}
             {m.summary.upcomingWithNoCost > 0
               ? `${m.summary.upcomingWithNoCost} ${t('insights.unpaid')}`

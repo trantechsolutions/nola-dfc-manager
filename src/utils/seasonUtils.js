@@ -1,6 +1,6 @@
 // src/utils/seasonUtils.js
 // Parses season IDs (e.g., "2025-2026") into date boundaries.
-// Season runs August 1 of the first year to July 31 of the second year.
+// Season runs July 1 of the first year to June 30 of the second year.
 
 /**
  * Parse a season ID like "2025-2026" into start/end dates.
@@ -11,8 +11,8 @@ export function getSeasonDateRange(seasonId) {
   const startYear = parseInt(parts[0], 10);
   const endYear = parseInt(parts[1], 10) || startYear + 1;
 
-  const start = new Date(startYear, 7, 1); // August 1
-  const end = new Date(endYear, 6, 31, 23, 59, 59); // July 31, 23:59:59
+  const start = new Date(startYear, 6, 1); // July 1
+  const end = new Date(endYear, 5, 30, 23, 59, 59); // June 30, 23:59:59
 
   return {
     start,

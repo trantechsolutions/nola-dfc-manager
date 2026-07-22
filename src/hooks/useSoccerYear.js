@@ -10,13 +10,13 @@ import { supabaseService } from '../services/supabaseService';
 export const useSoccerYear = (user, teamId = null, defaultSeason = null) => {
   const [seasons, setSeasons] = useState([]);
   const [teamSeasons, setTeamSeasons] = useState([]);
-  // Compute current season dynamically: Aug-Jul cycle
+  // Compute current season dynamically: Jul-Jun cycle
   const [selectedSeason, setSelectedSeason] = useState(() => {
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth(); // 0-indexed
-    // If Aug (7) or later, season is year-year+1. Otherwise year-1-year.
-    return month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+    // If Jul (6) or later, season is year-year+1. Otherwise year-1-year.
+    return month >= 6 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
   });
   const [loading, setLoading] = useState(true);
 

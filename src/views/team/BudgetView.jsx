@@ -733,7 +733,7 @@ export default function BudgetView({
                 )}
               </div>
               <p className="text-xs text-muted-foreground font-semibold mt-0.5">
-                Aug {selectedSeason.split('-')[0]} – May {selectedSeason.split('-')[1]} · {seasonPlayers.length} players
+                Jul {selectedSeason.split('-')[0]} – Jun {selectedSeason.split('-')[1]} · {seasonPlayers.length} players
                 · Fee: {formatMoney(roundedBaseFee)}
               </p>
             </div>
