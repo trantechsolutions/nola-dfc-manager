@@ -2,14 +2,13 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Calendar,
+  CalendarOff,
   ChevronDown,
-  MapPin,
   Clock,
   Share2,
   Check,
   Link2,
   LogIn,
-  Filter,
   X,
   List,
   CalendarDays,
@@ -18,19 +17,26 @@ import {
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import ICAL from 'ical.js';
-import { classifyEvent, EVENT_TYPES, EVENT_CALENDAR_COLORS } from '../../utils/eventClassifier';
 
 const PUBLIC_HEADERS = {
   apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
   Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
 };
 
+const BLACKOUT_COLOR = { bg: '#1e293b', border: '#0f172a', text: '#94a3b8' };
+
+// Format a 'YYYY-MM-DD' string into a friendly, timezone-safe display date.
+function formatDateStr(dateStr) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 // ── Fetch teams directly (no auth required — uses anon key + public RLS policy) ──
 async function fetchPublicTeams() {
   try {
     const res = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/teams?select=id,name,age_group,gender,tier,ical_url,color_primary,status&status=eq.active&order=name`,
-      { headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY } },
+      { headers: PUBLIC_HEADERS },
     );
     if (!res.ok) return [];
     const data = await res.json();
@@ -50,6 +56,8 @@ async function fetchPublicTeams() {
 }
 
 // ── Fetch & parse iCal for a team ──
+// Public consumers only ever see that a team is *unavailable* during a slot —
+// the event title, location, and type are intentionally never surfaced here.
 async function fetchTeamEvents(team) {
   if (!team?.icalUrl) return [];
   try {
@@ -62,32 +70,28 @@ async function fetchTeamEvents(team) {
       .getAllSubcomponents('vevent')
       .map((vevent) => {
         const event = new ICAL.Event(vevent);
-        const jsDate = event.startDate.toJSDate();
-        const descProp = vevent.getFirstPropertyValue('description');
-        const description = descProp ? String(descProp) : '';
+        const jsStart = event.startDate.toJSDate();
+        const jsEnd = event.endDate ? event.endDate.toJSDate() : null;
         const status = vevent.getFirstPropertyValue('status') || 'CONFIRMED';
-        const isCancelled = status.toUpperCase() === 'CANCELLED';
+        const isCancelled = String(status).toUpperCase() === 'CANCELLED';
 
         return {
           id: `${team.id}-${event.uid}`,
-          title: event.summary,
-          description,
-          location: event.location || 'TBD',
           timestamp: event.startDate.toUnixTime(),
-          eventType: classifyEvent(event.summary, description),
           isCancelled,
           teamId: team.id,
           teamName: team.name,
           teamColor: team.colorPrimary,
-          displayDate: jsDate.toLocaleDateString(undefined, {
+          displayDate: jsStart.toLocaleDateString(undefined, {
             weekday: 'short',
             month: 'short',
             day: 'numeric',
             year: 'numeric',
           }),
-          displayTime: jsDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
-          isoDate: jsDate.toISOString().split('T')[0],
-          start: jsDate.toISOString(),
+          displayTime: jsStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+          displayEndTime: jsEnd ? jsEnd.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : null,
+          start: jsStart.toISOString(),
+          end: jsEnd ? jsEnd.toISOString() : null,
         };
       })
       .filter((e) => !e.isCancelled);
@@ -100,7 +104,7 @@ async function fetchTeamEvents(team) {
 // ── Fetch blackout dates ──
 async function fetchBlackouts() {
   try {
-    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/blackouts?select=date_str`, {
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/blackouts?select=date_str,team_id`, {
       headers: PUBLIC_HEADERS,
     });
     if (!res.ok) return [];
@@ -109,6 +113,72 @@ async function fetchBlackouts() {
   } catch {
     return [];
   }
+}
+
+// ── Anonymized "Unavailable" detail modal ──
+function UnavailableModal({ detail, onClose }) {
+  if (!detail) return null;
+  const { isBlackout, teamName, teamColor, displayDate, displayTime, displayEndTime } = detail;
+  const timeRange = displayEndTime ? `${displayTime} – ${displayEndTime}` : displayTime;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[300] p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-card rounded-lg p-6 w-full max-w-sm shadow-md animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full">
+              <CalendarOff size={22} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-foreground leading-tight">Unavailable</h3>
+              <p className="text-xs font-medium text-muted-foreground">
+                {isBlackout ? 'Rest day — no bookings' : 'This slot is already booked'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {!isBlackout && teamName && (
+            <div className="flex items-center gap-2.5">
+              <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: teamColor || '#1e293b' }} />
+              <span className="text-sm font-semibold text-foreground">{teamName}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2.5 text-sm text-foreground">
+            <CalendarDays size={15} className="text-muted-foreground shrink-0" />
+            <span className="font-medium">{displayDate}</span>
+          </div>
+          {!isBlackout && timeRange && (
+            <div className="flex items-center gap-2.5 text-sm text-foreground">
+              <Clock size={15} className="text-muted-foreground shrink-0" />
+              <span className="font-medium">{timeRange}</span>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={onClose}
+          className="mt-6 w-full py-2.5 px-4 rounded-lg font-semibold text-foreground bg-muted hover:bg-muted/80 transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function PublicCalendarView({ onBack }) {
@@ -121,9 +191,9 @@ export default function PublicCalendarView({ onBack }) {
   const [blackoutDates, setBlackoutDates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('calendar');
-  const [typeFilter, setTypeFilter] = useState('all');
   const [copied, setCopied] = useState(false);
   const [showTeamDropdown, setShowTeamDropdown] = useState(false);
+  const [selectedDetail, setSelectedDetail] = useState(null);
 
   // ── Load teams on mount ──
   useEffect(() => {
@@ -142,7 +212,11 @@ export default function PublicCalendarView({ onBack }) {
 
   // ── Fetch events when team selection changes ──
   const fetchEvents = useCallback(async () => {
-    if (teams.length === 0) return;
+    if (teams.length === 0) {
+      setEvents([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
 
     let allEvents = [];
@@ -171,52 +245,45 @@ export default function PublicCalendarView({ onBack }) {
   const upcomingEvents = useMemo(() => events.filter((e) => e.timestamp >= now), [events, now]);
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) || null;
 
-  const filteredEvents = useMemo(() => {
-    if (typeFilter === 'all') return upcomingEvents;
-    return upcomingEvents.filter((e) => e.eventType === typeFilter);
-  }, [upcomingEvents, typeFilter]);
+  // Blackouts relevant to the current selection
+  const relevantBlackouts = useMemo(
+    () => blackoutDates.filter((b) => (selectedTeamId === 'all' ? true : !b.team_id || b.team_id === selectedTeamId)),
+    [blackoutDates, selectedTeamId],
+  );
 
-  // Calendar events for FullCalendar
+  // Calendar events for FullCalendar — every real event is masked to "Unavailable"
   const calendarEvents = useMemo(() => {
-    const mapped = events
-      .filter((e) => e.timestamp >= now)
-      .map((event) => {
-        const colors = EVENT_CALENDAR_COLORS[event.eventType] || EVENT_CALENDAR_COLORS.event;
-        return {
-          id: event.id,
-          title: selectedTeamId === 'all' ? `[${event.teamName}] ${event.title}` : event.title,
-          start: event.start,
-          backgroundColor: selectedTeamId === 'all' ? event.teamColor : colors.bg,
-          borderColor: selectedTeamId === 'all' ? event.teamColor : colors.border,
-          textColor: '#ffffff',
-          extendedProps: {
-            location: event.location,
-            time: event.displayTime,
-            eventType: event.eventType,
-            teamName: event.teamName,
-          },
-        };
-      });
-
-    const relevantBlackouts = blackoutDates.filter(
-      (b) =>
-        selectedTeamId === 'all'
-          ? true // Show all blackouts when viewing all teams
-          : !b.team_id || b.team_id === selectedTeamId, // Team-specific + global
-    );
+    const mapped = upcomingEvents.map((event) => ({
+      id: event.id,
+      title: 'Unavailable',
+      start: event.start,
+      end: event.end || undefined,
+      backgroundColor: event.teamColor,
+      borderColor: event.teamColor,
+      textColor: '#ffffff',
+      extendedProps: {
+        isBlackout: false,
+        teamName: event.teamName,
+        teamColor: event.teamColor,
+        displayDate: event.displayDate,
+        displayTime: event.displayTime,
+        displayEndTime: event.displayEndTime,
+      },
+    }));
 
     const blackouts = relevantBlackouts.map((b) => ({
       id: `blackout-${b.date_str}`,
       title: 'Unavailable',
       start: b.date_str,
-      backgroundColor: '#1e293b',
-      borderColor: '#0f172a',
-      textColor: '#94a3b8',
       allDay: true,
+      backgroundColor: BLACKOUT_COLOR.bg,
+      borderColor: BLACKOUT_COLOR.border,
+      textColor: BLACKOUT_COLOR.text,
+      extendedProps: { isBlackout: true, displayDate: formatDateStr(b.date_str) },
     }));
 
     return [...mapped, ...blackouts];
-  }, [events, blackoutDates, selectedTeamId, now]);
+  }, [upcomingEvents, relevantBlackouts]);
 
   // ── Share link ──
   const shareUrl = useMemo(() => {
@@ -243,6 +310,8 @@ export default function PublicCalendarView({ onBack }) {
     }
   };
 
+  const activeTeams = teams.filter((t) => t.icalUrl);
+
   return (
     <div className="min-h-screen bg-background">
       {/* ── HEADER ── */}
@@ -254,11 +323,11 @@ export default function PublicCalendarView({ onBack }) {
                 <Calendar size={20} className="text-blue-400" />
                 <span className="text-xs font-bold text-blue-400">Public Schedule</span>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Team Schedule</h1>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Team Availability</h1>
               <p className="text-muted-foreground text-sm font-medium mt-1">
                 {selectedTeamId === 'all'
-                  ? `${teams.length} teams · ${upcomingEvents.length} upcoming events`
-                  : `${selectedTeam?.name || 'Team'} · ${upcomingEvents.length} upcoming`}
+                  ? `${teams.length} teams · ${upcomingEvents.length} booked slots`
+                  : `${selectedTeam?.name || 'Team'} · ${upcomingEvents.length} booked slots`}
               </p>
             </div>
 
@@ -372,40 +441,10 @@ export default function PublicCalendarView({ onBack }) {
             </button>
           </div>
 
-          {/* Type Filter */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <Filter size={13} className="text-muted-foreground" />
-            <div className="flex flex-wrap gap-1 bg-muted rounded-lg p-0.5">
-              <button
-                onClick={() => setTypeFilter('all')}
-                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
-                  typeFilter === 'all' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'
-                }`}
-              >
-                All
-              </button>
-              {Object.entries(EVENT_TYPES).map(([key, type]) => (
-                <button
-                  key={key}
-                  onClick={() => setTypeFilter(key)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1 ${
-                    typeFilter === key ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'
-                  }`}
-                >
-                  <span className={`w-2 h-2 rounded-full ${type.dot}`} />
-                  {type.label}
-                </button>
-              ))}
-            </div>
-            {typeFilter !== 'all' && (
-              <button
-                onClick={() => setTypeFilter('all')}
-                className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 flex items-center gap-0.5"
-              >
-                <X size={12} /> Clear
-              </button>
-            )}
-          </div>
+          {/* Privacy note */}
+          <p className="text-xs text-muted-foreground font-medium hidden sm:block">
+            Only availability is shown — event details are private.
+          </p>
 
           {/* Share URL (desktop) */}
           <div className="hidden md:flex items-center gap-2 bg-background rounded-lg px-3 py-1.5 border border-border max-w-xs">
@@ -432,26 +471,26 @@ export default function PublicCalendarView({ onBack }) {
           <div className="bg-card p-4 md:p-6 rounded-lg border border-border shadow-sm">
             {/* Legend */}
             <div className="flex flex-wrap gap-3 mb-4 text-xs font-semibold text-muted-foreground">
-              {selectedTeamId === 'all'
-                ? // Team color legend for all-teams view
-                  teams
-                    .filter((t) => t.icalUrl)
-                    .map((t) => (
-                      <span key={t.id} className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: t.colorPrimary }} />
-                        {t.name}
-                      </span>
-                    ))
-                : // Event type legend for single-team view
-                  Object.entries(EVENT_TYPES).map(([key, type]) => (
-                    <span key={key} className="flex items-center gap-1.5">
-                      <span className={`w-2.5 h-2.5 rounded-sm ${type.color}`} />
-                      {type.label}
-                    </span>
-                  ))}
+              {selectedTeamId === 'all' ? (
+                // Team color legend for all-teams view
+                activeTeams.map((t) => (
+                  <span key={t.id} className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: t.colorPrimary }} />
+                    {t.name}
+                  </span>
+                ))
+              ) : (
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className="w-2.5 h-2.5 rounded-sm"
+                    style={{ backgroundColor: selectedTeam?.colorPrimary || '#1e293b' }}
+                  />
+                  Unavailable
+                </span>
+              )}
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-sm bg-foreground" />
-                Unavailable
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: BLACKOUT_COLOR.bg }} />
+                Rest day
               </span>
             </div>
 
@@ -462,16 +501,14 @@ export default function PublicCalendarView({ onBack }) {
               events={calendarEvents}
               eventClick={(info) => {
                 const p = info.event.extendedProps;
-                if (info.event.title === 'Unavailable') {
-                  alert('This date is unavailable (blackout / rest day).');
-                } else {
-                  alert(
-                    `${p.teamName ? `[${p.teamName}] ` : ''}${info.event.title}\n` +
-                      `Type: ${EVENT_TYPES[p.eventType]?.label || 'Event'}\n` +
-                      `Time: ${p.time}\n` +
-                      `Location: ${p.location}`,
-                  );
-                }
+                setSelectedDetail({
+                  isBlackout: p.isBlackout,
+                  teamName: p.teamName,
+                  teamColor: p.teamColor,
+                  displayDate: p.displayDate,
+                  displayTime: p.displayTime,
+                  displayEndTime: p.displayEndTime,
+                });
               }}
               height="auto"
               aspectRatio={1.35}
@@ -483,48 +520,55 @@ export default function PublicCalendarView({ onBack }) {
         ) : (
           /* ── LIST VIEW ── */
           <div className="space-y-2">
-            {filteredEvents.length === 0 ? (
+            {upcomingEvents.length === 0 ? (
               <div className="bg-card rounded-lg border-2 border-dashed border-border p-12 text-center text-muted-foreground font-semibold text-sm">
-                {typeFilter !== 'all' ? 'No events match your filter.' : 'No upcoming events scheduled.'}
+                No upcoming bookings.
               </div>
             ) : (
-              filteredEvents.map((event) => {
-                const type = EVENT_TYPES[event.eventType] || EVENT_TYPES.event;
+              upcomingEvents.map((event) => {
+                const timeRange = event.displayEndTime
+                  ? `${event.displayTime} – ${event.displayEndTime}`
+                  : event.displayTime;
                 return (
-                  <div
+                  <button
                     key={event.id}
-                    className="bg-card rounded-lg border border-border shadow-sm overflow-hidden flex hover:shadow-md dark:hover:shadow-none transition-shadow"
+                    onClick={() =>
+                      setSelectedDetail({
+                        isBlackout: false,
+                        teamName: event.teamName,
+                        teamColor: event.teamColor,
+                        displayDate: event.displayDate,
+                        displayTime: event.displayTime,
+                        displayEndTime: event.displayEndTime,
+                      })
+                    }
+                    className="w-full text-left bg-card rounded-lg border border-border shadow-sm overflow-hidden flex hover:shadow-md dark:hover:shadow-none transition-shadow"
                   >
                     <div className="w-1.5 shrink-0" style={{ backgroundColor: event.teamColor }} />
                     <div className="p-4 flex-grow">
                       <div className="flex items-center gap-2 mb-1.5">
-                        <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded ${type.colorLight}`}>
-                          {type.label}
+                        <span className="text-xs font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                          Unavailable
                         </span>
                         {selectedTeamId === 'all' && (
                           <span className="text-xs font-semibold text-muted-foreground">{event.teamName}</span>
                         )}
                         <span className="text-xs text-muted-foreground ml-auto">{event.displayDate}</span>
                       </div>
-                      <h4 className="font-bold text-foreground text-sm mb-2">{event.title}</h4>
-                      <div className="flex flex-wrap gap-3">
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Clock size={12} className="text-muted-foreground" />
-                          <span className="font-medium">{event.displayTime}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <MapPin size={12} className="text-muted-foreground" />
-                          <span className="font-medium">{event.location}</span>
-                        </div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Clock size={12} className="text-muted-foreground" />
+                        <span className="font-medium">{timeRange}</span>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })
             )}
           </div>
         )}
       </div>
+
+      <UnavailableModal detail={selectedDetail} onClose={() => setSelectedDetail(null)} />
     </div>
   );
 }
