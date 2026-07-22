@@ -61,10 +61,10 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data.json();
   } catch {
-    payload = { title: 'Touchline', body: event.data.text(), url: '/' };
+    payload = { title: 'Cantera', body: event.data.text(), url: '/' };
   }
 
-  const { title = 'Touchline', body = '', url = '/', icon, badge } = payload;
+  const { title = 'Cantera', body = '', url = '/', icon, badge } = payload;
 
   const options = {
     body,

@@ -1,0 +1,24 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Keeper">
+  <defs>
+    <linearGradient id="kpBg" x1="128" y1="40" x2="384" y2="472" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D26A4F"/>
+      <stop offset="1" stop-color="#A5382B"/>
+    </linearGradient>
+  </defs>
+
+  <!-- app-icon squircle (maskable-safe) -->
+  <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#kpBg)"/>
+
+  <!-- the goal: crossbar + two posts, standing on the goal line -->
+  <g stroke="#FFF6F2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M168 360 L168 180 Q168 166 182 166 L330 166 Q344 166 344 180 L344 360" stroke-width="22"/>
+    <path d="M146 360 L366 360" stroke-width="20"/>
+  </g>
+
+  <!-- the clean sheet hanging in the goal -->
+  <rect x="198" y="200" width="116" height="128" rx="14" fill="#FFF6F2"/>
+
+  <!-- reconciled: a slate check, and one ledger rule -->
+  <path d="M224 268 L246 292 L294 236" fill="none" stroke="#0F172A" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M222 306 L290 306" stroke="#A5382B" stroke-width="9" stroke-linecap="round" opacity="0.55"/>
+</svg>

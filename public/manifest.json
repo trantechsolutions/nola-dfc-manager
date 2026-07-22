@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Touchline",
-  "short_name": "Touchline",
-  "description": "Run the whole club from the touchline — soccer team management for coaches, staff, and parents.",
+  "name": "Cantera",
+  "short_name": "Cantera",
+  "description": "Where the club is built — youth soccer club management for coaches, staff, and parents.",
   "icons": [
     {
       "src": "./favicon.svg",

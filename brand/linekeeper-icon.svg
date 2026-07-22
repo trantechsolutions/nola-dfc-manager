@@ -1,0 +1,22 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Linekeeper">
+  <defs>
+    <linearGradient id="lkBg" x1="128" y1="40" x2="384" y2="472" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D26A4F"/>
+      <stop offset="1" stop-color="#A5382B"/>
+    </linearGradient>
+  </defs>
+
+  <!-- app-icon squircle (maskable-safe) -->
+  <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#lkBg)"/>
+
+  <!-- Touchline's open tracking ring -->
+  <path d="M 181 385.9 A 150 150 0 1 1 331 385.9"
+        fill="none" stroke="#FFF6F2" stroke-width="24" stroke-linecap="round" opacity="0.95"/>
+
+  <!-- Keeper's clean-sheet check, closing the loop -->
+  <path d="M212 296 L250 338 L334 230"
+        fill="none" stroke="#FFF6F2" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- clay pentagon: the ball's heart, shared DNA -->
+  <path d="M256 150 L286 172 L274.5 207 L237.5 207 L226 172 Z" fill="#A5382B" opacity="0.9"/>
+</svg>

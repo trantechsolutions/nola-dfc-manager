@@ -1,0 +1,345 @@
+<title>Keeper — Brand Kit</title>
+<meta name="description" content="Keeper — a reimagined brand for the NOLA DFC youth soccer club manager: goalkeeper meets bookkeeper, one clean sheet." />
+<style>
+  :root {
+    --bg: #FBF7F4;
+    --surface: #FFFFFF;
+    --ink: #23140F;
+    --muted: #6B564E;
+    --line: #EADFD8;
+
+    /* brand constants — do not flip with theme */
+    --slate: #0F172A;
+    --slate-2: #17203A;
+    --terra: #B84A38;
+    --terra-lite: #D26A4F;
+    --clay: #A5382B;
+    --chalk: #FFF6F2;
+    --pitch: #2F9160;
+
+    --radius: 16px;
+    --maxw: 1080px;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #120D0B; --surface: #1C1512; --ink: #F6ECE7; --muted: #B79E95; --line: #322622;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #FBF7F4; --surface: #FFFFFF; --ink: #23140F; --muted: #6B564E; --line: #EADFD8;
+  }
+  :root[data-theme="dark"] {
+    --bg: #120D0B; --surface: #1C1512; --ink: #F6ECE7; --muted: #B79E95; --line: #322622;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: clamp(28px, 5vw, 72px) clamp(20px, 5vw, 48px); }
+
+  .eyebrow {
+    font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--terra); font-weight: 700; margin: 0 0 18px;
+  }
+  .on-slate .eyebrow { color: var(--terra-lite); }
+
+  a { color: inherit; }
+  :focus-visible { outline: 2.5px solid var(--terra-lite); outline-offset: 3px; border-radius: 4px; }
+  svg { display: block; }
+  code {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+    font-size: 0.88em; background: color-mix(in srgb, var(--terra) 12%, transparent);
+    padding: 0.1em 0.4em; border-radius: 6px;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    background:
+      radial-gradient(115% 90% at 100% 0%, rgba(210,106,79,0.26), transparent 55%),
+      radial-gradient(90% 120% at 0% 100%, rgba(47,145,96,0.14), transparent 50%),
+      var(--slate);
+    border-radius: calc(var(--radius) + 4px);
+    padding: clamp(32px, 6vw, 68px);
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 44px;
+    align-items: center;
+    color: var(--chalk);
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .hero .eyebrow { color: var(--terra-lite); }
+  .wordmark {
+    font-size: clamp(56px, 11vw, 118px);
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 0.92;
+    margin: 0 0 20px;
+  }
+  .wordmark .dot { color: var(--terra-lite); }
+  .tag {
+    font-size: clamp(16px, 2.1vw, 21px);
+    color: #CBD2E0; margin: 0; max-width: 40ch; line-height: 1.5;
+  }
+  .tag b { color: var(--chalk); font-weight: 600; }
+  .hero .mark { width: clamp(148px, 25vw, 224px); height: auto; filter: drop-shadow(0 26px 50px rgba(0,0,0,0.5)); }
+  @media (max-width: 720px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero .mark { width: 150px; order: -1; }
+  }
+
+  /* reveal */
+  .reveal { opacity: 0; transform: translateY(14px); animation: rise 0.7s var(--ease) forwards; }
+  .reveal.d1 { animation-delay: 0.06s; }
+  .reveal.d2 { animation-delay: 0.13s; }
+  .reveal.d3 { animation-delay: 0.2s; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { animation: none; opacity: 1; transform: none; }
+  }
+
+  /* ---------- SECTIONS ---------- */
+  section { margin-top: clamp(44px, 7vw, 78px); }
+  h2 { font-size: clamp(23px, 3vw, 31px); letter-spacing: -0.02em; margin: 0 0 8px; text-wrap: balance; font-weight: 700; }
+  .lede { color: var(--muted); margin: 0 0 26px; max-width: 62ch; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .swatch-canvas {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 44px;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 236px;
+  }
+  .on-dark { background: var(--slate); border-color: transparent; }
+  .on-light { background: #FFFFFF; }
+  .swatch-canvas .mark { width: 148px; height: auto; }
+  .canvas-label { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 14px 2px 0; font-weight: 600; }
+
+  /* favicon strip */
+  .favi { display: flex; align-items: flex-end; gap: 34px; flex-wrap: wrap; padding: 34px 40px; background: var(--slate); border-radius: var(--radius); }
+  .favi figure { margin: 0; text-align: center; }
+  .favi .cap { display: block; color: #8C93A4; font-size: 11px; margin-top: 12px; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
+
+  /* palette */
+  .palette { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  @media (max-width: 760px) { .palette { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 440px) { .palette { grid-template-columns: repeat(2, 1fr); } }
+  .chip { border-radius: 13px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); transition: transform 0.18s var(--ease); }
+  .chip:hover { transform: translateY(-3px); }
+  .chip .fill { height: 88px; }
+  .chip .meta { padding: 10px 12px; }
+  .chip .nm { font-weight: 700; font-size: 13px; letter-spacing: -0.01em; }
+  .chip .hx { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+  .chip .role { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* cols: rationale + names */
+  .cols { display: grid; grid-template-columns: 1.12fr 0.88fr; gap: 26px; }
+  @media (max-width: 780px) { .cols { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px 28px; }
+  .card h3 { margin: 0 0 14px; font-size: 16px; letter-spacing: 0.02em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .reasons { list-style: none; margin: 0; padding: 0; display: grid; gap: 17px; }
+  .reasons li { padding-left: 20px; position: relative; }
+  .reasons li::before { content: ""; position: absolute; left: 0; top: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--terra); }
+  .reasons b { display: block; font-weight: 600; letter-spacing: -0.01em; }
+  .reasons span { color: var(--muted); font-size: 14.5px; }
+
+  .names { list-style: none; margin: 0; padding: 0; display: grid; }
+  .names li { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; padding: 14px 2px; border-bottom: 1px dashed var(--line); }
+  .names li:last-child { border-bottom: 0; }
+  .names .n { font-weight: 700; letter-spacing: -0.01em; }
+  .names .n.rec { color: var(--terra); }
+  .names .n .flag { font-weight: 500; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pitch); margin-left: 8px; vertical-align: 1px; }
+  .names .why { color: var(--muted); font-size: 13.5px; text-align: right; max-width: 22ch; }
+
+  /* voice / taglines */
+  .voice { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  @media (max-width: 640px) { .voice { grid-template-columns: 1fr; } }
+  .line { border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; background: var(--surface); }
+  .line .role { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--terra); font-weight: 700; margin: 0 0 8px; }
+  .line .txt { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+  .line.big { grid-column: 1 / -1; background: var(--slate); border-color: transparent; color: var(--chalk); }
+  .line.big .role { color: var(--terra-lite); }
+  .line.big .txt { font-size: clamp(24px, 4vw, 34px); font-weight: 800; letter-spacing: -0.03em; }
+
+  /* callout */
+  .callout {
+    display: flex; gap: 18px; align-items: flex-start;
+    border: 1px solid var(--line); border-left: 4px solid var(--pitch);
+    border-radius: var(--radius); padding: 22px 26px; background: var(--surface);
+  }
+  .callout .badge {
+    flex: none; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--pitch); background: color-mix(in srgb, var(--pitch) 14%, transparent);
+    padding: 5px 10px; border-radius: 999px; margin-top: 2px;
+  }
+  .callout p { margin: 0; color: var(--muted); }
+  .callout b { color: var(--ink); font-weight: 600; }
+
+  footer { margin-top: 66px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; }
+  footer .note { color: var(--terra); font-weight: 600; }
+</style>
+
+<!-- ========== shared mark definition ========== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="kpBg" x1="128" y1="40" x2="384" y2="472" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D26A4F"/>
+      <stop offset="1" stop-color="#A5382B"/>
+    </linearGradient>
+    <symbol id="keeper-mark" viewBox="0 0 512 512">
+      <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#kpBg)"/>
+      <g stroke="#FFF6F2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <path d="M168 360 L168 180 Q168 166 182 166 L330 166 Q344 166 344 180 L344 360" stroke-width="22"/>
+        <path d="M146 360 L366 360" stroke-width="20"/>
+      </g>
+      <rect x="198" y="200" width="116" height="128" rx="14" fill="#FFF6F2"/>
+      <path d="M224 268 L246 292 L294 236" fill="none" stroke="#0F172A" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M222 306 L290 306" stroke="#A5382B" stroke-width="9" stroke-linecap="round" opacity="0.55"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <div class="hero on-slate">
+    <div>
+      <p class="eyebrow reveal">Youth Soccer Club Manager</p>
+      <h1 class="wordmark reveal d1">Keeper<span class="dot">.</span></h1>
+      <p class="tag reveal d2">Keep a clean sheet — your club's roster, schedule, dues, and <b>reconciled books</b>, all in one calm place.</p>
+    </div>
+    <svg class="mark reveal d3" viewBox="0 0 512 512" role="img" aria-label="Keeper logo"><use href="#keeper-mark"/></svg>
+  </div>
+
+  <!-- THE NAME -->
+  <section>
+    <p class="eyebrow">The Name</p>
+    <h2>Why “Keeper”</h2>
+    <p class="lede">The goalkeeper is the one position a team trusts with the result — the last line, the one who protects what everyone worked for. This app puts that same guardian in front of a club's money, roster, and schedule. And a <em>keeper</em> is also a <em>bookkeeper</em>: the one who keeps the records straight.</p>
+    <div class="cols">
+      <div class="card">
+        <h3>The case</h3>
+        <ul class="reasons">
+          <li><b>The club's most trusted position.</b><span>The keeper guards the result on the pitch; the treasurer and manager guard it off it. Same job, one name.</span></li>
+          <li><b>Keeper = bookkeeper.</b><span>One who keeps: the ledger, the roster, the documents, the season. Kept — not lost in a spreadsheet.</span></li>
+          <li><b>A clean sheet, on and off the pitch.</b><span>In soccer a clean sheet is a match with nothing conceded. In the books it's every dollar reconciled. Same standard, one word.</span></li>
+          <li><b>One word, two languages.</b><span>Reads as a proper noun in English and Spanish. The meaning lives in the role and the mark — not an English-only pun the way “Touchline / in touch” did.</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>If you'd rather see options</h3>
+        <ul class="names">
+          <li><span class="n rec">Keeper</span><span class="why">recommended — goalkeeper &amp; bookkeeper</span></li>
+          <li><span class="n">Tally</span><span class="why">the running count: the score and the ledger</span></li>
+          <li><span class="n">Sterling</span><span class="why">a byword for sound and trustworthy</span></li>
+          <li><span class="n">Backline</span><span class="why">the last line before the keeper; we've got the club's back</span></li>
+          <li><span class="n">Crescent<span class="flag">NOLA</span></span><span class="why">the Crescent City; a season curved shut</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE MARK -->
+  <section>
+    <p class="eyebrow">The Mark</p>
+    <h2>A goal, with a clean sheet hanging in it</h2>
+    <p class="lede">The goal frame says the sport at a glance. The white sheet with a slate check says the books are reconciled — a keeper's clean sheet, made literal. The terracotta squircle drops straight into the existing icon pipeline, and the whole thing reads the same on a splash screen or a 16&nbsp;px browser tab.</p>
+    <div class="grid-2">
+      <div>
+        <div class="swatch-canvas on-dark">
+          <svg class="mark" viewBox="0 0 512 512" role="img" aria-label="Keeper logo on slate"><use href="#keeper-mark"/></svg>
+        </div>
+        <p class="canvas-label">On slate — app splash / sidebar</p>
+      </div>
+      <div>
+        <div class="swatch-canvas on-light">
+          <svg class="mark" viewBox="0 0 512 512" role="img" aria-label="Keeper logo on white"><use href="#keeper-mark"/></svg>
+        </div>
+        <p class="canvas-label">On white — light theme / print</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAVICON SCALE -->
+  <section>
+    <p class="eyebrow">Holds Up Small</p>
+    <h2>Favicon &amp; home-screen sizes</h2>
+    <p class="lede">Same paths, no redraw. The goal, the sheet, and the check stay legible down to a browser tab.</p>
+    <div class="favi">
+      <figure><svg width="96" height="96" viewBox="0 0 512 512" aria-label="Keeper 96px"><use href="#keeper-mark"/></svg><span class="cap">96</span></figure>
+      <figure><svg width="48" height="48" viewBox="0 0 512 512" aria-label="Keeper 48px"><use href="#keeper-mark"/></svg><span class="cap">48</span></figure>
+      <figure><svg width="32" height="32" viewBox="0 0 512 512" aria-label="Keeper 32px"><use href="#keeper-mark"/></svg><span class="cap">32</span></figure>
+      <figure><svg width="16" height="16" viewBox="0 0 512 512" aria-label="Keeper 16px"><use href="#keeper-mark"/></svg><span class="cap">16</span></figure>
+    </div>
+  </section>
+
+  <!-- VOICE / TAGLINES -->
+  <section>
+    <p class="eyebrow">Voice</p>
+    <h2>Taglines &amp; lockup lines</h2>
+    <p class="lede">One idea, said at four lengths — pick the register the surface needs. Calm, plain, sure of the numbers.</p>
+    <div class="voice">
+      <div class="line big">
+        <p class="role">Primary</p>
+        <p class="txt">Keep a clean sheet.</p>
+      </div>
+      <div class="line">
+        <p class="role">Lockup</p>
+        <p class="txt">A clean sheet, on and off the pitch.</p>
+      </div>
+      <div class="line">
+        <p class="role">App store / manifest</p>
+        <p class="txt">Every dollar accounted for. Every kid taken care of.</p>
+      </div>
+      <div class="line">
+        <p class="role">One-liner</p>
+        <p class="txt">The keeper for your club's books, roster, and schedule.</p>
+      </div>
+      <div class="line">
+        <p class="role">Español</p>
+        <p class="txt">Cuentas claras, temporada tranquila.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PALETTE -->
+  <section>
+    <p class="eyebrow">Palette</p>
+    <h2>The app's own colors, plus one</h2>
+    <p class="lede">Terracotta and slate are lifted straight from the shipped theme (<code>oklch(0.55 0.15 25)</code> and the PWA theme color) — nothing new to reconcile. The one addition is <b>Pitch green</b>, already the app's success token, promoted to brand duty: paid, reconciled, a clean sheet.</p>
+    <div class="palette">
+      <div class="chip"><div class="fill" style="background:#D26A4F"></div><div class="meta"><div class="nm">Coral</div><div class="hx">#D26A4F</div><div class="role">brand light</div></div></div>
+      <div class="chip"><div class="fill" style="background:#B84A38"></div><div class="meta"><div class="nm">Terracotta</div><div class="hx">#B84A38</div><div class="role">brand</div></div></div>
+      <div class="chip"><div class="fill" style="background:#A5382B"></div><div class="meta"><div class="nm">Clay</div><div class="hx">#A5382B</div><div class="role">brand deep</div></div></div>
+      <div class="chip"><div class="fill" style="background:#0F172A"></div><div class="meta"><div class="nm">Slate</div><div class="hx">#0F172A</div><div class="role">ground / trust</div></div></div>
+      <div class="chip"><div class="fill" style="background:#2F9160"></div><div class="meta"><div class="nm">Pitch</div><div class="hx">#2F9160</div><div class="role">clean sheet</div></div></div>
+      <div class="chip"><div class="fill" style="background:#FFF6F2;border-bottom:1px solid var(--line)"></div><div class="meta"><div class="nm">Chalk</div><div class="hx">#FFF6F2</div><div class="role">the lines</div></div></div>
+    </div>
+  </section>
+
+  <!-- BILINGUAL NOTE -->
+  <section>
+    <div class="callout">
+      <span class="badge">EN · ES</span>
+      <p><b>Built to survive translation.</b> The app ships bilingual, with a full Spanish push queued. “Keeper” works because it leans on the universal role of the goalkeeper and a mark that needs no words — not a pun that only lands in English. The Spanish voice line carries the same promise: <em>cuentas claras, temporada tranquila.</em></p>
+    </div>
+  </section>
+
+  <footer>
+    <span>Keeper — youth soccer club manager</span>
+    <span>Terracotta / Slate · goal &amp; clean-sheet mark</span>
+    <span class="note">Proposal — replaces Touchline. Live app unchanged until you say go.</span>
+  </footer>
+</div>

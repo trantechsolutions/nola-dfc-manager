@@ -1,0 +1,253 @@
+<title>Naming Alternatives — Club Manager</title>
+<meta name="description" content="Six more name-and-logo directions for the NOLA DFC club manager, plus runners-up — each mark on the shared terracotta/slate system." />
+<style>
+  :root {
+    --bg: #FBF7F4; --surface: #FFFFFF; --ink: #23140F; --muted: #6B564E; --line: #EADFD8;
+    --slate: #0F172A; --terra: #B84A38; --terra-lite: #D26A4F; --clay: #A5382B; --chalk: #FFF6F2; --pitch: #2F9160;
+    --radius: 16px; --maxw: 1140px; --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #120D0B; --surface: #1C1512; --ink: #F6ECE7; --muted: #B79E95; --line: #322622; }
+  }
+  :root[data-theme="light"] { --bg: #FBF7F4; --surface: #FFFFFF; --ink: #23140F; --muted: #6B564E; --line: #EADFD8; }
+  :root[data-theme="dark"] { --bg: #120D0B; --surface: #1C1512; --ink: #F6ECE7; --muted: #B79E95; --line: #322622; }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: clamp(28px, 5vw, 68px) clamp(20px, 5vw, 48px); }
+  .eyebrow { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--terra); font-weight: 700; margin: 0 0 16px; }
+  h1 { font-size: clamp(32px, 6vw, 56px); letter-spacing: -0.035em; line-height: 1.0; margin: 0 0 16px; font-weight: 800; text-wrap: balance; }
+  h1 .hl { color: var(--terra); }
+  .intro { color: var(--muted); font-size: clamp(16px, 2vw, 19px); max-width: 60ch; margin: 0; }
+  :focus-visible { outline: 2.5px solid var(--terra-lite); outline-offset: 3px; border-radius: 4px; }
+  svg { display: block; }
+
+  section { margin-top: clamp(40px, 6vw, 64px); }
+  h2 { font-size: clamp(20px, 3vw, 26px); letter-spacing: -0.02em; margin: 0 0 6px; font-weight: 700; }
+  .lede { color: var(--muted); margin: 0 0 24px; max-width: 60ch; }
+
+  /* seen strip */
+  .seen { display: flex; gap: 14px; flex-wrap: wrap; }
+  .seen .mini { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px 8px 8px; background: var(--surface); }
+  .seen .mini svg { width: 38px; height: 38px; border-radius: 10px; }
+  .seen .mini b { font-weight: 700; letter-spacing: -0.01em; font-size: 14px; }
+  .seen .mini span { color: var(--muted); font-size: 12.5px; margin-left: 2px; }
+
+  /* options grid */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+
+  .opt {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 24px; display: flex; flex-direction: column; gap: 4px;
+    transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease), border-color 0.18s var(--ease);
+  }
+  .opt:hover { transform: translateY(-4px); box-shadow: 0 16px 40px -22px rgba(35,20,15,0.5); border-color: color-mix(in srgb, var(--terra) 35%, var(--line)); }
+  .opt .mark { width: 108px; height: 108px; margin-bottom: 14px; filter: drop-shadow(0 12px 22px rgba(0,0,0,0.16)); }
+  .opt .head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .opt .nm { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; }
+  .opt .chip { flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--terra); background: color-mix(in srgb, var(--terra) 12%, transparent); padding: 4px 9px; border-radius: 999px; }
+  .opt .rat { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+  .opt .tl { margin: 12px 0 0; padding-top: 12px; border-top: 1px dashed var(--line); font-weight: 600; letter-spacing: -0.01em; font-size: 14.5px; }
+  .opt .tl::before { content: "“"; color: var(--terra); }
+  .opt .tl::after { content: "”"; color: var(--terra); }
+  .opt.edge .chip { color: var(--pitch); background: color-mix(in srgb, var(--pitch) 14%, transparent); }
+
+  /* runners-up */
+  .runners { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 40px; }
+  @media (max-width: 640px) { .runners { grid-template-columns: 1fr; } }
+  .runners li { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; padding: 13px 2px; border-bottom: 1px dashed var(--line); }
+  .runners .n { font-weight: 700; letter-spacing: -0.01em; }
+  .runners .why { color: var(--muted); font-size: 13px; text-align: right; max-width: 26ch; }
+
+  footer { margin-top: 60px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; }
+  footer .note { color: var(--terra); font-weight: 600; }
+</style>
+
+<!-- ========== marks ========== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="brandBg" x1="128" y1="40" x2="384" y2="472" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D26A4F"/><stop offset="1" stop-color="#A5382B"/>
+    </linearGradient>
+
+    <!-- already seen -->
+    <symbol id="tl-mark" viewBox="0 0 512 512">
+      <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#brandBg)"/>
+      <path d="M 181 385.9 A 150 150 0 1 1 331 385.9" fill="none" stroke="#FFF6F2" stroke-width="20" stroke-linecap="round" opacity="0.95"/>
+      <circle cx="256" cy="256" r="118" fill="#FFFFFF"/>
+      <g stroke="#A5382B" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <path d="M256 212 L256 150"/><path d="M297.8 242.4 L356.8 223.2"/><path d="M281.9 291.6 L318.3 341.8"/>
+        <path d="M230.1 291.6 L193.7 341.8"/><path d="M214.2 242.4 L155.2 223.2"/>
+        <path d="M256 212 L297.8 242.4 L281.9 291.6 L230.1 291.6 L214.2 242.4 Z" fill="#A5382B"/>
+      </g>
+    </symbol>
+    <symbol id="kp-mark" viewBox="0 0 512 512">
+      <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#brandBg)"/>
+      <g stroke="#FFF6F2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <path d="M168 360 L168 180 Q168 166 182 166 L330 166 Q344 166 344 180 L344 360" stroke-width="22"/>
+        <path d="M146 360 L366 360" stroke-width="20"/>
+      </g>
+      <rect x="198" y="200" width="116" height="128" rx="14" fill="#FFF6F2"/>
+      <path d="M224 268 L246 292 L294 236" fill="none" stroke="#0F172A" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="lk-mark" viewBox="0 0 512 512">
+      <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#brandBg)"/>
+      <path d="M 181 385.9 A 150 150 0 1 1 331 385.9" fill="none" stroke="#FFF6F2" stroke-width="24" stroke-linecap="round" opacity="0.95"/>
+      <path d="M212 296 L250 338 L334 230" fill="none" stroke="#FFF6F2" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M256 150 L286 172 L274.5 207 L237.5 207 L226 172 Z" fill="#A5382B" opacity="0.9"/>
+    </symbol>
+
+    <!-- 1. Tally: tally marks -->
+    <symbol id="m-tally" viewBox="0 0 512 512">
+      <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#brandBg)"/>
+      <g stroke="#FFF6F2" stroke-width="21" stroke-linecap="round" fill="none">
+        <path d="M200 200 L200 312"/><path d="M238 200 L238 312"/><path d="M276 200 L276 312"/><path d="M314 200 L314 312"/>
+      </g>
+      <path d="M184 306 L330 206" stroke="#0F172A" stroke-width="21" stroke-linecap="round"/>
+    </symbol>
+
+    <!-- 2. Captain: armband + star -->
+    <symbol id="m-captain" viewBox="0 0 512 512">
+      <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#brandBg)"/>
+      <rect x="150" y="212" width="212" height="88" rx="44" fill="#FFF6F2"/>
+      <path d="M256 216 L265.4 243.1 L294.0 243.6 L271.2 260.9 L279.5 288.4 L256 272 L232.5 288.4 L240.8 260.9 L218.0 243.6 L246.6 243.1 Z" fill="#A5382B"/>
+    </symbol>
+
+    <!-- 3. Lineup: team sheet -->
+    <symbol id="m-lineup" viewBox="0 0 512 512">
+      <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#brandBg)"/>
+      <rect x="168" y="152" width="176" height="212" rx="20" fill="#FFF6F2"/>
+      <rect x="232" y="138" width="48" height="30" rx="10" fill="#A5382B"/>
+      <g stroke="#A5382B" stroke-width="13" stroke-linecap="round" opacity="0.55">
+        <path d="M198 214 L314 214"/><path d="M198 254 L314 254"/><path d="M198 294 L272 294"/>
+      </g>
+    </symbol>
+
+    <!-- 4. Sterling: bullion / bars -->
+    <symbol id="m-sterling" viewBox="0 0 512 512">
+      <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#brandBg)"/>
+      <rect x="176" y="288" width="160" height="46" rx="12" fill="#FFF6F2"/>
+      <rect x="192" y="234" width="128" height="46" rx="12" fill="#FFF6F2"/>
+      <rect x="208" y="180" width="96" height="46" rx="12" fill="#FFF6F2"/>
+    </symbol>
+
+    <!-- 5. Crescent: crescent + ball -->
+    <symbol id="m-crescent" viewBox="0 0 512 512">
+      <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#brandBg)"/>
+      <mask id="cresMask" maskUnits="userSpaceOnUse">
+        <rect x="0" y="0" width="512" height="512" fill="#000"/>
+        <circle cx="250" cy="256" r="122" fill="#FFF"/>
+        <circle cx="308" cy="256" r="108" fill="#000"/>
+      </mask>
+      <rect x="0" y="0" width="512" height="512" fill="#FFF6F2" mask="url(#cresMask)"/>
+      <circle cx="252" cy="256" r="34" fill="#FFF6F2"/>
+      <path d="M252 235 L271 249 L263.7 271 L240.3 271 L233 249 Z" fill="#A5382B"/>
+    </symbol>
+
+    <!-- 6. Matchday: center circle + spot -->
+    <symbol id="m-matchday" viewBox="0 0 512 512">
+      <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#brandBg)"/>
+      <path d="M256 148 L256 364" stroke="#FFF6F2" stroke-width="20" stroke-linecap="round"/>
+      <circle cx="256" cy="256" r="104" fill="none" stroke="#FFF6F2" stroke-width="20"/>
+      <circle cx="256" cy="256" r="30" fill="#FFF6F2"/>
+      <path d="M256 236 L272 248 L266 267 L246 267 L240 248 Z" fill="#A5382B"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Naming — more to review</p>
+    <h1>Six more <span class="hl">directions</span></h1>
+    <p class="intro">Different territories, so the choice is real: financial-trust, leadership, organization, premium, hometown, and matchday energy. Same palette and icon system as before — compare them like for like.</p>
+  </header>
+
+  <!-- already seen -->
+  <section>
+    <h2>Already on the table</h2>
+    <p class="lede">The three you've seen, for reference.</p>
+    <div class="seen">
+      <div class="mini"><svg viewBox="0 0 512 512"><use href="#tl-mark"/></svg><span><b>Touchline</b> · the original</span></div>
+      <div class="mini"><svg viewBox="0 0 512 512"><use href="#kp-mark"/></svg><span><b>Keeper</b> · clean sheet</span></div>
+      <div class="mini"><svg viewBox="0 0 512 512"><use href="#lk-mark"/></svg><span><b>Linekeeper</b> · the fusion</span></div>
+    </div>
+  </section>
+
+  <!-- new directions -->
+  <section>
+    <h2>New directions</h2>
+    <p class="lede">Each is a name and a mark that holds down to a favicon. The green tag flags the two that carry the app's real edge — trustworthy with money.</p>
+    <div class="grid">
+
+      <div class="opt edge">
+        <svg class="mark" viewBox="0 0 512 512" role="img" aria-label="Tally mark"><use href="#m-tally"/></svg>
+        <div class="head"><span class="nm">Tally</span><span class="chip">Ledger + score</span></div>
+        <p class="rat">The running count — the score on the pitch and the balance in the books, kept in one place. The mark is the oldest way to keep score there is.</p>
+        <p class="tl">Keep the tally.</p>
+      </div>
+
+      <div class="opt">
+        <svg class="mark" viewBox="0 0 512 512" role="img" aria-label="Captain mark"><use href="#m-captain"/></svg>
+        <div class="head"><span class="nm">Captain</span><span class="chip">Leadership</span></div>
+        <p class="rat">You already run the club — Captain just hands you the armband. Warm, human, and unmistakably the one in charge.</p>
+        <p class="tl">Wear the armband.</p>
+      </div>
+
+      <div class="opt">
+        <svg class="mark" viewBox="0 0 512 512" role="img" aria-label="Lineup mark"><use href="#m-lineup"/></svg>
+        <div class="head"><span class="nm">Lineup</span><span class="chip">In order</span></div>
+        <p class="rat">The team sheet made digital — roster, schedule, and dues, everyone accounted for and ready. Echoes the “line” without leaning on it.</p>
+        <p class="tl">Your club, lined up.</p>
+      </div>
+
+      <div class="opt edge">
+        <svg class="mark" viewBox="0 0 512 512" role="img" aria-label="Sterling mark"><use href="#m-sterling"/></svg>
+        <div class="head"><span class="nm">Sterling</span><span class="chip">Premium</span></div>
+        <p class="rat">A byword for sound, trustworthy, and true — the quiet register for a tool people hand their money to. Bars that double as a balance sheet.</p>
+        <p class="tl">Sound to the last cent.</p>
+      </div>
+
+      <div class="opt">
+        <svg class="mark" viewBox="0 0 512 512" role="img" aria-label="Crescent mark"><use href="#m-crescent"/></svg>
+        <div class="head"><span class="nm">Crescent</span><span class="chip">New Orleans</span></div>
+        <p class="rat">The Crescent City, worn with local pride — and a moon that closes the loop on a season. The only option that says where the club is from.</p>
+        <p class="tl">Made in the Crescent City.</p>
+      </div>
+
+      <div class="opt">
+        <svg class="mark" viewBox="0 0 512 512" role="img" aria-label="Matchday mark"><use href="#m-matchday"/></svg>
+        <div class="head"><span class="nm">Matchday</span><span class="chip">Energetic</span></div>
+        <p class="rat">The day it all comes together — the register for a club that lives for Saturday. Lightest on the money angle, heaviest on heart.</p>
+        <p class="tl">Everything, by matchday.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- runners-up -->
+  <section>
+    <h2>Also on the table</h2>
+    <p class="lede">Names worth a look if none above lands — no marks drawn yet; say the word and I'll draw any of them.</p>
+    <ul class="runners">
+      <li><span class="n">Backline</span><span class="why">the defense that has the club's back</span></li>
+      <li><span class="n">Tabla</span><span class="why">bilingual by design — the standings table &amp; the ledger</span></li>
+      <li><span class="n">Gaffer</span><span class="why">insider slang for the boss who runs it all</span></li>
+      <li><span class="n">Kickoff</span><span class="why">energetic, ops-forward, start of everything</span></li>
+      <li><span class="n">Corner Flag</span><span class="why">playful and crest-ready</span></li>
+      <li><span class="n">Skipper</span><span class="why">the captain, a shade friendlier</span></li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>Naming alternatives — youth soccer club manager</span>
+    <span>All on the shared terracotta / slate / chalk system</span>
+    <span class="note">Proposal — live app unchanged until you say go.</span>
+  </footer>
+</div>

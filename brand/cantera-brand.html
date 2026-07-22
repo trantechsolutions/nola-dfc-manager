@@ -1,0 +1,248 @@
+<title>Cantera — Brand Concept</title>
+<meta name="description" content="Cantera — a world-football name for the NOLA DFC youth club manager: a club's cantera is the youth academy it quarries its future from. Bilingual, unique, ownable." />
+<style>
+  :root {
+    --bg: #FBF7F4; --surface: #FFFFFF; --ink: #23140F; --muted: #6B564E; --line: #EADFD8;
+    --slate: #0F172A; --terra: #B84A38; --terra-lite: #D26A4F; --clay: #A5382B; --chalk: #FFF6F2; --pitch: #2F9160;
+    --radius: 16px; --maxw: 1080px; --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #120D0B; --surface: #1C1512; --ink: #F6ECE7; --muted: #B79E95; --line: #322622; }
+  }
+  :root[data-theme="light"] { --bg: #FBF7F4; --surface: #FFFFFF; --ink: #23140F; --muted: #6B564E; --line: #EADFD8; }
+  :root[data-theme="dark"] { --bg: #120D0B; --surface: #1C1512; --ink: #F6ECE7; --muted: #B79E95; --line: #322622; }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: clamp(28px, 5vw, 72px) clamp(20px, 5vw, 48px); }
+  .eyebrow { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--terra); font-weight: 700; margin: 0 0 18px; }
+  :focus-visible { outline: 2.5px solid var(--terra-lite); outline-offset: 3px; border-radius: 4px; }
+  svg { display: block; }
+  em.w { font-style: italic; color: var(--ink); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.88em; background: color-mix(in srgb, var(--terra) 12%, transparent); padding: 0.1em 0.4em; border-radius: 6px; }
+
+  /* HERO */
+  .hero {
+    background:
+      radial-gradient(115% 90% at 100% 0%, rgba(210,106,79,0.26), transparent 55%),
+      radial-gradient(90% 120% at 0% 100%, rgba(47,145,96,0.14), transparent 50%),
+      var(--slate);
+    border-radius: calc(var(--radius) + 4px); padding: clamp(32px, 6vw, 68px);
+    display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 44px; align-items: center;
+    color: var(--chalk); position: relative; overflow: hidden; isolation: isolate;
+  }
+  .hero .eyebrow { color: var(--terra-lite); }
+  .pron { font-size: 13px; letter-spacing: 0.04em; color: #9AA3B4; margin: 8px 0 0; font-variant: small-caps; }
+  .wordmark { font-size: clamp(56px, 11vw, 120px); font-weight: 800; letter-spacing: -0.045em; line-height: 0.92; margin: 0; }
+  .wordmark .dot { color: var(--terra-lite); }
+  .tag { font-size: clamp(17px, 2.2vw, 22px); color: #CBD2E0; margin: 18px 0 0; max-width: 40ch; line-height: 1.5; }
+  .tag b { color: var(--chalk); font-weight: 600; }
+  .hero .mark { width: clamp(150px, 25vw, 228px); height: auto; filter: drop-shadow(0 26px 50px rgba(0,0,0,0.5)); }
+  @media (max-width: 720px) { .hero { grid-template-columns: 1fr; } .hero .mark { width: 152px; order: -1; } }
+
+  .reveal { opacity: 0; transform: translateY(14px); animation: rise 0.7s var(--ease) forwards; }
+  .reveal.d1 { animation-delay: 0.06s; } .reveal.d2 { animation-delay: 0.13s; } .reveal.d3 { animation-delay: 0.2s; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .reveal { animation: none; opacity: 1; transform: none; } }
+
+  section { margin-top: clamp(44px, 7vw, 78px); }
+  h2 { font-size: clamp(23px, 3vw, 31px); letter-spacing: -0.02em; margin: 0 0 8px; text-wrap: balance; font-weight: 700; }
+  .lede { color: var(--muted); margin: 0 0 26px; max-width: 64ch; }
+
+  .cols { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 26px; }
+  @media (max-width: 780px) { .cols { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px 28px; }
+  .card h3 { margin: 0 0 14px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .reasons { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+  .reasons li { padding-left: 20px; position: relative; }
+  .reasons li::before { content: ""; position: absolute; left: 0; top: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--terra); }
+  .reasons b { display: block; font-weight: 600; letter-spacing: -0.01em; }
+  .reasons span { color: var(--muted); font-size: 14.5px; }
+
+  .worldfootball { margin: 0; padding: 0; list-style: none; display: grid; gap: 13px; }
+  .worldfootball li { color: var(--muted); font-size: 14px; padding-left: 18px; position: relative; }
+  .worldfootball li::before { content: "›"; position: absolute; left: 0; color: var(--terra); font-weight: 700; }
+  .worldfootball b { color: var(--ink); font-weight: 600; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+  .swatch-canvas { border: 1px solid var(--line); border-radius: var(--radius); padding: 44px; display: flex; align-items: center; justify-content: center; min-height: 224px; }
+  .on-dark { background: var(--slate); border-color: transparent; }
+  .on-light { background: #FFFFFF; }
+  .swatch-canvas .mark { width: 144px; height: 144px; }
+  .canvas-label { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin: 14px 2px 0; font-weight: 600; }
+
+  .favi { display: flex; align-items: flex-end; gap: 34px; flex-wrap: wrap; padding: 34px 40px; background: var(--slate); border-radius: var(--radius); margin-top: 20px; }
+  .favi figure { margin: 0; text-align: center; }
+  .favi .cap { display: block; color: #8C93A4; font-size: 11px; margin-top: 12px; letter-spacing: 0.08em; font-variant-numeric: tabular-nums; }
+
+  .voice { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  @media (max-width: 640px) { .voice { grid-template-columns: 1fr; } }
+  .voiceline { border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; background: var(--surface); }
+  .voiceline .role { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--terra); font-weight: 700; margin: 0 0 8px; }
+  .voiceline .txt { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+  .voiceline.big { grid-column: 1 / -1; background: var(--slate); border-color: transparent; color: var(--chalk); }
+  .voiceline.big .role { color: var(--terra-lite); }
+  .voiceline.big .txt { font-size: clamp(24px, 4vw, 34px); font-weight: 800; letter-spacing: -0.03em; }
+
+  .names { list-style: none; margin: 0; padding: 0; display: grid; }
+  .names li { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; padding: 14px 2px; border-bottom: 1px dashed var(--line); }
+  .names li:last-child { border-bottom: 0; }
+  .names .n { font-weight: 700; letter-spacing: -0.01em; }
+  .names .n .tongue { font-weight: 500; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--pitch); margin-left: 8px; vertical-align: 1px; }
+  .names .why { color: var(--muted); font-size: 13.5px; text-align: right; max-width: 30ch; }
+
+  .palette { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  @media (max-width: 760px) { .palette { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 440px) { .palette { grid-template-columns: repeat(2, 1fr); } }
+  .chip { border-radius: 13px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); }
+  .chip .fill { height: 78px; }
+  .chip .meta { padding: 9px 11px; }
+  .chip .nm { font-weight: 700; font-size: 12.5px; }
+  .chip .hx { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  footer { margin-top: 66px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; }
+  footer .note { color: var(--terra); font-weight: 600; }
+</style>
+
+<!-- ========== mark ========== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="cnBg" x1="128" y1="40" x2="384" y2="472" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D26A4F"/><stop offset="1" stop-color="#A5382B"/>
+    </linearGradient>
+    <!-- Cantera: the ball's pentagon, cut like quarried stone -->
+    <symbol id="cn-mark" viewBox="0 0 512 512">
+      <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#cnBg)"/>
+      <!-- gem body -->
+      <path d="M256 117 L384.4 210.3 L335.3 361.2 L176.7 361.2 L127.6 210.3 Z" fill="#FFF6F2"/>
+      <!-- table facet (catching light) -->
+      <path d="M256 200 L305.5 235.9 L286.6 294.1 L225.4 294.1 L206.5 235.9 Z" fill="#A5382B" opacity="0.14"/>
+      <!-- crown facets + table edges -->
+      <g stroke="#A5382B" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.85">
+        <path d="M256 200 L305.5 235.9 L286.6 294.1 L225.4 294.1 L206.5 235.9 Z"/>
+        <path d="M256 200 L256 117"/>
+        <path d="M305.5 235.9 L384.4 210.3"/>
+        <path d="M286.6 294.1 L335.3 361.2"/>
+        <path d="M225.4 294.1 L176.7 361.2"/>
+        <path d="M206.5 235.9 L127.6 210.3"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div>
+      <p class="eyebrow reveal">Youth Soccer Club Manager</p>
+      <h1 class="wordmark reveal d1">Cantera<span class="dot">.</span></h1>
+      <p class="pron reveal d1">Spanish · can-<b>teh</b>-ra · a club's youth academy</p>
+      <p class="tag reveal d2">Where the club is built — young players, rosters, dues, schedules, and the books, <b>quarried from one foundation.</b></p>
+    </div>
+    <svg class="mark reveal d3" viewBox="0 0 512 512" role="img" aria-label="Cantera logo"><use href="#cn-mark"/></svg>
+  </div>
+
+  <!-- THE NAME -->
+  <section>
+    <p class="eyebrow">The Name</p>
+    <h2>A word from the football world, not the soccer one</h2>
+    <p class="lede">Everywhere the game is <em class="w">football</em>, a club's <em class="w">cantera</em> is its youth academy — literally its “quarry,” the ground a club digs its future out of and shapes. The kids who come up through it are <em class="w">canteranos</em>. It's the single most important idea in youth football, and no English word carries it.</p>
+    <div class="cols">
+      <div class="card">
+        <h3>Why it's the one</h3>
+        <ul class="reasons">
+          <li><b>It's literally this app.</b><span>A tool for running a youth club <em>is</em> the cantera, made digital — the players, their growth, the money and dates behind them.</span></li>
+          <li><b>Bilingual by birth.</b><span>A Spanish word your families already feel. With a full Spanish release queued, the name works in both languages from day one — no pun lost in translation.</span></li>
+          <li><b>Unique and ownable.</b><span>Unheard-of as an English-market app name, yet instantly real to anyone in the game. The name is yours to define.</span></li>
+          <li><b>The metaphor builds.</b><span>A cantera is quarried stone — the foundation you build on. It covers players <em>and</em> books: everything the club is built from.</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>In the football world</h3>
+        <ul class="worldfootball">
+          <li><b>La Masia</b> — Barcelona's cantera; produced Messi, Xavi, Iniesta.</li>
+          <li><b>La Fábrica</b> — Real Madrid's; “the factory.”</li>
+          <li>A player “<b>de la cantera</b>” is homegrown — the highest compliment a club pays.</li>
+          <li>“<b>Apostar por la cantera</b>” — to bet on your youth — is a club's proudest stance.</li>
+          <li>Used across the Spanish-speaking football world, from Buenos Aires to right here.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE MARK -->
+  <section>
+    <p class="eyebrow">The Mark</p>
+    <h2>The ball's pentagon, cut from stone</h2>
+    <p class="lede">The pentagon is the shape at the heart of every soccer ball. Here it's faceted like a cut gem — raw talent quarried and shaped, the whole idea of a cantera in one figure. It keeps the sport's DNA while looking like nothing else in the space, and collapses cleanly to a favicon.</p>
+    <div class="grid-2">
+      <div>
+        <div class="swatch-canvas on-dark"><svg class="mark" viewBox="0 0 512 512" role="img" aria-label="Cantera on slate"><use href="#cn-mark"/></svg></div>
+        <p class="canvas-label">On slate — app splash / sidebar</p>
+      </div>
+      <div>
+        <div class="swatch-canvas on-light"><svg class="mark" viewBox="0 0 512 512" role="img" aria-label="Cantera on white"><use href="#cn-mark"/></svg></div>
+        <p class="canvas-label">On white — light theme / print</p>
+      </div>
+    </div>
+    <div class="favi">
+      <figure><svg width="96" height="96" viewBox="0 0 512 512" aria-label="96px"><use href="#cn-mark"/></svg><span class="cap">96</span></figure>
+      <figure><svg width="48" height="48" viewBox="0 0 512 512" aria-label="48px"><use href="#cn-mark"/></svg><span class="cap">48</span></figure>
+      <figure><svg width="32" height="32" viewBox="0 0 512 512" aria-label="32px"><use href="#cn-mark"/></svg><span class="cap">32</span></figure>
+      <figure><svg width="16" height="16" viewBox="0 0 512 512" aria-label="16px"><use href="#cn-mark"/></svg><span class="cap">16</span></figure>
+    </div>
+  </section>
+
+  <!-- VOICE -->
+  <section>
+    <p class="eyebrow">Voice</p>
+    <h2>Taglines</h2>
+    <div class="voice">
+      <div class="voiceline big"><p class="role">Primary</p><p class="txt">Where the club is built.</p></div>
+      <div class="voiceline"><p class="role">Lockup</p><p class="txt">Run the club from the ground up.</p></div>
+      <div class="voiceline"><p class="role">Manifest</p><p class="txt">Players, dues, and dates — one foundation.</p></div>
+      <div class="voiceline"><p class="role">Español</p><p class="txt">Donde se construye el club.</p></div>
+    </div>
+  </section>
+
+  <!-- OTHER WORLD-FOOTBALL NAMES -->
+  <section>
+    <p class="eyebrow">If not Cantera</p>
+    <h2>Other names from world football</h2>
+    <p class="lede">Same instinct — reach past the American vocabulary. Say the word and I'll draw a mark for any of them.</p>
+    <ul class="names">
+      <li><span class="n">Semillero<span class="tongue">ES</span></span><span class="why">the “seedbed” — a club's nursery for young talent</span></li>
+      <li><span class="n">Cancha<span class="tongue">ES</span></span><span class="why">the pitch itself, in Latin American football — where it all happens</span></li>
+      <li><span class="n">Grassroots<span class="tongue">EN</span></span><span class="why">the official global term for community youth football</span></li>
+      <li><span class="n">Eleven<span class="tongue">XI</span></span><span class="why">the team is “the eleven” — clean, numeric, universal</span></li>
+      <li><span class="n">Dugout<span class="tongue">EN</span></span><span class="why">where the club is run from, match to match</span></li>
+    </ul>
+  </section>
+
+  <!-- PALETTE -->
+  <section>
+    <p class="eyebrow">Palette</p>
+    <h2>The shipped colors carry over</h2>
+    <p class="lede">Terracotta and clay already read as fired earth and stone — the cantera's own materials. Nothing to re-theme.</p>
+    <div class="palette">
+      <div class="chip"><div class="fill" style="background:#D26A4F"></div><div class="meta"><div class="nm">Coral</div><div class="hx">#D26A4F</div></div></div>
+      <div class="chip"><div class="fill" style="background:#B84A38"></div><div class="meta"><div class="nm">Terracotta</div><div class="hx">#B84A38</div></div></div>
+      <div class="chip"><div class="fill" style="background:#A5382B"></div><div class="meta"><div class="nm">Clay</div><div class="hx">#A5382B</div></div></div>
+      <div class="chip"><div class="fill" style="background:#0F172A"></div><div class="meta"><div class="nm">Slate</div><div class="hx">#0F172A</div></div></div>
+      <div class="chip"><div class="fill" style="background:#2F9160"></div><div class="meta"><div class="nm">Pitch</div><div class="hx">#2F9160</div></div></div>
+      <div class="chip"><div class="fill" style="background:#FFF6F2;border-bottom:1px solid var(--line)"></div><div class="meta"><div class="nm">Chalk</div><div class="hx">#FFF6F2</div></div></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Cantera — youth soccer club manager</span>
+    <span>Terracotta / Slate · the quarried pentagon</span>
+    <span class="note">Proposal — live app unchanged until you say go.</span>
+  </footer>
+</div>

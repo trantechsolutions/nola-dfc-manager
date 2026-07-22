@@ -5,7 +5,11 @@
       <stop offset="1" stop-color="#A5382B"/>
     </linearGradient>
   </defs>
+
+  <!-- app-icon squircle (maskable-safe) -->
   <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#cnBg)"/>
+
+  <!-- the ball's pentagon, faceted like quarried stone -->
   <path d="M256 117 L384.4 210.3 L335.3 361.2 L176.7 361.2 L127.6 210.3 Z" fill="#FFF6F2"/>
   <path d="M256 200 L305.5 235.9 L286.6 294.1 L225.4 294.1 L206.5 235.9 Z" fill="#A5382B" opacity="0.14"/>
   <g stroke="#A5382B" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.85">
