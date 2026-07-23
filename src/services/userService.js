@@ -80,6 +80,7 @@ export const userService = {
       userId: r.user_id,
       email: profileMap[r.user_id]?.email || null,
       displayName: profileMap[r.user_id]?.displayName || null,
+      isActive: profileMap[r.user_id]?.isActive ?? true,
     }));
   },
 

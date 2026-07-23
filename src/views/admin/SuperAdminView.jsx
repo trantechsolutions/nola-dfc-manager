@@ -1,5 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Building2, Plus, Trash2, Users, X, Shield, UserPlus, Layers, ClipboardCheck, Sparkles } from 'lucide-react';
+import {
+  Building2,
+  Plus,
+  Trash2,
+  Users,
+  X,
+  Shield,
+  UserPlus,
+  Layers,
+  ClipboardCheck,
+  Sparkles,
+  Ban,
+} from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
 
@@ -28,6 +40,7 @@ export default function SuperAdminView({
   const [loadingSAs, setLoadingSAs] = useState(true);
   const [saEmail, setSaEmail] = useState('');
   const [saSaving, setSaSaving] = useState(false);
+  const [saTogglingId, setSaTogglingId] = useState(null);
 
   // Single-team mode
   const [stmSaving, setStmSaving] = useState(false);
@@ -95,6 +108,28 @@ export default function SuperAdminView({
       if (showToast) showToast('Super admin revoked.');
     } catch (e) {
       if (showToast) showToast('Failed to revoke.', true);
+    }
+  };
+
+  const handleToggleSuperAdminActive = async (sa) => {
+    if (sa.userId === currentUserId) {
+      if (showToast) showToast('You cannot disable your own super admin access.', true);
+      return;
+    }
+    const activeCount = superAdmins.filter((x) => x.isActive).length;
+    if (sa.isActive && activeCount <= 1) {
+      if (showToast) showToast('Cannot disable the last active super admin.', true);
+      return;
+    }
+    setSaTogglingId(sa.id);
+    try {
+      await supabaseService.updateUserProfile(sa.userId, { isActive: !sa.isActive });
+      setSuperAdmins((prev) => prev.map((x) => (x.id === sa.id ? { ...x, isActive: !x.isActive } : x)));
+      if (showToast) showToast(sa.isActive ? 'Super admin disabled.' : 'Super admin re-enabled.');
+    } catch (e) {
+      if (showToast) showToast('Failed to update.', true);
+    } finally {
+      setSaTogglingId(null);
     }
   };
 
@@ -353,29 +388,60 @@ export default function SuperAdminView({
             {superAdmins.map((sa) => {
               const isSelf = sa.userId === currentUserId;
               const isLast = superAdmins.length <= 1;
+              const isLastActive = sa.isActive && superAdmins.filter((x) => x.isActive).length <= 1;
               return (
-                <div key={sa.id} className="flex items-center justify-between bg-background p-3 rounded-lg">
+                <div
+                  key={sa.id}
+                  className={`flex items-center justify-between bg-background p-3 rounded-lg ${!sa.isActive ? 'opacity-60' : ''}`}
+                >
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-foreground truncate">
+                    <p className="text-xs font-semibold text-foreground truncate flex items-center gap-2">
                       {sa.displayName || sa.email || sa.userId.slice(0, 12) + '…'}
-                      {isSelf && <span className="ml-2 text-violet-700 dark:text-violet-400">(you)</span>}
+                      {isSelf && <span className="text-violet-700 dark:text-violet-400">(you)</span>}
+                      {!sa.isActive && (
+                        <span className="font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 px-1.5 py-0.5 rounded">
+                          DISABLED
+                        </span>
+                      )}
                     </p>
                     {sa.email && sa.displayName && <p className="text-xs text-muted-foreground truncate">{sa.email}</p>}
                   </div>
-                  <button
-                    onClick={() => handleRevokeSuperAdmin(sa)}
-                    disabled={isSelf || isLast}
-                    title={
-                      isSelf
-                        ? 'You cannot revoke your own access'
-                        : isLast
-                          ? 'Cannot remove the last super admin'
-                          : 'Revoke'
-                    }
-                    className="p-2 text-muted-foreground hover:text-red-700 dark:hover:text-red-400 rounded-lg transition-colors disabled:opacity-30 disabled:hover:text-muted-foreground"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => handleToggleSuperAdminActive(sa)}
+                      disabled={isSelf || isLastActive || saTogglingId === sa.id}
+                      title={
+                        isSelf
+                          ? 'You cannot disable your own access'
+                          : isLastActive
+                            ? 'Cannot disable the last active super admin'
+                            : sa.isActive
+                              ? 'Disable'
+                              : 'Re-enable'
+                      }
+                      className={`p-2 rounded-lg transition-colors disabled:opacity-30 disabled:hover:text-muted-foreground ${
+                        sa.isActive
+                          ? 'text-muted-foreground hover:text-amber-700 dark:hover:text-amber-400'
+                          : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                      }`}
+                    >
+                      <Ban size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleRevokeSuperAdmin(sa)}
+                      disabled={isSelf || isLast}
+                      title={
+                        isSelf
+                          ? 'You cannot revoke your own access'
+                          : isLast
+                            ? 'Cannot remove the last super admin'
+                            : 'Revoke'
+                      }
+                      className="p-2 text-muted-foreground hover:text-red-700 dark:hover:text-red-400 rounded-lg transition-colors disabled:opacity-30 disabled:hover:text-muted-foreground"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               );
             })}
