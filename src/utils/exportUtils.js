@@ -63,8 +63,8 @@ export function exportLedgerPDF(transactions, seasonInfo, formatMoney) {
   let totalExpenses = 0;
 
   const sorted = [...transactions].sort((a, b) => {
-    const da = a.date ? new Date(a.date) : new Date(0);
-    const db = b.date ? new Date(b.date) : new Date(0);
+    const da = a.date?.seconds || 0;
+    const db = b.date?.seconds || 0;
     return da - db;
   });
 
@@ -82,7 +82,7 @@ export function exportLedgerPDF(transactions, seasonInfo, formatMoney) {
       doc.setFontSize(8);
     }
 
-    const date = tx.date ? new Date(tx.date).toLocaleDateString() : '';
+    const date = tx.date?.seconds ? new Date(tx.date.seconds * 1000).toLocaleDateString() : '';
     const title = truncate(tx.title || tx.description || '', 30);
     const category = truncate(tx.category || '', 20);
     const player = truncate(tx.playerName || '', 22);

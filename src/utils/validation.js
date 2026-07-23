@@ -3,6 +3,8 @@
  * Each function returns null on success or a string error message on failure.
  */
 
+import { parseDateOnly } from './ageGroup';
+
 export function validateTransaction(txData) {
   if (!txData.title || !txData.title.trim()) return 'Title is required.';
 
@@ -24,8 +26,8 @@ export function validatePlayer(playerData) {
   if (!playerData.lastName || !playerData.lastName.trim()) return 'Last name is required.';
 
   if (playerData.birthdate) {
-    const d = new Date(playerData.birthdate);
-    if (isNaN(d.getTime())) return 'Birthdate is invalid.';
+    const d = parseDateOnly(playerData.birthdate);
+    if (!d) return 'Birthdate is invalid.';
     const now = new Date();
     if (d > now) return 'Birthdate cannot be in the future.';
   }

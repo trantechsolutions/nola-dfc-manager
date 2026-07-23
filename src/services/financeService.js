@@ -169,7 +169,7 @@ export const financeService = {
       teamSeasonId: tx.team_season_id,
       playerId: tx.player_id,
       playerName: tx.players ? `${tx.players.first_name} ${tx.players.last_name}` : null,
-      date: { seconds: Math.floor(new Date(tx.date).getTime() / 1000) },
+      date: tx.date ? { seconds: Math.floor(new Date(tx.date + 'T12:00:00').getTime() / 1000) } : null,
       rawDate: tx.date,
       split: tx.split,
       category: tx.category,

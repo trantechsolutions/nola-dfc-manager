@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
-import { getUSAgeGroup, getAge } from '../../utils/ageGroup';
+import { getUSAgeGroup, getAge, formatDateOnly } from '../../utils/ageGroup';
 import { formatPhone, phoneDigits, phoneHref } from '../../utils/phone';
 import { getCompliance } from '../../utils/compliance';
 import { DOC_TYPE_LABELS, DOC_STATUS_COLORS } from '../../utils/constants';
@@ -506,7 +506,7 @@ export default function RosterManagement({
                         {player.birthdate && (
                           <p className="text-xs text-muted-foreground">
                             {t('playerForm.age')} {getAge(player.birthdate)} &middot; DOB{' '}
-                            {new Date(player.birthdate).toLocaleDateString()}
+                            {formatDateOnly(player.birthdate)}
                           </p>
                         )}
                         {isArchived && (

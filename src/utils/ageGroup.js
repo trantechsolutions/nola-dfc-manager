@@ -66,15 +66,48 @@ export function getUSAgeGroup(birthdate, seasonId) {
 }
 
 /**
+ * Parse a YYYY-MM-DD (optionally with a time/offset suffix) date-only string
+ * into a Date anchored to LOCAL midnight, rather than the UTC midnight that
+ * `new Date('YYYY-MM-DD')` produces. Without this, reading the result back
+ * with local getters (or .toLocaleDateString()) rolls the calendar day back
+ * by one in any timezone behind UTC — e.g. a 5/18 birthdate displaying as 5/17.
+ *
+ * @param {string} dateStr
+ * @returns {Date|null}
+ */
+export function parseDateOnly(dateStr) {
+  if (!dateStr) return null;
+  const isoMatch = typeof dateStr === 'string' && dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, y, m, d] = isoMatch;
+    return new Date(Number(y), Number(m) - 1, Number(d));
+  }
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Format a YYYY-MM-DD date-only string for display, without the timezone
+ * shift that `new Date(dateStr).toLocaleDateString()` is prone to.
+ *
+ * @param {string} dateStr
+ * @param {Intl.DateTimeFormatOptions} [options]
+ * @returns {string}
+ */
+export function formatDateOnly(dateStr, options) {
+  const d = parseDateOnly(dateStr);
+  return d ? d.toLocaleDateString(undefined, options) : '';
+}
+
+/**
  * Calculate a player's current age from birthdate.
  *
  * @param {string} birthdate – ISO date string (YYYY-MM-DD)
  * @returns {number|null}
  */
 export function getAge(birthdate) {
-  if (!birthdate) return null;
-  const birth = new Date(birthdate);
-  if (isNaN(birth.getTime())) return null;
+  const birth = parseDateOnly(birthdate);
+  if (!birth) return null;
   const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();

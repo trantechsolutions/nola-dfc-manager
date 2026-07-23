@@ -68,6 +68,7 @@ export default {
     paidPercent: '{{n}}% pagado',
     fullyPaid: '¡Totalmente pagado — gracias!',
     remaining: '{{amount}} restante',
+    paymentsUnavailableDraft: 'Las opciones de pago aparecerán cuando se finalice el presupuesto de la temporada.',
     feeBreakdown: 'Desglose de Cuotas',
     baseFee: 'Cuota Base de Temporada',
     teamFeesPaid: 'Cuotas Pagadas',

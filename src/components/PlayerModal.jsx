@@ -3,7 +3,7 @@ import { Eye, FileText, Trash2, FolderOpen } from 'lucide-react';
 import MedicalReleaseForm from './MedicalReleaseForm';
 import { supabaseService } from '../services/supabaseService';
 import { useT } from '../i18n/I18nContext';
-import { getUSAgeGroup, getAge } from '../utils/ageGroup';
+import { getUSAgeGroup, getAge, formatDateOnly } from '../utils/ageGroup';
 import { formatPhone } from '../utils/phone';
 import { getCompliance } from '../utils/compliance';
 import { DOC_TYPE_LABELS, DOC_STATUS_COLORS } from '../utils/constants';
@@ -110,8 +110,7 @@ export default function PlayerModal({
               </h3>
               {player.birthdate && (
                 <span className="text-xs text-muted-foreground mt-0.5">
-                  {t('playerForm.age')} {getAge(player.birthdate)} &middot; DOB{' '}
-                  {new Date(player.birthdate).toLocaleDateString()}
+                  {t('playerForm.age')} {getAge(player.birthdate)} &middot; DOB {formatDateOnly(player.birthdate)}
                 </span>
               )}
               {isWaived && (

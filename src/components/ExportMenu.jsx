@@ -29,7 +29,7 @@ export default function ExportMenu({ transactions, players, calculatePlayerFinan
       { key: 'status', label: 'Status' },
     ];
     const rows = transactions.map((tx) => ({
-      date: tx.date ? new Date(tx.date).toLocaleDateString() : '',
+      date: tx.date?.seconds ? new Date(tx.date.seconds * 1000).toLocaleDateString() : '',
       title: tx.title || tx.description || '',
       category: tx.category || '',
       playerName: tx.playerName || '',

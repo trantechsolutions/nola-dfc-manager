@@ -23,7 +23,7 @@ import {
 import MedicalReleaseForm from '../../components/MedicalReleaseForm';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
-import { getUSAgeGroup, getAge } from '../../utils/ageGroup';
+import { getUSAgeGroup, getAge, formatDateOnly } from '../../utils/ageGroup';
 import { formatPhone, phoneHref } from '../../utils/phone';
 import { getCompliance } from '../../utils/compliance';
 
@@ -202,6 +202,14 @@ export default function ParentView({
     fetchPlayerDocs();
   }, [fetchPlayerDocs]);
 
+  // Documents are fetched once per player, then narrowed to the season in
+  // view — legacy docs with no season_id are excluded rather than shown
+  // for every season.
+  const seasonDocs = useMemo(
+    () => playerDocs.filter((d) => d.seasonId === selectedSeason),
+    [playerDocs, selectedSeason],
+  );
+
   // ── EMPTY STATE (after all hooks) ──
   if (!players || players.length === 0 || !activePlayer)
     return (
@@ -314,7 +322,7 @@ export default function ParentView({
             className="bg-transparent border-none text-sm font-semibold text-blue-600 dark:text-blue-400 focus:ring-0 cursor-pointer text-right"
           >
             {playerSeasons.map((s) => (
-              <option key={s.id} value={s.id} className="text-foreground">
+              <option key={s.id} value={s.id} className="text-black">
                 {s.name || s.id}
               </option>
             ))}
@@ -345,7 +353,7 @@ export default function ParentView({
                   {activePlayer.birthdate && (
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {t('playerForm.age')} {getAge(activePlayer.birthdate)} &middot; DOB{' '}
-                      {new Date(activePlayer.birthdate).toLocaleDateString()}
+                      {formatDateOnly(activePlayer.birthdate)}
                     </p>
                   )}
                   {playerTeam && (
@@ -420,104 +428,62 @@ export default function ParentView({
             </div>
           </div>
 
-          {/* Payment Progress (visual breakdown) */}
-          {financials.baseFee > 0 && !financials.isWaived && (
-            <div className="bg-card p-5 rounded-lg border border-border shadow-sm">
-              <h3 className="font-semibold text-foreground mb-4 text-xs flex items-center gap-2">
-                <TrendingUp size={14} className="text-muted-foreground" /> {t('parent.paymentProgress')}
-              </h3>
-              <div className="relative h-4 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="absolute inset-y-0 left-0 bg-blue-500 rounded-l-full transition-all duration-700"
-                  style={{ width: `${Math.min(100, (financials.totalPaid / financials.baseFee) * 100)}%` }}
-                />
-                {financials.fundraising + financials.sponsorships + financials.credits > 0 && (
-                  <div
-                    className="absolute inset-y-0 bg-emerald-400 transition-all duration-700"
-                    style={{
-                      left: `${Math.min(100, (financials.totalPaid / financials.baseFee) * 100)}%`,
-                      width: `${Math.min(100 - (financials.totalPaid / financials.baseFee) * 100, ((financials.fundraising + financials.sponsorships + financials.credits) / financials.baseFee) * 100)}%`,
-                    }}
-                  />
-                )}
-              </div>
-              <div className="flex flex-wrap gap-4 mt-3 text-xs font-semibold text-muted-foreground">
-                {financials.totalPaid > 0 && (
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> {t('parent.feesPaid')} (
-                    {formatMoney(financials.totalPaid)})
-                  </span>
-                )}
-                {financials.fundraising > 0 && (
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" /> {t('nav.fundraising')} (
-                    {formatMoney(financials.fundraising)})
-                  </span>
-                )}
-                {financials.sponsorships > 0 && (
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-violet-400" /> {t('categories.sponsorship')} (
-                    {formatMoney(financials.sponsorships)})
-                  </span>
-                )}
-                {financials.credits > 0 && (
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" /> {t('categories.credit')} (
-                    {formatMoney(financials.credits)})
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Payment Options */}
-          {financials.remainingBalance > 0 &&
+          {/* Payment Progress (visual breakdown) — only worth showing once
+              there's an actual mix of payments/credits to break down; the
+              Balance Hero above already covers the plain 0%-paid case */}
+          {financials.baseFee > 0 &&
             !financials.isWaived &&
-            (playerTeam?.paymentInfo || accounts.length > 0) && (
-              <PaymentOptions
-                paymentInfo={playerTeam?.paymentInfo || ''}
-                accounts={accounts}
-                playerName={`${activePlayer.firstName} ${activePlayer.lastName}`}
-                remainingBalance={financials.remainingBalance}
-                formatMoney={formatMoney}
-                showToast={showToast}
-              />
-            )}
-
-          {/* Season + Team Selector */}
-          <div className="bg-card p-4 rounded-lg border border-border shadow-sm space-y-3">
-            <div>
-              <label className="text-xs font-bold text-muted-foreground">{t('common.season')}</label>
-              <select
-                value={selectedSeason}
-                onChange={(e) => setSelectedSeason(e.target.value)}
-                className="w-full mt-1 border border-border rounded-lg p-2.5 text-sm font-semibold text-foreground outline-none focus:ring-2 focus:ring-ring"
-              >
-                {playerSeasons.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.id}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {playerTeam && (
-              <div>
-                <label className="text-xs font-bold text-muted-foreground">{t('common.team')}</label>
-                <div className="mt-1 flex items-center gap-2 p-2.5 bg-background rounded-lg border border-border">
-                  <span
-                    className="w-3 h-3 rounded-full shrink-0"
-                    style={{ backgroundColor: playerTeam.colorPrimary || '#1e293b' }}
+            financials.totalPaid + financials.fundraising + financials.sponsorships + financials.credits > 0 && (
+              <div className="bg-card p-5 rounded-lg border border-border shadow-sm">
+                <h3 className="font-semibold text-foreground mb-4 text-xs flex items-center gap-2">
+                  <TrendingUp size={14} className="text-muted-foreground" /> {t('parent.paymentProgress')}
+                </h3>
+                <div className="relative h-4 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 bg-blue-500 rounded-l-full transition-all duration-700"
+                    style={{ width: `${Math.min(100, (financials.totalPaid / financials.baseFee) * 100)}%` }}
                   />
-                  <span className="text-sm font-semibold text-foreground">{playerTeam.name}</span>
-                  <span className="text-xs text-muted-foreground ml-auto">
-                    {playerTeam.ageGroup} · {playerTeam.gender}
-                  </span>
+                  {financials.fundraising + financials.sponsorships + financials.credits > 0 && (
+                    <div
+                      className="absolute inset-y-0 bg-emerald-400 transition-all duration-700"
+                      style={{
+                        left: `${Math.min(100, (financials.totalPaid / financials.baseFee) * 100)}%`,
+                        width: `${Math.min(100 - (financials.totalPaid / financials.baseFee) * 100, ((financials.fundraising + financials.sponsorships + financials.credits) / financials.baseFee) * 100)}%`,
+                      }}
+                    />
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-4 mt-3 text-xs font-semibold text-muted-foreground">
+                  {financials.totalPaid > 0 && (
+                    <span className="flex items-center gap-1">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> {t('parent.feesPaid')} (
+                      {formatMoney(financials.totalPaid)})
+                    </span>
+                  )}
+                  {financials.fundraising > 0 && (
+                    <span className="flex items-center gap-1">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" /> {t('nav.fundraising')} (
+                      {formatMoney(financials.fundraising)})
+                    </span>
+                  )}
+                  {financials.sponsorships > 0 && (
+                    <span className="flex items-center gap-1">
+                      <span className="w-2.5 h-2.5 rounded-full bg-violet-400" /> {t('categories.sponsorship')} (
+                      {formatMoney(financials.sponsorships)})
+                    </span>
+                  )}
+                  {financials.credits > 0 && (
+                    <span className="flex items-center gap-1">
+                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" /> {t('categories.credit')} (
+                      {formatMoney(financials.credits)})
+                    </span>
+                  )}
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Budget Status Card */}
+          {/* Budget Status — single source of truth for draft/finalized state;
+              also explains why Payment Options is or isn't shown below */}
           <div
             className={`p-4 rounded-lg border shadow-sm ${isFinalized ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200' : 'bg-amber-50 dark:bg-amber-900/30 border-amber-200'}`}
           >
@@ -544,9 +510,47 @@ export default function ParentView({
                       ? t('parent.budgetFinalizedMsg')
                       : t('parent.budgetDraftMsg', { amount: formatMoney(financials.baseFee) })}
                 </p>
+                {isDraft && !financials.isWaived && financials.remainingBalance > 0 && (
+                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mt-1">
+                    {t('parent.paymentsUnavailableDraft')}
+                  </p>
+                )}
               </div>
             </div>
           </div>
+
+          {/* Payment Options — withheld until the budget is finalized, since the
+              fee (and therefore the balance owed) is still subject to change */}
+          {isFinalized &&
+            financials.remainingBalance > 0 &&
+            !financials.isWaived &&
+            (playerTeam?.paymentInfo || accounts.length > 0) && (
+              <PaymentOptions
+                paymentInfo={playerTeam?.paymentInfo || ''}
+                accounts={accounts}
+                playerName={`${activePlayer.firstName} ${activePlayer.lastName}`}
+                remainingBalance={financials.remainingBalance}
+                formatMoney={formatMoney}
+                showToast={showToast}
+              />
+            )}
+
+          {/* Team */}
+          {playerTeam && (
+            <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
+              <label className="text-xs font-bold text-muted-foreground">{t('common.team')}</label>
+              <div className="mt-1 flex items-center gap-2 p-2.5 bg-background rounded-lg border border-border">
+                <span
+                  className="w-3 h-3 rounded-full shrink-0"
+                  style={{ backgroundColor: playerTeam.colorPrimary || '#1e293b' }}
+                />
+                <span className="text-sm font-semibold text-foreground">{playerTeam.name}</span>
+                <span className="text-xs text-muted-foreground ml-auto">
+                  {playerTeam.ageGroup} · {playerTeam.gender}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Medical Release Form */}
           <div
@@ -615,7 +619,7 @@ export default function ParentView({
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-foreground text-xs flex items-center gap-2">
                   <FolderOpen size={14} className="text-muted-foreground" /> {t('parent.documents')} (
-                  {playerDocs.length})
+                  {seasonDocs.length})
                 </h3>
                 <button
                   onClick={() => setShowUploadForm((v) => !v)}
@@ -692,13 +696,13 @@ export default function ParentView({
               <div className="p-10 text-center text-muted-foreground font-semibold text-sm animate-pulse">
                 {t('common.loading')}...
               </div>
-            ) : playerDocs.length === 0 ? (
+            ) : seasonDocs.length === 0 ? (
               <div className="p-10 text-center text-muted-foreground font-semibold text-sm">
                 {t('parent.noDocuments')}
               </div>
             ) : (
               <div className="divide-y divide-border">
-                {playerDocs.map((doc) => {
+                {seasonDocs.map((doc) => {
                   const statusColor =
                     {
                       uploaded: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
@@ -768,7 +772,7 @@ export default function ParentView({
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">{t('playerForm.birthdate')}</span>
                     <span className="text-sm font-semibold text-foreground">
-                      {new Date(activePlayer.birthdate).toLocaleDateString()}
+                      {formatDateOnly(activePlayer.birthdate)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">

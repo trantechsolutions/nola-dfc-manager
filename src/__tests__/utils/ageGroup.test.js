@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getUSAgeGroup, getAge } from '../../utils/ageGroup';
+import { getUSAgeGroup, getAge, parseDateOnly, formatDateOnly } from '../../utils/ageGroup';
 
 describe('getAge', () => {
   it('calculates age correctly', () => {
@@ -79,5 +79,25 @@ describe('getUSAgeGroup — fallback (no seasonId)', () => {
   it('returns a valid U-group format', () => {
     expect(getUSAgeGroup('2012-03-15', null)).toMatch(/^U\d+$/);
     expect(getUSAgeGroup('2012-03-15', '')).toMatch(/^U\d+$/);
+  });
+});
+
+describe('parseDateOnly / formatDateOnly — timezone safety', () => {
+  it('anchors a YYYY-MM-DD string to local midnight, not UTC midnight', () => {
+    // new Date('2015-05-18') is UTC midnight, which rolls back to 5/17 in any
+    // timezone behind UTC. parseDateOnly must preserve the literal calendar date.
+    const d = parseDateOnly('2015-05-18');
+    expect(d.getFullYear()).toBe(2015);
+    expect(d.getMonth()).toBe(4); // 0-indexed
+    expect(d.getDate()).toBe(18);
+  });
+
+  it('formats without shifting the day backward', () => {
+    expect(formatDateOnly('2015-05-18')).toBe(new Date(2015, 4, 18).toLocaleDateString());
+  });
+
+  it('returns null/empty for missing input', () => {
+    expect(parseDateOnly(null)).toBeNull();
+    expect(formatDateOnly(null)).toBe('');
   });
 });

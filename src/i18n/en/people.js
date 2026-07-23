@@ -68,6 +68,7 @@ export default {
     paidPercent: '{{n}}% paid',
     fullyPaid: 'Fully paid — thank you!',
     remaining: '{{amount}} remaining',
+    paymentsUnavailableDraft: 'Payment options will appear once the season budget is finalized.',
     feeBreakdown: 'Fee Breakdown',
     baseFee: 'Base Season Fee',
     teamFeesPaid: 'Team Fees Paid',
