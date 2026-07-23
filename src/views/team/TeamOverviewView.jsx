@@ -94,13 +94,17 @@ export default function TeamOverviewView({
   const paymentStats = useMemo(() => {
     const waived = players.filter((p) => p.seasonProfiles?.[selectedSeasonData?.id]?.feeWaived);
     const nonWaived = players.filter((p) => !p.seasonProfiles?.[selectedSeasonData?.id]?.feeWaived);
+    // A player only counts as "paid" if a real fee was assessed (baseFee > 0)
+    // and it's fully covered. Season profiles with no team_season link (e.g.
+    // legacy/orphaned records) resolve to baseFee 0 / remainingBalance 0, which
+    // otherwise looks identical to "fully paid" despite nothing being collected.
     const paid = nonWaived.filter((p) => {
       const fin = playerFinancials[p.id];
-      return fin && fin.remainingBalance <= 0;
+      return fin && fin.baseFee > 0 && fin.remainingBalance <= 0;
     });
     const outstanding = nonWaived.filter((p) => {
       const fin = playerFinancials[p.id];
-      return fin && fin.remainingBalance > 0;
+      return fin && (fin.remainingBalance > 0 || !(fin.baseFee > 0));
     });
     const totalOwed = nonWaived.reduce((s, p) => s + (playerFinancials[p.id]?.baseFee || 0), 0);
     const totalCollected = nonWaived.reduce((s, p) => {
@@ -718,7 +722,7 @@ export default function TeamOverviewView({
                                 {t('overview.owes', { amount: formatMoney(fin.remainingBalance) })}
                               </span>
                             )}
-                            {fin && fin.remainingBalance <= 0 && !isWaived && (
+                            {fin && fin.baseFee > 0 && fin.remainingBalance <= 0 && !isWaived && (
                               <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-0.5">
                                 <CheckCircle2 size={10} /> {t('overview.paid')}
                               </span>

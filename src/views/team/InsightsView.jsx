@@ -106,7 +106,7 @@ export default function InsightsView({
       ...calculatePlayerFinancials(p, transactions),
     }));
     const totalOutstanding = playerBalances.reduce((sum, p) => sum + p.remainingBalance, 0);
-    const paidInFull = playerBalances.filter((p) => p.remainingBalance <= 0).length;
+    const paidInFull = playerBalances.filter((p) => p.baseFee > 0 && p.remainingBalance <= 0).length;
     const collectionRate = playerBalances.length > 0 ? Math.round((paidInFull / playerBalances.length) * 100) : 0;
 
     const projectedExpenses = currentSeasonData?.totalProjectedExpenses || 0;
