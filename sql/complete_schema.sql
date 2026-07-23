@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS teams (
   tier text,
   ical_url text,
   payment_info text DEFAULT '',
+  reeplayer_player_link text DEFAULT '',
+  reeplayer_fan_link text DEFAULT '',
   color_primary text,
   color_secondary text,
   status text DEFAULT 'active'

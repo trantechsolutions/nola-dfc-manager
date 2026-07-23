@@ -16,6 +16,8 @@ export const teamService = {
       colorSecondary: t.color_secondary,
       status: t.status,
       paymentInfo: t.payment_info || '',
+      reeplayerPlayerLink: t.reeplayer_player_link || '',
+      reeplayerFanLink: t.reeplayer_fan_link || '',
     }));
   },
 
@@ -34,6 +36,8 @@ export const teamService = {
       colorSecondary: data.color_secondary,
       status: data.status,
       paymentInfo: data.payment_info || '',
+      reeplayerPlayerLink: data.reeplayer_player_link || '',
+      reeplayerFanLink: data.reeplayer_fan_link || '',
     };
   },
 
@@ -67,6 +71,8 @@ export const teamService = {
     if ('colorSecondary' in updates) row.color_secondary = updates.colorSecondary;
     if ('status' in updates) row.status = updates.status;
     if ('paymentInfo' in updates) row.payment_info = updates.paymentInfo;
+    if ('reeplayerPlayerLink' in updates) row.reeplayer_player_link = updates.reeplayerPlayerLink;
+    if ('reeplayerFanLink' in updates) row.reeplayer_fan_link = updates.reeplayerFanLink;
     const { error } = await supabase.from('teams').update(row).eq('id', teamId);
     if (error) throw error;
   },

@@ -320,11 +320,11 @@ export default function PublicCalendarView({ onBack }) {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <Calendar size={20} className="text-blue-400" />
-                <span className="text-xs font-bold text-blue-400">Public Schedule</span>
+                <Calendar size={20} className="text-accent-foreground/80" />
+                <span className="text-xs font-bold text-accent-foreground/80">Public Schedule</span>
               </div>
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Team Availability</h1>
-              <p className="text-muted-foreground text-sm font-medium mt-1">
+              <p className="text-accent-foreground/70 text-sm font-medium mt-1">
                 {selectedTeamId === 'all'
                   ? `${teams.length} teams · ${upcomingEvents.length} booked slots`
                   : `${selectedTeam?.name || 'Team'} · ${upcomingEvents.length} booked slots`}
@@ -336,7 +336,9 @@ export default function PublicCalendarView({ onBack }) {
               <button
                 onClick={handleCopyLink}
                 className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg font-semibold text-xs transition-all ${
-                  copied ? 'bg-emerald-600 text-white' : 'bg-white/10 text-white hover:bg-white/20'
+                  copied
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-accent-foreground/10 text-accent-foreground hover:bg-accent-foreground/20'
                 }`}
               >
                 {copied ? <Check size={14} /> : <Share2 size={14} />}
@@ -347,7 +349,7 @@ export default function PublicCalendarView({ onBack }) {
               {onBack && (
                 <button
                   onClick={onBack}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg font-semibold text-xs bg-white/10 text-white hover:bg-white/20 transition-all"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg font-semibold text-xs bg-accent-foreground/10 text-accent-foreground hover:bg-accent-foreground/20 transition-all"
                 >
                   <LogIn size={14} /> Sign In
                 </button>
@@ -359,7 +361,7 @@ export default function PublicCalendarView({ onBack }) {
           <div className="mt-4 relative">
             <button
               onClick={() => setShowTeamDropdown(!showTeamDropdown)}
-              className="w-full md:w-auto flex items-center justify-between gap-3 px-4 py-3 bg-white/10 rounded-lg hover:bg-white/15 transition-colors"
+              className="w-full md:w-auto flex items-center justify-between gap-3 px-4 py-3 bg-accent-foreground/10 rounded-lg hover:bg-accent-foreground/15 transition-colors"
             >
               <div className="flex items-center gap-2.5">
                 {selectedTeam && (
@@ -375,14 +377,14 @@ export default function PublicCalendarView({ onBack }) {
                   {selectedTeamId === 'all' ? 'All Teams' : selectedTeam?.name || 'Select Team'}
                 </span>
                 {selectedTeam && (
-                  <span className="text-xs text-muted-foreground font-medium hidden md:inline">
+                  <span className="text-xs text-accent-foreground/70 font-medium hidden md:inline">
                     {selectedTeam.ageGroup} · {selectedTeam.gender} · {selectedTeam.tier}
                   </span>
                 )}
               </div>
               <ChevronDown
                 size={16}
-                className={`text-muted-foreground transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
+                className={`text-accent-foreground/70 transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
               />
             </button>
 
@@ -393,7 +395,7 @@ export default function PublicCalendarView({ onBack }) {
                   className={`w-full text-left px-4 py-3 flex items-center gap-2.5 hover:bg-accent/90 transition-colors ${selectedTeamId === 'all' ? 'bg-muted' : ''}`}
                 >
                   <span className="w-3 h-3 rounded-full bg-gradient-to-br from-blue-400 to-violet-400 shrink-0" />
-                  <span className="text-sm font-semibold text-white">All Teams</span>
+                  <span className="text-sm font-semibold text-foreground">All Teams</span>
                   <span className="text-xs text-muted-foreground ml-auto">{teams.length} teams</span>
                 </button>
                 <div className="border-t border-border" />
@@ -405,7 +407,7 @@ export default function PublicCalendarView({ onBack }) {
                   >
                     <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: t.colorPrimary }} />
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">{t.name}</p>
+                      <p className="text-sm font-semibold text-foreground truncate">{t.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {t.ageGroup} · {t.gender} · {t.tier}
                       </p>

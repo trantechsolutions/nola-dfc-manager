@@ -51,6 +51,7 @@
     --sidebar-accent-foreground: oklch(0.25 0.02 60);
     --sidebar-border: oklch(0.9 0.01 60);
     --sidebar-ring: oklch(0.55 0.15 25);
+    --calendar-today-bg: oklch(0.5 0.08 200 / 12%);
   }
   .dark {
     --background: oklch(0.18 0.01 60);
@@ -90,6 +91,7 @@
     --sidebar-accent-foreground: oklch(0.96 0.005 60);
     --sidebar-border: oklch(0.96 0.005 60 / 18%);
     --sidebar-ring: oklch(0.65 0.16 25);
+    --calendar-today-bg: oklch(0.7 0.1 200 / 18%);
   }
   * {
     border-color: var(--border);
@@ -116,4 +118,30 @@ textarea::placeholder {
 /* Dark mode shadow tuning */
 .dark .shadow-sm {
   --tw-shadow-color: var(--shadow-color);
+}
+
+/* FullCalendar — bridge its own hardcoded light theme (white page bg, #ddd
+   borders, grey neutral text, a murky yellow "today" highlight) to the app's
+   design tokens so it follows light/dark mode instead of always rendering
+   light-theme chrome (e.g. a white sticky day-of-week header on a dark page). */
+.fc {
+  --fc-page-bg-color: var(--card);
+  --fc-neutral-bg-color: var(--muted);
+  --fc-neutral-text-color: var(--muted-foreground);
+  --fc-border-color: var(--border);
+  --fc-button-text-color: var(--foreground);
+  --fc-button-bg-color: var(--muted);
+  --fc-button-border-color: var(--border);
+  --fc-button-hover-bg-color: var(--secondary);
+  --fc-button-hover-border-color: var(--border);
+  --fc-button-active-bg-color: var(--primary);
+  --fc-button-active-border-color: var(--primary);
+  --fc-today-bg-color: var(--calendar-today-bg);
+  --fc-highlight-color: var(--calendar-today-bg);
+  --fc-now-indicator-color: var(--destructive);
+  color: var(--foreground);
+}
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  color: var(--primary-foreground);
 }

@@ -214,12 +214,19 @@ export const playerService = {
   setSeasonCompliance: async (playerId, seasonId, field, value) => {
     if (!seasonId) throw new Error('A season is required to update compliance.');
     const dbField = field === 'reePlayerWaiver' ? 'reeplayer_waiver' : 'medical_release';
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('player_seasons')
       .update({ [dbField]: value })
       .eq('player_id', playerId)
-      .eq('season_id', seasonId);
+      .eq('season_id', seasonId)
+      .select('player_id');
     if (error) throw error;
+    // An UPDATE with no matching row succeeds silently in Supabase — that
+    // would otherwise hide a missing season enrollment (see
+    // sql/fix_missing_player_season_enrollment.sql) behind a "saved fine" UI.
+    if (!data || data.length === 0) {
+      throw new Error(`No ${seasonId} season enrollment found for this player — compliance was not updated.`);
+    }
 
     // Fire-and-forget audit log + compliance notification to parent
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -296,6 +303,24 @@ export const playerService = {
       ...(teamSeasonId ? { team_season_id: teamSeasonId } : {}),
     };
     const { error } = await supabase.from('player_seasons').upsert(row, { onConflict: 'player_id,season_id' });
+    if (error) throw error;
+  },
+
+  // Relinks an EXISTING player_seasons row to a team_season without
+  // touching fee_waived/status. Needed because a player can be enrolled
+  // (addPlayerToSeason) before the team's team_season row exists yet — that
+  // leaves team_season_id NULL, which silently zeroes their fee since
+  // player_financials joins through it. Call this once the team_season is
+  // known (e.g. right after saving/creating the budget) to backfill any
+  // roster players still pointing at the wrong/missing team_season.
+  relinkPlayerSeasonTeamSeason: async (playerId, seasonId, teamSeasonId) => {
+    // Unconditional (not filtered on the current team_season_id) since NULL
+    // is the common case to fix and `.neq()` would never match a NULL column.
+    const { error } = await supabase
+      .from('player_seasons')
+      .update({ team_season_id: teamSeasonId })
+      .eq('player_id', playerId)
+      .eq('season_id', seasonId);
     if (error) throw error;
   },
 

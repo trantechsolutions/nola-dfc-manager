@@ -78,5 +78,13 @@ export default {
     paymentHelp: 'Shown to parents when they have an outstanding balance',
     paymentPlaceholder:
       "e.g. Payments can be made via Venmo @team-handle or Zelle to treasurer@email.com. Please include your player's name in the memo.",
+    reeplayerLinks: 'ReePlayer Links',
+    reeplayerLinksHelp: 'Shown to parents in the player portal',
+    reeplayerPlayerLink: 'Player Sign-Up Link',
+    reeplayerPlayerLinkHelp: 'Shown to parents until staff confirms the ReePlayer account, then it disappears',
+    reeplayerPlayerLinkPlaceholder: 'https://reeplayer.com/signup/...',
+    reeplayerFanLink: 'Fan Link',
+    reeplayerFanLinkHelp: 'Always shown to parents',
+    reeplayerFanLinkPlaceholder: 'https://reeplayer.com/fan/...',
   },
 };

@@ -409,6 +409,21 @@ export default function BudgetView({
       const tsId = savedTs?.id || currentTeamSeason?.id;
       await supabaseService.saveBudgetItems(selectedSeason, budgetItems, tsId);
 
+      // Relink any already-enrolled roster players whose player_seasons row
+      // predates this team_season (e.g. enrolled via Roster Management before
+      // a budget was ever drafted for this team+season, leaving
+      // team_season_id NULL). Without this their fee/balance silently stays
+      // $0 forever since player_financials joins through team_season_id.
+      if (tsId) {
+        const staleLinks = availablePlayers.filter((p) => {
+          const profile = p.seasonProfiles?.[selectedSeason];
+          return profile && profile.teamSeasonId !== tsId;
+        });
+        for (const p of staleLinks) {
+          await supabaseService.relinkPlayerSeasonTeamSeason(p.id, selectedSeason, tsId);
+        }
+      }
+
       // Save any pending roster changes
       if (pendingAssignments.length > 0) {
         for (const p of pendingAssignments) {

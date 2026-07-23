@@ -78,5 +78,13 @@ export default {
     paymentHelp: 'Se muestra a los padres cuando tienen un saldo pendiente',
     paymentPlaceholder:
       'ej. Los pagos se pueden hacer por Venmo @equipo o Zelle a tesorero@correo.com. Incluya el nombre del jugador en la nota.',
+    reeplayerLinks: 'Enlaces de ReePlayer',
+    reeplayerLinksHelp: 'Se muestra a los padres en el portal del jugador',
+    reeplayerPlayerLink: 'Enlace de Registro del Jugador',
+    reeplayerPlayerLinkHelp: 'Se muestra a los padres hasta que el personal confirme la cuenta de ReePlayer',
+    reeplayerPlayerLinkPlaceholder: 'https://reeplayer.com/signup/...',
+    reeplayerFanLink: 'Enlace de Fanáticos',
+    reeplayerFanLinkHelp: 'Siempre se muestra a los padres',
+    reeplayerFanLinkPlaceholder: 'https://reeplayer.com/fan/...',
   },
 };

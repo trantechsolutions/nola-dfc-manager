@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Rss, CreditCard, CheckCircle2, AlertCircle, Edit, Save, X, Loader2 } from 'lucide-react';
+import { Rss, CreditCard, Link2, CheckCircle2, AlertCircle, Edit, Save, X, Loader2 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
 import AccountManager from '../../components/AccountManager';
@@ -28,6 +28,16 @@ export default function TeamSettingsView({
 
   useEffect(() => {
     setPaymentInfo(selectedTeam?.paymentInfo || '');
+  }, [selectedTeam?.id]);
+
+  // ── ReePlayer links state ──
+  const [reeplayerPlayerLink, setReeplayerPlayerLink] = useState(selectedTeam?.reeplayerPlayerLink || '');
+  const [reeplayerFanLink, setReeplayerFanLink] = useState(selectedTeam?.reeplayerFanLink || '');
+  const [isSavingReeplayer, setIsSavingReeplayer] = useState(false);
+
+  useEffect(() => {
+    setReeplayerPlayerLink(selectedTeam?.reeplayerPlayerLink || '');
+    setReeplayerFanLink(selectedTeam?.reeplayerFanLink || '');
   }, [selectedTeam?.id]);
 
   const currentIcsUrl = selectedTeam?.icalUrl || '';
@@ -92,6 +102,24 @@ export default function TeamSettingsView({
       if (showToast) showToast(`Failed: ${err.message}`, true);
     } finally {
       setIsSavingIcs(false);
+    }
+  };
+
+  // ── ReePlayer links handler ──
+  const handleSaveReeplayer = async () => {
+    if (!selectedTeam?.id) return;
+    setIsSavingReeplayer(true);
+    try {
+      await supabaseService.updateTeam(selectedTeam.id, {
+        reeplayerPlayerLink: reeplayerPlayerLink.trim(),
+        reeplayerFanLink: reeplayerFanLink.trim(),
+      });
+      if (refreshContext) await refreshContext();
+      if (showToast) showToast('ReePlayer links saved.');
+    } catch (err) {
+      if (showToast) showToast(`Failed: ${err.message}`, true);
+    } finally {
+      setIsSavingReeplayer(false);
     }
   };
 
@@ -229,6 +257,51 @@ export default function TeamSettingsView({
           />
         </div>
       )}
+
+      {/* ── ReePlayer Links ── */}
+      <div className="bg-card rounded-lg border border-border shadow-sm p-5 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-background rounded-lg">
+            <Link2 size={16} className="text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-foreground">{t('settings.reeplayerLinks')}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t('settings.reeplayerLinksHelp')}</p>
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-bold text-muted-foreground">{t('settings.reeplayerPlayerLink')}</label>
+          <p className="text-xs text-muted-foreground mt-0.5 mb-2">{t('settings.reeplayerPlayerLinkHelp')}</p>
+          <input
+            type="url"
+            value={reeplayerPlayerLink}
+            onChange={(e) => setReeplayerPlayerLink(e.target.value)}
+            placeholder={t('settings.reeplayerPlayerLinkPlaceholder')}
+            className="w-full border border-border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-ring bg-card"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-bold text-muted-foreground">{t('settings.reeplayerFanLink')}</label>
+          <p className="text-xs text-muted-foreground mt-0.5 mb-2">{t('settings.reeplayerFanLinkHelp')}</p>
+          <input
+            type="url"
+            value={reeplayerFanLink}
+            onChange={(e) => setReeplayerFanLink(e.target.value)}
+            placeholder={t('settings.reeplayerFanLinkPlaceholder')}
+            className="w-full border border-border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-ring bg-card"
+          />
+        </div>
+        <div className="flex justify-end">
+          <button
+            onClick={handleSaveReeplayer}
+            disabled={isSavingReeplayer}
+            className="flex items-center gap-1.5 px-5 py-2 bg-accent hover:bg-accent/90 text-accent-foreground text-xs font-bold rounded-lg disabled:opacity-50 transition-colors"
+          >
+            {isSavingReeplayer ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+            {t('common.save')}
+          </button>
+        </div>
+      </div>
 
       {/* ── Payment Instructions ── */}
       <div className="bg-card rounded-lg border border-border shadow-sm p-5 space-y-4">

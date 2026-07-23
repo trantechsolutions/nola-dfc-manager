@@ -85,6 +85,9 @@ export default {
     docDeleteConfirm: '¿Eliminar "{{title}}"?',
     docDeleted: 'Documento eliminado',
     docDeleteFail: 'No se pudo eliminar el documento',
+    reeplayer: 'ReePlayer',
+    reeplayerPlayerSignup: 'Registrarse en ReePlayer',
+    reeplayerFan: 'Página de Fanáticos de ReePlayer',
   },
 
   overview: {

@@ -85,6 +85,9 @@ export default {
     docDeleteConfirm: 'Delete "{{title}}"?',
     docDeleted: 'Document deleted',
     docDeleteFail: 'Failed to delete document',
+    reeplayer: 'ReePlayer',
+    reeplayerPlayerSignup: 'Sign Up for ReePlayer',
+    reeplayerFan: 'ReePlayer Fan Page',
   },
 
   overview: {

@@ -19,6 +19,8 @@ import {
   Trash2,
   FolderOpen,
   Upload,
+  Video,
+  ExternalLink,
 } from 'lucide-react';
 import MedicalReleaseForm from '../../components/MedicalReleaseForm';
 import { supabaseService } from '../../services/supabaseService';
@@ -233,6 +235,10 @@ export default function ParentView({
         docType: uploadDocType,
         title: `${DOC_TYPE_LABELS[uploadDocType] || uploadDocType} - ${uploadFile.name}`,
       });
+      if (uploadDocType === 'medical_release') {
+        await supabaseService.setSeasonCompliance(activePlayer.id, selectedSeason, 'medicalRelease', true);
+        onRefresh?.();
+      }
       showToast?.(t('parent.docUploaded', 'Document uploaded successfully'));
       setUploadFile(null);
       setUploadDocType('medical_release');
@@ -612,6 +618,41 @@ export default function ParentView({
               fetchPlayerDocs();
             }}
           />
+
+          {/* ReePlayer — sign-up link stays until staff confirms the account
+              via the ReePlayer Waiver toggle; fan link is always shown */}
+          {(playerTeam?.reeplayerFanLink || (playerTeam?.reeplayerPlayerLink && !parentComp.reePlayerWaiver)) && (
+            <div className="bg-card p-4 rounded-lg border border-border shadow-sm space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-background flex items-center justify-center shrink-0">
+                  <Video size={18} className="text-muted-foreground" />
+                </div>
+                <p className="text-sm font-bold text-foreground">{t('parent.reeplayer')}</p>
+              </div>
+              {playerTeam.reeplayerPlayerLink && !parentComp.reePlayerWaiver && (
+                <a
+                  href={playerTeam.reeplayerPlayerLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                >
+                  <ExternalLink size={13} />
+                  {t('parent.reeplayerPlayerSignup')}
+                </a>
+              )}
+              {playerTeam.reeplayerFanLink && (
+                <a
+                  href={playerTeam.reeplayerFanLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-card text-foreground hover:bg-background border border-border transition-colors"
+                >
+                  <ExternalLink size={13} />
+                  {t('parent.reeplayerFan')}
+                </a>
+              )}
+            </div>
+          )}
 
           {/* Documents */}
           <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">

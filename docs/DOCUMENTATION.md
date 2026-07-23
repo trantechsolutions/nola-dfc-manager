@@ -199,19 +199,21 @@ No `user_roles` row is created for parents.
 
 #### `teams`
 
-| Column            | Type            | Notes                                 |
-| ----------------- | --------------- | ------------------------------------- |
-| `id`              | uuid PK         |                                       |
-| `club_id`         | uuid FK → clubs |                                       |
-| `name`            | text            |                                       |
-| `age_group`       | text            | e.g. "U12"                            |
-| `gender`          | text            |                                       |
-| `tier`            | text            |                                       |
-| `ical_url`        | text            | External .ics feed URL                |
-| `payment_info`    | text            | Payment instructions shown to parents |
-| `color_primary`   | text            | Hex color                             |
-| `color_secondary` | text            | Hex color                             |
-| `status`          | text            | active / archived                     |
+| Column                  | Type            | Notes                                                                    |
+| ----------------------- | --------------- | ------------------------------------------------------------------------ |
+| `id`                    | uuid PK         |                                                                          |
+| `club_id`               | uuid FK → clubs |                                                                          |
+| `name`                  | text            |                                                                          |
+| `age_group`             | text            | e.g. "U12"                                                               |
+| `gender`                | text            |                                                                          |
+| `tier`                  | text            |                                                                          |
+| `ical_url`              | text            | External .ics feed URL                                                   |
+| `payment_info`          | text            | Payment instructions shown to parents                                    |
+| `reeplayer_player_link` | text            | Player sign-up URL; hidden once `reeplayer_waiver` is set for the season |
+| `reeplayer_fan_link`    | text            | Team ReePlayer fan page; always shown                                    |
+| `color_primary`         | text            | Hex color                                                                |
+| `color_secondary`       | text            | Hex color                                                                |
+| `status`                | text            | active / archived                                                        |
 
 #### `players`
 
