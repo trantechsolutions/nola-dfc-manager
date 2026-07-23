@@ -63,7 +63,7 @@ export default function DesktopSidebar() {
     <aside className="hidden md:flex w-64 bg-sidebar text-sidebar-foreground flex-col sticky top-0 h-screen border-r border-sidebar-border">
       <div className="p-6">
         <h1 className="text-xl font-bold tracking-tighter uppercase text-sidebar-foreground">
-          {club?.name || 'Cantera'}
+          {club?.name || 'Cantera Manager'}
         </h1>
 
         {!singleTeam && teams.length > 1 && (

@@ -29,7 +29,7 @@ export default function MobileMenu() {
       <div className="absolute inset-0 bg-black/40" onClick={() => setMobileMenuOpen(false)} />
       <div className="absolute left-0 top-0 bottom-0 w-72 bg-sidebar text-sidebar-foreground p-5 overflow-y-auto animate-in slide-in-from-left duration-200 border-r border-sidebar-border">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="font-bold text-sidebar-foreground text-sm">{club?.name || 'Cantera'}</h2>
+          <h2 className="font-bold text-sidebar-foreground text-sm">{club?.name || 'Cantera Manager'}</h2>
           <button onClick={() => setMobileMenuOpen(false)} className="text-muted-foreground">
             <X size={20} />
           </button>

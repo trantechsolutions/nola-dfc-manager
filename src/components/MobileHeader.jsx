@@ -28,7 +28,7 @@ export default function MobileHeader() {
             <Menu size={20} />
           </button>
           <div>
-            <h1 className="font-bold text-foreground text-sm">{club?.name || 'Cantera'}</h1>
+            <h1 className="font-bold text-foreground text-sm">{club?.name || 'Cantera Manager'}</h1>
             {selectedTeam && (
               <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">{selectedTeam.name}</p>
             )}

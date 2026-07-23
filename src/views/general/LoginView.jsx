@@ -44,7 +44,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="bg-card p-8 rounded-lg shadow-md w-full max-w-md">
         <div className="text-center mb-8">
-          <svg viewBox="0 0 512 512" className="w-16 h-16 mx-auto mb-4" role="img" aria-label="Cantera">
+          <svg viewBox="0 0 512 512" className="w-16 h-16 mx-auto mb-4" role="img" aria-label="Cantera Manager">
             <defs>
               <linearGradient id="cnLogin" x1="128" y1="40" x2="384" y2="472" gradientUnits="userSpaceOnUse">
                 <stop offset="0" stopColor="#D26A4F" />
@@ -52,18 +52,28 @@ export default function Login() {
               </linearGradient>
             </defs>
             <rect x="16" y="16" width="480" height="480" rx="116" fill="url(#cnLogin)" />
-            <path d="M256 117 L384.4 210.3 L335.3 361.2 L176.7 361.2 L127.6 210.3 Z" fill="#FFF6F2" />
-            <path d="M256 200 L305.5 235.9 L286.6 294.1 L225.4 294.1 L206.5 235.9 Z" fill="#A5382B" opacity="0.14" />
-            <g stroke="#A5382B" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.85">
-              <path d="M256 200 L305.5 235.9 L286.6 294.1 L225.4 294.1 L206.5 235.9 Z" />
-              <path d="M256 200 L256 117" />
-              <path d="M305.5 235.9 L384.4 210.3" />
-              <path d="M286.6 294.1 L335.3 361.2" />
-              <path d="M225.4 294.1 L176.7 361.2" />
-              <path d="M206.5 235.9 L127.6 210.3" />
+            <path
+              d="M 181 385.9 A 150 150 0 1 1 331 385.9"
+              fill="none"
+              stroke="#FFF6F2"
+              strokeWidth="20"
+              strokeLinecap="round"
+              opacity="0.95"
+            />
+            <path d="M256 144 L356.8 217.2 L318.3 335.8 L193.7 335.8 L155.2 217.2 Z" fill="#FFF6F2" />
+            <path d="M256 206 L297.8 236.4 L281.9 285.6 L230.1 285.6 L214.2 236.4 Z" fill="#A5382B" opacity="0.14" />
+            <g stroke="#A5382B" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.85">
+              <path d="M256 206 L297.8 236.4 L281.9 285.6 L230.1 285.6 L214.2 236.4 Z" />
+              <path d="M256 206 L256 144" />
+              <path d="M297.8 236.4 L356.8 217.2" />
+              <path d="M281.9 285.6 L318.3 335.8" />
+              <path d="M230.1 285.6 L193.7 335.8" />
+              <path d="M214.2 236.4 L155.2 217.2" />
             </g>
           </svg>
-          <h2 className="text-3xl font-bold text-foreground tracking-tight">Cantera</h2>
+          <h2 className="text-3xl font-bold text-foreground tracking-tight">
+            Cantera<span className="font-light"> Manager</span>
+          </h2>
           <p className="text-muted-foreground font-medium">
             {isRegistering ? t('auth.createAccount') : t('auth.managerPortal')}
           </p>
