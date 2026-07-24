@@ -12,6 +12,7 @@ export default function TransactionModal({
   players,
   teamEvents = [],
   activeAccounts = [],
+  categoryOptions = [],
   isReadOnly = false,
 }) {
   const defaultAccountId = activeAccounts[0]?.id || '';
@@ -179,14 +180,24 @@ export default function TransactionModal({
                 onChange={(e) => handleCategoryChange(e.target.value)}
                 className="w-full border border-border rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none"
               >
-                <option value="TMF">{t('txModal.catTeamFees')}</option>
-                <option value="FUN">{t('txModal.catFundraising')}</option>
-                <option value="SPO">{t('txModal.catSponsorship')}</option>
-                <option value="OPE">{t('txModal.catOperating')}</option>
-                <option value="TOU">{t('txModal.catTournament')}</option>
-                <option value="LEA">{t('txModal.catLeague')}</option>
-                <option value="CRE">{t('txModal.catCredit')}</option>
-                <option value="TRF">{t('txModal.catTransfer')}</option>
+                {categoryOptions.length > 0 ? (
+                  categoryOptions.map((cat) => (
+                    <option key={cat.code} value={cat.code}>
+                      {cat.label}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="TMF">{t('txModal.catTeamFees')}</option>
+                    <option value="FUN">{t('txModal.catFundraising')}</option>
+                    <option value="SPO">{t('txModal.catSponsorship')}</option>
+                    <option value="OPE">{t('txModal.catOperating')}</option>
+                    <option value="TOU">{t('txModal.catTournament')}</option>
+                    <option value="LEA">{t('txModal.catLeague')}</option>
+                    <option value="CRE">{t('txModal.catCredit')}</option>
+                    <option value="TRF">{t('txModal.catTransfer')}</option>
+                  </>
+                )}
               </select>
             </div>
             {!isTransfer && formData.category !== 'CRE' && (
