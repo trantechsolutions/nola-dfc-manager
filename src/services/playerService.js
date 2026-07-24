@@ -224,8 +224,39 @@ export const playerService = {
     // An UPDATE with no matching row succeeds silently in Supabase — that
     // would otherwise hide a missing season enrollment (see
     // sql/fix_missing_player_season_enrollment.sql) behind a "saved fine" UI.
+    // But RLS filtering looks identical from here: guardians can SELECT their
+    // own player's enrollment yet have no UPDATE policy on player_seasons, so
+    // a parent signing the medical release got told they weren't enrolled.
+    // Re-read the row to tell "not enrolled" apart from "not allowed".
     if (!data || data.length === 0) {
-      throw new Error(`No ${seasonId} season enrollment found for this player — compliance was not updated.`);
+      const { data: enrollment } = await supabase
+        .from('player_seasons')
+        .select('id')
+        .eq('player_id', playerId)
+        .eq('season_id', seasonId)
+        .maybeSingle();
+
+      if (!enrollment) {
+        throw new Error(`No ${seasonId} season enrollment found for this player — compliance was not updated.`);
+      }
+
+      // Enrolled, just not writable by this user. Guardians go through a
+      // SECURITY DEFINER RPC scoped to their own player's medical release
+      // (sql/fix_guardian_medical_release_rls.sql); nothing else on the
+      // enrollment row is parent-writable.
+      let allowed = false;
+      if (dbField === 'medical_release') {
+        const { data: rpcOk, error: rpcErr } = await supabase.rpc('set_guardian_medical_release', {
+          p_player_id: playerId,
+          p_season_id: seasonId,
+          p_value: value,
+        });
+        if (rpcErr) throw rpcErr;
+        allowed = rpcOk === true;
+      }
+      if (!allowed) {
+        throw new Error('You do not have permission to update compliance for this player.');
+      }
     }
 
     // Fire-and-forget audit log + compliance notification to parent
