@@ -52,7 +52,7 @@ import { useLedgerManager } from './hooks/useLedgerManager';
 import { useTeamContext } from './hooks/useTeamContext';
 import { useAppData } from './hooks/useAppData';
 import { useModalState } from './hooks/useModalState';
-import { PERMISSIONS } from './utils/roles';
+import { PERMISSIONS, PARENT_ROLE } from './utils/roles';
 import { useCategoryManager } from './hooks/useCategoryManager';
 import { useAccounts } from './hooks/useAccounts';
 import { useBookBalance } from './hooks/useBookBalance';
@@ -150,7 +150,7 @@ function App() {
   // When impersonating, act as parent regardless of actual role
   const viewingAsParent = !!impersonatingAs;
   const effectiveIsStaff = viewingAsParent ? false : isStaff;
-  const role = effectiveIsStaff ? 'manager' : 'parent';
+  const role = effectiveIsStaff ? 'manager' : PARENT_ROLE;
 
   // ── PARENT TEAM DETECTION ──
   // Parents have no roles so selectedTeamId is null. We derive their team
@@ -487,8 +487,9 @@ function App() {
   const teamNavItems = effectiveIsStaff
     ? [
         { id: 'schedule', label: t('nav.schedule'), icon: Calendar },
-        ...(can(PERMISSIONS.TEAM_VIEW_ROSTER) || can(PERMISSIONS.TEAM_MANAGE_USERS)
-          ? [{ id: 'people', label: t('nav.players'), icon: Users }]
+        ...(can(PERMISSIONS.TEAM_VIEW_ROSTER) ? [{ id: 'people', label: t('nav.players'), icon: Users }] : []),
+        ...(can(PERMISSIONS.TEAM_MANAGE_USERS)
+          ? [{ id: 'team-users', label: t('nav.users', 'Users'), icon: Shield }]
           : []),
         ...(can(PERMISSIONS.TEAM_VIEW_INSIGHTS) && !insightsHidden
           ? [{ id: 'insights', label: t('nav.insights'), icon: Sparkles }]

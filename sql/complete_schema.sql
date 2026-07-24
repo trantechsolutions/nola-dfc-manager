@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 CREATE TABLE IF NOT EXISTS user_roles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
-  role text NOT NULL CHECK (role IN ('super_admin', 'club_admin', 'club_manager', 'team_manager', 'team_admin', 'treasurer', 'scheduler', 'head_coach', 'assistant_coach', 'parent')),
+  role text NOT NULL CHECK (role IN ('super_admin', 'club_admin', 'club_manager', 'team_manager', 'treasurer', 'scheduler', 'head_coach', 'assistant_coach', 'fundraiser', 'parent')),
   club_id uuid REFERENCES clubs(id),
   team_id uuid REFERENCES teams(id),
   created_at timestamptz DEFAULT now()

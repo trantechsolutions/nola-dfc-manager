@@ -199,30 +199,10 @@ export default function DesktopSidebar() {
           </>
         )}
 
-        {seasonNavItems.map((item) => {
-          const isActive = currentView === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => navigate(`/${item.id}`)}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold transition-all text-sm ${
-                isActive
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-sidebar-foreground hover:bg-sidebar-accent'
-              }`}
-            >
-              <item.icon size={18} />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
-
-        {/* TEAM section */}
-        <div className="border-t border-sidebar-border my-2" />
         <p className="text-xs font-semibold text-muted-foreground px-4 pt-1 pb-1">
           {selectedTeam?.name || t('common.team')}
         </p>
-        {teamNavItems.map((item) => (
+        {[...seasonNavItems, ...teamNavItems].map((item) => (
           <button
             key={item.id}
             onClick={() => navigate(`/${item.id}`)}

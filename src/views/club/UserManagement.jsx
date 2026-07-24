@@ -23,11 +23,11 @@ const ROLE_COLORS = {
   club_admin: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
   club_manager: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
   team_manager: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-  team_admin: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
   scheduler: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
   treasurer: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
   head_coach: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
   assistant_coach: 'bg-muted text-foreground',
+  fundraiser: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
   parent: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
 };
 const INV_STATUS_COLORS = {

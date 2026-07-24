@@ -113,14 +113,14 @@ On first login, `supabaseService.ensureUserProfile(user)` upserts a row in `user
 
 **Team-level roles** are scoped to a specific `team_id`:
 
-| Role              | Description                                 |
-| ----------------- | ------------------------------------------- |
-| `team_manager`    | Full operations + user management           |
-| `team_admin`      | Full operations, no user management         |
-| `treasurer`       | Ledger, budget, sponsors, waivers, insights |
-| `scheduler`       | Edit schedule, view roster                  |
-| `head_coach`      | View roster, schedule, budget               |
-| `assistant_coach` | View roster and schedule                    |
+| Role              | Description                                                         |
+| ----------------- | ------------------------------------------------------------------- |
+| `team_manager`    | Full operations + user management + rubric                          |
+| `treasurer`       | Ledger, budget, sponsors, waivers, insights                         |
+| `scheduler`       | Edit schedule, view roster                                          |
+| `fundraiser`      | Sponsors (view/edit), roster + budget (view-only). No ledger access |
+| `head_coach`      | View roster, schedule, budget                                       |
+| `assistant_coach` | View roster and schedule                                            |
 
 ### Permission Constants (`PERMISSIONS`)
 

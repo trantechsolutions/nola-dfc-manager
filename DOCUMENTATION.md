@@ -167,55 +167,59 @@ The app has a **three-tier hierarchical role system**:
 ```mermaid
 graph TD
     A["🌐 App Level\nsuper_admin"] --> B["🏢 Club Level\nclub_admin / club_manager"]
-    B --> C["⚽ Team Level\nteam_manager / team_admin / treasurer / scheduler / head_coach / assistant_coach"]
+    B --> C["⚽ Team Level\nteam_manager / treasurer / scheduler / fundraiser / head_coach / assistant_coach"]
     C --> D["👨‍👩‍👧 No Role = Parent\n(derived from player guardian records)"]
 ```
 
 ### Role Definitions
 
-| Role              | Scope | Description                                                                    |
-| ----------------- | ----- | ------------------------------------------------------------------------------ |
-| `super_admin`     | App   | Global administrator. Full access to all clubs, teams, data.                   |
-| `club_admin`      | Club  | Full access to all teams in the club. Can manage teams, roles, settings.       |
-| `club_manager`    | Club  | Read-only access across all teams. Cannot edit settings or roles.              |
-| `team_manager`    | Team  | Full team access + can manage other users' roles within the team.              |
-| `team_admin`      | Team  | Full team access. Cannot manage user roles.                                    |
-| `treasurer`       | Team  | Finance-only: budget, ledger, sponsors, waivers.                               |
-| `scheduler`       | Team  | Schedule-only: create events, manage blackouts.                                |
-| `head_coach`      | Team  | View roster + schedule. Can submit evaluations + manage rubric.                |
-| `assistant_coach` | Team  | View roster + schedule. Can submit evaluations.                                |
-| _(none)_          | —     | **Parent**: derives team from guardian records. Sees their player's data only. |
+| Role              | Scope | Description                                                                                          |
+| ----------------- | ----- | ---------------------------------------------------------------------------------------------------- |
+| `super_admin`     | App   | Global administrator. Full access to all clubs, teams, data.                                         |
+| `club_admin`      | Club  | Full access to all teams in the club. Can manage teams, roles, settings.                             |
+| `club_manager`    | Club  | Read-only access across all teams. Cannot edit settings or roles.                                    |
+| `team_manager`    | Team  | Full team access. Manages team users and the evaluation rubric.                                      |
+| `treasurer`       | Team  | Finance-only: budget, ledger, sponsors, waivers.                                                     |
+| `scheduler`       | Team  | Schedule-only: create events, manage blackouts.                                                      |
+| `fundraiser`      | Team  | Sponsors and fundraising: view/edit sponsors, view roster + budget. No ledger or budget-edit access. |
+| `head_coach`      | Team  | View roster + schedule. Can submit evaluations + manage rubric.                                      |
+| `assistant_coach` | Team  | View roster + schedule. Can submit evaluations.                                                      |
+| _(none)_          | —     | **Parent**: derives team from guardian records. Sees their player's data only.                       |
+
+> Note: `team_admin` was a separate team-level role that granted the same practical
+> access as `team_manager`. It has been merged into `team_manager` to remove the
+> duplicate naming — see `sql/merge_team_admin_role_migration.sql`.
 
 ### Permission Matrix
 
-| Permission        | super_admin | club_admin | club_manager | team_manager | team_admin | treasurer | scheduler | head_coach | assistant_coach |
-| ----------------- | :---------: | :--------: | :----------: | :----------: | :--------: | :-------: | :-------: | :--------: | :-------------: |
-| Manage Clubs      |     ✅      |            |              |              |            |           |           |            |                 |
-| Club Settings     |     ✅      |     ✅     |              |              |            |           |           |            |                 |
-| Manage Teams      |     ✅      |     ✅     |              |              |            |           |           |            |                 |
-| Manage Club Roles |     ✅      |     ✅     |              |              |            |           |           |            |                 |
-| View Any Team     |     ✅      |     ✅     |      ✅      |              |            |           |           |            |                 |
-| View Roster       |     ✅      |     ✅     |      ✅      |      ✅      |     ✅     |    ✅     |    ✅     |     ✅     |       ✅        |
-| Edit Roster       |     ✅      |     ✅     |              |      ✅      |     ✅     |           |           |            |                 |
-| View Schedule     |     ✅      |     ✅     |      ✅      |      ✅      |     ✅     |           |    ✅     |     ✅     |       ✅        |
-| Edit Schedule     |     ✅      |     ✅     |              |      ✅      |     ✅     |           |    ✅     |            |                 |
-| View Budget       |     ✅      |     ✅     |      ✅      |      ✅      |     ✅     |    ✅     |           |            |                 |
-| Edit Budget       |     ✅      |     ✅     |              |      ✅      |     ✅     |    ✅     |           |            |                 |
-| View Ledger       |     ✅      |     ✅     |      ✅      |      ✅      |     ✅     |    ✅     |           |            |                 |
-| Edit Ledger       |     ✅      |     ✅     |              |      ✅      |     ✅     |    ✅     |           |            |                 |
-| View Sponsors     |     ✅      |     ✅     |      ✅      |      ✅      |     ✅     |    ✅     |           |            |                 |
-| Edit Sponsors     |     ✅      |     ✅     |              |      ✅      |     ✅     |    ✅     |           |            |                 |
-| View Insights     |     ✅      |     ✅     |      ✅      |      ✅      |     ✅     |    ✅     |           |            |                 |
-| Manage Waivers    |     ✅      |     ✅     |              |      ✅      |     ✅     |    ✅     |           |            |                 |
-| Manage Team Users |     ✅      |     ✅     |              |      ✅      |            |           |           |            |                 |
-| Manage Rubric     |     ✅      |     ✅     |              |              |     ✅     |           |           |     ✅     |                 |
-| Evaluate Players  |     ✅      |     ✅     |              |              |            |           |           |     ✅     |       ✅        |
-| View Evaluations  |     ✅      |     ✅     |      ✅      |      ✅      |     ✅     |           |           |     ✅     |       ✅        |
+| Permission        | super_admin | club_admin | club_manager | team_manager | treasurer | scheduler | fundraiser | head_coach | assistant_coach |
+| ----------------- | :---------: | :--------: | :----------: | :----------: | :-------: | :-------: | :--------: | :--------: | :-------------: |
+| Manage Clubs      |     ✅      |            |              |              |           |           |            |            |                 |
+| Club Settings     |     ✅      |     ✅     |              |              |           |           |            |            |                 |
+| Manage Teams      |     ✅      |     ✅     |              |              |           |           |            |            |                 |
+| Manage Club Roles |     ✅      |     ✅     |              |              |           |           |            |            |                 |
+| View Any Team     |     ✅      |     ✅     |      ✅      |              |           |           |            |            |                 |
+| View Roster       |     ✅      |     ✅     |      ✅      |      ✅      |    ✅     |    ✅     |     ✅     |     ✅     |       ✅        |
+| Edit Roster       |     ✅      |     ✅     |              |      ✅      |           |           |            |            |                 |
+| View Schedule     |     ✅      |     ✅     |      ✅      |      ✅      |           |    ✅     |            |     ✅     |       ✅        |
+| Edit Schedule     |     ✅      |     ✅     |              |      ✅      |           |    ✅     |            |            |                 |
+| View Budget       |     ✅      |     ✅     |      ✅      |      ✅      |    ✅     |           |     ✅     |            |                 |
+| Edit Budget       |     ✅      |     ✅     |              |      ✅      |    ✅     |           |            |            |                 |
+| View Ledger       |     ✅      |     ✅     |      ✅      |      ✅      |    ✅     |           |            |            |                 |
+| Edit Ledger       |     ✅      |     ✅     |              |      ✅      |    ✅     |           |            |            |                 |
+| View Sponsors     |     ✅      |     ✅     |      ✅      |      ✅      |    ✅     |           |     ✅     |            |                 |
+| Edit Sponsors     |     ✅      |     ✅     |              |      ✅      |    ✅     |           |     ✅     |            |                 |
+| View Insights     |     ✅      |     ✅     |      ✅      |      ✅      |    ✅     |           |            |            |                 |
+| Manage Waivers    |     ✅      |     ✅     |              |      ✅      |    ✅     |           |            |            |                 |
+| Manage Team Users |     ✅      |     ✅     |              |      ✅      |           |           |            |            |                 |
+| Manage Rubric     |     ✅      |     ✅     |              |      ✅      |           |           |            |     ✅     |                 |
+| Evaluate Players  |     ✅      |     ✅     |              |              |           |           |            |     ✅     |       ✅        |
+| View Evaluations  |     ✅      |     ✅     |      ✅      |      ✅      |           |           |            |     ✅     |       ✅        |
 
 ### Role Assignment Rules
 
 - **Club-assignable roles** (assigned by `club_admin`): `head_coach`, `assistant_coach`, `team_manager`
-- **Team-assignable roles** (assigned by `team_manager` within their team): `team_admin`, `treasurer`, `scheduler`
+- **Team-assignable roles** (assigned by `team_manager` within their team): `treasurer`, `scheduler`, `fundraiser`
 - Parents have **no role record** — their access is derived from the `guardians` array on player records.
 
 ### `hasPermission()` Logic
@@ -445,7 +449,7 @@ graph TD
 
 **Who can manage the rubric:**
 
-- `head_coach`, `team_admin`, `club_admin`, `super_admin`
+- `head_coach`, `team_manager`, `club_admin`, `super_admin`
 
 **Evaluator Selection:** If the current user is a `team_manager` or `club_admin`, they can select a different evaluator to view/submit scores on their behalf.
 

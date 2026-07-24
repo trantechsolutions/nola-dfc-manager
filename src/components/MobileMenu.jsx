@@ -74,34 +74,11 @@ export default function MobileMenu() {
             </div>
           )}
         </div>
-        <div className="space-y-1 mb-4">
-          {seasonNavItems.map((item) => {
-            const isActive = currentView === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  navigate(`/${item.id}`);
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-                  isActive ? 'bg-primary text-primary-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent'
-                }`}
-              >
-                <item.icon size={18} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Team section */}
-        <div className="border-t border-sidebar-border my-3" />
         <p className="text-xs font-semibold text-muted-foreground px-4 mb-2">
           {selectedTeam?.name || t('common.team')}
         </p>
-        <div className="space-y-1">
-          {teamNavItems.map((item) => (
+        <div className="space-y-1 mb-4">
+          {[...seasonNavItems, ...teamNavItems].map((item) => (
             <button
               key={item.id}
               onClick={() => {

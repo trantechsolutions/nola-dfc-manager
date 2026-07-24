@@ -27,6 +27,7 @@ const TeamList = lazy(() => import('../views/club/TeamList'));
 const TeamOnboarding = lazy(() => import('../views/club/TeamOnboarding'));
 const FinanceView = lazy(() => import('../views/team/FinanceView'));
 const PeopleView = lazy(() => import('../views/team/PeopleView'));
+const TeamUserManagement = lazy(() => import('../views/team/TeamUserManagement'));
 const ClubAdminHub = lazy(() => import('../views/club/ClubAdminHub'));
 const TeamSettingsView = lazy(() => import('../views/team/TeamSettingsView'));
 const Changelog = lazy(() => import('./Changelog'));
@@ -587,16 +588,13 @@ export default function AppRoutes({
                   />
                 )}
 
-                {/* People hub: Roster + Documents + Permissions */}
-                {(can(PERMISSIONS.TEAM_VIEW_ROSTER) || can(PERMISSIONS.TEAM_MANAGE_USERS)) && (
+                {/* People hub: Roster + Documents */}
+                {can(PERMISSIONS.TEAM_VIEW_ROSTER) && (
                   <Route
                     path="/people"
                     element={
                       <PeopleView
-                        visibleTabs={[
-                          ...(can(PERMISSIONS.TEAM_VIEW_ROSTER) ? ['roster', 'documents'] : []),
-                          ...(can(PERMISSIONS.TEAM_MANAGE_USERS) ? ['permissions'] : []),
-                        ]}
+                        visibleTabs={['roster', 'documents']}
                         rosterProps={
                           can(PERMISSIONS.TEAM_VIEW_ROSTER)
                             ? {
@@ -645,16 +643,17 @@ export default function AppRoutes({
                               }
                             : null
                         }
-                        permissionsProps={
-                          can(PERMISSIONS.TEAM_MANAGE_USERS)
-                            ? {
-                                selectedTeam,
-                                showToast,
-                                showConfirm,
-                              }
-                            : null
-                        }
                       />
+                    }
+                  />
+                )}
+
+                {/* Team Users: manage roles for team parents/guardians */}
+                {can(PERMISSIONS.TEAM_MANAGE_USERS) && (
+                  <Route
+                    path="/team-users"
+                    element={
+                      <TeamUserManagement selectedTeam={selectedTeam} showToast={showToast} showConfirm={showConfirm} />
                     }
                   />
                 )}
@@ -683,7 +682,6 @@ export default function AppRoutes({
                 <Route path="/finance" element={<Navigate to="/finance/ledger" replace />} />
                 <Route path="/roster" element={<Navigate to="/people" replace />} />
                 <Route path="/documents" element={<Navigate to="/people" replace />} />
-                <Route path="/team-users" element={<Navigate to="/people" replace />} />
               </>
             )}
 

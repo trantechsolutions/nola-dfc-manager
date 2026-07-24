@@ -8,6 +8,7 @@ import {
   ROLE_PERMISSIONS,
   CLUB_ROLES,
   TEAM_ROLES,
+  TEAM_ASSIGNABLE_ROLES,
 } from '../../utils/roles';
 
 // ── Test data factories ───────────────────────────────────────────────────────
@@ -22,11 +23,11 @@ const roles = {
   clubAdmin: [makeRole('club_admin')],
   clubManager: [makeRole('club_manager')],
   teamManager: [makeRole('team_manager', TEAM_A)],
-  teamAdmin: [makeRole('team_admin', TEAM_A)],
   treasurer: [makeRole('treasurer', TEAM_A)],
   scheduler: [makeRole('scheduler', TEAM_A)],
   headCoach: [makeRole('head_coach', TEAM_A)],
   assistantCoach: [makeRole('assistant_coach', TEAM_A)],
+  fundraiser: [makeRole('fundraiser', TEAM_A)],
   noRoles: [],
   multiTeam: [makeRole('treasurer', TEAM_A), makeRole('scheduler', TEAM_B)],
 };
@@ -141,6 +142,33 @@ describe('hasPermission', () => {
     });
   });
 
+  describe('fundraiser', () => {
+    it('can view and edit sponsors on assigned team', () => {
+      expect(hasPermission(roles.fundraiser, PERMISSIONS.TEAM_VIEW_SPONSORS, TEAM_A)).toBe(true);
+      expect(hasPermission(roles.fundraiser, PERMISSIONS.TEAM_EDIT_SPONSORS, TEAM_A)).toBe(true);
+    });
+
+    it('can view roster and budget', () => {
+      expect(hasPermission(roles.fundraiser, PERMISSIONS.TEAM_VIEW_ROSTER, TEAM_A)).toBe(true);
+      expect(hasPermission(roles.fundraiser, PERMISSIONS.TEAM_VIEW_BUDGET, TEAM_A)).toBe(true);
+    });
+
+    it('cannot edit budget or touch the ledger', () => {
+      expect(hasPermission(roles.fundraiser, PERMISSIONS.TEAM_EDIT_BUDGET, TEAM_A)).toBe(false);
+      expect(hasPermission(roles.fundraiser, PERMISSIONS.TEAM_VIEW_LEDGER, TEAM_A)).toBe(false);
+      expect(hasPermission(roles.fundraiser, PERMISSIONS.TEAM_EDIT_LEDGER, TEAM_A)).toBe(false);
+    });
+
+    it('cannot manage users or edit schedule', () => {
+      expect(hasPermission(roles.fundraiser, PERMISSIONS.TEAM_MANAGE_USERS, TEAM_A)).toBe(false);
+      expect(hasPermission(roles.fundraiser, PERMISSIONS.TEAM_EDIT_SCHEDULE, TEAM_A)).toBe(false);
+    });
+
+    it('has NO permissions on a different team', () => {
+      expect(hasPermission(roles.fundraiser, PERMISSIONS.TEAM_VIEW_SPONSORS, TEAM_B)).toBe(false);
+    });
+  });
+
   describe('no roles (parent)', () => {
     it('fails every permission check', () => {
       Object.values(PERMISSIONS).forEach((perm) => {
@@ -208,6 +236,12 @@ describe('getHighestTeamRole', () => {
     expect(getHighestTeamRole(roles.scheduler, TEAM_A)).toBe('scheduler');
     expect(getHighestTeamRole(roles.headCoach, TEAM_A)).toBe('head_coach');
     expect(getHighestTeamRole(roles.assistantCoach, TEAM_A)).toBe('assistant_coach');
+    expect(getHighestTeamRole(roles.fundraiser, TEAM_A)).toBe('fundraiser');
+  });
+
+  it('prefers fundraiser over head_coach when both present', () => {
+    const both = [makeRole('head_coach', TEAM_A), makeRole('fundraiser', TEAM_A)];
+    expect(getHighestTeamRole(both, TEAM_A)).toBe('fundraiser');
   });
 
   it('returns null for a user with no role on the given team', () => {
@@ -218,8 +252,8 @@ describe('getHighestTeamRole', () => {
     expect(getHighestTeamRole(roles.noRoles, TEAM_A)).toBeNull();
   });
 
-  it('prefers team_manager over team_admin when both present', () => {
-    const both = [makeRole('team_admin', TEAM_A), makeRole('team_manager', TEAM_A)];
+  it('prefers team_manager over treasurer when both present', () => {
+    const both = [makeRole('treasurer', TEAM_A), makeRole('team_manager', TEAM_A)];
     expect(getHighestTeamRole(both, TEAM_A)).toBe('team_manager');
   });
 });
@@ -261,6 +295,15 @@ describe('getNavItemsForRole', () => {
     expect(items).not.toContain('team-users');
   });
 
+  it('fundraiser sees dashboard, budget, sponsors but not ledger or team-users', () => {
+    const items = getNavItemsForRole(roles.fundraiser, TEAM_A);
+    expect(items).toContain('dashboard');
+    expect(items).toContain('budget');
+    expect(items).toContain('sponsors');
+    expect(items).not.toContain('ledger');
+    expect(items).not.toContain('team-users');
+  });
+
   it('parent (no roles) sees no nav items', () => {
     expect(getNavItemsForRole(roles.noRoles, TEAM_A)).toHaveLength(0);
   });
@@ -276,9 +319,14 @@ describe('ROLE_PERMISSIONS matrix', () => {
     });
   });
 
-  it('team_manager has more permissions than team_admin', () => {
-    // team_manager is the only team role with TEAM_MANAGE_USERS
+  it('team_manager has full team access, including managing users and the rubric', () => {
     expect(ROLE_PERMISSIONS.team_manager).toContain(PERMISSIONS.TEAM_MANAGE_USERS);
-    expect(ROLE_PERMISSIONS.team_admin).not.toContain(PERMISSIONS.TEAM_MANAGE_USERS);
+    expect(ROLE_PERMISSIONS.team_manager).toContain(PERMISSIONS.TEAM_MANAGE_RUBRIC);
+  });
+
+  it('fundraiser is team-assignable alongside treasurer and scheduler', () => {
+    expect(TEAM_ASSIGNABLE_ROLES).toContain('fundraiser');
+    expect(TEAM_ASSIGNABLE_ROLES).toContain('treasurer');
+    expect(TEAM_ASSIGNABLE_ROLES).toContain('scheduler');
   });
 });

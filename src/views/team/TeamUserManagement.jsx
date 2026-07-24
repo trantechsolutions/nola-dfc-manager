@@ -18,11 +18,11 @@ import { TEAM_ROLES, ALL_ROLES, TEAM_ASSIGNABLE_ROLES } from '../../utils/roles'
 
 const ROLE_COLORS = {
   team_manager: 'bg-blue-100 text-blue-700 dark:text-blue-300',
-  team_admin: 'bg-indigo-100 text-indigo-700 dark:text-indigo-300',
   scheduler: 'bg-violet-100 text-violet-700 dark:text-violet-300',
   treasurer: 'bg-emerald-100 text-emerald-700 dark:text-emerald-300',
   head_coach: 'bg-amber-100 text-amber-700 dark:text-amber-300',
   assistant_coach: 'bg-muted text-foreground',
+  fundraiser: 'bg-orange-100 text-orange-700 dark:text-orange-300',
 };
 
 export default function TeamUserManagement({ selectedTeam, showToast, showConfirm }) {
@@ -358,7 +358,7 @@ export default function TeamUserManagement({ selectedTeam, showToast, showConfir
                   </div>
                 </div>
 
-                {/* Assign role form — only TEAM_ASSIGNABLE_ROLES (team_admin, treasurer, scheduler) */}
+                {/* Assign role form — only TEAM_ASSIGNABLE_ROLES (treasurer, scheduler) */}
                 {isExpanded && (
                   <div className="border-t border-border p-4 bg-blue-50/50 dark:bg-blue-900/20 flex items-center gap-2">
                     <span className="text-xs font-semibold text-muted-foreground shrink-0">Assign:</span>
@@ -404,16 +404,16 @@ export default function TeamUserManagement({ selectedTeam, showToast, showConfir
         </p>
         <p className="mt-2 font-semibold text-muted-foreground">Available roles:</p>
         <p className="mt-1">
-          <span className="font-semibold text-indigo-700 dark:text-indigo-400">Team Admin</span> — Full access to all
-          team functions (roster, budget, ledger, schedule, sponsors, insights).
-        </p>
-        <p>
           <span className="font-semibold text-emerald-700 dark:text-emerald-400">Treasurer</span> — Can manage budget,
           ledger, transactions, sponsors, and fee waivers.
         </p>
         <p>
           <span className="font-semibold text-violet-700 dark:text-violet-400">Scheduler</span> — Can create and manage
           blackout dates on the calendar.
+        </p>
+        <p>
+          <span className="font-semibold text-orange-700 dark:text-orange-400">Fundraiser</span> — Can view and manage
+          sponsors and fundraising distributions. Cannot edit the ledger or budget.
         </p>
         <p className="mt-2">
           Coaches and Team Managers are assigned by a Club Admin from the Club → Teams or Club → Users tab.

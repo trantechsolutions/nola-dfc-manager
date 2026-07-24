@@ -16,6 +16,7 @@ import {
   PERMISSIONS,
   CLUB_ROLES,
   APP_ROLES,
+  PARENT_ROLE,
 } from '../utils/roles';
 
 export const useTeamContext = (user) => {
@@ -117,12 +118,12 @@ export const useTeamContext = (user) => {
 
   // Determine the user's effective role level
   const effectiveRole = useMemo(() => {
-    if (!user || userRoles.length === 0) return 'parent'; // default fallback
+    if (!user || userRoles.length === 0) return PARENT_ROLE; // default fallback
     if (userRoles.some((r) => r.role === 'super_admin')) return 'super_admin';
     if (userRoles.some((r) => r.role === 'club_admin')) return 'club_admin';
     if (userRoles.some((r) => r.role === 'club_manager')) return 'club_manager';
-    if (selectedTeamId) return getHighestTeamRole(userRoles, selectedTeamId) || 'parent';
-    return 'parent';
+    if (selectedTeamId) return getHighestTeamRole(userRoles, selectedTeamId) || PARENT_ROLE;
+    return PARENT_ROLE;
   }, [user, userRoles, selectedTeamId]);
 
   // Is this user a staff member (any role) vs a parent?

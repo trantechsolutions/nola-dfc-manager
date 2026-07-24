@@ -39,12 +39,7 @@ export const TEAM_ROLES = {
     label: 'Team Manager',
     level: 'team',
     description:
-      'Full access to the team: roster, budget, ledger, schedule, sponsors, insights. Can manage team-level users.',
-  },
-  team_admin: {
-    label: 'Team Admin',
-    level: 'team',
-    description: 'Full access to all team functions: roster, budget, ledger, schedule, sponsors, insights.',
+      'Full access to the team: roster, budget, ledger, schedule, sponsors, insights. Can manage team-level users and the evaluation rubric.',
   },
   scheduler: {
     label: 'Scheduler',
@@ -66,9 +61,32 @@ export const TEAM_ROLES = {
     level: 'team',
     description: 'View-only access to roster, schedule, and player compliance.',
   },
+  fundraiser: {
+    label: 'Fundraiser',
+    level: 'team',
+    description:
+      'Manages sponsors and fundraising: view/edit sponsor distributions, view the roster and budget. No ledger or budget-edit access — does not handle money.',
+  },
 };
 
-export const ALL_ROLES = { ...APP_ROLES, ...CLUB_ROLES, ...TEAM_ROLES };
+/**
+ * IMPLICIT ROLES
+ * Not assignable and never stored as a user_roles row. `parent` is the default
+ * fallback for a user with zero role assignments — their access is derived from
+ * the guardians array on player records, not from a role grant. Documented here
+ * so it's a discoverable, single-source-of-truth concept instead of a magic
+ * string repeated across useTeamContext.js / App.jsx.
+ */
+export const IMPLICIT_ROLES = {
+  parent: {
+    label: 'Parent/Guardian',
+    level: 'implicit',
+    description: "Default fallback role. Access is derived from a player's guardian records, not a role grant.",
+  },
+};
+export const PARENT_ROLE = 'parent';
+
+export const ALL_ROLES = { ...APP_ROLES, ...CLUB_ROLES, ...TEAM_ROLES, ...IMPLICIT_ROLES };
 
 /**
  * CLUB-ASSIGNABLE ROLES
@@ -80,9 +98,10 @@ export const CLUB_ASSIGNABLE_ROLES = ['head_coach', 'assistant_coach', 'team_man
 /**
  * TEAM-ASSIGNABLE ROLES
  * These are the only roles that team managers can assign from the Team Users tab.
- * Team managers assign admins, treasurers, and schedulers within their team.
+ * Team managers assign treasurers and schedulers within their team; the team_manager
+ * role itself is club-assignable only (see CLUB_ASSIGNABLE_ROLES).
  */
-export const TEAM_ASSIGNABLE_ROLES = ['team_admin', 'treasurer', 'scheduler'];
+export const TEAM_ASSIGNABLE_ROLES = ['treasurer', 'scheduler', 'fundraiser'];
 
 /**
  * PERMISSION KEYS
@@ -215,22 +234,6 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.TEAM_VIEW_INSIGHTS,
     PERMISSIONS.TEAM_MANAGE_WAIVERS,
     PERMISSIONS.TEAM_MANAGE_USERS,
-    PERMISSIONS.CLUB_VIEW_EVALUATIONS,
-  ],
-
-  team_admin: [
-    PERMISSIONS.TEAM_VIEW_ROSTER,
-    PERMISSIONS.TEAM_EDIT_ROSTER,
-    PERMISSIONS.TEAM_VIEW_SCHEDULE,
-    PERMISSIONS.TEAM_EDIT_SCHEDULE,
-    PERMISSIONS.TEAM_VIEW_BUDGET,
-    PERMISSIONS.TEAM_EDIT_BUDGET,
-    PERMISSIONS.TEAM_VIEW_LEDGER,
-    PERMISSIONS.TEAM_EDIT_LEDGER,
-    PERMISSIONS.TEAM_VIEW_SPONSORS,
-    PERMISSIONS.TEAM_EDIT_SPONSORS,
-    PERMISSIONS.TEAM_VIEW_INSIGHTS,
-    PERMISSIONS.TEAM_MANAGE_WAIVERS,
     PERMISSIONS.TEAM_MANAGE_RUBRIC,
     PERMISSIONS.CLUB_VIEW_EVALUATIONS,
   ],
@@ -262,6 +265,13 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.TEAM_VIEW_SCHEDULE,
     PERMISSIONS.CLUB_EVALUATE_PLAYERS,
     PERMISSIONS.CLUB_VIEW_EVALUATIONS,
+  ],
+
+  fundraiser: [
+    PERMISSIONS.TEAM_VIEW_ROSTER,
+    PERMISSIONS.TEAM_VIEW_BUDGET,
+    PERMISSIONS.TEAM_VIEW_SPONSORS,
+    PERMISSIONS.TEAM_EDIT_SPONSORS,
   ],
 };
 
@@ -303,10 +313,10 @@ export function getAccessibleTeamIds(userRoles, allTeamIds = []) {
 
 /**
  * Get the highest role a user holds for a specific team.
- * Priority: team_manager > team_admin > treasurer > scheduler > head_coach > assistant_coach
+ * Priority: team_manager > treasurer > scheduler > fundraiser > head_coach > assistant_coach
  */
 export function getHighestTeamRole(userRoles, teamId) {
-  const priority = ['team_manager', 'team_admin', 'treasurer', 'scheduler', 'head_coach', 'assistant_coach'];
+  const priority = ['team_manager', 'treasurer', 'scheduler', 'fundraiser', 'head_coach', 'assistant_coach'];
   const teamRoles = userRoles.filter((ur) => ur.teamId === teamId).map((ur) => ur.role);
 
   // App-level and club-level roles override team roles

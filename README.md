@@ -47,17 +47,16 @@ NOLA DFC Manager replaces spreadsheets with a purpose-built tool that handles ev
 
 ## User Roles
 
-| Role              | Scope        | What they can do                                |
-| ----------------- | ------------ | ----------------------------------------------- |
-| `club_admin`      | Club-wide    | Everything — all teams, all users, all settings |
-| `club_manager`    | Club-wide    | View-only across all teams                      |
-| `team_manager`    | One team     | Full team operations + user/role management     |
-| `team_admin`      | One team     | Full operations, no user management             |
-| `treasurer`       | One team     | Ledger, budget, sponsors, fee waivers, insights |
-| `scheduler`       | One team     | Edit schedule, view roster                      |
-| `head_coach`      | One team     | View roster, schedule, and budget               |
-| `assistant_coach` | One team     | View roster and schedule                        |
-| _(no role)_       | Own children | Parent portal — read-only                       |
+| Role              | Scope        | What they can do                                     |
+| ----------------- | ------------ | ---------------------------------------------------- |
+| `club_admin`      | Club-wide    | Everything — all teams, all users, all settings      |
+| `club_manager`    | Club-wide    | View-only across all teams                           |
+| `team_manager`    | One team     | Full team operations + user/role management + rubric |
+| `treasurer`       | One team     | Ledger, budget, sponsors, fee waivers, insights      |
+| `scheduler`       | One team     | Edit schedule, view roster                           |
+| `head_coach`      | One team     | View roster, schedule, and budget                    |
+| `assistant_coach` | One team     | View roster and schedule                             |
+| _(no role)_       | Own children | Parent portal — read-only                            |
 
 Parents are detected automatically by matching their login email to guardian records on player profiles. No manual role assignment needed.
 

@@ -16,7 +16,7 @@ export default {
   budget: 'Presupuesto',
   fundraising: 'Recaudación',
   documents: 'Documentos',
-  permissions: 'Permisos',
+  users: 'Usuarios',
   categories: 'Categorías',
   bookBalance: 'Balance de Libros',
 };
