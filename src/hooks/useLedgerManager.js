@@ -5,7 +5,34 @@
 import { supabaseService } from '../services/supabaseService';
 import { validateTransaction } from '../utils/validation';
 
-export const useLedgerManager = (refreshData, selectedSeason, teamSeasonId = null, setTransactions = null) => {
+// Postgres RLS rejections surface verbatim ("new row violates row-level
+// security policy for table ..."), which tells a coach nothing. Every path
+// that can hit one here is an access problem, so say that instead.
+const describeError = (error) => {
+  const message = error?.message || 'Something went wrong. Please try again.';
+  return /row-level security/i.test(message) ? "You don't have permission to change this team's ledger." : message;
+};
+
+export const useLedgerManager = (
+  refreshData,
+  selectedSeason,
+  teamSeasonId = null,
+  setTransactions = null,
+  { teamId = null, onTeamSeasonCreated = null } = {},
+) => {
+  // A team has no team_seasons row until its budget is first drafted, but the
+  // transactions RLS policy authorizes on team_season_id — so inserting with a
+  // null one is rejected outright ("new row violates row-level security
+  // policy") for everyone except super admins. Create the draft row on demand
+  // so logging a transaction doesn't require setting up a budget first.
+  const resolveTeamSeasonId = async () => {
+    if (teamSeasonId) return teamSeasonId;
+    if (!teamId || !selectedSeason) return null;
+    const created = await supabaseService.ensureTeamSeason(teamId, selectedSeason);
+    if (created) await onTeamSeasonCreated?.();
+    return created;
+  };
+
   const handleSaveTransaction = async (txData) => {
     const validationError = validateTransaction(txData);
     if (validationError) return { success: false, error: validationError };
@@ -18,12 +45,19 @@ export const useLedgerManager = (refreshData, selectedSeason, teamSeasonId = nul
         dateStr = txData.date.split('T')[0];
       }
 
+      // Existing transactions keep the team season they were filed under;
+      // new ones need one resolved (or created) before they can be inserted.
+      const scopeId = txData.teamSeasonId || (txData.id ? teamSeasonId : await resolveTeamSeasonId());
+      if (!txData.id && !scopeId) {
+        return { success: false, error: 'Select a team before logging a transaction.' };
+      }
+
       const formattedData = {
         ...txData,
         date: dateStr,
         seasonId: txData.seasonId || selectedSeason,
         // Attach team_season_id if available (new transactions get scoped)
-        ...(teamSeasonId && !txData.teamSeasonId ? { teamSeasonId } : {}),
+        ...(scopeId && !txData.teamSeasonId ? { teamSeasonId: scopeId } : {}),
       };
 
       // Optimistic update: reflect change in UI before server confirms
@@ -49,7 +83,7 @@ export const useLedgerManager = (refreshData, selectedSeason, teamSeasonId = nul
         await refreshData();
       }
       console.error('Transaction save failed:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: describeError(error) };
     }
   };
 
@@ -71,12 +105,17 @@ export const useLedgerManager = (refreshData, selectedSeason, teamSeasonId = nul
       // Rollback
       if (setTransactions && snapshot) setTransactions(snapshot);
       console.error('Failed to delete transaction:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: describeError(error) };
     }
   };
 
   const handleBulkUpload = async (txns) => {
     try {
+      const scopeId = await resolveTeamSeasonId();
+      if (!scopeId) {
+        return { success: false, error: 'Select a team before importing transactions.' };
+      }
+
       const normalised = txns.map((tx) => {
         let dateStr = tx.date;
         if (tx.date && tx.date.seconds) {
@@ -88,16 +127,16 @@ export const useLedgerManager = (refreshData, selectedSeason, teamSeasonId = nul
           ...tx,
           date: dateStr,
           seasonId: tx.seasonId || selectedSeason,
-          ...(teamSeasonId && !tx.teamSeasonId ? { teamSeasonId } : {}),
+          ...(tx.teamSeasonId ? {} : { teamSeasonId: scopeId }),
         };
       });
 
-      await supabaseService.bulkAddTransactions(normalised, selectedSeason, teamSeasonId);
+      await supabaseService.bulkAddTransactions(normalised, selectedSeason, scopeId);
       await refreshData();
       return { success: true };
     } catch (error) {
       console.error('Bulk upload failed:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: describeError(error) };
     }
   };
 
