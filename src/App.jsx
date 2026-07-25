@@ -292,6 +292,11 @@ function App() {
     selectedSeason,
     teamSeasonId,
     setTransactions,
+    // teamId lets the ledger create the team_seasons row on demand when the
+    // team has no budget yet for this season; refreshSeasons then picks it up.
+    // selectedTeamId, not effectiveTeamId — the ledger is staff-only, and a
+    // parent's derived team must never provision a team season.
+    { teamId: selectedTeamId, onTeamSeasonCreated: refreshSeasons },
   );
 
   const {
