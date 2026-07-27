@@ -1,6 +1,33 @@
 import { supabase } from '../supabase';
 import { logAuditEvent } from './auditService';
 
+// Single row shape for every transaction read — and for the row addTransaction
+// hands back, so a freshly written transaction can be dropped straight into
+// component state without waiting on a refetch.
+const mapTransactionRow = (tx) => ({
+  id: tx.id,
+  seasonId: tx.season_id,
+  teamSeasonId: tx.team_season_id,
+  playerId: tx.player_id,
+  playerName: tx.players ? `${tx.players.first_name} ${tx.players.last_name}` : '',
+  date: tx.date ? { seconds: Math.floor(new Date(tx.date + 'T12:00:00').getTime() / 1000) } : null,
+  rawDate: tx.date,
+  split: tx.split,
+  category: tx.category,
+  title: tx.title,
+  amount: Number(tx.amount),
+  notes: tx.notes,
+  cleared: tx.cleared,
+  distributed: tx.distributed,
+  waterfallBatchId: tx.waterfall_batch_id,
+  originalTxId: tx.original_tx_id,
+  accountId: tx.account_id || null,
+  transferFromAccountId: tx.transfer_from_account_id || null,
+  transferToAccountId: tx.transfer_to_account_id || null,
+  eventId: tx.event_id || null,
+  eventTitle: tx.team_events?.title || null,
+});
+
 export const financeService = {
   getAllTransactions: async () => {
     const { data, error } = await supabase
@@ -9,29 +36,7 @@ export const financeService = {
       .order('date', { ascending: false });
     if (error) throw error;
 
-    return data.map((tx) => ({
-      id: tx.id,
-      seasonId: tx.season_id,
-      teamSeasonId: tx.team_season_id,
-      playerId: tx.player_id,
-      playerName: tx.players ? `${tx.players.first_name} ${tx.players.last_name}` : '',
-      date: tx.date ? { seconds: Math.floor(new Date(tx.date + 'T12:00:00').getTime() / 1000) } : null,
-      rawDate: tx.date,
-      split: tx.split,
-      category: tx.category,
-      title: tx.title,
-      amount: Number(tx.amount),
-      notes: tx.notes,
-      cleared: tx.cleared,
-      distributed: tx.distributed,
-      waterfallBatchId: tx.waterfall_batch_id,
-      originalTxId: tx.original_tx_id,
-      accountId: tx.account_id || null,
-      transferFromAccountId: tx.transfer_from_account_id || null,
-      transferToAccountId: tx.transfer_to_account_id || null,
-      eventId: tx.event_id || null,
-      eventTitle: tx.team_events?.title || null,
-    }));
+    return data.map(mapTransactionRow);
   },
 
   addTransaction: async (txData) => {
@@ -54,7 +59,11 @@ export const financeService = {
       transfer_to_account_id: txData.transferToAccountId || null,
       event_id: txData.eventId || null,
     };
-    const { data, error } = await supabase.from('transactions').insert(row).select().single();
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert(row)
+      .select('*, players(first_name, last_name), team_events(title)')
+      .single();
     if (error) throw error;
 
     // Fire-and-forget audit log
@@ -71,7 +80,7 @@ export const financeService = {
       }
     });
 
-    return data;
+    return mapTransactionRow(data);
   },
 
   updateTransaction: async (txId, txData) => {
@@ -151,9 +160,12 @@ export const financeService = {
       ...(teamSeasonId ? { team_season_id: teamSeasonId } : {}),
     }));
 
-    const { data, error } = await supabase.from('transactions').insert(rows).select();
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert(rows)
+      .select('*, players(first_name, last_name), team_events(title)');
     if (error) throw error;
-    return data;
+    return data.map(mapTransactionRow);
   },
 
   getTransactionsByTeamSeason: async (teamSeasonId) => {
@@ -163,29 +175,7 @@ export const financeService = {
       .eq('team_season_id', teamSeasonId)
       .order('date', { ascending: false });
     if (error) throw error;
-    return data.map((tx) => ({
-      id: tx.id,
-      seasonId: tx.season_id,
-      teamSeasonId: tx.team_season_id,
-      playerId: tx.player_id,
-      playerName: tx.players ? `${tx.players.first_name} ${tx.players.last_name}` : null,
-      date: tx.date ? { seconds: Math.floor(new Date(tx.date + 'T12:00:00').getTime() / 1000) } : null,
-      rawDate: tx.date,
-      split: tx.split,
-      category: tx.category,
-      title: tx.title,
-      amount: Number(tx.amount),
-      notes: tx.notes,
-      cleared: tx.cleared,
-      distributed: tx.distributed,
-      waterfallBatchId: tx.waterfall_batch_id,
-      originalTxId: tx.original_tx_id,
-      accountId: tx.account_id || null,
-      transferFromAccountId: tx.transfer_from_account_id || null,
-      transferToAccountId: tx.transfer_to_account_id || null,
-      eventId: tx.event_id || null,
-      eventTitle: tx.team_events?.title || null,
-    }));
+    return data.map(mapTransactionRow);
   },
 
   getAllTransactionsForTeam: async (teamId) => {

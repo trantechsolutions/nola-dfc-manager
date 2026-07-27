@@ -61,21 +61,37 @@ export const useLedgerManager = (
       };
 
       // Optimistic update: reflect change in UI before server confirms
+      const tempId = `opt_${Date.now()}`;
       if (setTransactions) {
         if (formattedData.id) {
           setTransactions((prev) => prev.map((tx) => (tx.id === formattedData.id ? { ...tx, ...formattedData } : tx)));
         } else {
-          // Temp optimistic record — will be replaced by fetchData with real id
-          setTransactions((prev) => [{ ...formattedData, _optimistic: true, id: `opt_${Date.now()}` }, ...prev]);
+          setTransactions((prev) => [{ ...formattedData, _optimistic: true, id: tempId }, ...prev]);
         }
       }
 
+      let saved = null;
       if (formattedData.id) {
         await supabaseService.updateTransaction(formattedData.id, formattedData);
       } else {
-        await supabaseService.addTransaction(formattedData);
+        saved = await supabaseService.addTransaction(formattedData);
       }
+
       await refreshData();
+
+      // Reconcile AFTER the refetch, not before it. refreshData() replaces the
+      // whole transaction list with whatever its own query returned, and it
+      // discards its result outright if another fetch started in the meantime
+      // — so a transaction that saved fine could vanish from the ledger until
+      // the page was reloaded. The row the write itself returned is the one
+      // piece of state that cannot be stale, so it goes in last.
+      if (setTransactions) {
+        setTransactions((prev) => {
+          const withoutTemp = prev.filter((tx) => tx.id !== tempId);
+          if (!saved || withoutTemp.some((tx) => tx.id === saved.id)) return withoutTemp;
+          return [saved, ...withoutTemp];
+        });
+      }
       return { success: true };
     } catch (error) {
       // Rollback optimistic update on failure
@@ -100,6 +116,9 @@ export const useLedgerManager = (
 
       await supabaseService.deleteTransaction(txId);
       await refreshData();
+      // Same reconciliation as on save: a stale refetch must not resurrect a
+      // row that is already gone from the database.
+      if (setTransactions) setTransactions((prev) => prev.filter((tx) => tx.id !== txId));
       return { success: true };
     } catch (error) {
       // Rollback
@@ -131,8 +150,15 @@ export const useLedgerManager = (
         };
       });
 
-      await supabaseService.bulkAddTransactions(normalised, selectedSeason, scopeId);
+      const savedRows = await supabaseService.bulkAddTransactions(normalised, selectedSeason, scopeId);
       await refreshData();
+      if (setTransactions && savedRows?.length) {
+        setTransactions((prev) => {
+          const present = new Set(prev.map((tx) => tx.id));
+          const missing = savedRows.filter((tx) => !present.has(tx.id));
+          return missing.length > 0 ? [...missing, ...prev] : prev;
+        });
+      }
       return { success: true };
     } catch (error) {
       console.error('Bulk upload failed:', error);

@@ -121,33 +121,62 @@ export function useAppData({
       });
   }, [currentTeamSeason?.id, selectedSeason]);
 
+  // Realtime handlers must not be part of the subscription's dependencies:
+  // fetchData is rebuilt whenever the season, team season or teamSeasons array
+  // changes, and re-subscribing on each of those tore the channel down faster
+  // than it could finish joining.
+  const fetchDataRef = useRef(fetchData);
+  fetchDataRef.current = fetchData;
+
+  const teamSeasonIdsRef = useRef([]);
+  teamSeasonIdsRef.current = (teamSeasons || []).map((ts) => ts.id).filter(Boolean);
+
   // Real-time subscriptions: keep players, transactions, and team_events in sync
   // when other users make changes. Scoped to the active team to avoid noise.
   useEffect(() => {
     const teamId = selectedTeamId || parentTeamId;
     if (!teamId) return;
 
+    // Bursts of related writes (a waterfall distribution, a bulk import) arrive
+    // as one event per row — coalesce them into a single refetch.
+    let timer = null;
+    const refetch = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fetchDataRef.current(), 250);
+    };
+
     const channel = supabase
       .channel(`realtime-team-${teamId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `team_id=eq.${teamId}` }, () =>
-        fetchData(),
+        refetch(),
       )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'transactions', filter: `team_id=eq.${teamId}` },
-        () => fetchData(),
-      )
+      // transactions has no team_id column — it is scoped through
+      // team_season_id (sql/complete_schema.sql). Filtering on team_id made
+      // the whole channel fail to subscribe, which silently killed the
+      // players and team_events bindings alongside it, so nothing this app
+      // did in another tab or device ever showed up without a page reload.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
+        const tsId = payload.new?.team_season_id || payload.old?.team_season_id;
+        if (!tsId || teamSeasonIdsRef.current.includes(tsId)) refetch();
+      })
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'team_events', filter: `team_id=eq.${teamId}` },
-        () => fetchData(),
+        () => refetch(),
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        // A rejected subscription is otherwise completely silent: the app keeps
+        // running and just stops reflecting anyone else's changes.
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('Realtime subscription failed — live updates are off:', status, err?.message || '');
+        }
+      });
 
     return () => {
+      clearTimeout(timer);
       supabase.removeChannel(channel);
     };
-  }, [selectedTeamId, parentTeamId, fetchData]);
+  }, [selectedTeamId, parentTeamId]);
 
   const updateTeamEvent = (dbEventId, updates) => {
     setTeamEvents((prev) => prev.map((e) => (e.id === dbEventId ? { ...e, ...updates } : e)));
