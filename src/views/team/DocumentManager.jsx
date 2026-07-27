@@ -15,11 +15,14 @@ import {
   Download,
   FileCheck2,
   Camera,
+  Loader2,
 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { ALL_ROLES } from '../../utils/roles';
 import { DOC_TYPES, DOC_STATUS_COLORS } from '../../utils/constants';
 import { getCompliance } from '../../utils/compliance';
+import { downloadDocumentsAsZip } from '../../utils/downloadDocumentsZip';
 
 const STATUS_COLORS = DOC_STATUS_COLORS;
 
@@ -41,9 +44,11 @@ export default function DocumentManager({
   const [uploadingFor, setUploadingFor] = useState(null); // playerId
   const [uploadDocType, setUploadDocType] = useState('medical_release');
   const [isUploading, setIsUploading] = useState(false);
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const fileInputRef = useRef(null);
 
   const canEdit = can(PERMISSIONS.TEAM_EDIT_ROSTER);
+  const canViewMedical = can(PERMISSIONS.TEAM_VIEW_MEDICAL_DOCS);
 
   // Fetch documents scoped to team AND season
   const fetchDocs = async () => {
@@ -51,8 +56,9 @@ export default function DocumentManager({
     try {
       if (selectedTeam) {
         const allDocs = await supabaseService.getTeamDocuments(selectedTeam.id);
-        // Filter to current season — show docs that either match the season or have no season set
-        const seasonDocs = allDocs.filter((d) => !d.seasonId || d.seasonId === selectedSeason);
+        // Strictly scope to the selected season — a doc uploaded under one season
+        // should not show up under another.
+        const seasonDocs = allDocs.filter((d) => d.seasonId === selectedSeason);
         setDocuments(seasonDocs);
       }
     } catch (e) {
@@ -67,14 +73,25 @@ export default function DocumentManager({
     fetchDocs();
   }, [selectedTeam?.id, selectedSeason]);
 
-  // Per-player compliance (uses only players passed in, which are already season-filtered)
+  // Live-refresh when a document is uploaded/verified/deleted elsewhere
+  // (e.g. a parent re-signing on another device). See sql/enable_realtime.sql.
+  useRealtimeRefresh(
+    selectedTeam?.id ? `realtime-documents-${selectedTeam.id}` : null,
+    [{ table: 'documents', filter: `team_id=eq.${selectedTeam?.id}` }],
+    fetchDocs,
+    !!selectedTeam?.id,
+  );
+
+  // Per-player compliance (uses only players passed in, which are already season-filtered).
+  // hasMedical reads the season compliance flag (not the raw documents list) so the
+  // stat stays accurate for roles that can't see medical_release documents under RLS.
   const playerCompliance = useMemo(() => {
     const map = {};
     players.forEach((p) => {
-      const playerDocs = documents.filter((d) => d.playerId === p.id);
-      const hasMedical = playerDocs.some(
-        (d) => d.docType === 'medical_release' && ['uploaded', 'verified'].includes(d.status),
+      const playerDocs = documents.filter(
+        (d) => d.playerId === p.id && (canViewMedical || d.docType !== 'medical_release'),
       );
+      const hasMedical = getCompliance(p, selectedSeason).medicalRelease;
       const hasReeplayer = getCompliance(p, selectedSeason).reePlayerWaiver;
       map[p.id] = {
         hasMedical,
@@ -85,11 +102,16 @@ export default function DocumentManager({
       };
     });
     return map;
-  }, [players, documents, selectedSeason]);
+  }, [players, documents, selectedSeason, canViewMedical]);
 
   const compliantCount = Object.values(playerCompliance).filter((c) => c.isComplete).length;
   const missingMedical = Object.values(playerCompliance).filter((c) => !c.hasMedical).length;
   const missingReeplayer = players.filter((p) => !getCompliance(p, selectedSeason).reePlayerWaiver).length;
+
+  const medicalDocsForDownload = useMemo(
+    () => documents.filter((d) => d.docType === 'medical_release' && ['uploaded', 'verified'].includes(d.status)),
+    [documents],
+  );
 
   // Sync the season's medical-release flag from document state
   const syncWaiverStatus = async (playerId, status) => {
@@ -174,6 +196,29 @@ export default function DocumentManager({
     }
   };
 
+  const handleDownloadAllMedical = async () => {
+    if (!medicalDocsForDownload.length || isDownloadingAll) return;
+    setIsDownloadingAll(true);
+    try {
+      const zipName = `${selectedTeam?.name || 'Team'} Medical Release Forms - ${selectedSeason}.zip`.replace(
+        /[\\/:*?"<>|]/g,
+        '',
+      );
+      const { downloaded, failed } = await downloadDocumentsAsZip(medicalDocsForDownload, zipName);
+      if (downloaded === 0) {
+        showToast('Failed to download medical forms', true);
+      } else if (failed > 0) {
+        showToast(`Downloaded ${downloaded} form${downloaded === 1 ? '' : 's'} (${failed} failed)`);
+      } else {
+        showToast(`Downloaded ${downloaded} medical release form${downloaded === 1 ? '' : 's'}`);
+      }
+    } catch (err) {
+      showToast(`Download failed: ${err.message}`, true);
+    } finally {
+      setIsDownloadingAll(false);
+    }
+  };
+
   const filteredPlayers = useMemo(() => {
     let result = players;
     if (searchTerm) {
@@ -190,11 +235,26 @@ export default function DocumentManager({
 
   return (
     <div className="space-y-5 pb-24 md:pb-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">Documents</h2>
-        <p className="text-xs text-muted-foreground font-semibold">
-          {selectedTeam?.name} · {selectedSeason} · {documents.length} files uploaded
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Documents</h2>
+          <p className="text-xs text-muted-foreground font-semibold">
+            {selectedTeam?.name} · {selectedSeason} · {documents.length} files uploaded
+          </p>
+        </div>
+        {canViewMedical && (
+          <button
+            onClick={handleDownloadAllMedical}
+            disabled={isDownloadingAll || medicalDocsForDownload.length === 0}
+            title={
+              medicalDocsForDownload.length === 0 ? 'No medical release forms to download' : 'Download all as a zip'
+            }
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shrink-0"
+          >
+            {isDownloadingAll ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            {isDownloadingAll ? 'Zipping…' : `Download All Medical Forms (${medicalDocsForDownload.length})`}
+          </button>
+        )}
       </div>
 
       {/* Compliance Summary */}

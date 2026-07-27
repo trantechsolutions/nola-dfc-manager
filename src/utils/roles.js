@@ -134,6 +134,7 @@ export const PERMISSIONS = {
   TEAM_MANAGE_WAIVERS: 'team:manage_waivers', // Toggle fee waivers
   TEAM_MANAGE_USERS: 'team:manage_users', // Assign roles to team parents/guardians
   TEAM_MANAGE_RUBRIC: 'team:manage_rubric', // Customize the team's season evaluation rubric
+  TEAM_VIEW_MEDICAL_DOCS: 'team:view_medical_docs', // View/download medical release forms (team_manager+ only, not coaches/treasurer/scheduler/fundraiser)
 
   // Evaluations (club-level)
   CLUB_MANAGE_EVALUATIONS: 'club:manage_evaluations', // Create/configure evaluation sessions
@@ -171,6 +172,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.TEAM_MANAGE_WAIVERS,
     PERMISSIONS.TEAM_MANAGE_USERS,
     PERMISSIONS.TEAM_MANAGE_RUBRIC,
+    PERMISSIONS.TEAM_VIEW_MEDICAL_DOCS,
     // All evaluation permissions
     PERMISSIONS.CLUB_MANAGE_EVALUATIONS,
     PERMISSIONS.CLUB_EVALUATE_PLAYERS,
@@ -200,6 +202,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.TEAM_MANAGE_WAIVERS,
     PERMISSIONS.TEAM_MANAGE_USERS,
     PERMISSIONS.TEAM_MANAGE_RUBRIC,
+    PERMISSIONS.TEAM_VIEW_MEDICAL_DOCS,
     // Evaluation permissions
     PERMISSIONS.CLUB_MANAGE_EVALUATIONS,
     PERMISSIONS.CLUB_EVALUATE_PLAYERS,
@@ -235,6 +238,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.TEAM_MANAGE_WAIVERS,
     PERMISSIONS.TEAM_MANAGE_USERS,
     PERMISSIONS.TEAM_MANAGE_RUBRIC,
+    PERMISSIONS.TEAM_VIEW_MEDICAL_DOCS,
     PERMISSIONS.CLUB_VIEW_EVALUATIONS,
   ],
 

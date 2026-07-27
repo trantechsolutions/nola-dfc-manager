@@ -124,10 +124,10 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
       // 1. Save form data to DB (per season)
       await supabaseService.saveMedicalForm(player.id, seasonId, formData, lang);
 
-      // 2. Remove any existing medical_release documents (overwrite, not stack)
+      // 2. Remove any existing medical_release documents for this season (overwrite, not stack)
       try {
         const existingDocs = await supabaseService.getPlayerDocuments(player.id);
-        const oldMedical = existingDocs.filter((d) => d.docType === 'medical_release');
+        const oldMedical = existingDocs.filter((d) => d.docType === 'medical_release' && d.seasonId === seasonId);
         for (const doc of oldMedical) {
           await supabaseService.deleteDocument(doc.id, doc.filePath);
         }

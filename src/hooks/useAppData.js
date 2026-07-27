@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { supabase } from '../supabase';
 import { supabaseService } from '../services/supabaseService';
+import { useRealtimeRefresh } from './useRealtimeRefresh';
 
 /**
  * Owns all server-fetched data state: players, transactions, playerFinancials,
@@ -123,31 +123,20 @@ export function useAppData({
 
   // Real-time subscriptions: keep players, transactions, and team_events in sync
   // when other users make changes. Scoped to the active team to avoid noise.
-  useEffect(() => {
-    const teamId = selectedTeamId || parentTeamId;
-    if (!teamId) return;
-
-    const channel = supabase
-      .channel(`realtime-team-${teamId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'players', filter: `team_id=eq.${teamId}` }, () =>
-        fetchData(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'transactions', filter: `team_id=eq.${teamId}` },
-        () => fetchData(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'team_events', filter: `team_id=eq.${teamId}` },
-        () => fetchData(),
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [selectedTeamId, parentTeamId, fetchData]);
+  // `transactions` has no team_id column — it's scoped by team_season_id, so
+  // it needs the current team-season id, not the team id, to filter correctly.
+  const teamId = selectedTeamId || parentTeamId;
+  const teamSeasonId = currentTeamSeason?.id || null;
+  useRealtimeRefresh(
+    teamId ? `realtime-team-${teamId}-${teamSeasonId || 'none'}` : null,
+    [
+      { table: 'players', filter: `team_id=eq.${teamId}` },
+      { table: 'team_events', filter: `team_id=eq.${teamId}` },
+      ...(teamSeasonId ? [{ table: 'transactions', filter: `team_season_id=eq.${teamSeasonId}` }] : []),
+    ],
+    fetchData,
+    !!teamId,
+  );
 
   const updateTeamEvent = (dbEventId, updates) => {
     setTeamEvents((prev) => prev.map((e) => (e.id === dbEventId ? { ...e, ...updates } : e)));

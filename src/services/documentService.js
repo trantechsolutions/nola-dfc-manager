@@ -42,6 +42,7 @@ export const documentService = {
       playerId: d.player_id,
       playerName: d.players ? `${d.players.first_name} ${d.players.last_name}` : null,
       jerseyNumber: d.players?.jersey_number,
+      seasonId: d.season_id,
       docType: d.doc_type,
       title: d.title,
       fileName: d.file_name,
@@ -142,6 +143,12 @@ export const documentService = {
   getDocumentUrl: async (filePath) => {
     const { data } = await supabase.storage.from('player-documents').createSignedUrl(filePath, 3600);
     return data?.signedUrl || null;
+  },
+
+  downloadDocumentBlob: async (filePath) => {
+    const { data, error } = await supabase.storage.from('player-documents').download(filePath);
+    if (error) throw error;
+    return data;
   },
 
   // Medical forms are per-season — each year requires its own waiver.

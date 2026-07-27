@@ -27,6 +27,7 @@ import {
 import { supabaseService } from '../../services/supabaseService';
 import PlayerFormModal from '../../components/PlayerFormModal';
 import { useBudgetForecast } from '../../hooks/useBudgetForecast';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { exportBudgetActualsPDF, exportBudgetActualsCSV } from '../../utils/exportUtils';
 
 // Fallback budget categories used when no categoryOptions prop is provided
@@ -186,6 +187,20 @@ export default function BudgetView({
   useEffect(() => {
     fetchData();
   }, [selectedSeason, currentTeamSeason?.id]);
+
+  // Live-refresh when budget items, amendments, or this team-season's
+  // transactions change on another device/tab. See sql/enable_realtime.sql.
+  const tsId = currentTeamSeason?.id || null;
+  useRealtimeRefresh(
+    tsId ? `realtime-budget-${tsId}` : null,
+    [
+      { table: 'budget_items', filter: `team_season_id=eq.${tsId}` },
+      { table: 'budget_amendments', filter: `team_season_id=eq.${tsId}` },
+      { table: 'transactions', filter: `team_season_id=eq.${tsId}` },
+    ],
+    fetchData,
+    !!tsId,
+  );
 
   useEffect(() => {
     if (!showExportMenu) return;

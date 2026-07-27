@@ -65,6 +65,41 @@ AS $$
   WHERE up.user_id = auth.uid()
 $$;
 
+-- Helper function: get team IDs this user administers medical records for.
+-- Medical release forms/documents are sensitive, so access is scoped tighter
+-- than general club staff (user_club_ids()): only the team's team_manager
+-- and the club's club_admin — not treasurer/scheduler/coaches/fundraiser/
+-- club_manager. super_admin bypasses via is_super_admin() separately.
+CREATE OR REPLACE FUNCTION user_medical_admin_team_ids()
+RETURNS SETOF uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+AS $$
+  SELECT team_id FROM user_roles
+  WHERE user_id = auth.uid() AND team_id IS NOT NULL AND role = 'team_manager'
+  UNION
+  SELECT t.id FROM teams t
+  JOIN user_roles ur ON ur.club_id = t.club_id
+  WHERE ur.user_id = auth.uid() AND ur.role = 'club_admin'
+$$;
+
+-- Helper function: club IDs this user administers medical records for as
+-- club_admin. Players can exist with team_id = NULL (e.g. status = 'prospect'
+-- tryout pool, per players.status CHECK), which user_medical_admin_team_ids()
+-- can't reach since it joins through teams. This lets a club_admin still see
+-- medical records for unassigned players via players.club_id / documents.club_id,
+-- which are NOT NULL.
+CREATE OR REPLACE FUNCTION user_medical_admin_club_ids()
+RETURNS SETOF uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+AS $$
+  SELECT club_id FROM user_roles
+  WHERE user_id = auth.uid() AND club_id IS NOT NULL AND role = 'club_admin'
+$$;
+
 
 -- ============================================================
 -- DROP all existing permissive policies first
@@ -282,56 +317,97 @@ CREATE POLICY "budget_items_delete" ON budget_items FOR DELETE TO authenticated
 
 -- ============================================================
 -- DOCUMENTS
+-- Medical release documents are scoped tighter than other doc types:
+-- only the guardian, the team's team_manager, or a club_admin/super_admin
+-- can see them. Other doc types (birth certificate, insurance card, etc.)
+-- keep the broader club-staff access.
 -- ============================================================
 CREATE POLICY "documents_select" ON documents FOR SELECT TO authenticated
   USING (
     is_super_admin()
-    OR club_id IN (SELECT user_club_ids())
     OR player_id IN (SELECT user_guardian_player_ids())
+    OR (doc_type <> 'medical_release' AND club_id IN (SELECT user_club_ids()))
+    OR (
+      doc_type = 'medical_release'
+      AND (team_id IN (SELECT user_medical_admin_team_ids()) OR club_id IN (SELECT user_medical_admin_club_ids()))
+    )
   );
 
 CREATE POLICY "documents_insert" ON documents FOR INSERT TO authenticated
   WITH CHECK (
     is_super_admin()
-    OR club_id IN (SELECT user_club_ids())
     OR player_id IN (SELECT user_guardian_player_ids())
+    OR (doc_type <> 'medical_release' AND club_id IN (SELECT user_club_ids()))
+    OR (
+      doc_type = 'medical_release'
+      AND (team_id IN (SELECT user_medical_admin_team_ids()) OR club_id IN (SELECT user_medical_admin_club_ids()))
+    )
   );
 
 CREATE POLICY "documents_update" ON documents FOR UPDATE TO authenticated
-  USING (is_super_admin() OR club_id IN (SELECT user_club_ids()));
+  USING (
+    is_super_admin()
+    OR (doc_type <> 'medical_release' AND club_id IN (SELECT user_club_ids()))
+    OR (
+      doc_type = 'medical_release'
+      AND (team_id IN (SELECT user_medical_admin_team_ids()) OR club_id IN (SELECT user_medical_admin_club_ids()))
+    )
+  );
 
 CREATE POLICY "documents_delete" ON documents FOR DELETE TO authenticated
-  USING (is_super_admin() OR club_id IN (SELECT user_club_ids()));
+  USING (
+    is_super_admin()
+    OR player_id IN (SELECT user_guardian_player_ids())
+    OR (doc_type <> 'medical_release' AND club_id IN (SELECT user_club_ids()))
+    OR (
+      doc_type = 'medical_release'
+      AND (team_id IN (SELECT user_medical_admin_team_ids()) OR club_id IN (SELECT user_medical_admin_club_ids()))
+    )
+  );
 
 
 -- ============================================================
 -- MEDICAL_FORMS
+-- Same tighter scope as medical_release documents: guardian, the player's
+-- team_manager, or club_admin/super_admin — not the rest of club staff.
 -- ============================================================
 CREATE POLICY "medical_forms_select" ON medical_forms FOR SELECT TO authenticated
   USING (
     is_super_admin()
-    OR player_id IN (SELECT id FROM players WHERE club_id IN (SELECT user_club_ids()))
     OR player_id IN (SELECT user_guardian_player_ids())
+    OR player_id IN (
+      SELECT id FROM players
+      WHERE team_id IN (SELECT user_medical_admin_team_ids()) OR club_id IN (SELECT user_medical_admin_club_ids())
+    )
   );
 
 CREATE POLICY "medical_forms_insert" ON medical_forms FOR INSERT TO authenticated
   WITH CHECK (
     is_super_admin()
-    OR player_id IN (SELECT id FROM players WHERE club_id IN (SELECT user_club_ids()))
     OR player_id IN (SELECT user_guardian_player_ids())
+    OR player_id IN (
+      SELECT id FROM players
+      WHERE team_id IN (SELECT user_medical_admin_team_ids()) OR club_id IN (SELECT user_medical_admin_club_ids())
+    )
   );
 
 CREATE POLICY "medical_forms_update" ON medical_forms FOR UPDATE TO authenticated
   USING (
     is_super_admin()
-    OR player_id IN (SELECT id FROM players WHERE club_id IN (SELECT user_club_ids()))
     OR player_id IN (SELECT user_guardian_player_ids())
+    OR player_id IN (
+      SELECT id FROM players
+      WHERE team_id IN (SELECT user_medical_admin_team_ids()) OR club_id IN (SELECT user_medical_admin_club_ids())
+    )
   );
 
 CREATE POLICY "medical_forms_delete" ON medical_forms FOR DELETE TO authenticated
   USING (
     is_super_admin()
-    OR player_id IN (SELECT id FROM players WHERE club_id IN (SELECT user_club_ids()))
+    OR player_id IN (
+      SELECT id FROM players
+      WHERE team_id IN (SELECT user_medical_admin_team_ids()) OR club_id IN (SELECT user_medical_admin_club_ids())
+    )
   );
 
 
@@ -537,3 +613,5 @@ GRANT EXECUTE ON FUNCTION user_club_ids() TO authenticated;
 GRANT EXECUTE ON FUNCTION is_super_admin() TO authenticated;
 GRANT EXECUTE ON FUNCTION user_team_ids() TO authenticated;
 GRANT EXECUTE ON FUNCTION user_guardian_player_ids() TO authenticated;
+GRANT EXECUTE ON FUNCTION user_medical_admin_team_ids() TO authenticated;
+GRANT EXECUTE ON FUNCTION user_medical_admin_club_ids() TO authenticated;
