@@ -244,6 +244,11 @@ CREATE POLICY "player_seasons_insert" ON player_seasons FOR INSERT TO authentica
     OR player_id IN (SELECT id FROM players WHERE club_id IN (SELECT user_club_ids()))
   );
 
+-- Guardians deliberately have no UPDATE policy here: RLS gates whole rows, so
+-- any policy letting a parent sign the medical release would also expose
+-- fee_waived / status / team_season_id on the same row. Parent-signed medical
+-- release goes through set_guardian_medical_release()
+-- (sql/fix_guardian_medical_release_rls.sql) instead.
 CREATE POLICY "player_seasons_update" ON player_seasons FOR UPDATE TO authenticated
   USING (
     is_super_admin()

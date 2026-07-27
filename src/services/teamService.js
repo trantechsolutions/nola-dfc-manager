@@ -153,6 +153,48 @@ export const teamService = {
     };
   },
 
+  // Get-or-create the team_seasons row for a team/season pair.
+  //
+  // A team only gets a team_seasons row when its budget is first drafted, but
+  // transactions, budget items and player enrollments are all scoped by
+  // team_season_id — and the transactions RLS policy checks
+  //   team_season_id IN (SELECT id FROM team_seasons WHERE team_id IN user_team_ids())
+  // which is NULL (i.e. fails) for a row with no team_season_id. Anyone who
+  // isn't a super admin therefore couldn't log a transaction in a season the
+  // team had no budget row for. The created row is an empty draft — base_fee 0,
+  // not finalized — exactly what BudgetView would have written on first save.
+  ensureTeamSeason: async (teamId, seasonId) => {
+    if (!teamId || !seasonId) return null;
+
+    const { data: existing, error: findErr } = await supabase
+      .from('team_seasons')
+      .select('id')
+      .eq('team_id', teamId)
+      .eq('season_id', seasonId)
+      .maybeSingle();
+    if (findErr) throw findErr;
+    if (existing) return existing.id;
+
+    // team_seasons.season_id is a FK to seasons(id), and the season list is
+    // partly synthesized client-side (useSoccerYear), so the parent row may
+    // not exist yet.
+    const { error: seasonErr } = await supabase
+      .from('seasons')
+      .upsert({ id: seasonId, name: seasonId }, { onConflict: 'id', ignoreDuplicates: true });
+    if (seasonErr) throw seasonErr;
+
+    const { data, error } = await supabase
+      .from('team_seasons')
+      .upsert(
+        { team_id: teamId, season_id: seasonId, is_finalized: false, base_fee: 0, buffer_percent: 5 },
+        { onConflict: 'team_id,season_id' },
+      )
+      .select('id')
+      .single();
+    if (error) throw error;
+    return data.id;
+  },
+
   // Targeted update for the distribution method only. Kept separate from
   // saveTeamSeason so budget saves/finalization never touch it (and can't
   // reset it to the default).
