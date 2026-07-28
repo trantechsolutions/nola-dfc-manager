@@ -13,9 +13,11 @@ import {
   Lock,
   DollarSign,
   CheckCircle2,
+  ClipboardList,
 } from 'lucide-react';
 import CalendarView from '../../components/CalendarView';
 import EventExpenseModal from '../../components/EventExpenseModal';
+import MatchupPlanner from '../../components/MatchupPlanner';
 import { EVENT_TYPES } from '../../utils/eventClassifier';
 import { useT } from '../../i18n/I18nContext';
 import { filterEventsBySeason } from '../../utils/seasonUtils';
@@ -43,13 +45,13 @@ const EventCard = ({
 
   return (
     <div
-      className={`bg-card rounded-lg border overflow-hidden transition-all ${
-        isPast ? 'opacity-60 border-border' : `${type.border} hover:shadow-md hover:-translate-y-0.5`
+      className={`w-full text-left bg-card rounded-lg border shadow-sm overflow-hidden flex transition-shadow ${
+        isPast ? 'opacity-60 border-border' : `${type.border} hover:shadow-md`
       } ${event.isCancelled ? 'opacity-40' : ''}`}
     >
-      <div className={`h-1.5 ${type.color}`} />
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-2">
+      <div className={`w-1.5 shrink-0 ${type.color}`} />
+      <div className="p-4 flex-grow min-w-0">
+        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
           {canEdit && editing ? (
             <select
               autoFocus
@@ -67,31 +69,29 @@ const EventCard = ({
           ) : (
             <button
               onClick={canEdit ? () => setEditing(true) : undefined}
-              className={`text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1 ${type.colorLight} ${canEdit ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+              className={`text-xs font-bold uppercase px-2 py-0.5 rounded flex items-center gap-1 ${type.colorLight} ${canEdit ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
               title={canEdit ? t('schedule.clickToChangeType') : undefined}
             >
               {type.label}
               {dbEvent?.typeLocked && <Lock size={8} className="opacity-60" />}
             </button>
           )}
-          <span className="text-xs font-semibold text-muted-foreground">{event.displayDate}</span>
+          <span className="text-xs text-muted-foreground ml-auto">{event.displayDate}</span>
         </div>
         <h4
-          className={`font-bold text-foreground text-sm leading-tight mb-3 ${event.isCancelled ? 'line-through' : ''}`}
+          className={`font-bold text-foreground text-sm leading-tight mb-1.5 ${event.isCancelled ? 'line-through' : ''}`}
         >
           {event.title}
         </h4>
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
             <Clock size={12} className="text-muted-foreground shrink-0" />
             <span className="font-medium">{event.displayTime}</span>
-          </div>
-          <div className="flex items-start gap-2 text-xs text-muted-foreground">
-            <MapPin size={12} className="text-muted-foreground shrink-0 mt-0.5" />
-            <span className="font-medium leading-tight" title={event.location}>
-              {event.location}
-            </span>
-          </div>
+          </span>
+          <span className="flex items-center gap-1.5 min-w-0" title={event.location}>
+            <MapPin size={12} className="text-muted-foreground shrink-0" />
+            <span className="font-medium truncate">{event.location}</span>
+          </span>
         </div>
 
         {/* Expense badge — only for synced events when admin */}
@@ -177,6 +177,15 @@ export default function ScheduleView({
   selectedSeason,
   activeAccounts = [],
   accountMap = {},
+  matchups = [],
+  matchupsLoading = false,
+  onCreateMatchup = null,
+  onUpdateMatchup = null,
+  onDeleteMatchup = null,
+  onDuplicateMatchup = null,
+  onSetMatchupStatus = null,
+  onConfirmMatchup = null,
+  onRescheduleMatchup = null,
 }) {
   const { t } = useT();
   const [tab, setTab] = useState('upcoming');
@@ -231,7 +240,7 @@ export default function ScheduleView({
       setIsSyncing(false);
     }
   };
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [typeFilters, setTypeFilters] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   const currentIcsUrl = selectedTeam?.icalUrl || '';
@@ -240,11 +249,16 @@ export default function ScheduleView({
     { id: 'upcoming', label: t('schedule.upcoming'), icon: Calendar },
     { id: 'past', label: t('schedule.past'), icon: History },
     { id: 'calendar', label: t('schedule.calendar'), icon: CalendarDays },
+    { id: 'planner', label: t('schedule.planner'), icon: ClipboardList },
   ];
+
+  const toggleTypeFilter = (key) => {
+    setTypeFilters((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  };
 
   const applyFilters = (list) => {
     let result = list;
-    if (typeFilter !== 'all') result = result.filter((e) => e.eventType === typeFilter);
+    if (typeFilters.length > 0) result = result.filter((e) => typeFilters.includes(e.eventType));
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       result = result.filter(
@@ -259,10 +273,10 @@ export default function ScheduleView({
 
   const filteredUpcoming = useMemo(
     () => applyFilters(seasonEvents.upcoming),
-    [seasonEvents.upcoming, typeFilter, searchTerm],
+    [seasonEvents.upcoming, typeFilters, searchTerm],
   );
-  const filteredPast = useMemo(() => applyFilters(seasonEvents.past), [seasonEvents.past, typeFilter, searchTerm]);
-  const hasFilters = typeFilter !== 'all' || searchTerm;
+  const filteredPast = useMemo(() => applyFilters(seasonEvents.past), [seasonEvents.past, typeFilters, searchTerm]);
+  const hasFilters = typeFilters.length > 0 || searchTerm;
 
   const FilterBar = () => (
     <div className="bg-card p-4 rounded-lg border border-border shadow-sm space-y-3">
@@ -288,17 +302,17 @@ export default function ScheduleView({
         <Filter size={13} className="text-muted-foreground" />
         <div className="flex flex-wrap gap-1 bg-muted rounded-lg p-0.5">
           <button
-            onClick={() => setTypeFilter('all')}
-            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${typeFilter === 'all' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
+            onClick={() => setTypeFilters([])}
+            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${typeFilters.length === 0 ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
           >
             {t('common.all')}
           </button>
           {Object.entries(EVENT_TYPES).map(([key, type]) => (
             <button
               key={key}
-              onClick={() => setTypeFilter(key)}
+              onClick={() => toggleTypeFilter(key)}
               className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1 ${
-                typeFilter === key ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'
+                typeFilters.includes(key) ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${type.dot}`} />
@@ -309,7 +323,7 @@ export default function ScheduleView({
         {hasFilters && (
           <button
             onClick={() => {
-              setTypeFilter('all');
+              setTypeFilters([]);
               setSearchTerm('');
             }}
             className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 flex items-center gap-1 ml-auto"
@@ -400,7 +414,7 @@ export default function ScheduleView({
               {hasFilters ? t('schedule.noFilterMatch') : t('schedule.noUpcoming')}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="space-y-2">
               {filteredUpcoming.map((e) => {
                 const db = dbEventsByUid[e.id];
                 return (
@@ -428,7 +442,7 @@ export default function ScheduleView({
               {hasFilters ? t('schedule.noFilterMatch') : t('schedule.noPast')}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="space-y-2">
               {filteredPast.map((e) => {
                 const db = dbEventsByUid[e.id];
                 return (
@@ -455,6 +469,23 @@ export default function ScheduleView({
             <CalendarView events={events} blackoutDates={blackoutDates} onToggleBlackout={onToggleBlackout} />
           </div>
         </div>
+      )}
+
+      {/* ── Planner (inter-team matchup scheduling) ── */}
+      {tab === 'planner' && (
+        <MatchupPlanner
+          matchups={matchups}
+          loading={matchupsLoading}
+          canEdit={canEditSchedule}
+          blackoutDates={blackoutDates}
+          onCreate={onCreateMatchup}
+          onUpdate={onUpdateMatchup}
+          onDelete={onDeleteMatchup}
+          onDuplicate={onDuplicateMatchup}
+          onSetStatus={onSetMatchupStatus}
+          onConfirm={onConfirmMatchup}
+          onReschedule={onRescheduleMatchup}
+        />
       )}
 
       {/* ── Event Expense Modal ── */}
