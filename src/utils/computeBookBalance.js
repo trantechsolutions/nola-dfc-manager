@@ -49,6 +49,8 @@ function txDateStr(tx) {
  * the last day of `monthKey`.
  *
  * Rules:
+ *  - Only tx.cleared === true counts — book balance is money on hand
+ *    (funds cleared or in possession), not projected/pending items.
  *  - Normal tx with account_id === accountId  → add amount
  *  - TRF with transfer_to_account_id === accountId  → add amount (inflow)
  *  - TRF with transfer_from_account_id === accountId → subtract amount (outflow)
@@ -72,6 +74,7 @@ export function computeLedgerBalance(accountId, monthKey, transactions) {
 
   let total = 0;
   for (const tx of transactions) {
+    if (!tx.cleared) continue;
     const d = txDateStr(tx);
     if (!d || (cutoff && d > cutoff)) continue;
 

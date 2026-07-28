@@ -62,6 +62,7 @@ describe('computeLedgerBalance', () => {
     transferFromAccountId: null,
     rawDate: '2025-03-15',
     date: null,
+    cleared: true,
     ...overrides,
   });
 
@@ -152,6 +153,30 @@ describe('computeLedgerBalance', () => {
     ];
     expect(computeLedgerBalance(ACCOUNT_A, MONTH, txs)).toBe(120);
   });
+
+  it('excludes uncleared (projected/pending) transactions — book balance is money on hand', () => {
+    const txs = [
+      tx({ accountId: ACCOUNT_A, amount: 100, rawDate: '2025-03-01', cleared: true }),
+      tx({ accountId: ACCOUNT_A, amount: 500, rawDate: '2025-03-10', cleared: false }),
+    ];
+    expect(computeLedgerBalance(ACCOUNT_A, MONTH, txs)).toBe(100);
+  });
+
+  it('excludes uncleared transfers from both the inflow and outflow sides', () => {
+    const txs = [
+      tx({ accountId: ACCOUNT_A, amount: 200, rawDate: '2025-02-01', cleared: true }),
+      tx({
+        category: 'TRF',
+        transferFromAccountId: ACCOUNT_A,
+        transferToAccountId: ACCOUNT_B,
+        amount: 50,
+        rawDate: '2025-03-05',
+        cleared: false,
+      }),
+    ];
+    expect(computeLedgerBalance(ACCOUNT_A, MONTH, txs)).toBe(200);
+    expect(computeLedgerBalance(ACCOUNT_B, MONTH, txs)).toBe(0);
+  });
 });
 
 // ── computeAllLedgerBalances ───────────────────────────────────────────────────
@@ -174,8 +199,8 @@ describe('computeAllLedgerBalances', () => {
       { id: 'a2', holding: 'digital' },
     ];
     const transactions = [
-      { id: 't1', category: 'INC', accountId: 'a1', amount: 100, rawDate: '2025-03-01', date: null },
-      { id: 't2', category: 'EXP', accountId: 'a2', amount: -40, rawDate: '2025-03-05', date: null },
+      { id: 't1', category: 'INC', accountId: 'a1', amount: 100, rawDate: '2025-03-01', date: null, cleared: true },
+      { id: 't2', category: 'EXP', accountId: 'a2', amount: -40, rawDate: '2025-03-05', date: null, cleared: true },
     ];
     const result = computeAllLedgerBalances(accounts, transactions, '2025-03-01');
     expect(result['a1']).toBe(100);
@@ -196,6 +221,7 @@ describe('computeBankLedgerTotal', () => {
     transferFromAccountId: null,
     rawDate: '2025-03-15',
     date: null,
+    cleared: true,
     ...overrides,
   });
 
@@ -239,6 +265,15 @@ describe('computeBankLedgerTotal', () => {
     ];
     // b1 = 500 - 100 = 400; b2 = 0 + 100 = 100; total = 500
     expect(computeBankLedgerTotal(accounts, transactions, MONTH)).toBe(500);
+  });
+
+  it('excludes uncleared transactions from the bank aggregate total', () => {
+    const accounts = [{ id: 'b1', holding: 'bank', isActive: true }];
+    const transactions = [
+      tx({ accountId: 'b1', amount: 100, cleared: true }),
+      tx({ accountId: 'b1', amount: 9000, cleared: false }),
+    ];
+    expect(computeBankLedgerTotal(accounts, transactions, MONTH)).toBe(100);
   });
 });
 

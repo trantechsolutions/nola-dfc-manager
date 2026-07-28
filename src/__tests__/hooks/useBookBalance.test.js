@@ -24,8 +24,16 @@ const ACCOUNTS = [
 ];
 
 const TRANSACTIONS = [
-  { id: 't1', category: 'INC', accountId: 'acct-bank', amount: 500, rawDate: '2025-03-10', date: null },
-  { id: 't2', category: 'EXP', accountId: 'acct-digital', amount: -100, rawDate: '2025-03-15', date: null },
+  { id: 't1', category: 'INC', accountId: 'acct-bank', amount: 500, rawDate: '2025-03-10', date: null, cleared: true },
+  {
+    id: 't2',
+    category: 'EXP',
+    accountId: 'acct-digital',
+    amount: -100,
+    rawDate: '2025-03-15',
+    date: null,
+    cleared: true,
+  },
 ];
 
 const makeStoredRow = (overrides = {}) => ({
