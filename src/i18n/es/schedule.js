@@ -35,6 +35,8 @@ export default {
     blackoutWarning: 'Esta fecha cae en una semana bloqueada',
     confirmMatchup: 'Confirmar — lo agrega al calendario',
     reschedule: 'Suspendido por lluvia / necesita nueva fecha',
+    duplicateMatchup: 'Duplicar',
+    editWeekLabel: 'Clic para renombrar esta semana',
     weekLabelPlaceholder: 'Nueva etiqueta de semana, ej. Semana 3 de Otoño',
     addMatchup: 'Agregar Partido',
     noMatchups: 'Aún no hay partidos. Agrega uno para empezar a planificar la temporada.',

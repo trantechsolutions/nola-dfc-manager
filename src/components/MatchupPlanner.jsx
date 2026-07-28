@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, CheckCircle2, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, RotateCcw, AlertTriangle, Copy } from 'lucide-react';
 import { MATCHUP_STATUS_META, nextStatuses } from '../utils/matchupStatus';
 import { useT } from '../i18n/I18nContext';
 
@@ -14,6 +14,35 @@ function groupByWeek(matchups) {
   });
   return Array.from(groups.entries());
 }
+
+const WeekHeader = ({ weekLabel, canEdit, onRename, t }) => {
+  const isUnscheduled = weekLabel === UNSCHEDULED_KEY;
+  const displayValue = isUnscheduled ? '' : weekLabel;
+
+  if (!canEdit) {
+    return (
+      <h3 className="text-xs font-bold uppercase text-muted-foreground tracking-wide">
+        {isUnscheduled ? t('schedule.unscheduledWeek') : weekLabel}
+      </h3>
+    );
+  }
+
+  return (
+    <input
+      key={weekLabel}
+      type="text"
+      defaultValue={displayValue}
+      placeholder={t('schedule.unscheduledWeek')}
+      title={t('schedule.editWeekLabel')}
+      onBlur={(e) => {
+        const next = e.target.value.trim();
+        if (next === displayValue) return;
+        onRename(next || null);
+      }}
+      className="text-xs font-bold uppercase text-muted-foreground tracking-wide bg-transparent border-b border-transparent hover:border-border focus:border-ring outline-none px-0.5 -ml-0.5 w-56 max-w-full"
+    />
+  );
+};
 
 const HomeAwayToggle = ({ value, onChange, disabled, t }) => (
   <div className="flex rounded-md border border-border overflow-hidden text-xs font-semibold shrink-0">
@@ -38,7 +67,17 @@ const HomeAwayToggle = ({ value, onChange, disabled, t }) => (
   </div>
 );
 
-const MatchupRow = ({ matchup, canEdit, isBlackedOut, onUpdate, onSetStatus, onConfirm, onReschedule, onDelete }) => {
+const MatchupRow = ({
+  matchup,
+  canEdit,
+  isBlackedOut,
+  onUpdate,
+  onSetStatus,
+  onConfirm,
+  onReschedule,
+  onDuplicate,
+  onDelete,
+}) => {
   const { t } = useT();
   const meta = MATCHUP_STATUS_META[matchup.status] || MATCHUP_STATUS_META.open;
   const editableTerminal = matchup.status === 'dns' || matchup.status === 'cancelled';
@@ -166,6 +205,13 @@ const MatchupRow = ({ matchup, canEdit, isBlackedOut, onUpdate, onSetStatus, onC
             </button>
           )}
           <button
+            onClick={() => onDuplicate(matchup)}
+            title={t('schedule.duplicateMatchup')}
+            className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+          >
+            <Copy size={15} />
+          </button>
+          <button
             onClick={() => onDelete(matchup.id)}
             title={t('common.delete')}
             className="p-1.5 rounded hover:bg-rose-50 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400"
@@ -186,6 +232,7 @@ export default function MatchupPlanner({
   onCreate,
   onUpdate,
   onDelete,
+  onDuplicate,
   onSetStatus,
   onConfirm,
   onReschedule,
@@ -232,9 +279,12 @@ export default function MatchupPlanner({
       ) : (
         groups.map(([weekLabel, rows]) => (
           <div key={weekLabel} className="space-y-2">
-            <h3 className="text-xs font-bold uppercase text-muted-foreground tracking-wide">
-              {weekLabel === UNSCHEDULED_KEY ? t('schedule.unscheduledWeek') : weekLabel}
-            </h3>
+            <WeekHeader
+              weekLabel={weekLabel}
+              canEdit={canEdit}
+              onRename={(newLabel) => rows.forEach((m) => onUpdate(m.id, { weekLabel: newLabel }))}
+              t={t}
+            />
             {rows.map((matchup) => (
               <MatchupRow
                 key={matchup.id}
@@ -245,6 +295,7 @@ export default function MatchupPlanner({
                 onSetStatus={onSetStatus}
                 onConfirm={onConfirm}
                 onReschedule={onReschedule}
+                onDuplicate={onDuplicate}
                 onDelete={onDelete}
               />
             ))}

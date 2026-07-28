@@ -54,6 +54,12 @@ export const useMatchups = (team = null, seasonId = null) => {
     setMatchups((prev) => prev.filter((m) => m.id !== id));
   }, []);
 
+  const duplicateMatchup = useCallback(async (matchup) => {
+    const created = await supabaseService.duplicateMatchup(matchup);
+    setMatchups((prev) => [...prev, created]);
+    return created;
+  }, []);
+
   const setMatchupStatus = useCallback(async (matchup, newStatus) => {
     const updated = await supabaseService.setMatchupStatus(matchup, newStatus);
     setMatchups((prev) => prev.map((m) => (m.id === matchup.id ? updated : m)));
@@ -79,6 +85,7 @@ export const useMatchups = (team = null, seasonId = null) => {
     createMatchup,
     updateMatchup,
     deleteMatchup,
+    duplicateMatchup,
     setMatchupStatus,
     confirmMatchup,
     rescheduleMatchup,

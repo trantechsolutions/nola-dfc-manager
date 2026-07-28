@@ -1,5 +1,5 @@
 import { supabase } from '../supabase';
-import { canTransition } from '../utils/matchupStatus';
+import { canTransition, buildDuplicatePayload } from '../utils/matchupStatus';
 
 const mapMatchup = (m) => ({
   id: m.id,
@@ -71,6 +71,14 @@ export const matchupService = {
   deleteMatchup: async (id) => {
     const { error } = await supabase.from('matchups').delete().eq('id', id);
     if (error) throw error;
+  },
+
+  /**
+   * Clones a matchup as a fresh, open negotiation row — see
+   * buildDuplicatePayload for exactly what does and doesn't carry over.
+   */
+  duplicateMatchup: async (matchup) => {
+    return matchupService.createMatchup(buildDuplicatePayload(matchup));
   },
 
   /**

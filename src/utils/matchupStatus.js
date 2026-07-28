@@ -38,6 +38,31 @@ export function isTerminal(status) {
 }
 
 /**
+ * Fields to carry over when duplicating a matchup row. Resets status to
+ * `open` and drops anything tied to this specific instance (the team_events
+ * promotion link, the reschedule chain) so the copy starts a clean
+ * negotiation instead of silently sharing state with the original.
+ */
+export function buildDuplicatePayload(matchup) {
+  return {
+    teamId: matchup.teamId,
+    seasonId: matchup.seasonId,
+    weekLabel: matchup.weekLabel,
+    status: 'open',
+    source: matchup.source,
+    isHome: matchup.isHome,
+    opponentName: matchup.opponentName,
+    leagueMatchId: matchup.leagueMatchId,
+    matchDate: matchup.matchDate,
+    matchTime: matchup.matchTime,
+    location: matchup.location,
+    field: matchup.field,
+    deadlineDate: matchup.deadlineDate,
+    notes: matchup.notes,
+  };
+}
+
+/**
  * Display metadata for each status, styled to match EVENT_TYPES in
  * eventClassifier.js.
  */

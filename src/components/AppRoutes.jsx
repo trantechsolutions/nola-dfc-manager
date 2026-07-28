@@ -183,6 +183,7 @@ export default function AppRoutes({
     createMatchup,
     updateMatchup,
     deleteMatchup,
+    duplicateMatchup,
     setMatchupStatus,
     confirmMatchup,
     rescheduleMatchup,
@@ -403,6 +404,7 @@ export default function AppRoutes({
                   onCreateMatchup={canEditSchedule ? createMatchup : null}
                   onUpdateMatchup={canEditSchedule ? updateMatchup : null}
                   onDeleteMatchup={canEditSchedule ? deleteMatchup : null}
+                  onDuplicateMatchup={canEditSchedule ? duplicateMatchup : null}
                   onSetMatchupStatus={canEditSchedule ? setMatchupStatus : null}
                   onConfirmMatchup={canEditSchedule ? confirmMatchup : null}
                   onRescheduleMatchup={canEditSchedule ? rescheduleMatchup : null}

@@ -35,6 +35,8 @@ export default {
     blackoutWarning: 'This date falls in a blackout window',
     confirmMatchup: 'Confirm — adds this to the schedule',
     reschedule: 'Rained out / needs a new date',
+    duplicateMatchup: 'Duplicate',
+    editWeekLabel: 'Click to rename this week',
     weekLabelPlaceholder: 'New week label, e.g. Fall Week 3',
     addMatchup: 'Add Matchup',
     noMatchups: 'No matchups yet. Add one to start planning the season.',
