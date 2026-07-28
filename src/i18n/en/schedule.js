@@ -41,6 +41,14 @@ export default {
     addMatchup: 'Add Matchup',
     noMatchups: 'No matchups yet. Add one to start planning the season.',
     unscheduledWeek: 'Unscheduled',
+    clubContacts: 'Club & Team Contacts',
+    clubNamePlaceholder: 'Club / team name...',
+    contactNamePlaceholder: 'Contact name...',
+    phonePlaceholder: 'Phone',
+    emailPlaceholder: 'Email',
+    newClubPlaceholder: 'New club or team name...',
+    addContact: 'Add Contact',
+    noContacts: 'No contacts saved yet.',
   },
 
   eventTypes: {

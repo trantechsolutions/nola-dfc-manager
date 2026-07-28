@@ -41,6 +41,14 @@ export default {
     addMatchup: 'Agregar Partido',
     noMatchups: 'Aún no hay partidos. Agrega uno para empezar a planificar la temporada.',
     unscheduledWeek: 'Sin Asignar',
+    clubContacts: 'Contactos de Clubes y Equipos',
+    clubNamePlaceholder: 'Nombre del club / equipo...',
+    contactNamePlaceholder: 'Nombre del contacto...',
+    phonePlaceholder: 'Teléfono',
+    emailPlaceholder: 'Correo',
+    newClubPlaceholder: 'Nombre del nuevo club o equipo...',
+    addContact: 'Agregar Contacto',
+    noContacts: 'Aún no hay contactos guardados.',
   },
 
   eventTypes: {

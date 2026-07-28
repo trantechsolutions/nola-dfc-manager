@@ -507,6 +507,22 @@ CREATE POLICY "matchups_delete" ON matchups FOR DELETE TO authenticated
 
 
 -- ============================================================
+-- OPPONENT_CONTACTS
+-- ============================================================
+CREATE POLICY "opponent_contacts_select" ON opponent_contacts FOR SELECT TO authenticated
+  USING (is_super_admin() OR team_id IN (SELECT user_team_ids()));
+
+CREATE POLICY "opponent_contacts_insert" ON opponent_contacts FOR INSERT TO authenticated
+  WITH CHECK (is_super_admin() OR team_id IN (SELECT user_team_ids()));
+
+CREATE POLICY "opponent_contacts_update" ON opponent_contacts FOR UPDATE TO authenticated
+  USING (is_super_admin() OR team_id IN (SELECT user_team_ids()));
+
+CREATE POLICY "opponent_contacts_delete" ON opponent_contacts FOR DELETE TO authenticated
+  USING (is_super_admin() OR team_id IN (SELECT user_team_ids()));
+
+
+-- ============================================================
 -- CUSTOM_CATEGORIES
 -- ============================================================
 CREATE POLICY "custom_categories_select" ON custom_categories FOR SELECT TO authenticated

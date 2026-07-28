@@ -187,6 +187,11 @@ export default function AppRoutes({
     setMatchupStatus,
     confirmMatchup,
     rescheduleMatchup,
+    opponentContacts,
+    opponentContactsLoading,
+    createOpponentContact,
+    updateOpponentContact,
+    deleteOpponentContact,
   } = useScheduleContext();
 
   return (
@@ -408,6 +413,11 @@ export default function AppRoutes({
                   onSetMatchupStatus={canEditSchedule ? setMatchupStatus : null}
                   onConfirmMatchup={canEditSchedule ? confirmMatchup : null}
                   onRescheduleMatchup={canEditSchedule ? rescheduleMatchup : null}
+                  opponentContacts={opponentContacts}
+                  opponentContactsLoading={opponentContactsLoading}
+                  onCreateOpponentContact={canEditSchedule ? createOpponentContact : null}
+                  onUpdateOpponentContact={canEditSchedule ? updateOpponentContact : null}
+                  onDeleteOpponentContact={canEditSchedule ? deleteOpponentContact : null}
                 />
               }
             />

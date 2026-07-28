@@ -21,6 +21,7 @@ begin
     'transactions',
     'team_events',
     'matchups',
+    'opponent_contacts',
     'budget_items',
     'budget_amendments',
     'documents'

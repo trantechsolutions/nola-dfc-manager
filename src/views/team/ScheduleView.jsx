@@ -18,6 +18,7 @@ import {
 import CalendarView from '../../components/CalendarView';
 import EventExpenseModal from '../../components/EventExpenseModal';
 import MatchupPlanner from '../../components/MatchupPlanner';
+import OpponentContactsPanel from '../../components/OpponentContactsPanel';
 import { EVENT_TYPES } from '../../utils/eventClassifier';
 import { useT } from '../../i18n/I18nContext';
 import { filterEventsBySeason } from '../../utils/seasonUtils';
@@ -186,6 +187,11 @@ export default function ScheduleView({
   onSetMatchupStatus = null,
   onConfirmMatchup = null,
   onRescheduleMatchup = null,
+  opponentContacts = [],
+  opponentContactsLoading = false,
+  onCreateOpponentContact = null,
+  onUpdateOpponentContact = null,
+  onDeleteOpponentContact = null,
 }) {
   const { t } = useT();
   const [tab, setTab] = useState('upcoming');
@@ -473,19 +479,29 @@ export default function ScheduleView({
 
       {/* ── Planner (inter-team matchup scheduling) ── */}
       {tab === 'planner' && (
-        <MatchupPlanner
-          matchups={matchups}
-          loading={matchupsLoading}
-          canEdit={canEditSchedule}
-          blackoutDates={blackoutDates}
-          onCreate={onCreateMatchup}
-          onUpdate={onUpdateMatchup}
-          onDelete={onDeleteMatchup}
-          onDuplicate={onDuplicateMatchup}
-          onSetStatus={onSetMatchupStatus}
-          onConfirm={onConfirmMatchup}
-          onReschedule={onRescheduleMatchup}
-        />
+        <div className="space-y-4">
+          <OpponentContactsPanel
+            contacts={opponentContacts}
+            loading={opponentContactsLoading}
+            canEdit={canEditSchedule}
+            onCreate={onCreateOpponentContact}
+            onUpdate={onUpdateOpponentContact}
+            onDelete={onDeleteOpponentContact}
+          />
+          <MatchupPlanner
+            matchups={matchups}
+            loading={matchupsLoading}
+            canEdit={canEditSchedule}
+            blackoutDates={blackoutDates}
+            onCreate={onCreateMatchup}
+            onUpdate={onUpdateMatchup}
+            onDelete={onDeleteMatchup}
+            onDuplicate={onDuplicateMatchup}
+            onSetStatus={onSetMatchupStatus}
+            onConfirm={onConfirmMatchup}
+            onReschedule={onRescheduleMatchup}
+          />
+        </div>
       )}
 
       {/* ── Event Expense Modal ── */}

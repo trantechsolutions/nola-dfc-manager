@@ -48,6 +48,7 @@ import { useSoccerYear } from './hooks/useSoccerYear';
 import { useFinance } from './hooks/useFinance';
 import { useSchedule } from './hooks/useSchedule';
 import { useMatchups } from './hooks/useMatchups';
+import { useOpponentContacts } from './hooks/useOpponentContacts';
 import { usePlayerManager } from './hooks/usePlayerManager';
 import { useLedgerManager } from './hooks/useLedgerManager';
 import { useTeamContext } from './hooks/useTeamContext';
@@ -238,6 +239,13 @@ function App() {
     confirmMatchup,
     rescheduleMatchup,
   } = useMatchups(effectiveTeam, selectedSeason);
+  const {
+    contacts: opponentContacts,
+    loading: opponentContactsLoading,
+    createContact: createOpponentContact,
+    updateContact: updateOpponentContact,
+    deleteContact: deleteOpponentContact,
+  } = useOpponentContacts(effectiveTeam);
 
   // ── FILTERED DATA ──
   const myPlayers = useMemo(() => {
@@ -604,6 +612,11 @@ function App() {
     setMatchupStatus,
     confirmMatchup,
     rescheduleMatchup,
+    opponentContacts,
+    opponentContactsLoading,
+    createOpponentContact,
+    updateOpponentContact,
+    deleteOpponentContact,
   };
 
   return (

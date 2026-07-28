@@ -142,6 +142,32 @@ CREATE TRIGGER matchups_updated_at
   BEFORE UPDATE ON matchups
   FOR EACH ROW EXECUTE FUNCTION set_matchups_updated_at();
 
+-- ── 8c. OPPONENT CONTACTS ──
+CREATE TABLE IF NOT EXISTS opponent_contacts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id uuid NOT NULL REFERENCES teams(id),
+  club_name text NOT NULL,
+  contact_name text,
+  email text,
+  phone text,
+  notes text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE OR REPLACE FUNCTION set_opponent_contacts_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS opponent_contacts_updated_at ON opponent_contacts;
+CREATE TRIGGER opponent_contacts_updated_at
+  BEFORE UPDATE ON opponent_contacts
+  FOR EACH ROW EXECUTE FUNCTION set_opponent_contacts_updated_at();
+
 -- ── 9. TRANSACTIONS ──
 CREATE TABLE IF NOT EXISTS transactions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -493,6 +519,7 @@ CREATE INDEX IF NOT EXISTS idx_documents_club ON documents(club_id);
 CREATE INDEX IF NOT EXISTS idx_team_events_team ON team_events(team_id);
 CREATE INDEX IF NOT EXISTS idx_matchups_team_season ON matchups(team_id, season_id);
 CREATE INDEX IF NOT EXISTS idx_matchups_reschedule_of ON matchups(reschedule_of_id);
+CREATE INDEX IF NOT EXISTS idx_opponent_contacts_team ON opponent_contacts(team_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_table ON audit_log(table_name);
 CREATE INDEX IF NOT EXISTS idx_audit_log_record ON audit_log(record_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(changed_by);
@@ -517,6 +544,7 @@ ALTER TABLE team_seasons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE player_seasons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE team_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE matchups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE opponent_contacts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE budget_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE budget_amendments ENABLE ROW LEVEL SECURITY;
