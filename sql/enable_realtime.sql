@@ -20,6 +20,7 @@ begin
     'players',
     'transactions',
     'team_events',
+    'matchups',
     'budget_items',
     'budget_amendments',
     'documents'

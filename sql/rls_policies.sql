@@ -487,6 +487,26 @@ CREATE POLICY "team_events_delete" ON team_events FOR DELETE TO authenticated
 
 
 -- ============================================================
+-- MATCHUPS
+-- ============================================================
+CREATE POLICY "matchups_select" ON matchups FOR SELECT TO authenticated
+  USING (
+    is_super_admin()
+    OR team_id IN (SELECT user_team_ids())
+    OR team_id IN (SELECT team_id FROM players WHERE id IN (SELECT user_guardian_player_ids()))
+  );
+
+CREATE POLICY "matchups_insert" ON matchups FOR INSERT TO authenticated
+  WITH CHECK (is_super_admin() OR team_id IN (SELECT user_team_ids()));
+
+CREATE POLICY "matchups_update" ON matchups FOR UPDATE TO authenticated
+  USING (is_super_admin() OR team_id IN (SELECT user_team_ids()));
+
+CREATE POLICY "matchups_delete" ON matchups FOR DELETE TO authenticated
+  USING (is_super_admin() OR team_id IN (SELECT user_team_ids()));
+
+
+-- ============================================================
 -- CUSTOM_CATEGORIES
 -- ============================================================
 CREATE POLICY "custom_categories_select" ON custom_categories FOR SELECT TO authenticated

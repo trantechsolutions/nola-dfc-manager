@@ -178,6 +178,14 @@ export default function AppRoutes({
     handleSaveExpense,
     handleToggleCleared,
     handleDeleteExpense,
+    matchups,
+    matchupsLoading,
+    createMatchup,
+    updateMatchup,
+    deleteMatchup,
+    setMatchupStatus,
+    confirmMatchup,
+    rescheduleMatchup,
   } = useScheduleContext();
 
   return (
@@ -390,6 +398,14 @@ export default function AppRoutes({
                   selectedSeason={selectedSeason}
                   activeAccounts={activeAccounts}
                   accountMap={accountMap}
+                  matchups={matchups}
+                  matchupsLoading={matchupsLoading}
+                  onCreateMatchup={canEditSchedule ? createMatchup : null}
+                  onUpdateMatchup={canEditSchedule ? updateMatchup : null}
+                  onDeleteMatchup={canEditSchedule ? deleteMatchup : null}
+                  onSetMatchupStatus={canEditSchedule ? setMatchupStatus : null}
+                  onConfirmMatchup={canEditSchedule ? confirmMatchup : null}
+                  onRescheduleMatchup={canEditSchedule ? rescheduleMatchup : null}
                 />
               }
             />

@@ -47,6 +47,7 @@ import { supabaseService } from './services/supabaseService';
 import { useSoccerYear } from './hooks/useSoccerYear';
 import { useFinance } from './hooks/useFinance';
 import { useSchedule } from './hooks/useSchedule';
+import { useMatchups } from './hooks/useMatchups';
 import { usePlayerManager } from './hooks/usePlayerManager';
 import { useLedgerManager } from './hooks/useLedgerManager';
 import { useTeamContext } from './hooks/useTeamContext';
@@ -226,6 +227,16 @@ function App() {
 
   const effectiveTeam = selectedTeam || parentTeam;
   const { events, blackoutDates, toggleBlackout, syncCalendar } = useSchedule(user, effectiveTeam);
+  const {
+    matchups,
+    loading: matchupsLoading,
+    createMatchup,
+    updateMatchup,
+    deleteMatchup,
+    setMatchupStatus,
+    confirmMatchup,
+    rescheduleMatchup,
+  } = useMatchups(effectiveTeam, selectedSeason);
 
   // ── FILTERED DATA ──
   const myPlayers = useMemo(() => {
@@ -583,6 +594,14 @@ function App() {
     handleSaveExpense,
     handleToggleCleared,
     handleDeleteExpense,
+    matchups,
+    matchupsLoading,
+    createMatchup,
+    updateMatchup,
+    deleteMatchup,
+    setMatchupStatus,
+    confirmMatchup,
+    rescheduleMatchup,
   };
 
   return (

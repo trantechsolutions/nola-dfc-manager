@@ -16,6 +16,7 @@ import { budgetService } from './budgetService';
 import { teamService } from './teamService';
 import { clubService } from './clubService';
 import { scheduleService } from './scheduleService';
+import { matchupService } from './matchupService';
 import { userService } from './userService';
 import { documentService } from './documentService';
 import { seasonService } from './seasonService';
@@ -30,6 +31,7 @@ export const supabaseService = {
   ...teamService,
   ...clubService,
   ...scheduleService,
+  ...matchupService,
   ...userService,
   ...documentService,
   ...seasonService,
