@@ -176,6 +176,21 @@ export default function PlayerModal({
                   />
                 </button>
               </div>
+              {/* Club Registration — manual switch, set once the player is registered with the club */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-medium text-foreground text-sm">{t('playerModal.clubRegistration')}</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t('playerModal.clubRegistrationHelp')}</p>
+                </div>
+                <button
+                  onClick={() => onToggleCompliance(player.id, 'clubRegistration', comp.clubRegistration)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${comp.clubRegistration ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${comp.clubRegistration ? 'translate-x-6' : 'translate-x-1'}`}
+                  />
+                </button>
+              </div>
             </div>
           </div>
 

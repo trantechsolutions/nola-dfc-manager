@@ -288,6 +288,7 @@ export default function ParentView({
   const complianceItems = [
     { label: t('medical.medicalRelease'), done: parentComp.medicalRelease },
     { label: t('medical.reeplayerWaiver'), done: parentComp.reePlayerWaiver },
+    { label: t('medical.clubRegistration'), done: parentComp.clubRegistration },
   ];
   const isFullyCompliant = complianceItems.every((c) => c.done);
 

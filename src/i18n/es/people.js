@@ -30,6 +30,8 @@ export default {
     fillOut: 'Llenar',
     reeplayerAccount: 'Cuenta ReePlayer',
     reeplayerHelp: 'El jugador ha creado una cuenta ReePlayer',
+    clubRegistration: 'Registro con el Club',
+    clubRegistrationHelp: 'El jugador está registrado con el club',
     guardians: 'Tutores',
     financialSummary: 'Resumen Financiero',
     remainingBalance: 'Saldo Pendiente',
@@ -171,5 +173,6 @@ export default {
     title: 'Formulario de Autorización Médica',
     medicalRelease: 'Autorización Médica',
     reeplayerWaiver: 'Exención ReePlayer',
+    clubRegistration: 'Registro con el Club',
   },
 };

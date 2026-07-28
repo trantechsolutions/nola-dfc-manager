@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   FileCheck2,
   Camera,
+  BadgeCheck,
   LayoutDashboard,
   UsersRound,
   ArrowUp,
@@ -20,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup } from '../../utils/ageGroup';
-import { getCompliance } from '../../utils/compliance';
+import { getCompliance, isFullyCompliant } from '../../utils/compliance';
 import JerseyBadge from '../../components/JerseyBadge';
 import { TRACKED_HOLDINGS, HOLDING_LABELS, HOLDING_ICONS } from '../../utils/holdings';
 
@@ -132,11 +133,9 @@ export default function TeamOverviewView({
       total: players.length,
       medical: players.filter((p) => getCompliance(p, selectedSeason).medicalRelease).length,
       reeplayer: players.filter((p) => getCompliance(p, selectedSeason).reePlayerWaiver).length,
+      clubReg: players.filter((p) => getCompliance(p, selectedSeason).clubRegistration).length,
       waived: players.filter((p) => p.seasonProfiles?.[selectedSeasonData?.id]?.feeWaived).length,
-      fullyCompliant: players.filter((p) => {
-        const c = getCompliance(p, selectedSeason);
-        return c.medicalRelease && c.reePlayerWaiver;
-      }).length,
+      fullyCompliant: players.filter((p) => isFullyCompliant(p, selectedSeason)).length,
     }),
     [players, selectedSeasonData, selectedSeason],
   );
@@ -529,6 +528,7 @@ export default function TeamOverviewView({
               {[
                 { label: t('medical.medicalRelease'), count: complianceStats.medical },
                 { label: t('medical.reeplayerWaiver'), count: complianceStats.reeplayer },
+                { label: t('medical.clubRegistration'), count: complianceStats.clubReg },
                 { label: t('overview.fullyCompliant'), count: complianceStats.fullyCompliant },
               ].map(({ label, count }) => {
                 const pct = complianceStats.total > 0 ? Math.round((count / complianceStats.total) * 100) : 0;
@@ -659,6 +659,7 @@ export default function TeamOverviewView({
                   const playerCompliance = getCompliance(player, selectedSeason);
                   const hasMedical = playerCompliance.medicalRelease;
                   const hasReeplayer = playerCompliance.reePlayerWaiver;
+                  const hasClubReg = playerCompliance.clubRegistration;
                   const fin = playerFinancials[player.id];
                   const hasBalance = canViewFinancials && fin && fin.remainingBalance > 0 && !isWaived;
                   const paidPct =
@@ -715,6 +716,15 @@ export default function TeamOverviewView({
                               <Camera
                                 size={13}
                                 className={hasReeplayer ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}
+                              />
+                            </span>
+                            {/* Club registration status */}
+                            <span title={hasClubReg ? 'Registered with club' : 'Not registered with club'}>
+                              <BadgeCheck
+                                size={13}
+                                className={
+                                  hasClubReg ? 'text-violet-700 dark:text-violet-400' : 'text-muted-foreground'
+                                }
                               />
                             </span>
                             {hasBalance && (

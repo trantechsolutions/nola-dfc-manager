@@ -30,6 +30,8 @@ export default {
     fillOut: 'Fill Out',
     reeplayerAccount: 'ReePlayer Account',
     reeplayerHelp: 'Player has created a ReePlayer account',
+    clubRegistration: 'Club Registration',
+    clubRegistrationHelp: 'Player is registered with the club',
     guardians: 'Guardians',
     financialSummary: 'Financial Summary',
     remainingBalance: 'Remaining Balance',
@@ -171,5 +173,6 @@ export default {
     title: 'Medical Release Form',
     medicalRelease: 'Medical Release',
     reeplayerWaiver: 'ReePlayer Waiver',
+    clubRegistration: 'Club Registration',
   },
 };

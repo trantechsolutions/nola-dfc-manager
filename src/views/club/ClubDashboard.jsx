@@ -13,7 +13,7 @@ import {
   CalendarRange,
 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
-import { getCompliance } from '../../utils/compliance';
+import { getCompliance, isFullyCompliant } from '../../utils/compliance';
 import { useT } from '../../i18n/I18nContext';
 import ClubCalendarView from './ClubCalendarView';
 
@@ -40,20 +40,15 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
 
             const medical = seasonPlayers.filter((p) => getCompliance(p, selectedSeason).medicalRelease).length;
             const reeplayer = seasonPlayers.filter((p) => getCompliance(p, selectedSeason).reePlayerWaiver).length;
-            const fullyCompliant = seasonPlayers.filter((p) => {
-              const c = getCompliance(p, selectedSeason);
-              return c.medicalRelease && c.reePlayerWaiver;
-            }).length;
+            const clubReg = seasonPlayers.filter((p) => getCompliance(p, selectedSeason).clubRegistration).length;
+            const fullyCompliant = seasonPlayers.filter((p) => isFullyCompliant(p, selectedSeason)).length;
 
             const docsUploaded = docs.length;
             const docsVerified = docs.filter((d) => d.status === 'verified').length;
             const docsPending = docs.filter((d) => d.status === 'uploaded').length;
 
             const missingCompliance = seasonPlayers
-              .filter((p) => {
-                const c = getCompliance(p, selectedSeason);
-                return !c.medicalRelease || !c.reePlayerWaiver;
-              })
+              .filter((p) => !isFullyCompliant(p, selectedSeason))
               .map((p) => {
                 const c = getCompliance(p, selectedSeason);
                 return {
@@ -61,6 +56,7 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
                   jersey: p.jerseyNumber,
                   missingMedical: !c.medicalRelease,
                   missingReeplayer: !c.reePlayerWaiver,
+                  missingClubReg: !c.clubRegistration,
                 };
               });
 
@@ -68,6 +64,7 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
               playerCount: seasonPlayers.length,
               medical,
               reeplayer,
+              clubReg,
               fullyCompliant,
               complianceRate:
                 seasonPlayers.length > 0 ? Math.round((fullyCompliant / seasonPlayers.length) * 100) : 100,
@@ -84,6 +81,7 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
               playerCount: 0,
               medical: 0,
               reeplayer: 0,
+              clubReg: 0,
               fullyCompliant: 0,
               complianceRate: 100,
               docsUploaded: 0,
@@ -108,9 +106,18 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
     const totalCompliant = vals.reduce((s, d) => s + d.fullyCompliant, 0);
     const totalMissingMedical = vals.reduce((s, d) => s + (d.playerCount - d.medical), 0);
     const totalMissingReeplayer = vals.reduce((s, d) => s + (d.playerCount - d.reeplayer), 0);
+    const totalMissingClubReg = vals.reduce((s, d) => s + (d.playerCount - d.clubReg), 0);
     const totalDocs = vals.reduce((s, d) => s + d.docsUploaded, 0);
     const totalStaff = new Set(vals.flatMap((d) => d.staffRoles.map((r) => r.userId))).size;
-    return { totalPlayers, totalCompliant, totalMissingMedical, totalMissingReeplayer, totalDocs, totalStaff };
+    return {
+      totalPlayers,
+      totalCompliant,
+      totalMissingMedical,
+      totalMissingReeplayer,
+      totalMissingClubReg,
+      totalDocs,
+      totalStaff,
+    };
   }, [teamData]);
 
   const overallComplianceRate =
@@ -275,13 +282,13 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
           </div>
 
           {/* Compliance Alerts */}
-          {(totals.totalMissingMedical > 0 || totals.totalMissingReeplayer > 0) && (
+          {(totals.totalMissingMedical > 0 || totals.totalMissingReeplayer > 0 || totals.totalMissingClubReg > 0) && (
             <div className="bg-gradient-to-r from-amber-50 to-red-50 dark:from-amber-900/20 dark:to-red-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-5">
               <h3 className="font-bold text-amber-800 dark:text-amber-300 text-sm flex items-center gap-2 mb-3">
                 <AlertTriangle size={16} className="text-amber-700 dark:text-amber-400" /> Missing Compliance — All
                 Teams
               </h3>
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="grid grid-cols-3 gap-3 mb-4">
                 <div className="bg-card border border-border rounded-lg p-3 text-center">
                   <p className="text-xl font-bold text-red-700 dark:text-red-400">{totals.totalMissingMedical}</p>
                   <p className="text-xs font-semibold text-muted-foreground">Missing Medical Release</p>
@@ -289,6 +296,10 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
                 <div className="bg-card border border-border rounded-lg p-3 text-center">
                   <p className="text-xl font-bold text-red-700 dark:text-red-400">{totals.totalMissingReeplayer}</p>
                   <p className="text-xs font-semibold text-muted-foreground">Missing ReePlayer Waiver</p>
+                </div>
+                <div className="bg-card border border-border rounded-lg p-3 text-center">
+                  <p className="text-xl font-bold text-red-700 dark:text-red-400">{totals.totalMissingClubReg}</p>
+                  <p className="text-xs font-semibold text-muted-foreground">Missing Club Registration</p>
                 </div>
               </div>
 
@@ -318,6 +329,9 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
                             {p.missingReeplayer && (
                               <ShieldX size={10} className="text-amber-400" title="Missing ReePlayer" />
                             )}
+                            {p.missingClubReg && (
+                              <ShieldX size={10} className="text-blue-400" title="Missing club registration" />
+                            )}
                           </span>
                         ))}
                         {d.missingCompliance.length > 6 && (
@@ -334,17 +348,21 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
           )}
 
           {/* All Compliant Banner */}
-          {totals.totalMissingMedical === 0 && totals.totalMissingReeplayer === 0 && totals.totalPlayers > 0 && (
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-5 flex items-center gap-3">
-              <CheckCircle2 size={24} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
-              <div>
-                <p className="font-bold text-emerald-800 text-sm">All Players Compliant</p>
-                <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                  Every player across all {teams.length} teams has their medical release and ReePlayer waiver on file.
-                </p>
+          {totals.totalMissingMedical === 0 &&
+            totals.totalMissingReeplayer === 0 &&
+            totals.totalMissingClubReg === 0 &&
+            totals.totalPlayers > 0 && (
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-5 flex items-center gap-3">
+                <CheckCircle2 size={24} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
+                <div>
+                  <p className="font-bold text-emerald-800 text-sm">All Players Compliant</p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                    Every player across all {teams.length} teams has their medical release, ReePlayer waiver, and club
+                    registration on file.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </>
       )}
     </div>

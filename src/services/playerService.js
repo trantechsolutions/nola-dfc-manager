@@ -35,6 +35,7 @@ export const playerService = {
           fundraiserBuyIn: ps.fundraiser_buyin ?? false,
           medicalRelease: ps.medical_release === true,
           reePlayerWaiver: ps.reeplayer_waiver === true,
+          clubRegistration: ps.club_registration === true,
         };
         return acc;
       }, {}),
@@ -85,6 +86,7 @@ export const playerService = {
           status: profile.status || 'active',
           medical_release: profile.medicalRelease ?? false,
           reeplayer_waiver: profile.reePlayerWaiver ?? false,
+          club_registration: profile.clubRegistration ?? false,
           ...(profile.teamSeasonId ? { team_season_id: profile.teamSeasonId } : {}),
         }));
         if (seasonRows.length > 0) {
@@ -158,6 +160,7 @@ export const playerService = {
             // routine player edit never resets a season's waiver status.
             ...('medicalRelease' in profile ? { medical_release: profile.medicalRelease } : {}),
             ...('reePlayerWaiver' in profile ? { reeplayer_waiver: profile.reePlayerWaiver } : {}),
+            ...('clubRegistration' in profile ? { club_registration: profile.clubRegistration } : {}),
             ...(profile.teamSeasonId ? { team_season_id: profile.teamSeasonId } : {}),
           },
           { onConflict: 'player_id,season_id' },
@@ -208,12 +211,19 @@ export const playerService = {
     });
   },
 
-  // Per-season compliance (medical release / ReePlayer waiver) lives on
-  // player_seasons — each season needs its own waiver. `field` is the camelCase
-  // key ('medicalRelease' | 'reePlayerWaiver').
+  // Per-season compliance (medical release / ReePlayer waiver / club
+  // registration) lives on player_seasons — each season needs its own
+  // waivers. `field` is the camelCase key ('medicalRelease' | 'reePlayerWaiver'
+  // | 'clubRegistration').
   setSeasonCompliance: async (playerId, seasonId, field, value) => {
     if (!seasonId) throw new Error('A season is required to update compliance.');
-    const dbField = field === 'reePlayerWaiver' ? 'reeplayer_waiver' : 'medical_release';
+    const FIELD_MAP = {
+      medicalRelease: 'medical_release',
+      reePlayerWaiver: 'reeplayer_waiver',
+      clubRegistration: 'club_registration',
+    };
+    const dbField = FIELD_MAP[field];
+    if (!dbField) throw new Error(`Unknown compliance field: ${field}`);
     const { data, error } = await supabase
       .from('player_seasons')
       .update({ [dbField]: value })
@@ -290,7 +300,12 @@ export const playerService = {
 
             const userIds = (profiles || []).map((p) => p.user_id);
             if (userIds.length > 0) {
-              const label = field === 'medicalRelease' ? 'Medical Release' : 'Player Waiver';
+              const label =
+                {
+                  medicalRelease: 'Medical Release',
+                  reePlayerWaiver: 'Player Waiver',
+                  clubRegistration: 'Club Registration',
+                }[field] || 'Compliance';
               const status = value ? 'approved' : 'flagged';
               pushService
                 .notifyUsers({
@@ -390,6 +405,7 @@ export const playerService = {
           fundraiserBuyIn: ps.fundraiser_buyin ?? false,
           medicalRelease: ps.medical_release === true,
           reePlayerWaiver: ps.reeplayer_waiver === true,
+          clubRegistration: ps.club_registration === true,
         };
         return acc;
       }, {}),
@@ -448,6 +464,7 @@ export const playerService = {
               fundraiserBuyIn: ps.fundraiser_buyin ?? false,
               medicalRelease: ps.medical_release === true,
               reePlayerWaiver: ps.reeplayer_waiver === true,
+              clubRegistration: ps.club_registration === true,
             };
             return acc;
           }, {}),
@@ -485,6 +502,7 @@ export const playerService = {
       playerStatus: r.player_status,
       medicalRelease: r.medical_release,
       reePlayerWaiver: r.reeplayer_waiver,
+      clubRegistration: r.club_registration,
       clubId: r.club_id,
       teamId: r.team_id,
       seasonId: r.season_id,
