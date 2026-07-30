@@ -29,6 +29,7 @@ import PlayerFormModal from '../../components/PlayerFormModal';
 import { useBudgetForecast } from '../../hooks/useBudgetForecast';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { exportBudgetActualsPDF, exportBudgetActualsCSV } from '../../utils/exportUtils';
+import { buildCategoryAdvice, varianceTone, TONE_STYLES } from '../../utils/budgetInsights';
 
 // Fallback budget categories used when no categoryOptions prop is provided
 const FALLBACK_BUDGET_CATEGORIES = [
@@ -284,7 +285,8 @@ export default function BudgetView({
     const map = {};
     seasonTransactions.forEach((tx) => {
       const cleared = tx.cleared === true || String(tx.cleared).toLowerCase() === 'true';
-      if (!cleared || tx.waterfallBatchId) return;
+      // Transfers move money between accounts; they are not income or spend.
+      if (!cleared || tx.waterfallBatchId || tx.category === 'TRF') return;
       const cat = tx.category || '';
       map[cat] = (map[cat] || 0) + Number(tx.amount || 0);
     });
@@ -321,15 +323,31 @@ export default function BudgetView({
 
     const categoryHistory = {};
     budgetCategories.forEach((cat) => {
-      categoryHistory[cat.code] = { budgeted: [], actual: [], seasons: [] };
+      categoryHistory[cat.code] = [];
     });
 
     pastSeasons.forEach((season) => {
       const items = historicalBudgets[season.id] || [];
-      const txs = allTransactions.filter((tx) => tx.seasonId === season.id && isCleared(tx) && !tx.waterfallBatchId);
-      const seasonActuals = {};
+      const txs = allTransactions.filter(
+        (tx) =>
+          tx.seasonId === season.id &&
+          isCleared(tx) &&
+          !tx.waterfallBatchId &&
+          // Account-to-account transfers are not spend. Excluded everywhere else
+          // (see Ledger and App totals); projections must match.
+          tx.category !== 'TRF',
+      );
+
+      // Expenses post negative, income positive. Keep the two sides apart so a
+      // refund credits back against spend instead of the netted sign flipping
+      // the whole category.
+      const outflow = {};
+      const inflow = {};
       txs.forEach((tx) => {
-        seasonActuals[tx.category || ''] = (seasonActuals[tx.category || ''] || 0) + Number(tx.amount || 0);
+        const code = tx.category || '';
+        const amount = Number(tx.amount) || 0;
+        if (amount < 0) outflow[code] = (outflow[code] || 0) + -amount;
+        else inflow[code] = (inflow[code] || 0) + amount;
       });
 
       budgetCategories.forEach((cat) => {
@@ -341,23 +359,44 @@ export default function BudgetView({
               : s + (Number(i.expensesFall) || 0) + (Number(i.expensesSpring) || 0),
           0,
         );
-        categoryHistory[cat.code].budgeted.push(budgeted);
-        categoryHistory[cat.code].actual.push(Math.abs(seasonActuals[cat.code] || 0));
-        categoryHistory[cat.code].seasons.push(season.id);
+        const actual =
+          cat.type === 'income' ? inflow[cat.code] || 0 : (outflow[cat.code] || 0) - (inflow[cat.code] || 0);
+        categoryHistory[cat.code].push({ seasonId: season.id, budgeted, actual });
       });
     });
 
     const categoryProjections = {};
     budgetCategories.forEach((cat) => {
-      const h = categoryHistory[cat.code];
-      const avgBudgeted = h.budgeted.length > 0 ? h.budgeted.reduce((a, b) => a + b, 0) / h.budgeted.length : 0;
-      const avgActual = h.actual.length > 0 ? h.actual.reduce((a, b) => a + b, 0) / h.actual.length : 0;
-      const variance = avgBudgeted > 0 ? ((avgActual - avgBudgeted) / avgBudgeted) * 100 : 0;
+      const history = categoryHistory[cat.code];
+      // Average only over seasons where the category was actually used. Zero-padding
+      // a category that did not exist yet halves its apparent cost.
+      const active = history.filter((h) => h.budgeted !== 0 || h.actual !== 0);
+      const seasonsTracked = active.length;
+      const avgBudgeted = seasonsTracked ? active.reduce((s, h) => s + h.budgeted, 0) / seasonsTracked : 0;
+      const avgActual = seasonsTracked ? active.reduce((s, h) => s + h.actual, 0) / seasonsTracked : 0;
+      // null (not 0) when there is nothing to divide by — spend against no budget
+      // is not "0% variance", it is unbudgeted.
+      const variance = avgBudgeted > 0 ? ((avgActual - avgBudgeted) / avgBudgeted) * 100 : null;
+
+      const actualsSeen = active.map((h) => h.actual);
+      const peakActual = actualsSeen.length ? Math.max(...actualsSeen) : 0;
+      const lowActual = actualsSeen.length ? Math.min(...actualsSeen) : 0;
+      const last = history.find((h) => h.budgeted !== 0 || h.actual !== 0) || null;
+
       categoryProjections[cat.code] = {
         avgBudgeted,
         avgActual,
         variance,
+        seasonsTracked,
+        peakActual,
+        lowActual,
+        lastActual: last ? last.actual : 0,
+        lastSeasonId: last ? last.seasonId : null,
+        history: active,
+        // Plan against the worst observed season once spend has proven volatile,
+        // otherwise the average is enough. Rounded up to the nearest $10.
         suggested: Math.ceil(Math.max(avgActual, avgBudgeted) / 10) * 10,
+        safeSuggested: Math.ceil(Math.max(peakActual, avgBudgeted) / 10) * 10,
       };
     });
 
@@ -367,11 +406,18 @@ export default function BudgetView({
       source: pastSeasons[0]?.id,
     }));
 
-    const totalBudgeted = Object.values(categoryProjections).reduce((s, p) => s + p.avgBudgeted, 0);
-    const totalActualAvg = Object.values(categoryProjections).reduce((s, p) => s + p.avgActual, 0);
+    // Expense-only. These tiles sit above the Expense Analysis list and must
+    // reconcile with it — folding dues and sponsorships in made them meaningless.
+    const totalBudgeted = expenseCodes.reduce((s, code) => s + (categoryProjections[code]?.avgBudgeted || 0), 0);
+    const totalActualAvg = expenseCodes.reduce((s, code) => s + (categoryProjections[code]?.avgActual || 0), 0);
+    // Shared scale so bars are comparable between categories, not just within one card.
+    const maxExpenseValue = expenseCodes.reduce(
+      (m, code) => Math.max(m, categoryProjections[code]?.avgBudgeted || 0, categoryProjections[code]?.avgActual || 0),
+      1,
+    );
 
-    return { categoryProjections, suggestedItems, pastSeasons, totalBudgeted, totalActualAvg };
-  }, [teamSeasons, historicalBudgets, allTransactions, selectedSeason, budgetCategories]);
+    return { categoryProjections, suggestedItems, pastSeasons, totalBudgeted, totalActualAvg, maxExpenseValue };
+  }, [teamSeasons, historicalBudgets, allTransactions, selectedSeason, budgetCategories, expenseCodes]);
 
   // ─── HANDLERS ───
   const addItem = (code) =>
@@ -1314,9 +1360,12 @@ export default function BudgetView({
                       if (!proj || (proj.avgBudgeted === 0 && proj.avgActual === 0)) return null;
                       const currentBudgeted =
                         (subtotals[cat.code]?.expensesFall || 0) + (subtotals[cat.code]?.expensesSpring || 0);
-                      const diff = currentBudgeted - proj.avgActual;
+                      // This panel is headed "vs Last Season" — compare against that
+                      // season's actual, not the multi-season average.
+                      const priorActual = proj.lastActual;
+                      const diff = currentBudgeted - priorActual;
                       const hasData = currentBudgeted > 0;
-                      const maxVal = Math.max(currentBudgeted, proj.avgActual, 1);
+                      const maxVal = Math.max(currentBudgeted, priorActual, 1);
 
                       return (
                         <div key={cat.code} className="space-y-1">
@@ -1342,7 +1391,7 @@ export default function BudgetView({
                           </div>
                           <div className="flex justify-between text-xs text-muted-foreground">
                             <span>Now: {hasData ? formatMoney(currentBudgeted) : '—'}</span>
-                            <span>Prev: {formatMoney(proj.avgActual)}</span>
+                            <span>Prev: {formatMoney(priorActual)}</span>
                           </div>
                         </div>
                       );
@@ -1629,15 +1678,25 @@ export default function BudgetView({
         <div className="space-y-5">
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
-              <p className="text-xs font-semibold text-muted-foreground">Avg Budgeted</p>
+              <p className="text-xs font-semibold text-muted-foreground">Avg Budgeted Expenses</p>
               <p className="text-xl font-bold text-foreground mt-1">{formatMoney(projections.totalBudgeted)}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {projections.pastSeasons.length} season{projections.pastSeasons.length !== 1 && 's'}
+                per season · {projections.pastSeasons.length} season{projections.pastSeasons.length !== 1 && 's'}
               </p>
             </div>
             <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
               <p className="text-xs font-semibold text-muted-foreground">Avg Actual Spend</p>
               <p className="text-xl font-bold text-foreground mt-1">{formatMoney(projections.totalActualAvg)}</p>
+              <p
+                className={`text-xs mt-0.5 font-semibold ${
+                  projections.totalActualAvg > projections.totalBudgeted
+                    ? 'text-red-700 dark:text-red-400'
+                    : 'text-emerald-700 dark:text-emerald-400'
+                }`}
+              >
+                {projections.totalActualAvg > projections.totalBudgeted ? 'over by ' : 'under by '}
+                {formatMoney(Math.abs(projections.totalActualAvg - projections.totalBudgeted))}
+              </p>
             </div>
             {!isFinalized && projections.suggestedItems.length > 0 && (
               <div className="bg-violet-50 dark:bg-violet-900/30 p-4 rounded-lg border border-violet-200 dark:border-violet-700 shadow-sm flex flex-col justify-center">
@@ -1655,28 +1714,47 @@ export default function BudgetView({
             <h3 className="font-bold text-foreground text-sm flex items-center gap-2 mb-4">
               <BarChart3 size={16} className="text-violet-700 dark:text-violet-400" /> Expense Analysis
             </h3>
+            <p className="text-xs text-muted-foreground -mt-2 mb-4">
+              Per-season averages across your finalized seasons. Bars share one scale, so category sizes are directly
+              comparable.
+            </p>
             <div className="space-y-3">
               {budgetCategories
                 .filter((c) => c.type === 'expense')
                 .map((cat) => {
                   const p = projections.categoryProjections[cat.code];
                   if (!p || (p.avgBudgeted === 0 && p.avgActual === 0)) return null;
-                  const maxVal = Math.max(p.avgBudgeted, p.avgActual, 1);
-                  const isOver = p.variance > 5;
-                  const isUnder = p.variance < -10;
+                  const maxVal = projections.maxExpenseValue;
+                  const tone = varianceTone(p.variance, p.avgActual);
+                  const styles = TONE_STYLES[tone];
+                  const currentBudgeted =
+                    (subtotals[cat.code]?.expensesFall || 0) + (subtotals[cat.code]?.expensesSpring || 0);
+                  const advice = buildCategoryAdvice({
+                    projection: p,
+                    currentBudgeted,
+                    rosterSize,
+                    formatMoney,
+                  });
+                  const pct = (v) => `${Math.min(Math.max((v / maxVal) * 100, 0), 100)}%`;
 
                   return (
                     <div key={cat.code} className="bg-background p-4 rounded-lg">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-semibold text-foreground">{cat.name}</span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-xs font-semibold text-foreground">{cat.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {p.seasonsTracked} season{p.seasonsTracked !== 1 ? 's' : ''}
+                          </span>
+                        </div>
                         <div className="flex items-center gap-1">
-                          {isOver && <ArrowUpRight size={12} className="text-red-700 dark:text-red-400" />}
-                          {isUnder && <ArrowDownRight size={12} className="text-emerald-700 dark:text-emerald-400" />}
-                          <span
-                            className={`text-xs font-bold ${isOver ? 'text-red-700 dark:text-red-400' : isUnder ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'}`}
-                          >
-                            {p.variance > 0 ? '+' : ''}
-                            {p.variance.toFixed(0)}%
+                          {tone === 'over' && <ArrowUpRight size={12} className="text-red-700 dark:text-red-400" />}
+                          {tone === 'under' && (
+                            <ArrowDownRight size={12} className="text-emerald-700 dark:text-emerald-400" />
+                          )}
+                          <span className={`text-xs font-bold ${styles.text}`}>
+                            {p.variance === null
+                              ? 'No budget'
+                              : `${p.variance > 0 ? '+' : ''}${p.variance.toFixed(0)}%`}
                           </span>
                         </div>
                       </div>
@@ -1684,10 +1762,7 @@ export default function BudgetView({
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-muted-foreground w-14">Budget</span>
                           <div className="flex-grow h-3 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-blue-400 rounded-full"
-                              style={{ width: `${(p.avgBudgeted / maxVal) * 100}%` }}
-                            />
+                            <div className="h-full bg-blue-400 rounded-full" style={{ width: pct(p.avgBudgeted) }} />
                           </div>
                           <span className="text-xs font-semibold text-foreground w-16 text-right">
                             {formatMoney(p.avgBudgeted)}
@@ -1696,16 +1771,36 @@ export default function BudgetView({
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-muted-foreground w-14">Actual</span>
                           <div className="flex-grow h-3 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${isOver ? 'bg-red-400' : 'bg-emerald-400'}`}
-                              style={{ width: `${(p.avgActual / maxVal) * 100}%` }}
-                            />
+                            <div className={`h-full rounded-full ${styles.bar}`} style={{ width: pct(p.avgActual) }} />
                           </div>
                           <span className="text-xs font-semibold text-foreground w-16 text-right">
                             {formatMoney(p.avgActual)}
                           </span>
                         </div>
                       </div>
+
+                      {advice.length > 0 && (
+                        <ul className="mt-3 pt-3 border-t border-border space-y-1.5">
+                          {advice.map((tip) => (
+                            <li key={tip.key} className="flex items-start gap-2 text-xs leading-relaxed">
+                              {tip.tone === 'warn' ? (
+                                <AlertTriangle
+                                  size={12}
+                                  className="mt-0.5 shrink-0 text-amber-700 dark:text-amber-400"
+                                />
+                              ) : tip.tone === 'good' ? (
+                                <CheckCircle2
+                                  size={12}
+                                  className="mt-0.5 shrink-0 text-emerald-700 dark:text-emerald-400"
+                                />
+                              ) : (
+                                <Lightbulb size={12} className="mt-0.5 shrink-0 text-violet-700 dark:text-violet-400" />
+                              )}
+                              <span className="text-muted-foreground">{tip.text}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   );
                 })}
