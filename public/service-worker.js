@@ -10,7 +10,10 @@ import { ExpirationPlugin } from 'workbox-expiration';
 import {
   SUPABASE_CACHE_NAME,
   STATIC_CACHE_NAME,
+  STALE_SUPABASE_CACHE_NAMES,
+  SUPABASE_MUTATION_METHODS,
   isCacheableSupabaseRequest,
+  isSupabaseMutation,
   buildPartitionedCacheKey,
 } from '../src/utils/swCachePolicy';
 
@@ -26,13 +29,13 @@ precacheAndRoute(self.__WB_MANIFEST || []);
 self.skipWaiting();
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    // Drop supabase-rest-v1, whose entries were keyed by URL alone and are
-    // therefore shared across users. Already-deployed clients carry these on
-    // disk, so the upgrade has to delete them rather than just stop writing.
-    caches
-      .delete('supabase-rest-v1')
-      .catch(() => {})
-      .then(() => self.clients.claim()),
+    // Drop superseded read caches: v1 entries were keyed by URL alone and are
+    // therefore shared across users, and v2 entries hold guardian rows that came
+    // in as embedded resources. Already-deployed clients carry these on disk, so
+    // the upgrade has to delete them rather than just stop writing.
+    Promise.all(STALE_SUPABASE_CACHE_NAMES.map((name) => caches.delete(name).catch(() => {}))).then(() =>
+      self.clients.claim(),
+    ),
   );
 });
 
@@ -60,6 +63,38 @@ registerRoute(
     ],
   }),
 );
+
+// ── Write-through invalidation ────────────────────────────────────────────────
+// StaleWhileRevalidate answers from cache first, which is wrong immediately after
+// a write: saving a player edit PATCHes /players and then refetches it, and the
+// refetch was being served the pre-edit snapshot — the edit only appeared after a
+// reload, once the background revalidation had landed. So every successful REST
+// write drops the read cache, and the purge is awaited *before* the write's
+// response is handed back so the app's own refetch can never race ahead of it.
+//
+// The whole cache goes, not just the mutated table's entries: PostgREST embeds
+// related rows (players?select=*,guardians(*),player_seasons(*)), so a guardian
+// or enrollment write invalidates queries filed under an entirely different
+// table. Entries are cheap to refill on the next read.
+async function purgeSupabaseReadCache() {
+  const cache = await caches.open(SUPABASE_CACHE_NAME);
+  const keys = await cache.keys();
+  await Promise.all(keys.map((key) => cache.delete(key)));
+}
+
+const supabaseMutationHandler = async ({ request }) => {
+  const response = await fetch(request);
+  // Only a success invalidates — a rejected write left the server unchanged, and
+  // throwing away good cached reads would just make the next load slower.
+  if (response.ok) {
+    await purgeSupabaseReadCache().catch(() => {});
+  }
+  return response;
+};
+
+for (const method of SUPABASE_MUTATION_METHODS) {
+  registerRoute(({ url, request }) => isSupabaseMutation(url, request.method), supabaseMutationHandler, method);
+}
 
 // CacheFirst for static assets from our own origin (fonts, icons)
 registerRoute(

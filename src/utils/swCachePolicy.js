@@ -11,8 +11,15 @@
 // Kept as pure functions in src/utils so they are unit-testable; the service
 // worker imports them (it is bundled by vite-plugin-pwa's injectManifest).
 
-/** Cache name for Supabase REST reads. Bumped to v2 — v1 entries are unpartitioned. */
-export const SUPABASE_CACHE_NAME = 'supabase-rest-v2';
+/**
+ * Cache name for Supabase REST reads. v1 entries are unpartitioned; v2 entries
+ * hold guardian rows that arrived as embedded resources before the select param
+ * was inspected. Both are evicted on activate.
+ */
+export const SUPABASE_CACHE_NAME = 'supabase-rest-v3';
+
+/** Superseded read caches, deleted when a new worker activates. */
+export const STALE_SUPABASE_CACHE_NAMES = ['supabase-rest-v1', 'supabase-rest-v2'];
 
 /** Cache name for same-origin fonts/images. */
 export const STATIC_CACHE_NAME = 'static-assets-v1';
@@ -21,12 +28,37 @@ export const STATIC_CACHE_NAME = 'static-assets-v1';
 export const ANON_PARTITION = 'anon';
 
 /**
+ * HTTP methods that can change server state. Supabase sends reads as GET and
+ * RPC calls as POST, so anything in this list is treated as a write.
+ */
+export const SUPABASE_MUTATION_METHODS = ['POST', 'PATCH', 'PUT', 'DELETE'];
+
+/**
  * Tables never written to Cache Storage. Medical forms and guardian records are
  * the most sensitive data in the app (minors' health details, parent contact
  * info) and are cheap to refetch — the offline benefit does not justify leaving
  * them on disk.
  */
 export const UNCACHEABLE_TABLES = ['medical_forms', 'guardians'];
+
+/**
+ * True when a PostgREST `select` pulls an uncacheable table in as an embedded
+ * resource. The path segment alone is not enough to judge a request: six call
+ * sites read guardian rows through `players?select=*,guardians(*)`, which is
+ * filed under `players` and so slipped past the table check with the guardian
+ * contact details attached.
+ *
+ * Embeds are `<table>(...)`, optionally aliased (`parents:guardians(*)`) or
+ * hinted (`guardians!inner(*)`), and may nest. Matching requires a `(` or `!`
+ * immediately after the name, so a plain column named `guardians` is untouched
+ * and a lookalike table like `guardians_archive(*)` is judged on its own name.
+ * Whitespace around the delimiters is tolerated — PostgREST accepts it, and
+ * callers do write `select('id, first_name, guardians(*)')`.
+ */
+export function selectEmbedsUncacheableTable(select) {
+  if (!select || typeof select !== 'string') return false;
+  return UNCACHEABLE_TABLES.some((table) => new RegExp(`(^|[,(:])\\s*${table}\\s*[(!]`).test(select));
+}
 
 /**
  * Decodes the `sub` (user id) claim from a Supabase JWT without verifying it.
@@ -75,7 +107,30 @@ export function isCacheableSupabaseRequest(url, method = 'GET') {
   // Path form is /rest/v1/<table>. Match the segment exactly so a table merely
   // containing the word (e.g. "guardians_archive") is judged on its own name.
   const table = parsed.pathname.split('/')[3] || '';
-  return !UNCACHEABLE_TABLES.includes(table);
+  if (UNCACHEABLE_TABLES.includes(table)) return false;
+
+  // A cacheable table can still carry an uncacheable one in its payload.
+  return !selectEmbedsUncacheableTable(parsed.searchParams.get('select'));
+}
+
+/**
+ * True when this is a Supabase REST write. The read cache is StaleWhileRevalidate,
+ * so without invalidating it here a refetch issued right after a save is answered
+ * from the pre-save snapshot and the UI appears not to have updated.
+ */
+export function isSupabaseMutation(url, method = 'GET') {
+  if (!url) return false;
+  if (!SUPABASE_MUTATION_METHODS.includes((method || 'GET').toUpperCase())) return false;
+
+  let parsed;
+  try {
+    parsed = typeof url === 'string' ? new URL(url) : url;
+  } catch {
+    return false;
+  }
+
+  if (!parsed.hostname?.endsWith('.supabase.co')) return false;
+  return parsed.pathname.startsWith('/rest/');
 }
 
 /**
