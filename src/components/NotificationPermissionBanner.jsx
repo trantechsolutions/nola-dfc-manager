@@ -100,7 +100,7 @@ export default function NotificationPermissionBanner() {
           <Bell size={18} className="text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-white">Enable Notifications</p>
+          <p className="text-sm font-bold text-foreground">Enable Notifications</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             Get alerts for schedule changes, payments, and team updates.
           </p>

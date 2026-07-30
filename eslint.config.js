@@ -29,7 +29,7 @@ export default defineConfig([
     },
   }, // Unit test files (vitest)
   {
-    files: ['src/__tests__/**/*.{js,jsx}', 'src/**/*.test.{js,jsx}', 'src/setupTests.js'],
+    files: ['src/__tests__/**/*.{js,jsx}', 'src/**/*.test.{js,jsx}'],
     languageOptions: {
       globals: {
         ...globals.browser,

@@ -1,4 +1,3 @@
-/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -64,18 +63,6 @@ export default defineConfig({
           pdf: ['jspdf', 'pdf-lib', 'html2canvas'],
         },
       },
-    },
-  },
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: './src/setupTests.js',
-    exclude: ['tests/e2e/**', 'node_modules/**'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'html'],
-      include: ['src/hooks/**', 'src/utils/**'],
-      exclude: ['src/setupTests.js'],
     },
   },
 });

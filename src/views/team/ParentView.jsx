@@ -88,7 +88,6 @@ export default function ParentView({
   // If props come in empty (timing issue), fetch directly
   const [selfPlayers, setSelfPlayers] = useState([]);
   const [selfTransactions, setSelfTransactions] = useState([]);
-  const [selfFinancials, setSelfFinancials] = useState({});
   const [bootstrapped, setBootstrapped] = useState(false);
 
   useEffect(() => {
@@ -115,12 +114,6 @@ export default function ParentView({
           if (ts?.id) {
             const txs = await supabaseService.getTransactionsByTeamSeason(ts.id);
             setSelfTransactions(txs);
-            try {
-              const fin = await supabaseService.getPlayerFinancials(latestSeason, ts.id);
-              setSelfFinancials(fin);
-            } catch {
-              /* noop */
-            }
           }
         }
         setBootstrapped(true);

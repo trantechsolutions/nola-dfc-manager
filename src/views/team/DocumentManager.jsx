@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Upload,
   FileText,
@@ -51,11 +51,13 @@ export default function DocumentManager({
   const canEdit = can(PERMISSIONS.TEAM_EDIT_ROSTER);
   const canViewMedical = can(PERMISSIONS.TEAM_VIEW_MEDICAL_DOCS);
 
-  // Fetch documents scoped to team AND season
-  const fetchDocs = async () => {
+  // Fetch documents scoped to team AND season.
+  // Memoised on the same identity the effect below keys off, so the effect can
+  // declare its real dependency instead of relying on a stale closure.
+  const fetchDocs = useCallback(async () => {
     setLoading(true);
     try {
-      if (selectedTeam) {
+      if (selectedTeam?.id) {
         const allDocs = await supabaseService.getTeamDocuments(selectedTeam.id);
         // Strictly scope to the selected season — a doc uploaded under one season
         // should not show up under another.
@@ -67,12 +69,12 @@ export default function DocumentManager({
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedTeam?.id, selectedSeason]);
 
   // Re-fetch when team OR season changes
   useEffect(() => {
     fetchDocs();
-  }, [selectedTeam?.id, selectedSeason]);
+  }, [fetchDocs]);
 
   // Live-refresh when a document is uploaded/verified/deleted elsewhere
   // (e.g. a parent re-signing on another device). See sql/enable_realtime.sql.

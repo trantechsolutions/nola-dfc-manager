@@ -208,7 +208,13 @@ function App() {
     teamSeasons,
   });
 
-  // Update parentTeamId after players resolve (two-pass: null → resolved)
+  // Update parentTeamId after players resolve (two-pass: null → resolved).
+  //
+  // This is derived state and useMemo would satisfy the linter, but the
+  // deliberate two-pass timing is what lets the guardian-email lookup resolve
+  // against a populated `players` array. Collapsing it to render-time
+  // derivation risks the parent-team regression fixed in 8d0b224, so it stays
+  // an effect until App.jsx has coverage to refactor against.
   useEffect(() => {
     if (viewingAsParent) {
       setParentTeamId(impersonatingAs.teamId || null);
@@ -226,6 +232,9 @@ function App() {
 
   // For parents, fetch the team object directly since useTeamContext returns
   // an empty teams array for users with no roles.
+  // The setState here is a reset guarding an async fetch, not derived state —
+  // there is no non-effect form of "clear the previous team while the next one
+  // loads".
   useEffect(() => {
     if (effectiveIsStaff || !parentTeamId) {
       setParentTeam(null);
@@ -430,10 +439,17 @@ function App() {
   // get a selectedTeamId and whose parentTeamId is itself derived from this
   // fetch's own guardian-email lookup — get an initial fetchData() call at
   // all; without it there is no path that ever populates their team.
+  //
+  // The dependency list is curated on purpose. `fetchData` is recreated every
+  // render, so adding it — as exhaustive-deps wants — would refetch in a loop
+  // until it is wrapped in useCallback with its own correct deps. That is a
+  // real change to the path commit 8d0b224 fixed for a stale-closure bug, and
+  // App.jsx has no test coverage, so the rule is silenced rather than guessed at.
   useEffect(() => {
     if (user) {
       fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, selectedTeamId, parentTeamId, selectedSeason, currentTeamSeason?.id]);
 
   // ── COMPUTED ──
