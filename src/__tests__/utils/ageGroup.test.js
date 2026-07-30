@@ -1,16 +1,33 @@
 import { describe, it, expect } from 'vitest';
 import { getUSAgeGroup, getAge, parseDateOnly, formatDateOnly } from '../../utils/ageGroup';
 
+/**
+ * Formats a Date as YYYY-MM-DD using **local** components.
+ *
+ * toISOString() would convert to UTC first, which in any negative-UTC-offset
+ * locale rolls the date forward late in the evening — and since parseDateOnly
+ * and getAge both work in local time, that produced a fixture one day ahead of
+ * the value under test (a "today" birthdate scoring as age -1 after ~7pm CDT).
+ */
+const toLocalIsoDate = (date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
 describe('getAge', () => {
   it('calculates age correctly', () => {
     const today = new Date();
     const tenYearsAgo = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate());
-    expect(getAge(tenYearsAgo.toISOString().split('T')[0])).toBe(10);
+    expect(getAge(toLocalIsoDate(tenYearsAgo))).toBe(10);
   });
 
   it('returns 0 for today birthdate', () => {
-    const today = new Date().toISOString().split('T')[0];
-    expect(getAge(today)).toBe(0);
+    expect(getAge(toLocalIsoDate(new Date()))).toBe(0);
+  });
+
+  it('is not thrown off by the UTC date rolling ahead of the local one', () => {
+    // Reproduces the original failure directly: late-evening local time in a
+    // negative-UTC-offset zone. The local date is what getAge compares against.
+    const localToday = new Date(2026, 6, 29, 23, 30);
+    expect(getAge(toLocalIsoDate(localToday))).toBe(getAge(toLocalIsoDate(new Date(2026, 6, 29))));
   });
 
   it('returns null for invalid input', () => {
