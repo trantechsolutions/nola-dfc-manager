@@ -343,6 +343,178 @@ describe('handleWaterfallCredit — per-team methods', () => {
   });
 });
 
+// ── manual split (explicit per-player allocations) ────────────────────────────
+describe('handleWaterfallCredit — manual allocations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    supabaseService.addTransaction.mockResolvedValue({ id: 'new-tx' });
+    supabaseService.updateTransaction.mockResolvedValue({});
+  });
+
+  it('credits each listed player the exact amount entered', async () => {
+    const p1 = makePlayer('p1');
+    const p2 = makePlayer('p2');
+    const p3 = makePlayer('p3');
+
+    supabaseService.getPlayerFinancials.mockResolvedValue({
+      p1: makeFinancials(500),
+      p2: makeFinancials(500),
+      p3: makeFinancials(500),
+    });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1, p2, p3] });
+    await handleWaterfallCredit(300, 'Car Wash', '', 'orig-tx', 'FUN', [
+      { playerId: 'p1', amount: 175 },
+      { playerId: 'p3', amount: 125 },
+    ]);
+
+    const calls = supabaseService.addTransaction.mock.calls.map((c) => c[0]);
+    expect(calls.find((c) => c.playerId === 'p1')?.amount).toBe(175);
+    expect(calls.find((c) => c.playerId === 'p3')?.amount).toBe(125);
+    expect(calls.find((c) => c.playerId === 'p2')).toBeUndefined();
+    expect(calls.find((c) => c.playerId === null)).toBeUndefined();
+    expect(supabaseService.updateTransaction).toHaveBeenCalledWith('orig-tx', { distributed: true });
+  });
+
+  it('overrides the season method entirely', async () => {
+    const p1 = makePlayer('p1');
+    const p2 = makePlayer('p2');
+
+    supabaseService.getPlayerFinancials.mockResolvedValue({
+      p1: makeFinancials(500),
+      p2: makeFinancials(500),
+    });
+
+    // team_pot would normally send everything to the pot — allocations win.
+    const { handleWaterfallCredit } = buildHook({ players: [p1, p2], method: 'team_pot' });
+    await handleWaterfallCredit(100, 'Raffle', 'p1', 'orig-tx', 'FUN', [{ playerId: 'p2', amount: 100 }]);
+
+    const calls = supabaseService.addTransaction.mock.calls.map((c) => c[0]);
+    expect(calls.find((c) => c.playerId === 'p2')?.amount).toBe(100);
+    expect(calls.find((c) => c.playerId === null)).toBeUndefined();
+  });
+
+  it('sends the unallocated remainder to the team pot', async () => {
+    const p1 = makePlayer('p1');
+    supabaseService.getPlayerFinancials.mockResolvedValue({ p1: makeFinancials(500) });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1] });
+    await handleWaterfallCredit(250, 'Bake Sale', '', 'orig-tx', 'FUN', [{ playerId: 'p1', amount: 100 }]);
+
+    const calls = supabaseService.addTransaction.mock.calls.map((c) => c[0]);
+    expect(calls.find((c) => c.playerId === 'p1')?.amount).toBe(100);
+    expect(calls.find((c) => c.playerId === null)?.amount).toBeCloseTo(150, 1);
+  });
+
+  it('applies amounts above a player’s remaining balance without capping', async () => {
+    const p1 = makePlayer('p1');
+    supabaseService.getPlayerFinancials.mockResolvedValue({ p1: makeFinancials(40) });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1] });
+    await handleWaterfallCredit(100, 'Sponsor', '', 'orig-tx', 'SPO', [{ playerId: 'p1', amount: 100 }]);
+
+    const calls = supabaseService.addTransaction.mock.calls.map((c) => c[0]);
+    expect(calls.find((c) => c.playerId === 'p1')?.amount).toBe(100);
+  });
+
+  it('credits fee-waived and non-buy-in players when named explicitly', async () => {
+    const p1 = makePlayer('p1', { feeWaived: true });
+    const p2 = makePlayer('p2', { buyIn: false });
+
+    supabaseService.getPlayerFinancials.mockResolvedValue({
+      p1: makeFinancials(0),
+      p2: makeFinancials(300),
+    });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1, p2] });
+    await handleWaterfallCredit(80, 'Sponsor', '', 'orig-tx', 'SPO', [
+      { playerId: 'p1', amount: 30 },
+      { playerId: 'p2', amount: 50 },
+    ]);
+
+    const calls = supabaseService.addTransaction.mock.calls.map((c) => c[0]);
+    expect(calls.find((c) => c.playerId === 'p1')?.amount).toBe(30);
+    expect(calls.find((c) => c.playerId === 'p2')?.amount).toBe(50);
+  });
+
+  it('merges duplicate rows for the same player', async () => {
+    const p1 = makePlayer('p1');
+    supabaseService.getPlayerFinancials.mockResolvedValue({ p1: makeFinancials(500) });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1] });
+    await handleWaterfallCredit(100, 'Sponsor', '', 'orig-tx', 'SPO', [
+      { playerId: 'p1', amount: 60 },
+      { playerId: 'p1', amount: 40 },
+    ]);
+
+    const playerCalls = supabaseService.addTransaction.mock.calls.map((c) => c[0]).filter((c) => c.playerId === 'p1');
+    expect(playerCalls).toHaveLength(1);
+    expect(playerCalls[0].amount).toBe(100);
+  });
+
+  it('ignores blank and zero rows', async () => {
+    const p1 = makePlayer('p1');
+    const p2 = makePlayer('p2');
+    supabaseService.getPlayerFinancials.mockResolvedValue({
+      p1: makeFinancials(500),
+      p2: makeFinancials(500),
+    });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1, p2] });
+    await handleWaterfallCredit(50, 'Sponsor', '', 'orig-tx', 'SPO', [
+      { playerId: 'p1', amount: 50 },
+      { playerId: 'p2', amount: '' },
+      { playerId: '', amount: 25 },
+    ]);
+
+    const calls = supabaseService.addTransaction.mock.calls.map((c) => c[0]);
+    expect(calls.find((c) => c.playerId === 'p2')).toBeUndefined();
+    expect(calls.find((c) => c.playerId === 'p1')?.amount).toBe(50);
+  });
+
+  it('throws when the split exceeds the total amount', async () => {
+    const p1 = makePlayer('p1');
+    supabaseService.getPlayerFinancials.mockResolvedValue({ p1: makeFinancials(500) });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1] });
+    await expect(
+      handleWaterfallCredit(100, 'Sponsor', '', 'orig-tx', 'SPO', [{ playerId: 'p1', amount: 150 }]),
+    ).rejects.toThrow('Manual split exceeds the total amount being distributed.');
+    expect(supabaseService.addTransaction).not.toHaveBeenCalled();
+  });
+
+  it('throws when a negative amount is supplied', async () => {
+    const p1 = makePlayer('p1');
+    supabaseService.getPlayerFinancials.mockResolvedValue({ p1: makeFinancials(500) });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1] });
+    await expect(
+      handleWaterfallCredit(100, 'Sponsor', '', 'orig-tx', 'SPO', [{ playerId: 'p1', amount: -20 }]),
+    ).rejects.toThrow('Manual split amounts cannot be negative.');
+  });
+
+  it('throws when an allocation names a player off the roster', async () => {
+    const p1 = makePlayer('p1');
+    supabaseService.getPlayerFinancials.mockResolvedValue({ p1: makeFinancials(500) });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1] });
+    await expect(
+      handleWaterfallCredit(100, 'Sponsor', '', 'orig-tx', 'SPO', [{ playerId: 'ghost', amount: 100 }]),
+    ).rejects.toThrow('Manual split references a player who is not on this roster.');
+  });
+
+  it('falls back to the season method when allocations are empty', async () => {
+    const p1 = makePlayer('p1');
+    supabaseService.getPlayerFinancials.mockResolvedValue({ p1: makeFinancials(500) });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1] });
+    await handleWaterfallCredit(120, 'Sponsor', 'p1', 'orig-tx', 'SPO', []);
+
+    const calls = supabaseService.addTransaction.mock.calls.map((c) => c[0]);
+    expect(calls.find((c) => c.playerId === 'p1')?.amount).toBe(120);
+  });
+});
+
 // ── revertWaterfall ───────────────────────────────────────────────────────────
 describe('revertWaterfall', () => {
   beforeEach(() => {

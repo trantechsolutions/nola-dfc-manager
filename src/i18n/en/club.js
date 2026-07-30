@@ -36,6 +36,7 @@ export default {
     txAdded: 'Transaction Added',
     txDeleted: 'Transaction deleted',
     fundsDistributed: 'Funds Distributed!',
+    fundsRecorded: 'Funds recorded to the ledger.',
     distributionReverted: 'Distribution Reverted.',
     distributionMethodSaved: 'Distribution method updated.',
     importSuccess: '{{n}} transactions imported!',

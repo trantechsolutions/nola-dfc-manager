@@ -36,6 +36,7 @@ export default {
     txAdded: 'Transacción Agregada',
     txDeleted: 'Transacción eliminada',
     fundsDistributed: '¡Fondos Distribuidos!',
+    fundsRecorded: 'Fondos registrados en el libro contable.',
     distributionReverted: 'Distribución Revertida.',
     distributionMethodSaved: 'Método de distribución actualizado.',
     importSuccess: '¡{{n}} transacciones importadas!',
