@@ -508,7 +508,7 @@ export default function BudgetView({
       if (showToast) showToast(finalize ? 'Budget Finalized & Fees Applied!' : 'Draft Saved.');
     } catch (e) {
       console.error('Save budget failed:', e);
-      if (showToast) showToast('Save failed.', true);
+      if (showToast) showToast(`Save failed: ${e.message || 'unknown error'}`, true);
     } finally {
       setIsSaving(false);
     }
@@ -552,7 +552,7 @@ export default function BudgetView({
       if (showToast) showToast('Budget amended successfully.');
     } catch (e) {
       console.error('Amendment save failed:', e);
-      if (showToast) showToast('Amendment failed.', true);
+      if (showToast) showToast(`Amendment failed: ${e.message || 'unknown error'}`, true);
     } finally {
       setIsSaving(false);
     }

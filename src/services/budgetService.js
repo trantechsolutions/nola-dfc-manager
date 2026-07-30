@@ -1,5 +1,12 @@
 import { supabase } from '../supabase';
 
+// Unsaved rows carry a client-generated placeholder id (`item_`, `sug_`,
+// `clone_`, …) so React can key them before they exist in the database. Only a
+// real UUID identifies a persisted row — matching on a prefix denylist missed
+// the clone/suggestion prefixes and sent `id: "sug_abc123"` to a uuid column.
+const PERSISTED_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isPersistedId = (id) => typeof id === 'string' && PERSISTED_ID.test(id);
+
 export const budgetService = {
   getBudgetItems: async (seasonId, teamSeasonId = null) => {
     let query = supabase.from('budget_items').select('*').eq('season_id', seasonId);
@@ -18,34 +25,58 @@ export const budgetService = {
   },
 
   saveBudgetItems: async (seasonId, items, teamSeasonId = null) => {
+    // Without a team_season the prune below would sweep every team's items for
+    // the season, and the insert would violate budget_items.team_season_id NOT
+    // NULL anyway. Fail loudly instead of deleting another team's budget.
+    if (!teamSeasonId) throw new Error('saveBudgetItems requires a teamSeasonId');
+
     // Upsert-then-prune: write all rows first, then remove any rows
     // that are no longer in the set. This prevents a data-loss window
     // that the previous delete-then-insert pattern had.
-    const rows = items.map((item) => ({
-      ...(item.id && !item.id.startsWith('item_') ? { id: item.id } : {}),
+    const toRow = (item) => ({
       season_id: seasonId,
+      team_season_id: teamSeasonId,
       category: item.category,
-      label: item.label,
+      label: item.label || '',
       income: item.income || 0,
       expenses_fall: item.expensesFall || 0,
       expenses_spring: item.expensesSpring || 0,
-      ...(teamSeasonId ? { team_season_id: teamSeasonId } : {}),
-    }));
+    });
 
-    let persistedIds = [];
-    if (rows.length > 0) {
+    // Existing and new rows go in separate calls. PostgREST inserts a batch as
+    // one statement over the union of the objects' keys, and supabase-js
+    // defaults the keys a row is missing to NULL rather than the column
+    // default — so a single mixed batch sends `id: null` for every new row and
+    // the whole save fails on the primary key. That is the "Save failed." seen
+    // when adding an item to a budget that already has saved items.
+    const existingRows = [];
+    const newRows = [];
+    for (const item of items) {
+      if (isPersistedId(item.id)) existingRows.push({ id: item.id, ...toRow(item) });
+      else newRows.push(toRow(item));
+    }
+
+    const persistedIds = [];
+    if (existingRows.length > 0) {
       const { data, error } = await supabase
         .from('budget_items')
-        .upsert(rows, { onConflict: 'id', ignoreDuplicates: false })
+        .upsert(existingRows, { onConflict: 'id', ignoreDuplicates: false })
         .select('id');
       if (error) throw error;
-      persistedIds = data.map((r) => r.id);
+      persistedIds.push(...data.map((r) => r.id));
+    }
+    if (newRows.length > 0) {
+      const { data, error } = await supabase.from('budget_items').insert(newRows).select('id');
+      if (error) throw error;
+      persistedIds.push(...data.map((r) => r.id));
     }
 
     // Delete any rows in the DB that are no longer in this save set
-    let existingQuery = supabase.from('budget_items').select('id').eq('season_id', seasonId);
-    if (teamSeasonId) existingQuery = existingQuery.eq('team_season_id', teamSeasonId);
-    const { data: existing, error: fetchErr } = await existingQuery;
+    const { data: existing, error: fetchErr } = await supabase
+      .from('budget_items')
+      .select('id')
+      .eq('season_id', seasonId)
+      .eq('team_season_id', teamSeasonId);
     if (fetchErr) throw fetchErr;
 
     const toDelete = (existing || []).map((r) => r.id).filter((id) => !persistedIds.includes(id));
