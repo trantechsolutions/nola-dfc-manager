@@ -255,7 +255,7 @@ export default function ScheduleView({
     { id: 'upcoming', label: t('schedule.upcoming'), icon: Calendar },
     { id: 'past', label: t('schedule.past'), icon: History },
     { id: 'calendar', label: t('schedule.calendar'), icon: CalendarDays },
-    { id: 'planner', label: t('schedule.planner'), icon: ClipboardList },
+    ...(canEditSchedule ? [{ id: 'planner', label: t('schedule.planner'), icon: ClipboardList }] : []),
   ];
 
   const toggleTypeFilter = (key) => {

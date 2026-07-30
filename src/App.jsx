@@ -183,7 +183,7 @@ function App() {
     currentSeasonData,
     currentTeamSeason,
     refreshSeasons,
-  } = useSoccerYear(user, effectiveTeamId, club?.settings?.defaultSeason || null);
+  } = useSoccerYear(user, effectiveTeamId, effectiveIsStaff ? club?.settings?.defaultSeason || null : null);
 
   const {
     players,
@@ -362,9 +362,12 @@ function App() {
       await supabaseService.ensureUserProfile(authUser);
       await supabaseService.claimMyInvitations();
       // setUser AFTER claim so useTeamContext's role fetch sees claimed rows.
+      // Don't call fetchData() here — this effect has a `[]` dep array, so it
+      // would always call the mount-time fetchData closure (userEmail always
+      // null). The effect below re-fires fetchData() once `user` is actually
+      // set, with a fresh, correctly-scoped closure.
       setUser(authUser);
       setLoading(false);
-      fetchData();
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -416,12 +419,16 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Re-fetch when team or season context changes
+  // Re-fetch when the user, team, or season context changes. `user` is in the
+  // trigger set (not just selectedTeamId/parentTeamId) so parents — who never
+  // get a selectedTeamId and whose parentTeamId is itself derived from this
+  // fetch's own guardian-email lookup — get an initial fetchData() call at
+  // all; without it there is no path that ever populates their team.
   useEffect(() => {
-    if (user && (selectedTeamId || parentTeamId)) {
+    if (user) {
       fetchData();
     }
-  }, [selectedTeamId, parentTeamId, selectedSeason, currentTeamSeason?.id]);
+  }, [user, selectedTeamId, parentTeamId, selectedSeason, currentTeamSeason?.id]);
 
   // ── COMPUTED ──
   const teamBalance = seasonalTransactions.reduce((acc, tx) => {

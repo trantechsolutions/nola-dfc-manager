@@ -24,6 +24,12 @@ export function useAppData({
   const [loading, setLoading] = useState(false);
 
   const fetchIdRef = useRef(0);
+  // Applied once: the first time we learn a parent's enrolled seasons, default
+  // selectedSeason to the most recent one. selectedSeason is never falsy (it's
+  // seeded with the computed current calendar season in useSoccerYear), so a
+  // `!resolvedSeason` check here would never fire — this ref is what actually
+  // lets the guardian's enrollment win the first time.
+  const parentSeasonAppliedRef = useRef(false);
 
   const fetchData = useCallback(
     async (seasonOverride) => {
@@ -41,10 +47,11 @@ export function useAppData({
               if (pData.length > 0 && pData[0].teamId) {
                 fetchTeamId = pData[0].teamId;
               }
-              if (pData.length > 0 && !resolvedSeason) {
+              if (pData.length > 0 && !parentSeasonAppliedRef.current) {
                 const profiles = pData[0].seasonProfiles || {};
                 const enrolledSeasons = Object.keys(profiles).sort((a, b) => b.localeCompare(a));
                 if (enrolledSeasons.length > 0) {
+                  parentSeasonAppliedRef.current = true;
                   resolvedSeason = enrolledSeasons[0];
                   setSelectedSeason(resolvedSeason);
                 }

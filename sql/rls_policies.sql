@@ -138,7 +138,12 @@ CREATE POLICY "clubs_delete" ON clubs FOR DELETE TO authenticated
 -- TEAMS
 -- ============================================================
 CREATE POLICY "teams_select" ON teams FOR SELECT TO authenticated
-  USING (is_super_admin() OR club_id IN (SELECT user_club_ids()));
+  USING (
+    is_super_admin()
+    OR club_id IN (SELECT user_club_ids())
+    -- Parents need their own child's team row (name, colors, ical feed, etc.)
+    OR id IN (SELECT team_id FROM players WHERE id IN (SELECT user_guardian_player_ids()))
+  );
 
 CREATE POLICY "teams_insert" ON teams FOR INSERT TO authenticated
   WITH CHECK (is_super_admin() OR club_id IN (SELECT user_club_ids()));
