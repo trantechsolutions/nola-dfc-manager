@@ -61,6 +61,7 @@ import { useAccounts } from './hooks/useAccounts';
 import { useBookBalance } from './hooks/useBookBalance';
 import { useAppSettings } from './hooks/useAppSettings';
 import { resolveSingleTeamMode, setAdminOverride } from './utils/singleTeamMode';
+import { swCacheService } from './services/swCacheService';
 
 function App() {
   const navigate = useNavigate();
@@ -411,6 +412,10 @@ function App() {
         lastUserIdRef.current = null;
         setUser(null);
         setLoading(false);
+        // Drop this user's cached Supabase rows so they aren't left on disk for
+        // whoever uses the device next. Fire-and-forget — the service worker
+        // may be absent (dev, unsupported browser) and sign-out must not block.
+        swCacheService.purgeDataCaches();
       }
       // All other events (TOKEN_REFRESHED, INITIAL_SESSION, USER_UPDATED)
       // are intentionally ignored here.
