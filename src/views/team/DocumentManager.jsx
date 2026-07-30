@@ -23,6 +23,7 @@ import { ALL_ROLES } from '../../utils/roles';
 import { DOC_TYPES, DOC_STATUS_COLORS } from '../../utils/constants';
 import { getCompliance } from '../../utils/compliance';
 import { downloadDocumentsAsZip } from '../../utils/downloadDocumentsZip';
+import { compressImageFile } from '../../utils/imageCompression';
 
 const STATUS_COLORS = DOC_STATUS_COLORS;
 
@@ -124,15 +125,20 @@ export default function DocumentManager({
   };
 
   const handleFileSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !uploadingFor) return;
-    if (file.size > 10 * 1024 * 1024) {
-      showToast('File too large (max 10MB)', true);
-      return;
-    }
+    const selected = e.target.files?.[0];
+    if (!selected || !uploadingFor) return;
 
     setIsUploading(true);
     try {
+      // Downscale camera photos before the size check — a phone snapshot is
+      // routinely over 10MB straight off the sensor, and rejecting it outright
+      // would block the most common mobile upload.
+      const file = await compressImageFile(selected);
+      if (file.size > 10 * 1024 * 1024) {
+        showToast('File too large (max 10MB)', true);
+        return;
+      }
+
       await supabaseService.uploadDocument(file, uploadingFor, {
         clubId: club?.id,
         teamId: selectedTeam?.id,
@@ -427,7 +433,23 @@ export default function DocumentManager({
                           ref={fileInputRef}
                           type="file"
                           className="hidden"
-                          accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx"
+                          accept="image/*,.pdf,.jpg,.jpeg,.png,.gif,.doc,.docx"
+                          onChange={handleFileSelect}
+                          disabled={isUploading}
+                        />
+                      </label>
+                      {/* Camera-only path, kept separate from the picker above:
+                          `capture` forces the camera and would otherwise hide
+                          the photo library. */}
+                      <label
+                        className={`sm:hidden flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold cursor-pointer transition-all ${isUploading ? 'bg-muted text-muted-foreground' : 'bg-muted text-foreground hover:bg-muted/80'}`}
+                      >
+                        <Camera size={14} />
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          capture="environment"
                           onChange={handleFileSelect}
                           disabled={isUploading}
                         />

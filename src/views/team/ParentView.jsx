@@ -23,6 +23,7 @@ import {
   ExternalLink,
   Edit,
   Save,
+  Camera,
 } from 'lucide-react';
 import MedicalReleaseForm from '../../components/MedicalReleaseForm';
 import { supabaseService } from '../../services/supabaseService';
@@ -33,6 +34,7 @@ import { getCompliance } from '../../utils/compliance';
 
 import { CATEGORY_LABELS, CATEGORY_TEXT_COLORS as CATEGORY_COLORS, DOC_TYPE_LABELS } from '../../utils/constants';
 import PaymentOptions from '../../components/PaymentOptions';
+import { compressImageFile } from '../../utils/imageCompression';
 
 function getProgressColor(pct) {
   if (pct >= 100)
@@ -243,12 +245,15 @@ export default function ParentView({
     if (!uploadFile || !activePlayer?.id) return;
     setUploading(true);
     try {
-      await supabaseService.uploadDocument(uploadFile, activePlayer.id, {
+      // Camera photos arrive at full sensor resolution; downscale before upload
+      // so parents on cell data aren't pushing 8MB per document.
+      const file = await compressImageFile(uploadFile);
+      await supabaseService.uploadDocument(file, activePlayer.id, {
         clubId: clubId || null,
         teamId: activePlayer.teamId || null,
         seasonId: selectedSeason || null,
         docType: uploadDocType,
-        title: `${DOC_TYPE_LABELS[uploadDocType] || uploadDocType} - ${uploadFile.name}`,
+        title: `${DOC_TYPE_LABELS[uploadDocType] || uploadDocType} - ${file.name}`,
       });
       if (uploadDocType === 'medical_release') {
         await supabaseService.setSeasonCompliance(activePlayer.id, selectedSeason, 'medicalRelease', true);
@@ -731,7 +736,7 @@ export default function ParentView({
                   </label>
                   <input
                     type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    accept="image/*,.pdf,.jpg,.jpeg,.png,.doc,.docx"
                     onChange={(e) => setUploadFile(e.target.files[0] || null)}
                     className="block w-full text-sm text-foreground
                       file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0
@@ -740,6 +745,21 @@ export default function ParentView({
                       hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50
                       file:cursor-pointer file:transition-colors"
                   />
+                  {/* Separate camera entry point. `capture` on the picker above
+                      would force the camera and hide the photo library, so the
+                      two paths stay distinct. Hidden on desktop, where it just
+                      opens the same file dialog. */}
+                  <label className="sm:hidden mt-2 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-muted text-foreground hover:bg-muted/80 cursor-pointer transition-colors">
+                    <Camera size={14} />
+                    {t('parent.takePhoto', 'Take Photo')}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => setUploadFile(e.target.files[0] || null)}
+                    />
+                  </label>
                 </div>
                 {uploadFile && (
                   <>
