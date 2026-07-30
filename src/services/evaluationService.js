@@ -1,6 +1,27 @@
 // src/services/evaluationService.js
 // All database operations for the player evaluation system.
 import { supabase } from '../supabase';
+import { outbox } from './outboxService';
+
+/** Outbox mutation type for a queued single-score save. */
+export const OUTBOX_SAVE_SCORE = 'evaluation.saveScore';
+
+/** The raw write, shared by the online path and the outbox replay handler. */
+async function writeScore({ candidateId, categoryId, evaluatorId, score, notes }) {
+  const { error } = await supabase.from('evaluation_scores').upsert(
+    {
+      candidate_id: candidateId,
+      category_id: categoryId,
+      evaluator_id: evaluatorId,
+      score,
+      notes: notes || null,
+    },
+    { onConflict: 'candidate_id,category_id,evaluator_id' },
+  );
+  if (error) throw error;
+}
+
+outbox.register(OUTBOX_SAVE_SCORE, writeScore);
 
 export const evaluationService = {
   // ─────────────────────────────────────────
@@ -269,20 +290,46 @@ export const evaluationService = {
   },
 
   saveScore: async ({ candidateId, categoryId, evaluatorId, score, notes }) => {
-    const { error } = await supabase.from('evaluation_scores').upsert(
-      {
-        candidate_id: candidateId,
-        category_id: categoryId,
-        evaluator_id: evaluatorId,
-        score,
-        notes: notes || null,
-      },
-      { onConflict: 'candidate_id,category_id,evaluator_id' },
-    );
-    if (error) throw error;
+    // Evaluations are scored pitch-side, where signal is routinely bad. Queue
+    // the write instead of losing it; the upsert's conflict target makes replay
+    // idempotent, and the dedupe key collapses repeated edits to one score.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      await outbox.enqueue({
+        type: OUTBOX_SAVE_SCORE,
+        payload: { candidateId, categoryId, evaluatorId, score, notes },
+        dedupeKey: `${OUTBOX_SAVE_SCORE}:${candidateId}:${categoryId}:${evaluatorId}`,
+      });
+      return { queued: true };
+    }
+
+    await writeScore({ candidateId, categoryId, evaluatorId, score, notes });
+    return { queued: false };
   },
 
   saveBatchScores: async (scores) => {
+    // The evaluator scoring screen saves a whole candidate at once, and it is
+    // the flow most likely to run without signal. Queue each score separately
+    // rather than the batch: it reuses the single-score handler and dedupes at
+    // the score level, so re-saving one candidate supersedes only their rows.
+    // The cost is N requests instead of one on replay, which is acceptable for
+    // a rubric's worth of categories.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      for (const s of scores) {
+        await outbox.enqueue({
+          type: OUTBOX_SAVE_SCORE,
+          payload: {
+            candidateId: s.candidateId,
+            categoryId: s.categoryId,
+            evaluatorId: s.evaluatorId,
+            score: s.score,
+            notes: s.notes,
+          },
+          dedupeKey: `${OUTBOX_SAVE_SCORE}:${s.candidateId}:${s.categoryId}:${s.evaluatorId}`,
+        });
+      }
+      return { queued: true };
+    }
+
     const rows = scores.map((s) => ({
       candidate_id: s.candidateId,
       category_id: s.categoryId,
@@ -294,6 +341,7 @@ export const evaluationService = {
       .from('evaluation_scores')
       .upsert(rows, { onConflict: 'candidate_id,category_id,evaluator_id' });
     if (error) throw error;
+    return { queued: false };
   },
 
   // Get aggregated scores from the view
