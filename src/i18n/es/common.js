@@ -10,6 +10,7 @@ export default {
   search: 'Buscar',
   loading: 'CARGANDO...',
   saving: 'Guardando...',
+  saved: 'Guardado',
   confirm: 'Confirmar',
   proceed: 'Continuar',
   yes: 'Sí',

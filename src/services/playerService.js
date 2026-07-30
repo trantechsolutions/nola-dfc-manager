@@ -3,6 +3,14 @@ import { logAuditEvent } from './auditService';
 import { pushService } from './pushService';
 import { formatPhone } from '../utils/phone';
 
+// '' and null/undefined mean "not entered"; 0 is a real answer (only child)
+// and must survive the round trip instead of collapsing to null.
+function normalizeSiblingsCount(value) {
+  if (value === '' || value === null || value === undefined) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 export const playerService = {
   getAllPlayers: async () => {
     const { data: players, error: pErr } = await supabase
@@ -20,6 +28,8 @@ export const playerService = {
       status: p.status,
       clubId: p.club_id,
       teamId: p.team_id,
+      shirtSize: p.shirt_size,
+      siblingsCount: p.siblings_count,
       guardians: (p.guardians || []).map((g) => ({
         id: g.id,
         name: g.name,
@@ -53,6 +63,8 @@ export const playerService = {
         birthdate: playerData.birthdate || null,
         gender: playerData.gender || null,
         status: playerData.status || 'active',
+        shirt_size: playerData.shirtSize || null,
+        siblings_count: normalizeSiblingsCount(playerData.siblingsCount),
         ...(playerData.clubId ? { club_id: playerData.clubId } : {}),
         ...(playerData.teamId ? { team_id: playerData.teamId } : {}),
       })
@@ -127,6 +139,8 @@ export const playerService = {
       status: playerData.status || 'active',
     };
     if ('gender' in playerData) row.gender = playerData.gender || null;
+    if ('shirtSize' in playerData) row.shirt_size = playerData.shirtSize || null;
+    if ('siblingsCount' in playerData) row.siblings_count = normalizeSiblingsCount(playerData.siblingsCount);
     const { error: pErr } = await supabase.from('players').update(row).eq('id', playerId);
     if (pErr) throw pErr;
 
@@ -396,6 +410,8 @@ export const playerService = {
       status: p.status,
       clubId: p.club_id,
       teamId: p.team_id,
+      shirtSize: p.shirt_size,
+      siblingsCount: p.siblings_count,
       guardians: (p.guardians || []).map((g) => ({ id: g.id, name: g.name, email: g.email, phone: g.phone })),
       seasonProfiles: (p.player_seasons || []).reduce((acc, ps) => {
         acc[ps.season_id] = {
@@ -431,6 +447,8 @@ export const playerService = {
       teamId: p.team_id,
       teamName: p.teams?.name || null,
       teamAgeGroup: p.teams?.age_group || null,
+      shirtSize: p.shirt_size,
+      siblingsCount: p.siblings_count,
       guardians: (p.guardians || []).map((g) => ({ id: g.id, name: g.name, email: g.email, phone: g.phone })),
     }));
   },
@@ -455,6 +473,8 @@ export const playerService = {
           status: p.status,
           clubId: p.club_id,
           teamId: p.team_id,
+          shirtSize: p.shirt_size,
+          siblingsCount: p.siblings_count,
           guardians: (p.guardians || []).map((gu) => ({ id: gu.id, name: gu.name, email: gu.email, phone: gu.phone })),
           seasonProfiles: (p.player_seasons || []).reduce((acc, ps) => {
             acc[ps.season_id] = {
@@ -485,6 +505,46 @@ export const playerService = {
       phone: phone || null,
     });
     if (error) throw error;
+  },
+
+  // Parent self-service: birthdate/shirt size/siblings via SECURITY DEFINER
+  // RPC — players_update RLS is staff-only (club_id IN user_club_ids()), so a
+  // direct UPDATE from a parent session matches zero rows and would look like
+  // a silent no-op. See sql/add_guardian_self_service_rpc.sql.
+  updateOwnPlayerDetails: async (playerId, { birthdate, shirtSize, siblingsCount }) => {
+    const { data: ok, error } = await supabase.rpc('update_guardian_player_details', {
+      p_player_id: playerId,
+      p_birthdate: birthdate || null,
+      p_shirt_size: shirtSize || null,
+      p_siblings_count: normalizeSiblingsCount(siblingsCount),
+    });
+    if (error) throw error;
+    if (!ok) throw new Error('You do not have permission to update this player.');
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        logAuditEvent({
+          tableName: 'players',
+          recordId: playerId,
+          action: 'update',
+          changedBy: user.id,
+          newData: { birthdate, shirtSize, siblingsCount },
+          metadata: { source: 'parent_self_service' },
+        });
+      }
+    });
+  },
+
+  // Parent self-service: a guardian's phone number only — name/email are
+  // excluded because email drives the guardians<->user login match (see the
+  // RPC's SQL comment).
+  updateGuardianPhone: async (guardianId, phone) => {
+    const { data: ok, error } = await supabase.rpc('update_guardian_phone', {
+      p_guardian_id: guardianId,
+      p_phone: formatPhone(phone) || null,
+    });
+    if (error) throw error;
+    if (!ok) throw new Error('You do not have permission to update this contact.');
   },
 
   getSeasonalRoster: async (teamId, seasonId) => {

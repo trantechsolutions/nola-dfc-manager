@@ -22,6 +22,8 @@ export default function PlayerFormModal({
     birthdate: '',
     gender: '',
     status: 'active',
+    shirtSize: '',
+    siblingsCount: '',
     guardians: [{ name: '', email: '', phone: '' }],
   });
 
@@ -34,6 +36,8 @@ export default function PlayerFormModal({
         ...initialData,
         birthdate: bd,
         gender: initialData.gender || '',
+        shirtSize: initialData.shirtSize || '',
+        siblingsCount: initialData.siblingsCount ?? '',
         guardians: initialData.guardians?.length ? initialData.guardians : [{ name: '', email: '', phone: '' }],
         status: initialData.status || 'active',
       });
@@ -45,6 +49,8 @@ export default function PlayerFormModal({
         birthdate: '',
         gender: '',
         status: 'active',
+        shirtSize: '',
+        siblingsCount: '',
         guardians: [{ name: '', email: '', phone: '' }],
       });
     }
@@ -201,6 +207,49 @@ export default function PlayerFormModal({
               <option value="M">Male</option>
               <option value="F">Female</option>
             </select>
+          </div>
+
+          {/* Shirt Size + Siblings — optional, used for gear-order and family planning */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                {t('playerForm.shirtSize', 'Shirt Size')}
+              </label>
+              <select
+                value={formData.shirtSize || ''}
+                onChange={(e) => setFormData({ ...formData, shirtSize: e.target.value })}
+                className="w-full border border-border rounded-lg p-2 focus:ring-2 focus:ring-ring outline-none"
+              >
+                <option value="">{t('playerForm.selectShirtSize', '— Select —')}</option>
+                <optgroup label={t('playerForm.youthSizes', 'Youth')}>
+                  <option value="YXS">YXS</option>
+                  <option value="YS">YS</option>
+                  <option value="YM">YM</option>
+                  <option value="YL">YL</option>
+                  <option value="YXL">YXL</option>
+                </optgroup>
+                <optgroup label={t('playerForm.adultSizes', 'Adult')}>
+                  <option value="AS">AS</option>
+                  <option value="AM">AM</option>
+                  <option value="AL">AL</option>
+                  <option value="AXL">AXL</option>
+                  <option value="AXXL">AXXL</option>
+                </optgroup>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1">
+                {t('playerForm.siblingsCount', 'Number of Siblings')}
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="20"
+                value={formData.siblingsCount ?? ''}
+                onChange={(e) => setFormData({ ...formData, siblingsCount: e.target.value })}
+                className="w-full border border-border rounded-lg p-2 focus:ring-2 focus:ring-ring outline-none"
+              />
+            </div>
           </div>
 
           <div className="bg-background p-4 rounded-lg border border-border">

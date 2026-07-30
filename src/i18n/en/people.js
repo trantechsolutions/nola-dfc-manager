@@ -19,6 +19,11 @@ export default {
     archive: 'Archive',
     addPlayer: 'Add Player',
     updatePlayer: 'Update Player',
+    shirtSize: 'Shirt Size',
+    selectShirtSize: '— Select —',
+    youthSizes: 'Youth',
+    adultSizes: 'Adult',
+    siblingsCount: 'Number of Siblings',
   },
 
   playerModal: {

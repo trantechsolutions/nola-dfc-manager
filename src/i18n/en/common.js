@@ -10,6 +10,7 @@ export default {
   search: 'Search',
   loading: 'LOADING...',
   saving: 'Saving...',
+  saved: 'Saved',
   confirm: 'Confirm',
   proceed: 'Proceed',
   yes: 'Yes',

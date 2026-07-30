@@ -379,6 +379,7 @@ export default function AppRoutes({
                     showConfirm={showConfirm}
                     user={user}
                     accounts={accounts}
+                    isReadOnly={isReadOnly}
                   />
                 )
               }

@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS players (
   status text DEFAULT 'active' CHECK (status IN ('active', 'archived', 'prospect')),
   medical_release boolean DEFAULT false,
   reeplayer_waiver boolean DEFAULT false,
+  shirt_size text,
+  siblings_count smallint CHECK (siblings_count IS NULL OR siblings_count >= 0),
   created_at timestamptz DEFAULT now()
 );
 

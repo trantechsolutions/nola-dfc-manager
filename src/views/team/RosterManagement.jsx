@@ -27,6 +27,7 @@ import {
   FileText,
   FolderOpen,
   Heart,
+  Shirt,
 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
@@ -268,6 +269,8 @@ export default function RosterManagement({
         'Status',
         'Date of Birth',
         'Age Group',
+        'Shirt Size',
+        'Siblings',
         'Medical Release',
         'ReePlayer Waiver',
         'Club Registration',
@@ -290,6 +293,8 @@ export default function RosterManagement({
         p.status,
         p.birthdate || '',
         getUSAgeGroup(p.birthdate, selectedSeason) || '',
+        p.shirtSize || '',
+        p.siblingsCount ?? '',
         comp.medicalRelease ? 'Yes' : 'No',
         comp.reePlayerWaiver ? 'Yes' : 'No',
         comp.clubRegistration ? 'Yes' : 'No',
@@ -575,7 +580,7 @@ export default function RosterManagement({
                   {/* ── Expanded Detail Panel ── */}
                   {isExpanded && (
                     <div className="bg-background/50 border-t border-border p-4 md:px-6 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* ── Contacts Section ── */}
                         <div className="bg-card rounded-lg border border-border p-4">
                           <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
@@ -721,6 +726,29 @@ export default function RosterManagement({
                                 </div>
                               );
                             })}
+                          </div>
+                        </div>
+
+                        {/* ── Planning Section ── */}
+                        <div className="bg-card rounded-lg border border-border p-4">
+                          <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
+                            <Shirt size={12} /> Planning
+                          </h4>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold text-foreground">{t('playerForm.shirtSize')}</span>
+                              <span className="text-xs font-semibold text-muted-foreground">
+                                {player.shirtSize || '—'}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold text-foreground">
+                                {t('playerForm.siblingsCount')}
+                              </span>
+                              <span className="text-xs font-semibold text-muted-foreground">
+                                {player.siblingsCount ?? '—'}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>

@@ -21,12 +21,14 @@ import {
   Upload,
   Video,
   ExternalLink,
+  Edit,
+  Save,
 } from 'lucide-react';
 import MedicalReleaseForm from '../../components/MedicalReleaseForm';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup, getAge, formatDateOnly } from '../../utils/ageGroup';
-import { formatPhone, phoneHref } from '../../utils/phone';
+import { formatPhone, formatPhoneInput, phoneHref } from '../../utils/phone';
 import { getCompliance } from '../../utils/compliance';
 
 import { CATEGORY_LABELS, CATEGORY_TEXT_COLORS as CATEGORY_COLORS, DOC_TYPE_LABELS } from '../../utils/constants';
@@ -62,6 +64,7 @@ export default function ParentView({
   showConfirm,
   user,
   accounts = [],
+  isReadOnly = false,
 }) {
   const { t } = useT();
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -72,6 +75,12 @@ export default function ParentView({
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadDocType, setUploadDocType] = useState('medical_release');
   const [uploading, setUploading] = useState(false);
+
+  // ── PLAYER INFO EDIT (parent self-service: birthdate, shirt size,
+  // siblings, guardian phones — see sql/add_guardian_self_service_rpc.sql) ──
+  const [editingInfo, setEditingInfo] = useState(false);
+  const [savingInfo, setSavingInfo] = useState(false);
+  const [infoForm, setInfoForm] = useState({ birthdate: '', shirtSize: '', siblingsCount: '', guardianPhones: {} });
 
   // ── SELF-SUFFICIENT DATA FETCH for parents ──
   // If props come in empty (timing issue), fetch directly
@@ -212,6 +221,12 @@ export default function ParentView({
     [playerDocs, selectedSeason],
   );
 
+  // Exit edit mode when the selected child changes so stale form values
+  // never leak from one player into another.
+  useEffect(() => {
+    setEditingInfo(false);
+  }, [activePlayer?.id]);
+
   // ── EMPTY STATE (after all hooks) ──
   if (!players || players.length === 0 || !activePlayer)
     return (
@@ -280,6 +295,40 @@ export default function ParentView({
       fetchPlayerDocs();
     } catch {
       showToast?.(t('parent.docDeleteFail'), true);
+    }
+  };
+
+  const startEditInfo = () => {
+    setInfoForm({
+      birthdate: activePlayer.birthdate || '',
+      shirtSize: activePlayer.shirtSize || '',
+      siblingsCount: activePlayer.siblingsCount ?? '',
+      guardianPhones: Object.fromEntries((activePlayer.guardians || []).map((g) => [g.id, g.phone || ''])),
+    });
+    setEditingInfo(true);
+  };
+
+  const handleSaveInfo = async () => {
+    setSavingInfo(true);
+    try {
+      await supabaseService.updateOwnPlayerDetails(activePlayer.id, {
+        birthdate: infoForm.birthdate,
+        shirtSize: infoForm.shirtSize,
+        siblingsCount: infoForm.siblingsCount,
+      });
+
+      const phoneUpdates = (activePlayer.guardians || [])
+        .filter((g) => (infoForm.guardianPhones[g.id] || '') !== (g.phone || ''))
+        .map((g) => supabaseService.updateGuardianPhone(g.id, infoForm.guardianPhones[g.id]));
+      if (phoneUpdates.length > 0) await Promise.all(phoneUpdates);
+
+      setEditingInfo(false);
+      onRefresh?.();
+      showToast?.(t('common.saved', 'Saved'));
+    } catch (e) {
+      showToast?.(e.message || 'Failed to save', true);
+    } finally {
+      setSavingInfo(false);
     }
   };
 
@@ -803,29 +852,67 @@ export default function ParentView({
         <div className="md:col-span-3 space-y-4">
           {/* Player Info */}
           <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
-            <h3 className="font-semibold text-foreground mb-3 text-xs">{t('parent.playerInfo')}</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-foreground text-xs">{t('parent.playerInfo')}</h3>
+              {!isReadOnly &&
+                (editingInfo ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setEditingInfo(false)}
+                      disabled={savingInfo}
+                      className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    <button
+                      onClick={handleSaveInfo}
+                      disabled={savingInfo}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    >
+                      <Save size={12} /> {savingInfo ? t('common.saving') : t('common.save')}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={startEditInfo}
+                    className="flex items-center gap-1 text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 transition-colors"
+                  >
+                    <Edit size={12} /> {t('common.edit')}
+                  </button>
+                ))}
+            </div>
             <div className="space-y-2.5">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">{t('parent.jerseyNum')}</span>
                 <span className="text-sm font-bold text-foreground">{activePlayer.jerseyNumber || '—'}</span>
               </div>
-              {activePlayer.birthdate && (
-                <>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{t('playerForm.birthdate')}</span>
-                    <span className="text-sm font-semibold text-foreground">
-                      {formatDateOnly(activePlayer.birthdate)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{t('playerForm.ageGroup')}</span>
-                    <span className="text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
-                      {getUSAgeGroup(activePlayer.birthdate, selectedSeason) || '—'} ({t('playerForm.age')}{' '}
-                      {getAge(activePlayer.birthdate)})
-                    </span>
-                  </div>
-                </>
+
+              {/* Birthdate — editable */}
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">{t('playerForm.birthdate')}</span>
+                {editingInfo ? (
+                  <input
+                    type="date"
+                    value={infoForm.birthdate}
+                    onChange={(e) => setInfoForm((f) => ({ ...f, birthdate: e.target.value }))}
+                    className="border border-border rounded-lg px-2 py-1 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                  />
+                ) : (
+                  <span className="text-sm font-semibold text-foreground">
+                    {activePlayer.birthdate ? formatDateOnly(activePlayer.birthdate) : '—'}
+                  </span>
+                )}
+              </div>
+              {!editingInfo && activePlayer.birthdate && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">{t('playerForm.ageGroup')}</span>
+                  <span className="text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                    {getUSAgeGroup(activePlayer.birthdate, selectedSeason) || '—'} ({t('playerForm.age')}{' '}
+                    {getAge(activePlayer.birthdate)})
+                  </span>
+                </div>
               )}
+
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">{t('common.status')}</span>
                 <span
@@ -850,19 +937,81 @@ export default function ParentView({
                   {isFullyCompliant ? t('parent.complete') : t('parent.incomplete')}
                 </span>
               </div>
+
+              {/* Shirt Size — editable */}
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">{t('playerForm.shirtSize')}</span>
+                {editingInfo ? (
+                  <select
+                    value={infoForm.shirtSize}
+                    onChange={(e) => setInfoForm((f) => ({ ...f, shirtSize: e.target.value }))}
+                    className="border border-border rounded-lg px-2 py-1 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">{t('playerForm.selectShirtSize')}</option>
+                    <optgroup label={t('playerForm.youthSizes')}>
+                      <option value="YXS">YXS</option>
+                      <option value="YS">YS</option>
+                      <option value="YM">YM</option>
+                      <option value="YL">YL</option>
+                      <option value="YXL">YXL</option>
+                    </optgroup>
+                    <optgroup label={t('playerForm.adultSizes')}>
+                      <option value="AS">AS</option>
+                      <option value="AM">AM</option>
+                      <option value="AL">AL</option>
+                      <option value="AXL">AXL</option>
+                      <option value="AXXL">AXXL</option>
+                    </optgroup>
+                  </select>
+                ) : (
+                  <span className="text-sm font-semibold text-foreground">{activePlayer.shirtSize || '—'}</span>
+                )}
+              </div>
+
+              {/* Siblings — editable */}
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">{t('playerForm.siblingsCount')}</span>
+                {editingInfo ? (
+                  <input
+                    type="number"
+                    min="0"
+                    max="20"
+                    value={infoForm.siblingsCount}
+                    onChange={(e) => setInfoForm((f) => ({ ...f, siblingsCount: e.target.value }))}
+                    className="w-16 border border-border rounded-lg px-2 py-1 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring text-right"
+                  />
+                ) : (
+                  <span className="text-sm font-semibold text-foreground">{activePlayer.siblingsCount ?? '—'}</span>
+                )}
+              </div>
+
               {activePlayer.guardians?.length > 0 && (
                 <div className="pt-2 border-t border-border">
                   <p className="text-xs font-bold text-muted-foreground mb-2">{t('playerModal.guardians')}</p>
                   {activePlayer.guardians.map((g, i) => (
-                    <div key={i} className="flex justify-between items-center py-1">
+                    <div key={g.id || i} className="flex justify-between items-center py-1 gap-2">
                       <span className="text-sm text-foreground">{g.name}</span>
-                      {g.phone && (
-                        <a
-                          href={phoneHref(g.phone)}
-                          className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800"
-                        >
-                          {formatPhone(g.phone)}
-                        </a>
+                      {editingInfo ? (
+                        <input
+                          type="tel"
+                          value={infoForm.guardianPhones[g.id] ?? ''}
+                          onChange={(e) =>
+                            setInfoForm((f) => ({
+                              ...f,
+                              guardianPhones: { ...f.guardianPhones, [g.id]: formatPhoneInput(e.target.value) },
+                            }))
+                          }
+                          className="w-36 border border-border rounded-lg px-2 py-1 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring"
+                        />
+                      ) : (
+                        g.phone && (
+                          <a
+                            href={phoneHref(g.phone)}
+                            className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800"
+                          >
+                            {formatPhone(g.phone)}
+                          </a>
+                        )
                       )}
                     </div>
                   ))}
