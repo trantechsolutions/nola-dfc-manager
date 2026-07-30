@@ -13,4 +13,28 @@ export default {
   errorCreate: 'Failed to create account. Email may already be in use.',
   errorLogin: 'Invalid email or password.',
   errorGoogle: 'Google Sign-In failed. Please try again.',
+  errorMagicLink: 'Failed to send magic link. Please try again.',
+
+  forgotPassword: 'Forgot password?',
+  forgotPasswordTitle: 'Reset Password',
+  forgotPasswordPrompt: "Enter your email and we'll send you a link to reset your password.",
+  sendResetLink: 'Send Reset Link',
+  resetLinkSent: "If an account exists for that email, we've sent a password reset link.",
+  backToLogin: 'Back to Sign In',
+
+  magicLink: 'Sign in with a magic link',
+  magicLinkTitle: 'Magic Link Sign-In',
+  magicLinkPrompt: "Enter your email and we'll send you a link to sign in — no password needed.",
+  sendMagicLink: 'Send Magic Link',
+  magicLinkSent: 'Check your email for a sign-in link.',
+
+  newPassword: 'New Password',
+  confirmPassword: 'Confirm Password',
+  resetPasswordTitle: 'Set a New Password',
+  resetPasswordSubmit: 'Update Password',
+  resetPasswordSuccess: 'Password updated! Redirecting you to sign in...',
+  resetPasswordFailed: 'Failed to update password. Please request a new reset link.',
+  resetPasswordMismatch: 'Passwords do not match.',
+  resetPasswordTooShort: 'Password must be at least {{n}} characters.',
+  resetLinkExpired: 'This password reset link is invalid or has expired. Please request a new one.',
 };

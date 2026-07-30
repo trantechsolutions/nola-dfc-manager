@@ -13,4 +13,28 @@ export default {
   errorCreate: 'No se pudo crear la cuenta. El correo puede estar en uso.',
   errorLogin: 'Correo o contraseña inválidos.',
   errorGoogle: 'Error con Google. Inténtalo de nuevo.',
+  errorMagicLink: 'No se pudo enviar el enlace mágico. Inténtalo de nuevo.',
+
+  forgotPassword: '¿Olvidaste tu contraseña?',
+  forgotPasswordTitle: 'Restablecer Contraseña',
+  forgotPasswordPrompt: 'Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.',
+  sendResetLink: 'Enviar Enlace',
+  resetLinkSent: 'Si existe una cuenta con ese correo, te enviamos un enlace para restablecer tu contraseña.',
+  backToLogin: 'Volver a Iniciar Sesión',
+
+  magicLink: 'Iniciar sesión con enlace mágico',
+  magicLinkTitle: 'Inicio de Sesión con Enlace Mágico',
+  magicLinkPrompt: 'Ingresa tu correo y te enviaremos un enlace para iniciar sesión — sin contraseña.',
+  sendMagicLink: 'Enviar Enlace Mágico',
+  magicLinkSent: 'Revisa tu correo para el enlace de inicio de sesión.',
+
+  newPassword: 'Nueva Contraseña',
+  confirmPassword: 'Confirmar Contraseña',
+  resetPasswordTitle: 'Establecer Nueva Contraseña',
+  resetPasswordSubmit: 'Actualizar Contraseña',
+  resetPasswordSuccess: '¡Contraseña actualizada! Redirigiendo para iniciar sesión...',
+  resetPasswordFailed: 'No se pudo actualizar la contraseña. Solicita un nuevo enlace.',
+  resetPasswordMismatch: 'Las contraseñas no coinciden.',
+  resetPasswordTooShort: 'La contraseña debe tener al menos {{n}} caracteres.',
+  resetLinkExpired: 'Este enlace para restablecer la contraseña no es válido o ha expirado. Solicita uno nuevo.',
 };

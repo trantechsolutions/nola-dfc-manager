@@ -26,6 +26,7 @@ import { useTheme } from './theme/ThemeContext';
 
 // Views
 import LoginView from './views/general/LoginView';
+import ResetPasswordView from './views/general/ResetPasswordView';
 import PublicCalendarView from './views/general/PublicCalendarView';
 
 // Components
@@ -73,6 +74,14 @@ function App() {
   const [user, setUser] = useState(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+  // A password-reset email link lands here with #access_token=...&type=recovery.
+  // supabase-js auto-establishes a session from that hash, but we must NOT
+  // treat it as a normal sign-in (see the AUTH LISTENER effect below) —
+  // otherwise the user gets dropped into the full app on a throwaway
+  // recovery session instead of being asked to set a new password.
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(
+    () => typeof window !== 'undefined' && window.location.hash.includes('type=recovery'),
+  );
 
   // ── TEAM CONTEXT ──
   const {
@@ -344,6 +353,11 @@ function App() {
   // ── AUTH LISTENER ──
   const lastUserIdRef = useRef(null);
   useEffect(() => {
+    // Computed once per mount from the URL, not from isPasswordRecovery state
+    // — this effect has a `[]` dep array, so reading the state var here would
+    // capture its mount-time value and never see a later setIsPasswordRecovery.
+    const isRecovery = typeof window !== 'undefined' && window.location.hash.includes('type=recovery');
+
     const bootstrap = async (authUser) => {
       await supabaseService.ensureUserProfile(authUser);
       await supabaseService.claimMyInvitations();
@@ -354,6 +368,12 @@ function App() {
     };
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      // A recovery link auto-establishes a session via the URL hash — don't
+      // bootstrap into the full app on it; ResetPasswordView owns this session.
+      if (isRecovery) {
+        setLoading(false);
+        return;
+      }
       const currentUser = session?.user || null;
       if (currentUser) {
         lastUserIdRef.current = currentUser.id;
@@ -371,7 +391,13 @@ function App() {
       // TOKEN_REFRESHED, INITIAL_SESSION, USER_UPDATED, etc. must NOT
       // trigger a loading state or data refetch — that causes the
       // "random reload" the user sees every ~60 minutes.
-      if (event === 'SIGNED_IN') {
+      if (event === 'PASSWORD_RECOVERY') {
+        // Backup signal alongside the hash check above (in case of timing
+        // races) — never bootstrap on this session either.
+        setIsPasswordRecovery(true);
+        setLoading(false);
+      } else if (event === 'SIGNED_IN') {
+        if (isRecovery) return;
         const incoming = session?.user || null;
         // Skip if it's the same user (e.g. token refresh on tab refocus)
         if (!incoming || incoming.id === lastUserIdRef.current) return;
@@ -383,8 +409,8 @@ function App() {
         setUser(null);
         setLoading(false);
       }
-      // All other events (TOKEN_REFRESHED, INITIAL_SESSION, USER_UPDATED,
-      // PASSWORD_RECOVERY) are intentionally ignored here.
+      // All other events (TOKEN_REFRESHED, INITIAL_SESSION, USER_UPDATED)
+      // are intentionally ignored here.
     });
 
     return () => subscription.unsubscribe();
@@ -434,6 +460,16 @@ function App() {
   const handleDeleteExpense = async (txId) => {
     await handleDeleteTransaction(txId);
   };
+
+  // ── PASSWORD RECOVERY ── (short-circuits before team-context loading,
+  // which never resolves here since `user` is intentionally never set)
+  if (isPasswordRecovery) {
+    return (
+      <ErrorBoundary>
+        <ResetPasswordView />
+      </ErrorBoundary>
+    );
+  }
 
   // ── LOADING STATES ──
   if (loading || contextLoading || settingsLoading)
