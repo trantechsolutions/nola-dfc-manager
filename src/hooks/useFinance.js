@@ -57,7 +57,19 @@ export const useFinance = (
   //   direct     – linked player only; anything over their balance → pot
   //   even_split – ignore the linked player; split equally across all buy-in players
   //   team_pot   – everything → pot, no player credit
-  const handleWaterfallCredit = async (totalAmount, title, sourcePlayerId, originalTxId, category = 'SPO') => {
+  //
+  // `allocations` ([{ playerId, amount }]) is a per-transaction manual override for
+  // funds that were raised by several individuals at once. When supplied it wins
+  // over the season method entirely: each listed player is credited exactly the
+  // amount entered and any unallocated remainder overflows to the team pot.
+  const handleWaterfallCredit = async (
+    totalAmount,
+    title,
+    sourcePlayerId,
+    originalTxId,
+    category = 'SPO',
+    allocations = null,
+  ) => {
     if (!isBudgetLocked) throw new Error('Budget must be finalized before distributing funds.');
 
     const method = currentSeasonData?.distributionMethod || 'waterfall';
@@ -65,9 +77,31 @@ export const useFinance = (
     let remainingAmount = parseFloat(totalAmount);
     const today = new Date().toISOString().split('T')[0];
 
+    if (!Number.isFinite(remainingAmount) || remainingAmount <= 0) {
+      throw new Error('Distribution amount must be greater than zero.');
+    }
+
     // Fetch FRESH financials from the DB view
     const freshFinancials = await supabaseService.getPlayerFinancials(selectedSeason, teamSeasonId);
     const creditsToApply = {};
+
+    // Collapse manual entries into a { playerId: amount } map, dropping blanks and
+    // merging duplicate rows for the same player.
+    const buildManualCredits = (rows) => {
+      const merged = {};
+      rows.forEach((row) => {
+        const pId = row?.playerId;
+        const amt = parseFloat(row?.amount);
+        if (!pId || !Number.isFinite(amt)) return;
+        if (amt < 0) throw new Error('Manual split amounts cannot be negative.');
+        if (amt <= 0.001) return;
+        if (!seasonalPlayers.some((p) => p.id === pId)) {
+          throw new Error('Manual split references a player who is not on this roster.');
+        }
+        merged[pId] = (merged[pId] || 0) + amt;
+      });
+      return merged;
+    };
 
     // Helper: check if a player has bought in to fundraising for this season
     const hasBuyIn = (player) => player.seasonProfiles?.[selectedSeason]?.fundraiserBuyIn === true;
@@ -119,7 +153,21 @@ export const useFinance = (
     };
 
     // ── STRATEGY DISPATCH ──
-    if (method === 'team_pot') {
+    // A manual split short-circuits the season method. Amounts are applied exactly
+    // as entered — deliberately NOT capped at each player's remaining balance, since
+    // the operator is stating who earned what.
+    const manualCredits = Array.isArray(allocations) && allocations.length > 0 ? buildManualCredits(allocations) : null;
+
+    if (manualCredits) {
+      const manualTotal = Object.values(manualCredits).reduce((sum, amt) => sum + amt, 0);
+      if (manualTotal - remainingAmount > 0.01) {
+        throw new Error('Manual split exceeds the total amount being distributed.');
+      }
+      Object.entries(manualCredits).forEach(([pId, amt]) => {
+        creditsToApply[pId] = amt;
+      });
+      remainingAmount -= manualTotal;
+    } else if (method === 'team_pot') {
       // No player credit — the full amount overflows to the team pot below.
     } else if (method === 'direct') {
       // Only the linked player benefits; the rest overflows to the pot.

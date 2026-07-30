@@ -12,8 +12,12 @@ import {
   Zap,
   Loader2,
   SlidersHorizontal,
+  Users,
+  Plus,
+  Clock,
 } from 'lucide-react';
 import { useT } from '../../i18n/I18nContext';
+import RecordFundsModal from '../../components/RecordFundsModal';
 
 // Per-team distribution strategies. `usesSource` = whether a linked/primary
 // player is meaningful for this method (drives the modal's source dropdown).
@@ -75,6 +79,9 @@ export default function SponsorsView({
   currentSeasonData,
   distributionMethod = 'waterfall',
   onSetDistributionMethod,
+  calculatePlayerFinancials,
+  onAddFunds,
+  activeAccounts = [],
 }) {
   const { t, tp } = useT();
 
@@ -88,6 +95,12 @@ export default function SponsorsView({
   const [sourcePlayerId, setSourcePlayerId] = useState('');
   const [originalTxId, setOriginalTxId] = useState(null);
   const [distCategory, setDistCategory] = useState('SPO');
+  // Manual split — a per-transaction override of the season method, for funds
+  // raised jointly by several players. Keyed by player id, values are raw input
+  // strings so a half-typed "12." doesn't get clobbered mid-edit.
+  const [manualMode, setManualMode] = useState(false);
+  const [manualAmounts, setManualAmounts] = useState({});
+  const [showRecordFunds, setShowRecordFunds] = useState(false);
   const [activeTab, setActiveTab] = useState('undistributed');
   const [expandedPlayerId, setExpandedPlayerId] = useState(null);
   const [isDistributingAll, setIsDistributingAll] = useState(false);
@@ -106,6 +119,61 @@ export default function SponsorsView({
   const activeMethod = DISTRIBUTION_METHODS.find((m) => m.value === distributionMethod) || DISTRIBUTION_METHODS[0];
   const methodUsesSource = activeMethod.usesSource;
   const isMethodDirty = draftMethod !== distributionMethod;
+
+  // ── MANUAL SPLIT MATH ──
+  const distTotal = parseFloat(distAmount) || 0;
+  const manualRows = Object.entries(manualAmounts)
+    .map(([playerId, raw]) => ({ playerId, amount: parseFloat(raw) }))
+    .filter((row) => Number.isFinite(row.amount) && row.amount > 0);
+  const manualTotal = manualRows.reduce((sum, row) => sum + row.amount, 0);
+  const manualRemainder = distTotal - manualTotal;
+  const isOverAllocated = manualTotal - distTotal > 0.01;
+  const canApply = !manualMode || (manualRows.length > 0 && !isOverAllocated);
+
+  // Remaining fee for a player, used as the per-row hint and the quick-fill value.
+  const playerBalance = (player) => {
+    if (!calculatePlayerFinancials) return null;
+    const stats = calculatePlayerFinancials(player, transactions);
+    return Number(stats?.remainingBalance || 0);
+  };
+
+  const openDistributeModal = (tx) => {
+    setDistAmount(tx.amount);
+    setDistTitle(tx.title);
+    setOriginalTxId(tx.id);
+    setDistCategory(tx.category);
+    setSourcePlayerId(tx.playerId || '');
+    setManualMode(false);
+    setManualAmounts({});
+    setShowDistribute(true);
+  };
+
+  const closeDistributeModal = () => {
+    setShowDistribute(false);
+    setOriginalTxId(null);
+    setManualMode(false);
+    setManualAmounts({});
+  };
+
+  const setManualAmount = (playerId, value) => {
+    setManualAmounts((prev) => {
+      const next = { ...prev };
+      if (value === '' || value === null) delete next[playerId];
+      else next[playerId] = value;
+      return next;
+    });
+  };
+
+  // Drop what's left of the pot onto this player, capped at what they still owe
+  // (or the whole remainder when balances aren't available).
+  const fillRemainderFor = (player) => {
+    const balance = playerBalance(player);
+    const existing = parseFloat(manualAmounts[player.id]) || 0;
+    const available = manualRemainder + existing;
+    if (available <= 0) return;
+    const target = balance === null || balance <= 0 ? available : Math.min(balance, available);
+    setManualAmount(player.id, String(Number(target.toFixed(2))));
+  };
 
   const handleSaveMethod = async () => {
     if (!onSetDistributionMethod || !isMethodDirty) return;
@@ -363,34 +431,45 @@ export default function SponsorsView({
             <h3 className="font-bold text-foreground flex items-center gap-2">
               <Lock size={18} className="text-amber-700 dark:text-amber-400" /> {t('sponsors.pending.heading')}
             </h3>
-            {undistributedSponsors.length > 1 && (
-              <button
-                onClick={handleDistributeAll}
-                disabled={isDistributingAll || !isBudgetLocked}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-md ${
-                  !isBudgetLocked
-                    ? 'bg-slate-300 text-muted-foreground cursor-not-allowed'
-                    : isDistributingAll
-                      ? 'bg-amber-500 text-white cursor-wait'
-                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
-                }`}
-                title={!isBudgetLocked ? t('sponsors.pending.finalizeFirst') : ''}
-              >
-                {isDistributingAll ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    {t('sponsors.pending.distributing', {
-                      current: distributeAllProgress.current,
-                      total: distributeAllProgress.total,
-                    })}
-                  </>
-                ) : (
-                  <>
-                    <Zap size={16} /> {t('sponsors.pending.distributeAll', { n: undistributedSponsors.length })}
-                  </>
-                )}
-              </button>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {undistributedSponsors.length > 1 && (
+                <button
+                  onClick={handleDistributeAll}
+                  disabled={isDistributingAll || !isBudgetLocked}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-md ${
+                    !isBudgetLocked
+                      ? 'bg-slate-300 text-muted-foreground cursor-not-allowed'
+                      : isDistributingAll
+                        ? 'bg-amber-500 text-white cursor-wait'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                  }`}
+                  title={!isBudgetLocked ? t('sponsors.pending.finalizeFirst') : ''}
+                >
+                  {isDistributingAll ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      {t('sponsors.pending.distributing', {
+                        current: distributeAllProgress.current,
+                        total: distributeAllProgress.total,
+                      })}
+                    </>
+                  ) : (
+                    <>
+                      <Zap size={16} /> {t('sponsors.pending.distributeAll', { n: undistributedSponsors.length })}
+                    </>
+                  )}
+                </button>
+              )}
+              {onAddFunds && (
+                <button
+                  onClick={() => setShowRecordFunds(true)}
+                  disabled={isDistributingAll}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20 transition-all disabled:opacity-60"
+                >
+                  <Plus size={16} /> {t('sponsors.record.button')}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Progress Bar (visible during Distribute All) */}
@@ -419,8 +498,16 @@ export default function SponsorsView({
 
           <div className="grid grid-cols-1 gap-4">
             {undistributedSponsors.length === 0 ? (
-              <div className="bg-background p-12 rounded-lg border border-border text-center text-muted-foreground font-semibold italic">
-                {t('sponsors.pending.allDistributed')}
+              <div className="bg-background p-12 rounded-lg border border-border text-center">
+                <p className="text-muted-foreground font-semibold italic">{t('sponsors.pending.allDistributed')}</p>
+                {onAddFunds && (
+                  <button
+                    onClick={() => setShowRecordFunds(true)}
+                    className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20 transition-all"
+                  >
+                    <Plus size={16} /> {t('sponsors.record.button')}
+                  </button>
+                )}
               </div>
             ) : (
               sortedUndistributed.map((tx) => (
@@ -444,6 +531,13 @@ export default function SponsorsView({
                           {t('sponsors.pending.via', { name: tx.playerName })}
                         </span>
                       )}
+                      {/* Funds not yet in hand — distributing these credits players
+                          for money the team hasn't received. */}
+                      {!isCleared(tx) && (
+                        <span className="text-xs font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                          <Clock size={11} /> {t('sponsors.pending.notReceived')}
+                        </span>
+                      )}
                     </div>
                     <p className="font-bold text-foreground text-lg">{tx.title}</p>
                     <p className="text-sm font-semibold text-muted-foreground mt-1">
@@ -452,14 +546,7 @@ export default function SponsorsView({
                     </p>
                   </div>
                   <button
-                    onClick={() => {
-                      setDistAmount(tx.amount);
-                      setDistTitle(tx.title);
-                      setOriginalTxId(tx.id);
-                      setDistCategory(tx.category);
-                      setSourcePlayerId(tx.playerId || '');
-                      setShowDistribute(true);
-                    }}
+                    onClick={() => openDistributeModal(tx)}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors shadow-md"
                   >
                     {t('sponsors.pending.distribute')}
@@ -610,6 +697,15 @@ export default function SponsorsView({
         </div>
       )}
 
+      {/* --- INTAKE MODAL (writes the SPO/FUN ledger entry) --- */}
+      <RecordFundsModal
+        show={showRecordFunds}
+        onClose={() => setShowRecordFunds(false)}
+        onSubmit={onAddFunds}
+        players={seasonalPlayers}
+        activeAccounts={activeAccounts}
+      />
+
       {/* --- WATERFALL MODAL --- */}
       {showDistribute && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
@@ -644,7 +740,104 @@ export default function SponsorsView({
                   />
                 </div>
               </div>
-              {methodUsesSource ? (
+              {/* Manual split toggle — overrides the season method for this credit only */}
+              <div className="flex items-start justify-between gap-3 bg-background border border-border rounded-lg p-3">
+                <div>
+                  <p className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Users size={15} className="text-blue-700 dark:text-blue-400" />
+                    {t('sponsors.modal.manualToggle')}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t('sponsors.modal.manualToggleHelp')}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={manualMode}
+                  aria-label={t('sponsors.modal.manualToggle')}
+                  onClick={() => setManualMode((on) => !on)}
+                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors mt-0.5 ${
+                    manualMode ? 'bg-emerald-600' : 'bg-muted-foreground/30'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      manualMode ? 'translate-x-[22px]' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {manualMode ? (
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2">
+                    {t('sponsors.modal.manualHeading')}
+                  </label>
+                  <div className="max-h-56 overflow-y-auto border border-border rounded-lg divide-y divide-border">
+                    {seasonalPlayers.length === 0 ? (
+                      <p className="p-4 text-xs text-muted-foreground italic">{t('sponsors.modal.manualNoPlayers')}</p>
+                    ) : (
+                      seasonalPlayers.map((p) => {
+                        const balance = playerBalance(p);
+                        return (
+                          <div key={p.id} className="flex items-center gap-3 p-2.5">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-foreground truncate">
+                                {p.firstName} {p.lastName}
+                              </p>
+                              {balance !== null && (
+                                <button
+                                  type="button"
+                                  onClick={() => fillRemainderFor(p)}
+                                  className="text-[11px] font-medium text-blue-700 dark:text-blue-400 hover:underline"
+                                >
+                                  {t('sponsors.modal.manualOwes', { amount: formatMoney(balance) })}
+                                </button>
+                              )}
+                            </div>
+                            <div className="relative w-28 shrink-0">
+                              <span className="absolute left-2.5 top-2 text-xs text-muted-foreground font-semibold">
+                                $
+                              </span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                inputMode="decimal"
+                                aria-label={`${p.firstName} ${p.lastName}`}
+                                value={manualAmounts[p.id] ?? ''}
+                                onChange={(e) => setManualAmount(p.id, e.target.value)}
+                                placeholder="0.00"
+                                className="w-full border border-border rounded-lg py-1.5 pl-6 pr-2 text-sm font-semibold text-right focus:ring-2 focus:ring-emerald-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Running tally: what's assigned vs. what falls through to the pot */}
+                  <div className="mt-3 space-y-1 text-xs">
+                    <div className="flex justify-between font-semibold text-foreground">
+                      <span>{t('sponsors.modal.manualAllocated')}</span>
+                      <span>{formatMoney(manualTotal)}</span>
+                    </div>
+                    <div
+                      className={`flex justify-between font-semibold ${
+                        isOverAllocated ? 'text-red-700 dark:text-red-400' : 'text-muted-foreground'
+                      }`}
+                    >
+                      <span>{isOverAllocated ? t('sponsors.modal.manualOver') : t('sponsors.modal.manualToPot')}</span>
+                      <span>{formatMoney(Math.abs(manualRemainder))}</span>
+                    </div>
+                  </div>
+                  {isOverAllocated && (
+                    <p className="text-xs font-semibold text-red-700 dark:text-red-400 mt-2">
+                      {t('sponsors.modal.manualOverError')}
+                    </p>
+                  )}
+                </div>
+              ) : methodUsesSource ? (
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground mb-1">
                     {t('sponsors.modal.applyTo')}
@@ -678,23 +871,33 @@ export default function SponsorsView({
 
               <div className="flex gap-3 pt-4 border-t border-border">
                 <button
-                  onClick={() => {
-                    setShowDistribute(false);
-                    setOriginalTxId(null);
-                  }}
+                  onClick={closeDistributeModal}
                   className="flex-1 py-3 font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
                 >
                   {t('sponsors.modal.cancel')}
                 </button>
                 <button
+                  disabled={!canApply}
                   onClick={() => {
-                    onDistribute(distAmount, distTitle, sourcePlayerId, originalTxId, distCategory);
-                    setShowDistribute(false);
-                    setOriginalTxId(null);
+                    onDistribute(
+                      distAmount,
+                      distTitle,
+                      manualMode ? '' : sourcePlayerId,
+                      originalTxId,
+                      distCategory,
+                      manualMode ? manualRows : null,
+                    );
+                    closeDistributeModal();
                   }}
-                  className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all shadow-lg shadow-emerald-600/20"
+                  className={`flex-1 py-3 font-bold rounded-lg transition-all ${
+                    canApply
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20'
+                      : 'bg-muted text-muted-foreground cursor-not-allowed'
+                  }`}
                 >
-                  {t('sponsors.modal.apply', { method: methodLabel(activeMethod.value) })}
+                  {manualMode
+                    ? t('sponsors.modal.applyManual')
+                    : t('sponsors.modal.apply', { method: methodLabel(activeMethod.value) })}
                 </button>
               </div>
             </div>

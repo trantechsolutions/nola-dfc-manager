@@ -566,9 +566,16 @@ export default function AppRoutes({
                                 currentSeasonData,
                                 onDistribute:
                                   can(PERMISSIONS.TEAM_EDIT_SPONSORS) && currentSeasonData?.isFinalized
-                                    ? async (amt, title, pId, originalId, category) => {
+                                    ? async (amt, title, pId, originalId, category, allocations) => {
                                         try {
-                                          await handleWaterfallCredit(amt, title, pId, originalId, category);
+                                          await handleWaterfallCredit(
+                                            amt,
+                                            title,
+                                            pId,
+                                            originalId,
+                                            category,
+                                            allocations,
+                                          );
                                           await fetchData();
                                           showToast(t('toast.fundsDistributed'));
                                         } catch (error) {
@@ -597,6 +604,21 @@ export default function AppRoutes({
                                   : null,
                                 seasonalPlayers,
                                 seasons,
+                                calculatePlayerFinancials,
+                                activeAccounts,
+                                // Intake writes a real ledger entry, so it follows
+                                // ledger-edit rights rather than sponsor rights —
+                                // a sponsor manager can distribute but not book money.
+                                onAddFunds:
+                                  canEditLedger && !isReadOnly
+                                    ? async (data) => {
+                                        const result = await handleSaveTransaction(data);
+                                        if (!result || result.success !== false) {
+                                          showToast(t('toast.fundsRecorded'));
+                                        }
+                                        return result;
+                                      }
+                                    : null,
                               }
                             : null
                         }

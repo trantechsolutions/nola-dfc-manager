@@ -449,8 +449,8 @@ SELECT
       ) / 50) * 50, 0)
   END AS base_fee,
   COALESCE(sum(t.amount) FILTER (WHERE t.category = 'TMF' AND t.cleared), 0) AS total_paid,
-  COALESCE(sum(t.amount) FILTER (WHERE t.category = 'FUN' AND t.cleared AND (t.distributed OR t.waterfall_batch_id IS NOT NULL)), 0) AS fundraising,
-  COALESCE(sum(t.amount) FILTER (WHERE t.category = 'SPO' AND t.cleared AND (t.distributed OR t.waterfall_batch_id IS NOT NULL)), 0) AS sponsorships,
+  COALESCE(sum(t.amount) FILTER (WHERE t.category = 'FUN' AND t.cleared AND t.waterfall_batch_id IS NOT NULL), 0) AS fundraising,
+  COALESCE(sum(t.amount) FILTER (WHERE t.category = 'SPO' AND t.cleared AND t.waterfall_batch_id IS NOT NULL), 0) AS sponsorships,
   COALESCE(sum(t.amount) FILTER (WHERE t.category = 'CRE' AND t.cleared), 0) AS credits,
   GREATEST(0,
     CASE WHEN ps.fee_waived THEN 0
@@ -461,8 +461,8 @@ SELECT
       ) / 50) * 50, 0)
     END
     - COALESCE(sum(t.amount) FILTER (WHERE t.category = 'TMF' AND t.cleared), 0)
-    - COALESCE(sum(t.amount) FILTER (WHERE t.category = 'FUN' AND t.cleared AND (t.distributed OR t.waterfall_batch_id IS NOT NULL)), 0)
-    - COALESCE(sum(t.amount) FILTER (WHERE t.category = 'SPO' AND t.cleared AND (t.distributed OR t.waterfall_batch_id IS NOT NULL)), 0)
+    - COALESCE(sum(t.amount) FILTER (WHERE t.category = 'FUN' AND t.cleared AND t.waterfall_batch_id IS NOT NULL), 0)
+    - COALESCE(sum(t.amount) FILTER (WHERE t.category = 'SPO' AND t.cleared AND t.waterfall_batch_id IS NOT NULL), 0)
     - COALESCE(sum(t.amount) FILTER (WHERE t.category = 'CRE' AND t.cleared), 0)
   ) AS remaining_balance
 FROM player_seasons ps
