@@ -3,6 +3,8 @@ import { useT } from '../i18n/I18nContext';
 import { useState } from 'react';
 import { useNavigation } from '../context/NavigationContext';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
+import IosInstallSheet from './IosInstallSheet';
 import { pushService } from '../services/pushService';
 
 export default function DesktopSidebar() {
@@ -39,6 +41,8 @@ export default function DesktopSidebar() {
   const [broadcastSending, setBroadcastSending] = useState(false);
   const selectedTeam = teams.find((t) => t.id === selectedTeamId) || teams[0] || null;
   const { isSubscribed, isSupported, subscribe } = usePushNotifications();
+  const { needsManualInstall } = useInstallPrompt();
+  const [showIosSheet, setShowIosSheet] = useState(false);
 
   const handleBroadcast = async () => {
     if (!broadcastMsg.trim()) return;
@@ -262,8 +266,19 @@ export default function DesktopSidebar() {
               <GitCommit size={16} />
               <span className="text-sm">Update Log</span>
             </button>
-            {/* Push notifications toggle */}
-            {isSupported &&
+            {/* Push notifications toggle. iOS withholds Web Push until the app
+                is installed, so an uninstalled iOS user gets the install route
+                rather than a button that cannot succeed. */}
+            {needsManualInstall ? (
+              <button
+                onClick={() => setShowIosSheet(true)}
+                className="w-full flex items-center gap-3 px-4 py-2 rounded-lg font-semibold text-sidebar-foreground hover:bg-sidebar-accent transition-all"
+              >
+                <Bell size={16} />
+                <span className="text-sm">Install for Notifications</span>
+              </button>
+            ) : (
+              isSupported &&
               (isSubscribed ? (
                 <div className="px-4 py-2 flex items-center gap-3">
                   <Bell size={16} className="text-success shrink-0" />
@@ -277,7 +292,9 @@ export default function DesktopSidebar() {
                   <Bell size={16} />
                   <span className="text-sm">Enable Notifications</span>
                 </button>
-              ))}
+              ))
+            )}
+            {showIosSheet && <IosInstallSheet onClose={() => setShowIosSheet(false)} />}
 
             {/* Broadcast to team (staff only) */}
             {selectedTeamId &&
