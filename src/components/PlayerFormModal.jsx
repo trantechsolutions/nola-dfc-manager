@@ -76,12 +76,18 @@ export default function PlayerFormModal({
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Safely update the player's season profile while preserving existing
-    // data like baseFee and feeWaived managed by the Budget view
-    const profiles = initialData?.seasonProfiles || {};
-    profiles[selectedSeason] = {
-      ...(profiles[selectedSeason] || {}),
-      status: formData.status,
+    // Update the player's season profile while preserving existing data like
+    // feeWaived managed by the Budget view. Copied, never mutated in place —
+    // `initialData` is the very object held in the players state array, so
+    // writing to its seasonProfiles edits state behind React's back and leaves
+    // memoized consumers showing the old values until an unrelated re-render.
+    const existing = initialData?.seasonProfiles || {};
+    const profiles = {
+      ...existing,
+      [selectedSeason]: {
+        ...(existing[selectedSeason] || {}),
+        status: formData.status,
+      },
     };
 
     const submissionData = {
