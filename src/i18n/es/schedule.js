@@ -102,7 +102,21 @@ export default {
     paymentInstructions: 'Instrucciones de Pago',
     paymentHelp: 'Se muestra a los padres cuando tienen un saldo pendiente',
     paymentPlaceholder:
-      'ej. Los pagos se pueden hacer por Venmo @equipo o Zelle a tesorero@correo.com. Incluya el nombre del jugador en la nota.',
+      'ej. Pague {balance} por Venmo @equipo o Zelle a tesorero@correo.com. Incluya {memo} en la nota.',
+    paymentTokens: 'Campos Dinámicos',
+    paymentTokensHelp:
+      'Toque para insertar. Cada campo se reemplaza con los datos de cada familia al ver las instrucciones. Dentro de un enlace, los montos se insertan como número simple y los nombres se codifican para URL — ej. https://pay.example.com/?amount={balance}&note={memo}',
+    paymentMathHelp:
+      'Los campos de dinero aceptan operaciones, para dividir una cuota sin fijarla a mano: {balance / 3}, {ceil(fee / 4)}, {fee - paid}, {balance * 0.5}. Funciona con + - * / %, paréntesis y round, ceil, floor, abs, min, max.',
+    paymentPreview: 'Vista previa (valores de ejemplo)',
+    paymentToken_balance: 'Saldo pendiente de la familia',
+    paymentToken_fee: 'Cuota total de la temporada',
+    paymentToken_paid: 'Monto ya pagado',
+    paymentToken_player: 'Nombre completo del jugador',
+    paymentToken_first: 'Nombre del jugador',
+    paymentToken_last: 'Apellido del jugador',
+    paymentToken_team: 'Nombre del equipo',
+    paymentToken_memo: 'Nota de pago sugerida',
     reeplayerLinks: 'Enlaces de ReePlayer',
     reeplayerLinksHelp: 'Se muestra a los padres en el portal del jugador',
     reeplayerPlayerLink: 'Enlace de Registro del Jugador',
