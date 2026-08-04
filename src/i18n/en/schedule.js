@@ -102,7 +102,21 @@ export default {
     paymentInstructions: 'Payment Instructions',
     paymentHelp: 'Shown to parents when they have an outstanding balance',
     paymentPlaceholder:
-      "e.g. Payments can be made via Venmo @team-handle or Zelle to treasurer@email.com. Please include your player's name in the memo.",
+      'e.g. Pay {balance} via Venmo @team-handle or Zelle to treasurer@email.com. Please put {memo} in the note.',
+    paymentTokens: 'Merge Tokens',
+    paymentTokensHelp:
+      'Tap to insert. Each token is replaced with that family’s own numbers when they view the instructions. Inside a link, amounts insert as a plain number and names are URL-encoded — e.g. https://pay.example.com/?amount={balance}&note={memo}',
+    paymentMathHelp:
+      'Money tokens do math, so you can split a fee without hardcoding it: {balance / 3}, {ceil(fee / 4)}, {fee - paid}, {balance * 0.5}. Works with + - * / %, parentheses, and round, ceil, floor, abs, min, max.',
+    paymentPreview: 'Preview (sample values)',
+    paymentToken_balance: 'Amount the family still owes',
+    paymentToken_fee: 'Full season fee',
+    paymentToken_paid: 'Amount already paid',
+    paymentToken_player: "Player's full name",
+    paymentToken_first: "Player's first name",
+    paymentToken_last: "Player's last name",
+    paymentToken_team: 'Team name',
+    paymentToken_memo: 'Suggested payment memo',
     reeplayerLinks: 'ReePlayer Links',
     reeplayerLinksHelp: 'Shown to parents in the player portal',
     reeplayerPlayerLink: 'Player Sign-Up Link',

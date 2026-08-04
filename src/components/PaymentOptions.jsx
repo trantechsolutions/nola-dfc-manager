@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Copy, Check, DollarSign, Smartphone, ExternalLink } from 'lucide-react';
 import QRCodeLib from 'qrcode';
+import { buildPaymentTokens } from '../utils/paymentTemplate';
+import PaymentInstructionsText from './PaymentInstructionsText';
 
 function QRCode({ value, size = 150 }) {
   const canvasRef = useRef(null);
@@ -131,7 +133,12 @@ export default function PaymentOptions({
   paymentInfo,
   accounts = [],
   playerName,
+  firstName,
+  lastName,
+  teamName,
   remainingBalance,
+  baseFee = 0,
+  totalPaid = 0,
   formatMoney,
   showToast,
 }) {
@@ -146,6 +153,18 @@ export default function PaymentOptions({
   const memo = `${playerName} - Season Fee`;
 
   if (methods.length === 0 && !paymentInfo) return null;
+
+  const tokens = buildPaymentTokens({
+    playerName,
+    firstName,
+    lastName,
+    teamName,
+    balance: amount,
+    fee: baseFee,
+    paid: totalPaid,
+    memo,
+    formatMoney,
+  });
 
   const handleCopy = (text, field) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -238,14 +257,14 @@ export default function PaymentOptions({
         ) : (
           /* No parseable methods — show raw instructions only */
           <div className="bg-background rounded-lg p-3">
-            <p className="text-xs text-foreground whitespace-pre-wrap">{paymentInfo}</p>
+            <PaymentInstructionsText template={paymentInfo} tokens={tokens} className="text-xs text-foreground" />
           </div>
         )}
 
         {/* Payment instructions always shown below cards when present */}
         {methods.length > 0 && paymentInfo && (
           <div className="pt-2 border-t border-border">
-            <p className="text-xs text-muted-foreground whitespace-pre-wrap">{paymentInfo}</p>
+            <PaymentInstructionsText template={paymentInfo} tokens={tokens} className="text-xs text-muted-foreground" />
           </div>
         )}
       </div>

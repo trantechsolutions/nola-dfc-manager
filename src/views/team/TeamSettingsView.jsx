@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Rss, CreditCard, Link2, CheckCircle2, AlertCircle, Edit, Save, X, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Rss, CreditCard, Link2, CheckCircle2, AlertCircle, Edit, Save, X, Loader2, Eye } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
 import AccountManager from '../../components/AccountManager';
+import PaymentInstructionsText from '../../components/PaymentInstructionsText';
+import { PAYMENT_TOKENS, buildPreviewTokens } from '../../utils/paymentTemplate';
 
 export default function TeamSettingsView({
   selectedTeam,
@@ -25,6 +27,7 @@ export default function TeamSettingsView({
   // ── Payment info state ──
   const [paymentInfo, setPaymentInfo] = useState(selectedTeam?.paymentInfo || '');
   const [isSavingPayment, setIsSavingPayment] = useState(false);
+  const paymentRef = useRef(null);
 
   useEffect(() => {
     setPaymentInfo(selectedTeam?.paymentInfo || '');
@@ -137,6 +140,26 @@ export default function TeamSettingsView({
       setIsSavingPayment(false);
     }
   };
+
+  // Drops a merge token at the caret so staff never has to type the braces.
+  const insertPaymentToken = (token) => {
+    const el = paymentRef.current;
+    const snippet = `{${token}}`;
+    if (!el) {
+      setPaymentInfo((prev) => prev + snippet);
+      return;
+    }
+    const start = el.selectionStart ?? paymentInfo.length;
+    const end = el.selectionEnd ?? start;
+    const next = paymentInfo.slice(0, start) + snippet + paymentInfo.slice(end);
+    setPaymentInfo(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + snippet.length, start + snippet.length);
+    });
+  };
+
+  const previewTokens = buildPreviewTokens({ teamName: selectedTeam?.name || '' });
 
   return (
     <div className="space-y-6 pb-20 md:pb-6 max-w-2xl">
@@ -315,12 +338,48 @@ export default function TeamSettingsView({
           </div>
         </div>
         <textarea
+          ref={paymentRef}
           value={paymentInfo}
           onChange={(e) => setPaymentInfo(e.target.value)}
           rows={5}
           placeholder={t('settings.paymentPlaceholder')}
           className="w-full border border-border rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none text-foreground"
         />
+
+        {/* Merge tokens — resolved per family when the instructions are shown */}
+        <div className="space-y-2">
+          <p className="text-xs font-bold text-foreground">{t('settings.paymentTokens')}</p>
+          <p className="text-xs text-muted-foreground">{t('settings.paymentTokensHelp')}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {PAYMENT_TOKENS.map(({ token }) => (
+              <button
+                key={token}
+                type="button"
+                onClick={() => insertPaymentToken(token)}
+                title={t(`settings.paymentToken_${token}`)}
+                className="px-2 py-1 rounded-lg border border-border bg-background text-xs font-mono font-semibold text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                {`{${token}}`}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">{t('settings.paymentMathHelp')}</p>
+        </div>
+
+        {/* Live preview against sample numbers */}
+        {paymentInfo.trim() && (
+          <div className="rounded-lg border border-border bg-background p-3 space-y-1.5">
+            <p className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
+              <Eye size={12} /> {t('settings.paymentPreview')}
+            </p>
+            <PaymentInstructionsText
+              template={paymentInfo}
+              tokens={previewTokens}
+              className="text-xs text-foreground"
+            />
+          </div>
+        )}
+
         <div className="flex justify-end">
           <button
             onClick={handleSavePayment}

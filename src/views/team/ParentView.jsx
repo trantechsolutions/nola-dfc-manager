@@ -583,7 +583,12 @@ export default function ParentView({
                 paymentInfo={playerTeam?.paymentInfo || ''}
                 accounts={accounts}
                 playerName={`${activePlayer.firstName} ${activePlayer.lastName}`}
+                firstName={activePlayer.firstName}
+                lastName={activePlayer.lastName}
+                teamName={playerTeam?.name || ''}
                 remainingBalance={financials.remainingBalance}
+                baseFee={financials.baseFee}
+                totalPaid={financials.totalPaid}
                 formatMoney={formatMoney}
                 showToast={showToast}
               />
