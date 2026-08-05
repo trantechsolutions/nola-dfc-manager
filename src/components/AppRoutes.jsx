@@ -331,7 +331,6 @@ export default function AppRoutes({
               element={
                 effectiveIsStaff ? (
                   <TeamOverviewView
-                    selectedTeam={effectiveTeam}
                     players={seasonalPlayers}
                     archivedPlayers={archivedPlayers}
                     teamBalance={teamBalance}
@@ -340,9 +339,7 @@ export default function AppRoutes({
                     selectedSeasonData={currentSeasonData}
                     transactions={seasonalTransactions}
                     calculatePlayerFinancials={calculatePlayerFinancials}
-                    seasons={seasons}
                     selectedSeason={selectedSeason}
-                    setSelectedSeason={setSelectedSeason}
                     canViewFinancials={can(PERMISSIONS.TEAM_VIEW_BUDGET) || can(PERMISSIONS.TEAM_VIEW_LEDGER)}
                     onAddPlayer={() => {
                       setPlayerToEdit(null);

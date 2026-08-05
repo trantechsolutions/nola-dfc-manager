@@ -49,7 +49,7 @@ export default defineConfig([
     },
   }, // E2E test files and config (node env)
   {
-    files: ['scripts/**/*.js', 'vite.config.js'],
+    files: ['scripts/**/*.js', 'vite.config.js', 'vitest.config.js'],
     languageOptions: {
       globals: globals.node,
     },

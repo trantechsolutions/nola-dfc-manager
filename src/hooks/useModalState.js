@@ -14,8 +14,6 @@ export function useModalState() {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [impersonatingAs, setImpersonatingAs] = useState(null);
   const [toast, setToast] = useState(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [sidebarSettingsOpen, setSidebarSettingsOpen] = useState(false);
 
   const showToast = (msg, isError = false, action = null) => {
     setToast({ msg, isError, action });
@@ -57,10 +55,6 @@ export function useModalState() {
     setImpersonatingAs,
     toast,
     setToast,
-    mobileMenuOpen,
-    setMobileMenuOpen,
-    sidebarSettingsOpen,
-    setSidebarSettingsOpen,
     showToast,
     showConfirm,
   };

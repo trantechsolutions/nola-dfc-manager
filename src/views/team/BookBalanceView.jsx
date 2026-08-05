@@ -111,7 +111,6 @@ export default function BookBalanceView({
       <div className="flex flex-col sm:flex-row sm:items-start gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold text-foreground leading-tight">{t('bookBalance.title')}</h2>
             {isMonthLocked && (
               <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg bg-muted text-foreground">
                 <Lock size={10} aria-hidden="true" />

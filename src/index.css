@@ -6,92 +6,91 @@
   html {
     @apply bg-background text-foreground font-sans antialiased;
   }
-  /* Warm community palette — see DESIGN.md §6
-     Hue 25 = saddle red (brand, warm advance)
-     Hue 60 = warm neutral undertone (paper-warm surfaces)
-     Hue 200 = teal accent (cool recede, depth pair to brand)
-     Functional hues: 145 green, 75 amber, 25 destructive (shares brand hue;
-     differentiated by chroma + icon + position per accessibility rules) */
+  /* ── AdminLTE v4 / Bootstrap 5.3 palette ──────────────────────────────
+     Values are lifted verbatim from the stylesheet AdminLTE v4 ships, so the
+     app reads as the reference theme rather than an approximation of it:
+
+       #0d6efd primary   #198754 success   #0dcaf0 info/accent
+       #ffc107 warning   #dc3545 danger    #6c757d secondary
+
+     Two Bootstrap conventions worth knowing before editing:
+     · Accent (info) and warning take BLACK foregrounds, not white — that is
+       what `.text-bg-info` / `.text-bg-warning` do, and it is the only way
+       either passes contrast as a solid fill.
+     · Cards share the body background and separate by a translucent border,
+       not by a raised surface. AdminLTE v4 dropped v3's grey #f4f6f9 canvas,
+       so --canvas intentionally equals --background. Set it to #f8f9fa
+       (Bootstrap's tertiary-bg) if you ever want the v3 recessed look back. */
   :root {
-    --background: oklch(0.99 0.005 60);
-    --foreground: oklch(0.2 0.01 60);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.2 0.01 60);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.2 0.01 60);
-    --primary: oklch(0.55 0.15 25);
-    --primary-foreground: oklch(0.99 0.005 60);
-    --secondary: oklch(0.96 0.008 60);
-    --secondary-foreground: oklch(0.25 0.02 60);
-    --muted: oklch(0.96 0.008 60);
-    --muted-foreground: oklch(0.42 0.015 60);
-    --accent: oklch(0.5 0.08 200);
-    --accent-foreground: oklch(0.99 0.005 60);
-    --success: oklch(0.6 0.13 145);
-    --success-foreground: oklch(0.99 0.005 60);
-    --warning: oklch(0.75 0.15 75);
-    --warning-foreground: oklch(0.2 0.02 75);
-    --destructive: oklch(0.55 0.2 25);
-    --destructive-foreground: oklch(0.99 0.005 60);
-    --border: oklch(0.9 0.01 60);
-    --input: oklch(0.9 0.01 60);
-    --ring: oklch(0.55 0.15 25);
-    --chart-1: oklch(0.55 0.15 25);
-    --chart-2: oklch(0.5 0.08 200);
-    --chart-3: oklch(0.6 0.13 145);
-    --chart-4: oklch(0.75 0.15 75);
-    --chart-5: oklch(0.5 0.015 60);
-    --shadow-color: oklch(0.1 0.02 60 / 0.08);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.97 0.008 60);
-    --sidebar-foreground: oklch(0.2 0.01 60);
-    --sidebar-primary: oklch(0.55 0.15 25);
-    --sidebar-primary-foreground: oklch(0.99 0.005 60);
-    --sidebar-accent: oklch(0.93 0.012 60);
-    --sidebar-accent-foreground: oklch(0.25 0.02 60);
-    --sidebar-border: oklch(0.9 0.01 60);
-    --sidebar-ring: oklch(0.55 0.15 25);
-    --calendar-today-bg: oklch(0.5 0.08 200 / 12%);
+    --background: #ffffff;
+    --foreground: #212529;
+    --canvas: #ffffff;
+    --card: #ffffff;
+    --card-foreground: #212529;
+    --popover: #ffffff;
+    --popover-foreground: #212529;
+    --primary: #0d6efd;
+    --primary-foreground: #ffffff;
+    --secondary: #e9ecef;
+    --secondary-foreground: #212529;
+    --muted: #e9ecef;
+    --muted-foreground: rgba(33, 37, 41, 0.75);
+    --accent: #0dcaf0;
+    --accent-foreground: #000000;
+    --success: #198754;
+    --success-foreground: #ffffff;
+    --warning: #ffc107;
+    --warning-foreground: #000000;
+    --destructive: #dc3545;
+    --destructive-foreground: #ffffff;
+    --border: rgba(0, 0, 0, 0.175);
+    --input: #dee2e6;
+    --ring: #86b7fe;
+    --chart-1: #0d6efd;
+    --chart-2: #0dcaf0;
+    --chart-3: #198754;
+    --chart-4: #ffc107;
+    --chart-5: #6c757d;
+    --shadow-color: rgba(33, 37, 41, 0.075);
+    --radius: 0.375rem;
+    --calendar-today-bg: rgba(13, 110, 253, 0.1);
+
+    /* Sidebar — AdminLTE's dark rail. Identical in both themes by design:
+       against a white canvas it is the darker surface, against the dark
+       canvas (#212529) it is the lighter one, so it separates either way.
+       No .dark override below — these cascade into it. */
+    --sidebar: #343a40;
+    --sidebar-foreground: #c2c7d0;
+    --sidebar-muted: rgba(194, 199, 208, 0.7);
+    --sidebar-heading: #c5c9d2;
+    --sidebar-brand: #343a40;
+    --sidebar-primary: #0d6efd;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: rgba(255, 255, 255, 0.1);
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: rgba(255, 255, 255, 0.15);
+    --sidebar-ring: #86b7fe;
   }
   .dark {
-    --background: oklch(0.18 0.01 60);
-    --foreground: oklch(0.96 0.005 60);
-    --card: oklch(0.23 0.012 60);
-    --card-foreground: oklch(0.96 0.005 60);
-    --popover: oklch(0.23 0.012 60);
-    --popover-foreground: oklch(0.96 0.005 60);
-    --primary: oklch(0.7 0.16 25);
-    --primary-foreground: oklch(0.12 0.02 25);
-    --secondary: oklch(0.28 0.015 60);
-    --secondary-foreground: oklch(0.96 0.005 60);
-    --muted: oklch(0.28 0.015 60);
-    --muted-foreground: oklch(0.78 0.012 60);
-    --accent: oklch(0.7 0.1 200);
-    --accent-foreground: oklch(0.12 0.02 200);
-    --success: oklch(0.78 0.14 145);
-    --success-foreground: oklch(0.12 0.02 145);
-    --warning: oklch(0.84 0.14 75);
-    --warning-foreground: oklch(0.18 0.02 75);
-    --destructive: oklch(0.72 0.19 25);
-    --destructive-foreground: oklch(0.12 0.02 25);
-    --border: oklch(0.96 0.005 60 / 18%);
-    --input: oklch(0.96 0.005 60 / 15%);
-    --ring: oklch(0.65 0.16 25);
-    --chart-1: oklch(0.65 0.16 25);
-    --chart-2: oklch(0.62 0.09 200);
-    --chart-3: oklch(0.68 0.14 145);
-    --chart-4: oklch(0.8 0.15 75);
-    --chart-5: oklch(0.7 0.012 60);
-    --shadow-color: oklch(0.05 0.02 60 / 0.4);
-    --sidebar: oklch(0.23 0.012 60);
-    --sidebar-foreground: oklch(0.96 0.005 60);
-    --sidebar-primary: oklch(0.65 0.16 25);
-    --sidebar-primary-foreground: oklch(0.15 0.02 25);
-    --sidebar-accent: oklch(0.28 0.015 60);
-    --sidebar-accent-foreground: oklch(0.96 0.005 60);
-    --sidebar-border: oklch(0.96 0.005 60 / 18%);
-    --sidebar-ring: oklch(0.65 0.16 25);
-    --calendar-today-bg: oklch(0.7 0.1 200 / 18%);
+    --background: #212529;
+    --foreground: #dee2e6;
+    --canvas: #212529;
+    --card: #212529;
+    --card-foreground: #dee2e6;
+    /* Dropdowns lift to tertiary-bg so they read above the page they cover. */
+    --popover: #2b3035;
+    --popover-foreground: #dee2e6;
+    --secondary: #343a40;
+    --secondary-foreground: #dee2e6;
+    --muted: #343a40;
+    --muted-foreground: rgba(222, 226, 230, 0.75);
+    --border: rgba(255, 255, 255, 0.15);
+    --input: #495057;
+    --shadow-color: rgba(0, 0, 0, 0.5);
+    --calendar-today-bg: rgba(13, 110, 253, 0.25);
+    /* The six brand/state hues are theme-invariant in Bootstrap 5.3 — a
+       solid #0d6efd fill with white text works on either canvas — so they
+       are deliberately NOT overridden here. */
   }
   * {
     border-color: var(--border);
@@ -99,6 +98,182 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   APP SHELL — AdminLTE v4 layout
+   ═══════════════════════════════════════════════════════════════════════
+   Metrics are lifted from AdminLTE v4's own stylesheet: a 250px sidebar
+   that minifies to 4.6rem, a 3.5rem brand block / header, and a named
+   CSS-grid wrapper. Everything here is structure only — colors resolve to
+   the app's design tokens (see @layer base above).
+
+   Grid areas:
+     ┌───────────┬───────────┐
+     │           │  header   │
+     │  sidebar  ├───────────┤
+     │           │   main    │
+     │           ├───────────┤
+     │           │  footer   │
+     └───────────┴───────────┘
+   ═══════════════════════════════════════════════════════════════════════ */
+@layer components {
+  .app-wrapper {
+    --lte-sidebar-w: 250px;
+    --lte-sidebar-mini-w: 4.6rem;
+    --lte-header-h: 3.5rem;
+    --lte-sidebar-current-w: var(--lte-sidebar-w);
+
+    display: grid;
+    grid-template-areas:
+      'lte-sidebar lte-header'
+      'lte-sidebar lte-main'
+      'lte-sidebar lte-footer';
+    grid-template-columns: var(--lte-sidebar-current-w) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* Minified ("sidebar-mini") state. The grid TRACK shrinks but the <aside>
+     is free to overflow it on hover — that is what lets the flyout expansion
+     overlay the content instead of shoving it sideways. */
+  .app-wrapper[data-sidebar='collapsed'] {
+    --lte-sidebar-current-w: var(--lte-sidebar-mini-w);
+  }
+
+  .app-sidebar {
+    grid-area: lte-sidebar;
+    position: sticky;
+    top: 0;
+    z-index: 1038;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    width: var(--lte-sidebar-current-w);
+    height: 100vh;
+    height: 100dvh;
+    transition:
+      width 0.3s ease-in-out,
+      transform 0.3s ease-in-out;
+  }
+
+  .app-header {
+    grid-area: lte-header;
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    min-height: var(--lte-header-h);
+  }
+
+  .app-main {
+    grid-area: lte-main;
+    min-width: 0;
+  }
+
+  .app-footer {
+    grid-area: lte-footer;
+    min-height: 3rem;
+  }
+
+  /* Only the nav scrolls — brand block and user block stay pinned. */
+  .sidebar-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--sidebar-accent) transparent;
+  }
+  .sidebar-wrapper::-webkit-scrollbar {
+    width: 6px;
+  }
+  .sidebar-wrapper::-webkit-scrollbar-thumb {
+    background-color: var(--sidebar-accent);
+    border-radius: 3px;
+  }
+
+  /* Labels collapse to zero width in mini mode and animate back on hover. */
+  .sidebar-label {
+    white-space: nowrap;
+    transition:
+      opacity 0.2s ease-in-out,
+      max-width 0.3s ease-in-out;
+    opacity: 1;
+    max-width: 12rem;
+  }
+
+  @media (min-width: 768px) {
+    .app-wrapper[data-sidebar='collapsed'] .sidebar-label,
+    .app-wrapper[data-sidebar='collapsed'] .sidebar-only-wide {
+      opacity: 0;
+      max-width: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .app-wrapper[data-sidebar='collapsed'] .sidebar-only-wide {
+      height: 0;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+    /* Flyout: hovering the minified rail restores the full 250px pane. */
+    .app-wrapper[data-sidebar='collapsed'] .app-sidebar:hover {
+      width: var(--lte-sidebar-w);
+      box-shadow: 0 0 1rem rgb(0 0 0 / 25%);
+    }
+    .app-wrapper[data-sidebar='collapsed'] .app-sidebar:hover .sidebar-label {
+      opacity: 1;
+      max-width: 12rem;
+    }
+  }
+
+  /* ── Mobile: off-canvas drawer ──
+     Sidebar leaves the grid entirely and slides in over the content. */
+  @media (max-width: 767.98px) {
+    .app-wrapper {
+      grid-template-areas:
+        'lte-header'
+        'lte-main'
+        'lte-footer';
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .app-sidebar {
+      grid-area: auto;
+      position: fixed;
+      inset-block: 0;
+      left: 0;
+      width: var(--lte-sidebar-w);
+      height: 100dvh;
+      transform: translateX(-100%);
+    }
+    .app-sidebar[data-open='true'] {
+      transform: translateX(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .app-sidebar,
+    .sidebar-label {
+      transition: none;
+    }
+  }
+
+  /* AdminLTE's `.app-content-header` / `.app-content` rhythm. */
+  .app-content-header {
+    padding: 1rem 0.75rem 0.5rem;
+  }
+  .app-content {
+    padding: 0 0.75rem 1.5rem;
+  }
+  @media (min-width: 768px) {
+    .app-content-header {
+      padding: 1rem 1.25rem 0.5rem;
+    }
+    .app-content {
+      padding: 0 1.25rem 1.5rem;
+    }
   }
 }
 

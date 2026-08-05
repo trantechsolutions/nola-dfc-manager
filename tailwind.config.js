@@ -13,6 +13,7 @@ export default {
       colors: {
         background: 'var(--background)',
         foreground: 'var(--foreground)',
+        canvas: 'var(--canvas)',
         card: { DEFAULT: 'var(--card)', foreground: 'var(--card-foreground)' },
         popover: { DEFAULT: 'var(--popover)', foreground: 'var(--popover-foreground)' },
         primary: { DEFAULT: 'var(--primary)', foreground: 'var(--primary-foreground)' },
@@ -25,6 +26,9 @@ export default {
         sidebar: {
           DEFAULT: 'var(--sidebar)',
           foreground: 'var(--sidebar-foreground)',
+          muted: 'var(--sidebar-muted)',
+          heading: 'var(--sidebar-heading)',
+          brand: 'var(--sidebar-brand)',
           primary: 'var(--sidebar-primary)',
           'primary-foreground': 'var(--sidebar-primary-foreground)',
           accent: 'var(--sidebar-accent)',

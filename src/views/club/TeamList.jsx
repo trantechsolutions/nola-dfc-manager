@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Plus,
-  Users,
-  Settings,
-  Trash2,
-  Edit,
-  ChevronDown,
-  ChevronUp,
-  Shield,
-  UserPlus,
-  Calendar,
-  X,
-  CheckCircle2,
-  Save,
-} from 'lucide-react';
+import { Plus, Settings, Trash2, Edit, UserPlus, X, Save } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { ALL_ROLES, TEAM_ROLES, CLUB_ASSIGNABLE_ROLES } from '../../utils/roles';
 import { useT } from '../../i18n/I18nContext';
+import Badge from '../../components/layout/Badge';
+import DirectoryCard, { DetailRow, EmptyRow } from '../../components/layout/DirectoryCard';
+import { DirectoryToolbar, SearchInput, ToolbarButton, RowAction } from '../../components/layout/DirectoryControls';
+import { paginate } from '../../utils/pagination';
+
+const PER_PAGE = 25;
+
+const COLUMNS = [
+  { key: 'team', label: 'Team' },
+  { key: 'age', label: 'Age group', className: 'hidden md:table-cell' },
+  { key: 'gender', label: 'Gender', className: 'hidden md:table-cell' },
+  { key: 'tier', label: 'Tier' },
+  { key: 'actions', label: 'Actions', align: 'right' },
+];
 
 export default function TeamList({ club, teams, onSelectTeam, formatMoney, showToast, showConfirm, refreshContext }) {
   const { t } = useT();
@@ -24,6 +24,8 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
   const [expandedTeam, setExpandedTeam] = useState(null);
   const [teamRoles, setTeamRoles] = useState({});
   const [isSaving, setIsSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
 
   // New team form
   const [newTeam, setNewTeam] = useState({
@@ -140,274 +142,281 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
 
   const COLORS = ['#1e293b', '#2563eb', '#059669', '#dc2626', '#7c3aed', '#d97706', '#0891b2', '#be185d'];
 
+  const filteredTeams = search.trim()
+    ? teams.filter((tm) => `${tm.name} ${tm.ageGroup} ${tm.tier}`.toLowerCase().includes(search.trim().toLowerCase()))
+    : teams;
+
+  const { slice, page: currentPage, pageCount, total, from, to } = paginate(filteredTeams, page, PER_PAGE);
+
   return (
-    <div className="space-y-5 pb-24 md:pb-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">{t('clubTeams.title')}</h2>
-          <p className="text-xs text-muted-foreground font-semibold">
-            {club?.name} · {teams.length} team{teams.length !== 1 && 's'}
-          </p>
-        </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-accent text-accent-foreground text-xs font-bold rounded-lg hover:bg-accent/90 shadow-lg transition-all"
-        >
-          <Plus size={14} /> {t('clubTeams.addTeam')}
-        </button>
-      </div>
+    <div className="space-y-5">
+      <p className="text-xs font-semibold text-muted-foreground">
+        {club?.name} · {teams.length} team{teams.length !== 1 && 's'}
+      </p>
 
-      {/* Team Cards */}
-      <div className="space-y-3">
-        {teams.map((team) => {
-          const isExpanded = expandedTeam === team.id;
-          const roles = teamRoles[team.id] || [];
-          const isEditingThis = editingTeamId === team.id;
+      <DirectoryCard
+        title={t('clubTeams.title', 'Team Directory')}
+        columns={COLUMNS}
+        noun="team"
+        page={currentPage}
+        pageCount={pageCount}
+        total={total}
+        from={from}
+        to={to}
+        onPageChange={setPage}
+        toolbar={
+          <DirectoryToolbar>
+            <SearchInput
+              value={search}
+              onChange={(v) => {
+                setSearch(v);
+                setPage(1);
+              }}
+              placeholder="Search teams..."
+              label="Search teams"
+            />
+            <ToolbarButton icon={Plus} tone="primary" onClick={() => setShowCreateForm(true)}>
+              {t('clubTeams.addTeam')}
+            </ToolbarButton>
+          </DirectoryToolbar>
+        }
+      >
+        {slice.length === 0 ? (
+          <EmptyRow colSpan={COLUMNS.length}>
+            {search ? 'No teams match your search.' : 'No teams in this club yet.'}
+          </EmptyRow>
+        ) : (
+          slice.map((team) => {
+            const isExpanded = expandedTeam === team.id;
+            const roles = teamRoles[team.id] || [];
+            const isEditingThis = editingTeamId === team.id;
 
-          return (
-            <div key={team.id} className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
-              <div className="flex items-center gap-4 p-5">
-                {/* Color dot */}
-                <div
-                  className="w-3 h-12 rounded-full shrink-0"
-                  style={{ backgroundColor: team.colorPrimary || '#1e293b' }}
-                />
-
-                {/* Info */}
-                <div className="flex-grow min-w-0">
-                  {isEditingThis ? (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <input
-                        autoFocus
-                        type="text"
-                        value={editingName}
-                        onChange={(e) => setEditingName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSaveTeam(team.id);
-                          if (e.key === 'Escape') {
+            return (
+              <React.Fragment key={team.id}>
+                <tr className="border-b border-border align-middle transition-colors hover:bg-foreground/[0.03]">
+                  <td className="px-4 py-2.5">
+                    {isEditingThis ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          autoFocus
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveTeam(team.id);
+                            if (e.key === 'Escape') {
+                              setEditingTeamId(null);
+                              setEditingName('');
+                              setEditingTier('competitive');
+                            }
+                          }}
+                          aria-label="Team name"
+                          className="flex-grow rounded-md border border-input bg-card px-2 py-1 text-sm font-semibold outline-none focus:ring-2 focus:ring-ring"
+                        />
+                        <select
+                          value={editingTier}
+                          onChange={(e) => setEditingTier(e.target.value)}
+                          aria-label="Team tier"
+                          className="rounded-md border border-input bg-card px-2 py-1.5 text-xs font-semibold outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value="competitive">Competitive</option>
+                          <option value="recreational">Recreational</option>
+                          <option value="academy">Academy</option>
+                          <option value="select">Select</option>
+                        </select>
+                        <RowAction
+                          icon={Save}
+                          label="Save team"
+                          disabled={isSaving}
+                          onClick={() => handleSaveTeam(team.id)}
+                        />
+                        <RowAction
+                          icon={X}
+                          label="Cancel edit"
+                          onClick={() => {
                             setEditingTeamId(null);
                             setEditingName('');
                             setEditingTier('competitive');
-                          }
-                        }}
-                        className="font-bold text-foreground text-sm border border-blue-300 dark:border-blue-700 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-ring flex-grow bg-card"
-                      />
-                      <select
-                        value={editingTier}
-                        onChange={(e) => setEditingTier(e.target.value)}
-                        className="text-xs font-semibold border border-border rounded-lg px-2 py-1.5 bg-card text-foreground outline-none focus:ring-2 focus:ring-ring"
-                      >
-                        <option value="competitive">Competitive</option>
-                        <option value="recreational">Recreational</option>
-                        <option value="academy">Academy</option>
-                        <option value="select">Select</option>
-                      </select>
-                      <button
-                        onClick={() => handleSaveTeam(team.id)}
-                        disabled={isSaving}
-                        className="text-emerald-700 dark:text-emerald-400 hover:text-emerald-700 dark:text-emerald-300 disabled:opacity-50"
-                      >
-                        <Save size={16} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditingTeamId(null);
-                          setEditingName('');
-                          setEditingTier('competitive');
-                        }}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="cursor-pointer" onClick={() => onSelectTeam(team.id)}>
-                      <h3 className="font-bold text-foreground text-sm">{team.name}</h3>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground font-medium mt-0.5">
-                        <span>{team.ageGroup}</span>
-                        <span>{team.gender === 'M' ? 'Boys' : team.gender === 'F' ? 'Girls' : team.gender}</span>
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-xs font-bold uppercase ${team.tier === 'competitive' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-muted text-muted-foreground'}`}
-                        >
-                          {team.tier}
-                        </span>
+                          }}
+                        />
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingTeamId(team.id);
-                      setEditingName(team.name);
-                      setEditingTier(team.tier || 'competitive');
-                    }}
-                    className="p-2 text-muted-foreground hover:text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all"
-                    title="Edit team name"
-                  >
-                    <Edit size={14} />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setExpandedTeam(isExpanded ? null : team.id);
-                    }}
-                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-background rounded-lg transition-all"
-                    title="Manage roles"
-                  >
-                    <Settings size={14} />
-                    {isExpanded ? (
-                      <ChevronUp size={10} className="ml-0.5 inline" />
                     ) : (
-                      <ChevronDown size={10} className="ml-0.5 inline" />
-                    )}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteTeam(team);
-                    }}
-                    className="p-2 text-muted-foreground hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all"
-                    title="Archive team"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Expanded: Role Management */}
-              {isExpanded && (
-                <div className="border-t border-border p-5 bg-background/50">
-                  <div className="space-y-3">
-                    {/* Header with assign button */}
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold text-muted-foreground">Team Roles</p>
                       <button
-                        onClick={() => setShowInvite(showInvite === team.id ? null : team.id)}
-                        className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 flex items-center gap-1"
+                        type="button"
+                        onClick={() => onSelectTeam(team.id)}
+                        className="flex items-center gap-2.5 text-left"
                       >
-                        <UserPlus size={12} /> Assign Role
+                        <span
+                          className="h-8 w-1.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: team.colorPrimary || 'var(--primary)' }}
+                        />
+                        <span className="font-semibold text-foreground transition-colors hover:text-primary">
+                          {team.name}
+                        </span>
                       </button>
+                    )}
+                  </td>
+                  <td className="hidden px-4 py-2.5 text-muted-foreground md:table-cell">{team.ageGroup}</td>
+                  <td className="hidden px-4 py-2.5 text-muted-foreground md:table-cell">
+                    {team.gender === 'M' ? 'Boys' : team.gender === 'F' ? 'Girls' : team.gender}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <Badge tone={team.tier === 'competitive' ? 'primary' : 'secondary'}>{team.tier}</Badge>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center justify-end gap-1">
+                      <RowAction
+                        icon={Edit}
+                        label="Edit team name"
+                        onClick={() => {
+                          setEditingTeamId(team.id);
+                          setEditingName(team.name);
+                          setEditingTier(team.tier || 'competitive');
+                        }}
+                      />
+                      <RowAction
+                        icon={Settings}
+                        label="Manage roles"
+                        aria-expanded={isExpanded}
+                        onClick={() => setExpandedTeam(isExpanded ? null : team.id)}
+                      />
+                      <RowAction icon={Trash2} label="Archive team" onClick={() => handleDeleteTeam(team)} />
                     </div>
+                  </td>
+                </tr>
 
-                    {roles === null ? (
-                      <p className="text-xs text-muted-foreground animate-pulse">Loading...</p>
-                    ) : roles.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic py-2">No roles assigned to this team yet.</p>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {roles.map((r) => (
-                          <div
-                            key={r.id}
-                            className={`flex items-center justify-between p-2.5 rounded-lg border ${r.isClubLevel ? 'bg-violet-50/50 dark:bg-violet-900/20 border-violet-100 dark:border-violet-800' : 'bg-card border-border'}`}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span
-                                className={`text-xs font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${
-                                  r.role === 'club_admin'
-                                    ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-                                    : r.role === 'club_manager'
-                                      ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
-                                      : r.role === 'team_manager'
-                                        ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-                                        : r.role === 'treasurer'
-                                          ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                                          : r.role === 'scheduler'
-                                            ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
-                                            : r.role === 'head_coach'
-                                              ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
-                                              : r.role === 'fundraiser'
-                                                ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
-                                                : 'bg-muted text-foreground'
-                                }`}
-                              >
-                                {ALL_ROLES[r.role]?.label || r.role}
-                              </span>
-                              <span className="text-xs text-muted-foreground truncate">
-                                {r.displayName || r.email || r.userId.slice(0, 8) + '...'}
-                              </span>
-                              {r.isClubLevel && (
-                                <span className="text-xs font-semibold text-violet-400 uppercase shrink-0">
-                                  via club
+                {isExpanded && (
+                  <DetailRow colSpan={COLUMNS.length}>
+                    <div className="space-y-3">
+                      {/* Header with assign button */}
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-muted-foreground">Team Roles</p>
+                        <button
+                          onClick={() => setShowInvite(showInvite === team.id ? null : team.id)}
+                          className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 flex items-center gap-1"
+                        >
+                          <UserPlus size={12} /> Assign Role
+                        </button>
+                      </div>
+
+                      {roles === null ? (
+                        <p className="text-xs text-muted-foreground animate-pulse">Loading...</p>
+                      ) : roles.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic py-2">No roles assigned to this team yet.</p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {roles.map((r) => (
+                            <div
+                              key={r.id}
+                              className={`flex items-center justify-between p-2.5 rounded-lg border ${r.isClubLevel ? 'bg-violet-50/50 dark:bg-violet-900/20 border-violet-100 dark:border-violet-800' : 'bg-card border-border'}`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span
+                                  className={`text-xs font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${
+                                    r.role === 'club_admin'
+                                      ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                                      : r.role === 'club_manager'
+                                        ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
+                                        : r.role === 'team_manager'
+                                          ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                                          : r.role === 'treasurer'
+                                            ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                                            : r.role === 'scheduler'
+                                              ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
+                                              : r.role === 'head_coach'
+                                                ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                                                : r.role === 'fundraiser'
+                                                  ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
+                                                  : 'bg-muted text-foreground'
+                                  }`}
+                                >
+                                  {ALL_ROLES[r.role]?.label || r.role}
+                                </span>
+                                <span className="text-xs text-muted-foreground truncate">
+                                  {r.displayName || r.email || r.userId.slice(0, 8) + '...'}
+                                </span>
+                                {r.isClubLevel && (
+                                  <span className="text-xs font-semibold text-violet-400 uppercase shrink-0">
+                                    via club
+                                  </span>
+                                )}
+                              </div>
+                              {/* Only allow revoking direct team roles, not inherited club roles */}
+                              {!r.isClubLevel ? (
+                                <button
+                                  onClick={() => handleRevokeRole(r.id, team.id)}
+                                  className="text-muted-foreground hover:text-red-700 dark:text-red-400 transition-colors shrink-0"
+                                >
+                                  <X size={12} />
+                                </button>
+                              ) : (
+                                <span
+                                  className="text-xs text-muted-foreground shrink-0"
+                                  title="Manage in Club Settings"
+                                >
+                                  🔒
                                 </span>
                               )}
                             </div>
-                            {/* Only allow revoking direct team roles, not inherited club roles */}
-                            {!r.isClubLevel ? (
-                              <button
-                                onClick={() => handleRevokeRole(r.id, team.id)}
-                                className="text-muted-foreground hover:text-red-700 dark:text-red-400 transition-colors shrink-0"
-                              >
-                                <X size={12} />
-                              </button>
-                            ) : (
-                              <span className="text-xs text-muted-foreground shrink-0" title="Manage in Club Settings">
-                                🔒
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
 
-                    {/* Invite form — only CLUB_ASSIGNABLE_ROLES (coach, assist coach, team manager) */}
-                    {showInvite === team.id && (
-                      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800 space-y-2">
-                        <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">
-                          Assign a coach or team manager by their login email
-                        </p>
-                        <div className="flex gap-2">
-                          <input
-                            type="email"
-                            placeholder="coach@example.com"
-                            value={inviteEmail}
-                            onChange={(e) => setInviteEmail(e.target.value)}
-                            className="flex-grow bg-card border border-blue-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-ring"
-                          />
-                          <select
-                            value={inviteRole}
-                            onChange={(e) => setInviteRole(e.target.value)}
-                            className="bg-card border border-blue-200 rounded-lg px-2 py-1.5 text-xs font-semibold outline-none"
-                          >
-                            {CLUB_ASSIGNABLE_ROLES.map((key) => (
-                              <option key={key} value={key}>
-                                {TEAM_ROLES[key]?.label || key}
-                              </option>
-                            ))}
-                          </select>
+                      {/* Invite form — only CLUB_ASSIGNABLE_ROLES (coach, assist coach, team manager) */}
+                      {showInvite === team.id && (
+                        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800 space-y-2">
+                          <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                            Assign a coach or team manager by their login email
+                          </p>
+                          <div className="flex gap-2">
+                            <input
+                              type="email"
+                              placeholder="coach@example.com"
+                              value={inviteEmail}
+                              onChange={(e) => setInviteEmail(e.target.value)}
+                              className="flex-grow bg-card border border-blue-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-ring"
+                            />
+                            <select
+                              value={inviteRole}
+                              onChange={(e) => setInviteRole(e.target.value)}
+                              className="bg-card border border-blue-200 rounded-lg px-2 py-1.5 text-xs font-semibold outline-none"
+                            >
+                              {CLUB_ASSIGNABLE_ROLES.map((key) => (
+                                <option key={key} value={key}>
+                                  {TEAM_ROLES[key]?.label || key}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            User must have an existing account. If they don't, use the Invite flow in Club → Users
+                            instead.
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setShowInvite(null)}
+                              className="text-xs font-semibold text-muted-foreground px-3 py-1.5"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleAssignRole(team.id)}
+                              disabled={isSaving || !inviteEmail.trim()}
+                              className="text-xs font-bold text-white bg-blue-600 px-4 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                            >
+                              Assign
+                            </button>
+                          </div>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          User must have an existing account. If they don't, use the Invite flow in Club → Users
-                          instead.
-                        </p>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setShowInvite(null)}
-                            className="text-xs font-semibold text-muted-foreground px-3 py-1.5"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() => handleAssignRole(team.id)}
-                            disabled={isSaving || !inviteEmail.trim()}
-                            className="text-xs font-bold text-white bg-blue-600 px-4 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                          >
-                            Assign
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                      )}
+                    </div>
+                  </DetailRow>
+                )}
+              </React.Fragment>
+            );
+          })
+        )}
+      </DirectoryCard>
 
       {/* Create Team Modal */}
       {showCreateForm && (

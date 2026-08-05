@@ -105,11 +105,10 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
   const currentStep = STEPS[step];
 
   return (
-    <div className="max-w-xl mx-auto space-y-6 pb-24 md:pb-6">
+    <div className="mx-auto max-w-xl space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">New Team Setup</h2>
           <p className="text-xs text-muted-foreground font-semibold">
             {club?.name} · Step {step + 1} of {STEPS.length}
           </p>

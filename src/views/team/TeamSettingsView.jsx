@@ -162,11 +162,8 @@ export default function TeamSettingsView({
   const previewTokens = buildPreviewTokens({ teamName: selectedTeam?.name || '' });
 
   return (
-    <div className="space-y-6 pb-20 md:pb-6 max-w-2xl">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">{t('settings.title')}</h2>
-        <p className="text-xs text-muted-foreground font-semibold mt-0.5">{selectedTeam?.name}</p>
-      </div>
+    <div className="max-w-2xl space-y-6">
+      <p className="text-xs text-muted-foreground font-semibold">{selectedTeam?.name}</p>
 
       {/* ── iCal Feed ── */}
       <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
