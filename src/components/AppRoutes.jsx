@@ -776,6 +776,7 @@ export default function AppRoutes({
           }}
           showToast={showToast}
           showConfirm={showConfirm}
+          canUploadMedical={can(PERMISSIONS.TEAM_VIEW_MEDICAL_DOCS)}
         />
       )}
 

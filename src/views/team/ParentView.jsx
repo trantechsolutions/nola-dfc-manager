@@ -36,6 +36,8 @@ import { CATEGORY_LABELS, CATEGORY_TEXT_COLORS as CATEGORY_COLORS, DOC_TYPE_LABE
 import PaymentOptions from '../../components/PaymentOptions';
 import { compressImageFile } from '../../utils/imageCompression';
 
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
 function getProgressColor(pct) {
   if (pct >= 100)
     return {
@@ -241,6 +243,10 @@ export default function ParentView({
       // Camera photos arrive at full sensor resolution; downscale before upload
       // so parents on cell data aren't pushing 8MB per document.
       const file = await compressImageFile(uploadFile);
+      if (file.size > MAX_UPLOAD_BYTES) {
+        showToast?.(t('parent.docTooLarge'), true);
+        return;
+      }
       await supabaseService.uploadDocument(file, activePlayer.id, {
         clubId: clubId || null,
         teamId: activePlayer.teamId || null,
@@ -252,14 +258,14 @@ export default function ParentView({
         await supabaseService.setSeasonCompliance(activePlayer.id, selectedSeason, 'medicalRelease', true);
         onRefresh?.();
       }
-      showToast?.(t('parent.docUploaded', 'Document uploaded successfully'));
+      showToast?.(t('parent.docUploaded'));
       setUploadFile(null);
       setUploadDocType('medical_release');
       setShowUploadForm(false);
       fetchPlayerDocs();
     } catch (err) {
       console.error('Upload failed:', err);
-      showToast?.(t('parent.docUploadFail', 'Failed to upload document'), true);
+      showToast?.(t('parent.docUploadFail'), true);
     } finally {
       setUploading(false);
     }
@@ -720,7 +726,7 @@ export default function ParentView({
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                 >
                   <Upload size={13} />
-                  {t('parent.uploadDoc', 'Upload Document')}
+                  {t('parent.uploadDoc')}
                 </button>
               </div>
             </div>
@@ -729,9 +735,7 @@ export default function ParentView({
             {showUploadForm && (
               <div className="p-5 border-b border-border bg-background space-y-3">
                 <div>
-                  <label className="text-xs font-bold text-muted-foreground block mb-1">
-                    {t('parent.selectFile', 'Select File')}
-                  </label>
+                  <label className="text-xs font-bold text-muted-foreground block mb-1">{t('parent.selectFile')}</label>
                   <input
                     type="file"
                     accept="image/*,.pdf,.jpg,.jpeg,.png,.doc,.docx"
@@ -749,7 +753,7 @@ export default function ParentView({
                       opens the same file dialog. */}
                   <label className="sm:hidden mt-2 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-muted text-foreground hover:bg-muted/80 cursor-pointer transition-colors">
                     <Camera size={14} />
-                    {t('parent.takePhoto', 'Take Photo')}
+                    {t('parent.takePhoto')}
                     <input
                       type="file"
                       accept="image/*"
@@ -763,7 +767,7 @@ export default function ParentView({
                   <>
                     <div>
                       <label className="text-xs font-bold text-muted-foreground block mb-1">
-                        {t('parent.docType', 'Document Type')}
+                        {t('parent.docType')}
                       </label>
                       <select
                         value={uploadDocType}
@@ -783,7 +787,7 @@ export default function ParentView({
                         disabled={uploading}
                         className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        {uploading ? t('common.saving', 'Uploading...') : t('parent.submitUpload', 'Upload')}
+                        {uploading ? t('parent.uploading') : t('parent.submitUpload')}
                       </button>
                       <button
                         onClick={() => {
@@ -793,7 +797,7 @@ export default function ParentView({
                         }}
                         className="px-4 py-2.5 rounded-lg text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors"
                       >
-                        {t('common.cancel', 'Cancel')}
+                        {t('common.cancel')}
                       </button>
                     </div>
                   </>
