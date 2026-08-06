@@ -249,6 +249,15 @@ function App() {
 
   const effectiveTeam = selectedTeam || parentTeam;
 
+  // Guardian-only accounts have zero user_roles, so useTeamContext's `teams`
+  // comes back empty and any view that resolves a player's team by id (the
+  // team name, colors and payment_info on ParentView) finds nothing. Fold the
+  // separately-fetched parentTeam in so those lookups still resolve.
+  const contextTeams = useMemo(() => {
+    if (teams.length > 0) return teams;
+    return parentTeam ? [parentTeam] : [];
+  }, [teams, parentTeam]);
+
   // Tab title tracks the team in context — for parents that is the team derived
   // from their player, not a staff team selection.
   useDocumentTitle(effectiveTeam?.name, club?.name);
@@ -355,6 +364,8 @@ function App() {
     isSaving: isCategorySaving,
   } = useCategoryManager(club?.id);
 
+  // effectiveTeamId, not selectedTeamId: parents never make a team selection,
+  // and accounts carry the payment handles ParentView renders in "How to Pay".
   const {
     accounts,
     activeAccounts,
@@ -363,7 +374,7 @@ function App() {
     saveAccount,
     deleteAccount,
     isSaving: isAccountSaving,
-  } = useAccounts(selectedTeamId);
+  } = useAccounts(effectiveTeamId);
 
   const bookBalance = useBookBalance(selectedTeamId, transactions, accounts);
 
@@ -744,7 +755,7 @@ function App() {
                 <AppRoutes
                   user={user}
                   club={club}
-                  teams={teams}
+                  teams={contextTeams}
                   selectedTeam={selectedTeam}
                   selectedTeamId={selectedTeamId}
                   setSelectedTeamId={setSelectedTeamId}

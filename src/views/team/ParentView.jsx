@@ -31,6 +31,7 @@ import { getCompliance } from '../../utils/compliance';
 
 import { CATEGORY_LABELS, CATEGORY_TEXT_COLORS as CATEGORY_COLORS, DOC_TYPE_LABELS } from '../../utils/constants';
 import PaymentOptions from '../../components/PaymentOptions';
+import { isPayableAccount } from '../../utils/accounts';
 import AdminCard from '../../components/layout/AdminCard';
 import TabCard from '../../components/layout/TabCard';
 import Badge from '../../components/layout/Badge';
@@ -147,16 +148,14 @@ export default function ParentView({
   const isFinalized = financials.isFinalized || currentSeasonData?.isFinalized || false;
   const isDraft = !isFinalized;
 
-  // Whether we can actually ask this guardian for money. Mirrors the guard on
-  // PaymentOptions: a draft budget means the fee is still an estimate, and a
-  // waived player owes nothing.
-  const canPay = isFinalized && financials.remainingBalance > 0 && !financials.isWaived;
-
   const paidPercent =
     financials.baseFee > 0
       ? Math.min(100, Math.round(((financials.baseFee - financials.remainingBalance) / financials.baseFee) * 100))
       : 100;
   const progressColors = getProgressColor(paidPercent);
+
+  // Accounts the team has published as payment methods — see isPayableAccount.
+  const payableAccounts = useMemo(() => accounts.filter(isPayableAccount), [accounts]);
 
   // ── PLAYER'S TEAM ──
   const playerTeam = useMemo(() => {
@@ -439,19 +438,6 @@ export default function ParentView({
                 )}
               </li>
             </ul>
-
-            {/* The reference's full-width primary button. Routes to whichever
-                tab actually needs attention rather than being decorative.
-                Gated on the same condition as PaymentOptions below — until the
-                budget is finalized the fee is still an estimate, so inviting a
-                payment would be inviting the wrong amount. */}
-            <button
-              type="button"
-              onClick={() => setTab(canPay ? 'account' : 'paperwork')}
-              className="w-full rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground transition-colors hover:brightness-110"
-            >
-              {canPay ? t('parent.makePayment', 'Make a payment') : t('parent.viewPaperwork', 'View paperwork')}
-            </button>
           </AdminCard>
 
           {/* "About" card — the reference's second card. */}
@@ -577,8 +563,10 @@ export default function ParentView({
                     </div>
                   </div>
 
-                  {/* Progress bar */}
-                  <div className="h-3 bg-white/80 rounded-full overflow-hidden shadow-inner">
+                  {/* Progress bar. The track needs its own dark value — the hero
+                      behind it flips to a dark tint, and a near-white track
+                      there reads as a filled bar rather than an empty one. */}
+                  <div className="h-3 overflow-hidden rounded-full bg-white/80 shadow-inner dark:bg-white/15">
                     <div
                       className={`h-full rounded-full transition-all duration-1000 ${progressColors.bar}`}
                       style={{ width: `${paidPercent}%` }}
@@ -687,10 +675,10 @@ export default function ParentView({
                 {isFinalized &&
                   financials.remainingBalance > 0 &&
                   !financials.isWaived &&
-                  (playerTeam?.paymentInfo || accounts.length > 0) && (
+                  (playerTeam?.paymentInfo || payableAccounts.length > 0) && (
                     <PaymentOptions
                       paymentInfo={playerTeam?.paymentInfo || ''}
-                      accounts={accounts}
+                      accounts={payableAccounts}
                       playerName={`${activePlayer.firstName} ${activePlayer.lastName}`}
                       firstName={activePlayer.firstName}
                       lastName={activePlayer.lastName}

@@ -2,13 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { Copy, Check, DollarSign, Smartphone, ExternalLink } from 'lucide-react';
 import QRCodeLib from 'qrcode';
 import { buildPaymentTokens } from '../utils/paymentTemplate';
+import { isPayableAccount } from '../utils/accounts';
 import PaymentInstructionsText from './PaymentInstructionsText';
 
-function QRCode({ value, size = 150 }) {
+function QRCode({ value, label, size = 150 }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
     if (!canvasRef.current || !value) return;
+    // Fixed black-on-white regardless of theme: a scanner needs the contrast,
+    // and inverting a QR for dark mode is what stops phones reading it.
     QRCodeLib.toCanvas(canvasRef.current, value, {
       width: size,
       margin: 2,
@@ -16,8 +19,26 @@ function QRCode({ value, size = 150 }) {
     }).catch(() => {});
   }, [value, size]);
 
-  return <canvas ref={canvasRef} className="rounded-lg border border-border" style={{ width: size, height: size }} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      // A canvas is a blank element to a screen reader. Naming it is the only
+      // way the code is announced as anything at all.
+      role="img"
+      aria-label={label}
+      className="rounded-lg border border-border"
+      style={{ width: size, height: size }}
+    />
+  );
 }
+
+// The card behind these chips is a tinted pastel that flips to a dark tint, so
+// the chip cannot hardcode a surface colour — `bg-white/80 text-foreground` put
+// #dee2e6 text on a near-white chip in dark mode, about 1.05:1. Theme tokens
+// are the whole point: --card and --foreground are a designed pair and stay
+// legible in both. py-1.5 clears the 24px WCAG 2.5.8 target minimum.
+const CHIP =
+  'shrink-0 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 function getServiceStyle(name) {
   const n = name.toLowerCase();
@@ -55,14 +76,12 @@ function getServiceStyle(name) {
 }
 
 function accountsToMethods(accounts) {
-  return accounts
-    .filter((a) => a.isActive && a.handle && a.handle.trim())
-    .map((a) => ({
-      key: a.id,
-      label: a.name,
-      handle: a.handle.trim(),
-      ...getServiceStyle(a.name),
-    }));
+  return accounts.filter(isPayableAccount).map((a) => ({
+    key: a.id,
+    label: a.name,
+    handle: a.handle.trim(),
+    ...getServiceStyle(a.name),
+  }));
 }
 
 function parsePaymentMethods(paymentInfo) {
@@ -166,12 +185,22 @@ export default function PaymentOptions({
     formatMoney,
   });
 
+  // The unhandled rejection was silent: clipboard access is denied outright on
+  // an insecure origin and on some in-app browsers, so the parent tapped a
+  // handle, saw nothing change, and had no way to know it hadn't copied.
   const handleCopy = (text, field) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedField(field);
-      showToast?.('Copied to clipboard');
-      setTimeout(() => setCopiedField(null), 2000);
-    });
+    const failed = () => showToast?.('Could not copy — select the text to copy it manually', true);
+    // The API is absent entirely on an insecure origin, so the optional call
+    // has to be checked before it is treated as a promise.
+    const writing = navigator.clipboard?.writeText(text);
+    if (!writing) return failed();
+    writing
+      .then(() => {
+        setCopiedField(field);
+        showToast?.('Copied to clipboard');
+        setTimeout(() => setCopiedField(null), 2000);
+      })
+      .catch(failed);
   };
 
   return (
@@ -187,9 +216,14 @@ export default function PaymentOptions({
         <div className="bg-background rounded-lg p-3 text-center">
           <p className="text-xs font-semibold text-muted-foreground">Amount Due</p>
           <p className="text-2xl font-bold text-foreground">{formatMoney(amount)}</p>
+          {/* `hover:text-blue-700 dark:text-blue-400` read as a matched pair but
+              isn't one — the dark variant has no hover scope, so dark mode
+              painted the memo permanently blue while light mode kept it muted.
+              One hover treatment, both themes. */}
           <button
             onClick={() => handleCopy(memo, 'memo')}
-            className="inline-flex items-center gap-1 mt-1 text-xs text-muted-foreground hover:text-blue-700 dark:text-blue-400 transition-colors"
+            aria-label={`Copy payment memo: ${memo}`}
+            className="mt-1 inline-flex items-center gap-1 rounded text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {copiedField === 'memo' ? <Check size={10} /> : <Copy size={10} />}
             Memo: {memo}
@@ -205,29 +239,47 @@ export default function PaymentOptions({
 
               return (
                 <div key={method.key} className={`rounded-lg border p-3 ${method.bgColor} ${method.borderColor}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg ${method.color} flex items-center justify-center`}>
+                  <div className="flex items-start justify-between gap-2">
+                    {/* min-w-0 lets this column shrink. Without it a long handle
+                        — a Zeffy donation URL, say — refuses to give ground and
+                        shoves the buttons out past the card edge. */}
+                    <div className="flex min-w-0 flex-1 items-start gap-2">
+                      <div
+                        className={`h-8 w-8 shrink-0 rounded-lg ${method.color} flex items-center justify-center`}
+                        aria-hidden="true"
+                      >
                         <Smartphone size={16} className="text-white" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className={`text-sm font-semibold ${method.textColor}`}>{method.label}</p>
                         {method.handle && (
                           <button
                             onClick={() => handleCopy(method.handle, method.key)}
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-blue-700 dark:text-blue-400"
+                            // The visible label is the handle itself, which tells
+                            // a screen reader nothing about what the button does.
+                            aria-label={`Copy ${method.label} handle ${method.handle}`}
+                            className="flex max-w-full items-start gap-1 rounded text-left text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
-                            {copiedField === method.key ? <Check size={10} /> : <Copy size={10} />}
-                            {method.handle}
+                            {copiedField === method.key ? (
+                              <Check size={10} className="mt-0.5 shrink-0" />
+                            ) : (
+                              <Copy size={10} className="mt-0.5 shrink-0" />
+                            )}
+                            {/* Wraps rather than truncates: a handle a parent
+                                cannot read in full is a handle they cannot
+                                check against their banking app. */}
+                            <span className="break-all">{method.handle}</span>
                           </button>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex shrink-0 items-center gap-1.5">
                       {method.handle && (
                         <button
                           onClick={() => setShowQR(isShowingQR ? null : method.key)}
-                          className="px-2 py-1 rounded-lg text-xs font-semibold bg-white/80 text-foreground hover:bg-card transition-colors"
+                          aria-expanded={isShowingQR}
+                          aria-controls={`qr-${method.key}`}
+                          className={CHIP}
                         >
                           {isShowingQR ? 'Hide QR' : 'QR Code'}
                         </button>
@@ -237,17 +289,22 @@ export default function PaymentOptions({
                           href={deepLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-2 py-1 rounded-lg text-xs font-semibold bg-white/80 text-foreground hover:bg-card transition-colors flex items-center gap-1"
+                          aria-label={`Pay ${formatMoney(amount)} with ${method.label} (opens in a new tab)`}
+                          className={`${CHIP} flex items-center gap-1`}
                         >
-                          <ExternalLink size={10} /> Pay
+                          <ExternalLink size={10} aria-hidden="true" /> Pay
                         </a>
                       )}
                     </div>
                   </div>
 
                   {isShowingQR && method.handle && (
-                    <div className="mt-3 flex justify-center">
-                      <QRCode value={deepLink || method.handle} size={160} />
+                    <div id={`qr-${method.key}`} className="mt-3 flex justify-center">
+                      <QRCode
+                        value={deepLink || method.handle}
+                        label={`${method.label} payment code for ${method.handle}`}
+                        size={160}
+                      />
                     </div>
                   )}
                 </div>

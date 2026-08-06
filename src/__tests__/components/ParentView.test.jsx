@@ -52,7 +52,24 @@ const financials = (overrides = {}) => ({
 
 // `seasonData` is separate from `fin` because the view ORs the two together —
 // a test for the draft case has to turn finalization off in both places.
-function renderParent({ players = [player()], fin = financials(), seasonData = { isFinalized: true } } = {}) {
+const account = (overrides = {}) => ({
+  id: 'a1',
+  teamId: 't1',
+  name: 'Venmo',
+  handle: '@TeamVenmo',
+  holding: 'digital',
+  isActive: true,
+  isPublic: true,
+  ...overrides,
+});
+
+function renderParent({
+  players = [player()],
+  fin = financials(),
+  seasonData = { isFinalized: true },
+  accounts = [],
+  team = TEAM,
+} = {}) {
   return render(
     <I18nProvider>
       <ParentView
@@ -60,7 +77,7 @@ function renderParent({ players = [player()], fin = financials(), seasonData = {
         transactions={[]}
         calculatePlayerFinancials={() => fin}
         formatMoney={(v) => `$${Number(v).toFixed(2)}`}
-        teams={[TEAM]}
+        teams={[team]}
         seasons={[{ id: SEASON }]}
         selectedSeason={SEASON}
         setSelectedSeason={vi.fn()}
@@ -70,7 +87,7 @@ function renderParent({ players = [player()], fin = financials(), seasonData = {
         showToast={vi.fn()}
         showConfirm={vi.fn()}
         user={{ email: 'byron@example.com' }}
-        accounts={[]}
+        accounts={accounts}
       />
     </I18nProvider>,
   );
@@ -103,34 +120,13 @@ describe('ParentView — profile layout', () => {
     expect(nestingWarnings()).toEqual([]);
   });
 
-  it('points the primary button at payment while a balance is owed', () => {
+  // The rail is a summary, not a control surface — its call-to-action button
+  // only ever jumped to a tab already one click away in the tab strip.
+  it('keeps the rail informational, with no call-to-action button', () => {
     renderParent();
-    expect(screen.getByRole('button', { name: /make a payment/i })).toBeInTheDocument();
-  });
-
-  // A draft budget means the fee is still an estimate — offering to collect it
-  // would be collecting the wrong amount.
-  it('withholds the payment button until the budget is finalized', () => {
-    renderParent({ fin: financials({ isFinalized: false }), seasonData: { isFinalized: false } });
 
     expect(screen.queryByRole('button', { name: /make a payment/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /view paperwork/i })).toBeInTheDocument();
-  });
-
-  it('withholds it for a waived player even once finalized', () => {
-    renderParent({ fin: financials({ isWaived: true }) });
-
-    expect(screen.queryByRole('button', { name: /make a payment/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /view paperwork/i })).toBeInTheDocument();
-  });
-
-  it('points it at paperwork once the balance is settled', async () => {
-    const user = userEvent.setup();
-    renderParent({ fin: financials({ remainingBalance: 0, totalPaid: 500 }) });
-
-    const button = screen.getByRole('button', { name: /view paperwork/i });
-    await user.click(button);
-    expect(screen.getByRole('tab', { name: /paperwork/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('button', { name: /view paperwork/i })).not.toBeInTheDocument();
   });
 
   it('opens on the Account tab', () => {
@@ -167,5 +163,94 @@ describe('ParentView — profile layout', () => {
   it('omits the child switcher for a single player', () => {
     renderParent();
     expect(screen.queryByRole('button', { name: /#7 Ada/ })).not.toBeInTheDocument();
+  });
+});
+
+// The Account pane's "How to Pay" panel is the only place a parent is told
+// where the money goes. It is driven by the team's accounts, each of which
+// carries an explicit isPublic flag — the team's internal ledger buckets share
+// the same table and must never surface here.
+describe('ParentView — how to pay', () => {
+  it('lists a published account as a payment method', () => {
+    renderParent({ accounts: [account()] });
+
+    expect(screen.getByText(/how to pay/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /@TeamVenmo/ })).toBeInTheDocument();
+  });
+
+  // The visible label on the handle button is the handle alone, which conveys
+  // nothing about what pressing it does.
+  it('names the copy control by its action, not just the handle', () => {
+    renderParent({ accounts: [account()] });
+    expect(screen.getByRole('button', { name: /copy venmo handle @TeamVenmo/i })).toBeInTheDocument();
+  });
+
+  it('warns that the pay link leaves the app', () => {
+    renderParent({ accounts: [account()] });
+    expect(screen.getByRole('link', { name: /opens in a new tab/i })).toBeInTheDocument();
+  });
+
+  it('reports the QR toggle state and names the code it reveals', async () => {
+    const user = userEvent.setup();
+    renderParent({ accounts: [account()] });
+
+    const toggle = screen.getByRole('button', { name: /qr code/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(toggle);
+    expect(screen.getByRole('button', { name: /hide qr/i })).toHaveAttribute('aria-expanded', 'true');
+    // A bare <canvas> is announced as nothing at all without a name.
+    expect(screen.getByRole('img', { name: /venmo payment code/i })).toBeInTheDocument();
+  });
+
+  it('renders every published account, not just the first', () => {
+    renderParent({
+      accounts: [account(), account({ id: 'a2', name: 'Zelle', handle: 'treasurer@team.com' })],
+    });
+
+    expect(screen.getByRole('button', { name: /@TeamVenmo/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /treasurer@team\.com/ })).toBeInTheDocument();
+  });
+
+  it('withholds accounts the team keeps internal', () => {
+    renderParent({
+      accounts: [account({ id: 'a3', name: 'Chase Checking', handle: '****1234', isPublic: false })],
+    });
+
+    expect(screen.queryByText(/how to pay/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\*\*\*\*1234/)).not.toBeInTheDocument();
+  });
+
+  it('withholds archived accounts even when published', () => {
+    renderParent({ accounts: [account({ isActive: false })] });
+    expect(screen.queryByText(/how to pay/i)).not.toBeInTheDocument();
+  });
+
+  // The panel is the ask for money; a draft fee is the wrong number to ask for.
+  it('withholds the whole panel until the budget is finalized', () => {
+    renderParent({
+      accounts: [account()],
+      fin: financials({ isFinalized: false }),
+      seasonData: { isFinalized: false },
+    });
+
+    expect(screen.queryByText(/how to pay/i)).not.toBeInTheDocument();
+  });
+
+  it('withholds it once the balance is settled', () => {
+    renderParent({ accounts: [account()], fin: financials({ remainingBalance: 0, totalPaid: 500 }) });
+    expect(screen.queryByText(/how to pay/i)).not.toBeInTheDocument();
+  });
+
+  it('withholds it from a waived player, who owes nothing to pay', () => {
+    renderParent({ accounts: [account()], fin: financials({ isWaived: true }) });
+    expect(screen.queryByText(/how to pay/i)).not.toBeInTheDocument();
+  });
+
+  // Falls back to the team's free-text instructions when no account is
+  // published — the older configuration, still valid.
+  it('falls back to the team payment instructions with no published accounts', () => {
+    renderParent({ team: { ...TEAM, paymentInfo: 'Checks payable to U12 Boys' } });
+    expect(screen.getByText(/checks payable to u12 boys/i)).toBeInTheDocument();
   });
 });
