@@ -29,6 +29,7 @@ const CAP_BG = 'bg-foreground/[0.03]';
  */
 export default function AdminCard({
   title,
+  subtitle,
   icon: Icon,
   variant = 'none',
   collapsible = false,
@@ -44,7 +45,7 @@ export default function AdminCard({
   // The header wraps rather than squeezes — AdminLTE's is a col-md-4 title /
   // col-md-8 tools row, so a header carrying a search box plus buttons has to
   // be able to drop to its own line on narrow viewports.
-  const hasHeader = Boolean(title || Icon || tools || collapsible || onRemove);
+  const hasHeader = Boolean(title || subtitle || Icon || tools || collapsible || onRemove);
 
   return (
     <section
@@ -57,7 +58,14 @@ export default function AdminCard({
       {hasHeader && (
         <header className={cn('flex flex-wrap items-center gap-2 border-b border-border px-4 py-3', CAP_BG)}>
           {Icon && <Icon size={16} className="shrink-0 text-muted-foreground" />}
-          <h3 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight">{title}</h3>
+          {/* `subtitle` rides on the title's own line rather than stacking
+              beneath it: in a grid of cards a second header line would only
+              appear on the cards that have one, leaving their bodies starting
+              lower than their neighbours'. */}
+          <h3 className="min-w-0 flex-1 truncate text-base font-semibold tracking-tight">
+            {title}
+            {subtitle && <span className="ml-2 text-xs font-normal text-muted-foreground">{subtitle}</span>}
+          </h3>
           <div className="ml-auto flex items-center gap-1">
             {tools}
             {collapsible && (
