@@ -37,3 +37,22 @@ vi.mock('../supabase', () => ({
     removeChannel: vi.fn(),
   },
 }));
+
+// ── matchMedia ───────────────────────────────────────────────────────────────
+// jsdom ships no implementation, so anything reading a breakpoint (the shell
+// chrome, ResponsiveModal) throws on mount. Width queries report true and
+// everything else false, which puts tests on the desktop layout by default —
+// suites that care about the narrow path install their own stub in beforeEach,
+// and assigning over this one is enough to win.
+if (!window.matchMedia) {
+  window.matchMedia = (query) => ({
+    matches: /min-width/.test(query),
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  });
+}

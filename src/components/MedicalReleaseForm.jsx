@@ -164,7 +164,8 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
   const labels = lang === 'es' ? ES : EN;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-start p-4 z-50 overflow-y-auto">
+    // Opens from inside PlayerModal, so it stacks a tier above it.
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-start p-4 z-[1060] overflow-y-auto">
       <div className="bg-card rounded-lg shadow-md w-full max-w-2xl my-4 overflow-hidden">
         {/* Header */}
         <div className="bg-red-600 text-white px-6 py-4 flex justify-between items-center shrink-0">

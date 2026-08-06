@@ -8,6 +8,7 @@ import { formatPhone } from '../utils/phone';
 import { getCompliance } from '../utils/compliance';
 import { DOC_TYPE_LABELS, DOC_STATUS_COLORS } from '../utils/constants';
 import { compressImageFile } from '../utils/imageCompression';
+import ResponsiveModal from './layout/ResponsiveModal';
 
 const STATUS_COLORS = DOC_STATUS_COLORS;
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -138,14 +139,30 @@ export default function PlayerModal({
   const comp = getCompliance(player, selectedSeason);
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center p-4 z-50">
-      <div className="bg-card rounded-lg shadow-md w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="bg-muted px-6 py-4 flex justify-between items-center text-foreground shrink-0">
+    <>
+      <ResponsiveModal onClose={onClose} size="md">
+        <ResponsiveModal.Header
+          className="bg-muted text-foreground"
+          actions={
+            onViewAsParent && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onViewAsParent(player);
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold text-muted-foreground hover:text-white transition-colors"
+                title="View as this player's parent"
+              >
+                <Eye size={12} /> {t('impersonation.viewAsParent')}
+              </button>
+            )
+          }
+        >
           <div className="flex items-center gap-3">
-            <span className="flex items-center justify-center bg-card text-foreground font-bold h-8 w-8 rounded-full text-sm">
+            <span className="flex items-center justify-center bg-card text-foreground font-bold h-8 w-8 rounded-full text-sm shrink-0">
               {player.jerseyNumber || '-'}
             </span>
-            <div className="flex flex-col">
+            <div className="flex min-w-0 flex-col">
               <h3 className="font-semibold text-lg leading-tight flex items-center gap-2">
                 {player.firstName} {player.lastName}
                 {player.birthdate && getUSAgeGroup(player.birthdate, selectedSeason) && (
@@ -164,26 +181,9 @@ export default function PlayerModal({
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {onViewAsParent && (
-              <button
-                onClick={() => {
-                  onClose();
-                  onViewAsParent(player);
-                }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold text-muted-foreground hover:text-white transition-colors"
-                title="View as this player's parent"
-              >
-                <Eye size={12} /> {t('impersonation.viewAsParent')}
-              </button>
-            )}
-            <button onClick={onClose} className="text-muted-foreground hover:text-white font-semibold text-xl">
-              &times;
-            </button>
-          </div>
-        </div>
+        </ResponsiveModal.Header>
 
-        <div className="p-6 overflow-y-auto custom-scrollbar">
+        <ResponsiveModal.Body>
           {/* Compliance Section */}
           <div className="mb-6 bg-background p-4 rounded-lg border border-border">
             <h4 className="text-xs font-semibold text-muted-foreground mb-3">{t('playerModal.playerSetup')}</h4>
@@ -443,20 +443,22 @@ export default function PlayerModal({
               </div>
             )}
           </div>
-        </div>
+        </ResponsiveModal.Body>
+      </ResponsiveModal>
 
-        <MedicalReleaseForm
-          show={showMedicalForm}
-          onClose={() => setShowMedicalForm(false)}
-          player={player}
-          clubId={clubId}
-          seasonId={selectedSeason}
-          onCompleted={() => {
-            onRefresh?.();
-            fetchPlayerDocs();
-          }}
-        />
-      </div>
-    </div>
+      {/* Sibling, not a child: as a descendant it would be clipped by the
+          panel's overflow and trapped in its stacking context. */}
+      <MedicalReleaseForm
+        show={showMedicalForm}
+        onClose={() => setShowMedicalForm(false)}
+        player={player}
+        clubId={clubId}
+        seasonId={selectedSeason}
+        onCompleted={() => {
+          onRefresh?.();
+          fetchPlayerDocs();
+        }}
+      />
+    </>
   );
 }
