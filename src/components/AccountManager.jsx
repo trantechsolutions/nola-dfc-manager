@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit, X, Save, Wallet, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit, X, Save, Wallet, Loader2, Eye, AlertTriangle } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import AdminCard from './layout/AdminCard';
 import { HOLDINGS, HOLDING_LABELS, HOLDING_ICONS, HOLDING_COLORS } from '../utils/holdings';
 
-const EMPTY_FORM = { id: null, name: '', handle: '', holding: 'bank', isActive: true, sortOrder: 0 };
+const EMPTY_FORM = {
+  id: null,
+  name: '',
+  handle: '',
+  holding: 'bank',
+  isActive: true,
+  isPublic: false,
+  sortOrder: 0,
+};
 
 /**
  * AccountManager — sits in the same `AdminCard` box as every other settings
@@ -30,6 +38,7 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
       handle: acc.handle || '',
       holding: acc.holding,
       isActive: acc.isActive,
+      isPublic: acc.isPublic ?? false,
       sortOrder: acc.sortOrder || 0,
     });
     setShowForm(true);
@@ -149,6 +158,18 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
                                 {t('accountMgr.archived')}
                               </span>
                             )}
+                            {/* Only the published state is badged. "Internal"
+                                is the default and the safe state — badging it
+                                would put a label on nearly every row and make
+                                the one that matters harder to spot. */}
+                            {acc.isActive && acc.isPublic && (
+                              <span
+                                className="flex shrink-0 items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 text-xs font-bold uppercase text-emerald-700 dark:text-emerald-400"
+                                title={t('accountMgr.publicHint')}
+                              >
+                                <Eye size={10} /> {t('accountMgr.publicBadge')}
+                              </span>
+                            )}
                           </div>
                           <p className="truncate text-xs font-medium text-muted-foreground">
                             {acc.handle || HOLDING_LABELS[acc.holding]}
@@ -258,18 +279,47 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 rounded-lg bg-background p-3">
-                <input
-                  type="checkbox"
-                  id="account-active"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                  className="h-4 w-4 rounded accent-primary"
-                />
-                <label htmlFor="account-active" className="text-xs font-semibold text-foreground">
-                  {t('accountMgr.active')}
-                </label>
+              <div className="space-y-2 rounded-lg bg-background p-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="account-active"
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    className="h-4 w-4 rounded accent-primary"
+                  />
+                  <label htmlFor="account-active" className="text-xs font-semibold text-foreground">
+                    {t('accountMgr.active')}
+                  </label>
+                </div>
+
+                {/* The one switch with an audience outside this page: checking
+                    it puts the handle in front of every parent on the team. */}
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    id="account-public"
+                    checked={formData.isPublic}
+                    onChange={(e) => setFormData({ ...formData, isPublic: e.target.checked })}
+                    className="mt-0.5 h-4 w-4 rounded accent-primary"
+                  />
+                  <div>
+                    <label htmlFor="account-public" className="text-xs font-semibold text-foreground">
+                      {t('accountMgr.public')}
+                    </label>
+                    <p className="text-xs text-muted-foreground">{t('accountMgr.publicHint')}</p>
+                  </div>
+                </div>
               </div>
+
+              {/* Published with nothing to publish — a parent would see the
+                  account name and no way to act on it, so say so before save. */}
+              {formData.isPublic && !formData.handle.trim() && (
+                <p className="flex items-start gap-1.5 text-xs font-semibold text-warning">
+                  <AlertTriangle size={13} className="mt-px shrink-0" />
+                  {t('accountMgr.publicNeedsHandle')}
+                </p>
+              )}
 
               {error && <p className="text-xs font-semibold text-destructive">{error}</p>}
 
