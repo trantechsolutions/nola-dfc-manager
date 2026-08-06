@@ -59,7 +59,9 @@ import { useAccounts } from './hooks/useAccounts';
 import { useBookBalance } from './hooks/useBookBalance';
 import { useAppSettings } from './hooks/useAppSettings';
 import { useDocumentTitle } from './hooks/useDocumentTitle';
+import { useViewScope } from './hooks/useViewScope';
 import { resolveSingleTeamMode, setAdminOverride } from './utils/singleTeamMode';
+import { isClubUiHidden } from './utils/viewScope';
 import { swCacheService } from './services/swCacheService';
 
 function App() {
@@ -131,6 +133,11 @@ function App() {
     },
     [saveSetting],
   );
+
+  // ── PER-USER VIEW SCOPE ──
+  // A club admin can narrow their own view to team level. Local preference
+  // only — it hides club chrome, it does not change what they're allowed to do.
+  const { viewScope, setViewScope } = useViewScope(user?.id);
 
   const {
     showPlayerForm,
@@ -537,12 +544,18 @@ function App() {
 
   // ── NAV ──
   const singleTeam = resolveSingleTeamMode(appSettings);
+  // App-wide single-team mode and the personal team-only scope hide the same
+  // surfaces — collapse them into one flag so nav and routes can't drift.
+  const clubUiHidden = isClubUiHidden({ singleTeam, viewScope });
+  // The scope picker is pointless under single-team mode (club UI is already
+  // gone for everyone) and meaningless for users with no club-level role.
+  const canSetViewScope = (isClubAdmin || isSuperAdmin) && !singleTeam;
 
   const appNavItems =
-    isSuperAdmin && !singleTeam ? [{ id: 'app-admin', label: 'App Admin', icon: Shield, section: 'app' }] : [];
+    isSuperAdmin && !clubUiHidden ? [{ id: 'app-admin', label: 'App Admin', icon: Shield, section: 'app' }] : [];
 
   const clubNavItems =
-    (isClubAdmin || isSuperAdmin) && !singleTeam
+    (isClubAdmin || isSuperAdmin) && !clubUiHidden
       ? [
           { id: 'club-overview', label: t('nav.overview'), icon: Building2, section: 'club' },
           { id: 'club-teams', label: t('nav.teams'), icon: ListTree, section: 'club' },
@@ -797,7 +810,10 @@ function App() {
                   showConfirm={showConfirm}
                   navigate={navigate}
                   bookBalance={bookBalance}
-                  singleTeam={singleTeam}
+                  clubUiHidden={clubUiHidden}
+                  viewScope={viewScope}
+                  onChangeViewScope={setViewScope}
+                  canSetViewScope={canSetViewScope}
                   singleTeamEnabled={singleTeamEnabled}
                   onToggleSingleTeam={handleToggleSingleTeam}
                   evaluationsHidden={evaluationsHidden}
