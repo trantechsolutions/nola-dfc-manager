@@ -1,9 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
-import { Rss, CreditCard, Link2, CheckCircle2, AlertCircle, Edit, Save, X, Loader2, Eye } from 'lucide-react';
+import {
+  Rss,
+  CreditCard,
+  Link2,
+  CheckCircle2,
+  AlertCircle,
+  Save,
+  Loader2,
+  Eye,
+  Layers,
+  Wallet,
+  Trash2,
+} from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
 import AccountManager from '../../components/AccountManager';
 import PaymentInstructionsText from '../../components/PaymentInstructionsText';
+import ViewScopeCard from '../../components/ViewScopeCard';
+import AdminCard from '../../components/layout/AdminCard';
+import FormRow from '../../components/layout/FormRow';
+import { formControl } from '../../components/layout/formControl';
+import SettingsShell from '../../components/layout/SettingsShell';
 import { PAYMENT_TOKENS, buildPreviewTokens } from '../../utils/paymentTemplate';
 
 export default function TeamSettingsView({
@@ -14,15 +31,25 @@ export default function TeamSettingsView({
   onSaveAccount,
   onDeleteAccount,
   isAccountSaving = false,
+  viewScope,
+  onChangeViewScope,
+  canSetViewScope = false,
 }) {
   const { t } = useT();
 
   // ── iCal state ──
-  const [isEditingIcs, setIsEditingIcs] = useState(false);
-  const [icsUrl, setIcsUrl] = useState('');
+  // The feed URL is edited in place (AdminLTE settings forms have no view/edit
+  // mode — the card footer owns the commit), so this mirrors the team record
+  // and re-syncs whenever the selected team changes.
+  const [icsUrl, setIcsUrl] = useState(selectedTeam?.icalUrl || '');
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [isSavingIcs, setIsSavingIcs] = useState(false);
+
+  useEffect(() => {
+    setIcsUrl(selectedTeam?.icalUrl || '');
+    setTestResult(null);
+  }, [selectedTeam?.id]);
 
   // ── Payment info state ──
   const [paymentInfo, setPaymentInfo] = useState(selectedTeam?.paymentInfo || '');
@@ -46,17 +73,6 @@ export default function TeamSettingsView({
   const currentIcsUrl = selectedTeam?.icalUrl || '';
 
   // ── iCal handlers ──
-  const handleStartEdit = () => {
-    setIcsUrl(currentIcsUrl);
-    setIsEditingIcs(true);
-    setTestResult(null);
-  };
-  const handleCancelEdit = () => {
-    setIsEditingIcs(false);
-    setIcsUrl('');
-    setTestResult(null);
-  };
-
   const handleTestUrl = async () => {
     if (!icsUrl.trim()) {
       setTestResult('invalid');
@@ -80,7 +96,6 @@ export default function TeamSettingsView({
     setIsSavingIcs(true);
     try {
       await supabaseService.updateTeam(selectedTeam.id, { icalUrl: icsUrl.trim() });
-      setIsEditingIcs(false);
       setTestResult(null);
       if (refreshContext) await refreshContext();
       if (showToast) showToast('Calendar feed updated.');
@@ -96,7 +111,6 @@ export default function TeamSettingsView({
     setIsSavingIcs(true);
     try {
       await supabaseService.updateTeam(selectedTeam.id, { icalUrl: '' });
-      setIsEditingIcs(false);
       setIcsUrl('');
       setTestResult(null);
       if (refreshContext) await refreshContext();
@@ -161,233 +175,234 @@ export default function TeamSettingsView({
 
   const previewTokens = buildPreviewTokens({ teamName: selectedTeam?.name || '' });
 
+  // The view-scope pane is the only way back once "Team only" has hidden Club →
+  // Settings, so it leads the rail when the current user can set it.
+  const sections = [
+    ...(canSetViewScope && onChangeViewScope
+      ? [{ id: 'view', label: t('settings.viewScope', 'View Scope'), icon: Layers }]
+      : []),
+    { id: 'calendar', label: t('settings.calendarFeed'), icon: Rss },
+    ...(onSaveAccount ? [{ id: 'accounts', label: t('settings.sectionAccounts', 'Accounts'), icon: Wallet }] : []),
+    { id: 'payments', label: t('settings.paymentInstructions'), icon: CreditCard },
+    { id: 'links', label: t('settings.reeplayerLinks'), icon: Link2 },
+  ];
+
+  const [section, setSection] = useState(sections[0]?.id || 'calendar');
+
   return (
-    <div className="max-w-2xl space-y-6">
-      <p className="text-xs text-muted-foreground font-semibold">{selectedTeam?.name}</p>
+    <div className="pb-24 md:pb-0">
+      <p className="mb-4 text-xs font-semibold text-muted-foreground">{selectedTeam?.name}</p>
 
-      {/* ── iCal Feed ── */}
-      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
-        <div className="p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-background rounded-lg">
-              <Rss size={16} className="text-muted-foreground" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-foreground">{t('settings.calendarFeed')}</p>
-              {currentIcsUrl ? (
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <CheckCircle2 size={11} className="text-emerald-700 dark:text-emerald-400" />
-                  <span className="text-xs text-muted-foreground font-medium truncate max-w-[300px]">
-                    {currentIcsUrl}
-                  </span>
+      <SettingsShell sections={sections} active={section} onChange={setSection}>
+        {section === 'view' && <ViewScopeCard viewScope={viewScope} onChange={onChangeViewScope} />}
+
+        {section === 'calendar' && (
+          <AdminCard
+            title={t('settings.calendarFeed')}
+            icon={Rss}
+            footer={
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                {currentIcsUrl ? (
+                  <button
+                    onClick={handleRemoveIcs}
+                    disabled={isSavingIcs}
+                    className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                  >
+                    <Trash2 size={13} /> {t('settings.removeFeed')}
+                  </button>
+                ) : (
+                  <span />
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleTestUrl}
+                    disabled={isTesting || !icsUrl.trim()}
+                    className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                  >
+                    {isTesting ? <Loader2 size={13} className="animate-spin" /> : null}
+                    {t('common.test')}
+                  </button>
+                  <SaveButton onClick={handleSaveIcs} busy={isSavingIcs} disabled={icsUrl.trim() === currentIcsUrl}>
+                    {t('settings.saveFeed')}
+                  </SaveButton>
                 </div>
-              ) : (
-                <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold mt-0.5 flex items-center gap-1">
-                  <AlertCircle size={11} /> {t('settings.noFeed')}
-                </p>
-              )}
-            </div>
-          </div>
-          {!isEditingIcs && (
-            <button
-              onClick={handleStartEdit}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted text-foreground text-xs font-semibold rounded-lg transition-colors"
-            >
-              <Edit size={12} /> {currentIcsUrl ? t('common.edit') : t('settings.addFeed')}
-            </button>
-          )}
-        </div>
-
-        {isEditingIcs && (
-          <div className="border-t border-border p-5 bg-background space-y-3">
-            <div>
-              <label className="text-xs font-bold text-muted-foreground">{t('settings.icsLabel')}</label>
-              <p className="text-xs text-muted-foreground mt-0.5 mb-2">{t('settings.icsHelp')}</p>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={icsUrl}
-                  onChange={(e) => {
-                    setIcsUrl(e.target.value);
-                    setTestResult(null);
-                  }}
-                  placeholder={t('settings.icsPlaceholder')}
-                  className="flex-grow border border-border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-ring bg-card"
-                />
-                <button
-                  onClick={handleTestUrl}
-                  disabled={isTesting || !icsUrl.trim()}
-                  className="px-4 py-2 bg-card border border-border text-foreground text-xs font-semibold rounded-lg hover:bg-muted disabled:opacity-50 shrink-0"
-                >
-                  {isTesting ? <Loader2 size={14} className="animate-spin" /> : t('common.test')}
-                </button>
               </div>
+            }
+            bodyClassName="space-y-4"
+          >
+            <StatusLine ok={Boolean(currentIcsUrl)} okText={currentIcsUrl} warnText={t('settings.noFeed')} />
+            <FormRow label={t('settings.icsLabel')} htmlFor="ics-url" help={t('settings.icsHelp')}>
+              <input
+                id="ics-url"
+                type="url"
+                value={icsUrl}
+                onChange={(e) => {
+                  setIcsUrl(e.target.value);
+                  setTestResult(null);
+                }}
+                placeholder={t('settings.icsPlaceholder')}
+                className={formControl}
+              />
               {testResult === 'valid' && (
-                <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold mt-1.5 flex items-center gap-1">
+                <p className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                   <CheckCircle2 size={12} /> {t('settings.feedVerified')}
                 </p>
               )}
               {testResult === 'invalid' && (
-                <p className="text-xs text-red-700 dark:text-red-400 font-semibold mt-1.5 flex items-center gap-1">
+                <p className="flex items-center gap-1 text-xs font-semibold text-destructive">
                   <AlertCircle size={12} /> {t('settings.feedInvalid')}
                 </p>
               )}
-            </div>
-            <div className="flex items-center justify-between pt-2 border-t border-border">
-              <div>
-                {currentIcsUrl && (
-                  <button
-                    onClick={handleRemoveIcs}
-                    disabled={isSavingIcs}
-                    className="text-xs font-semibold text-red-700 dark:text-red-400 hover:text-red-700 dark:text-red-300 disabled:opacity-50"
-                  >
-                    {t('settings.removeFeed')}
-                  </button>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleCancelEdit}
-                  className="flex items-center gap-1 px-3 py-1.5 text-muted-foreground text-xs font-semibold rounded-lg hover:bg-muted"
-                >
-                  <X size={12} /> {t('common.cancel')}
-                </button>
-                <button
-                  onClick={handleSaveIcs}
-                  disabled={isSavingIcs || !icsUrl.trim()}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg disabled:opacity-50"
-                >
-                  {isSavingIcs ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                  {t('settings.saveFeed')}
-                </button>
-              </div>
-            </div>
-          </div>
+            </FormRow>
+          </AdminCard>
         )}
-      </div>
 
-      {/* ── Accounts ── */}
-      {onSaveAccount && (
-        <div className="bg-card rounded-lg border border-border shadow-sm p-5">
+        {/* AccountManager supplies its own AdminCard so it shares the box, the
+            title bar and the footer rule with every other pane here. */}
+        {section === 'accounts' && onSaveAccount && (
           <AccountManager
             accounts={accounts}
             onSave={onSaveAccount}
             onDelete={onDeleteAccount}
             isSaving={isAccountSaving}
           />
-        </div>
-      )}
-
-      {/* ── ReePlayer Links ── */}
-      <div className="bg-card rounded-lg border border-border shadow-sm p-5 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-background rounded-lg">
-            <Link2 size={16} className="text-muted-foreground" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-foreground">{t('settings.reeplayerLinks')}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{t('settings.reeplayerLinksHelp')}</p>
-          </div>
-        </div>
-        <div>
-          <label className="text-xs font-bold text-muted-foreground">{t('settings.reeplayerPlayerLink')}</label>
-          <p className="text-xs text-muted-foreground mt-0.5 mb-2">{t('settings.reeplayerPlayerLinkHelp')}</p>
-          <input
-            type="url"
-            value={reeplayerPlayerLink}
-            onChange={(e) => setReeplayerPlayerLink(e.target.value)}
-            placeholder={t('settings.reeplayerPlayerLinkPlaceholder')}
-            className="w-full border border-border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-ring bg-card"
-          />
-        </div>
-        <div>
-          <label className="text-xs font-bold text-muted-foreground">{t('settings.reeplayerFanLink')}</label>
-          <p className="text-xs text-muted-foreground mt-0.5 mb-2">{t('settings.reeplayerFanLinkHelp')}</p>
-          <input
-            type="url"
-            value={reeplayerFanLink}
-            onChange={(e) => setReeplayerFanLink(e.target.value)}
-            placeholder={t('settings.reeplayerFanLinkPlaceholder')}
-            className="w-full border border-border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-ring bg-card"
-          />
-        </div>
-        <div className="flex justify-end">
-          <button
-            onClick={handleSaveReeplayer}
-            disabled={isSavingReeplayer}
-            className="flex items-center gap-1.5 px-5 py-2 bg-accent hover:bg-accent/90 text-accent-foreground text-xs font-bold rounded-lg disabled:opacity-50 transition-colors"
-          >
-            {isSavingReeplayer ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-            {t('common.save')}
-          </button>
-        </div>
-      </div>
-
-      {/* ── Payment Instructions ── */}
-      <div className="bg-card rounded-lg border border-border shadow-sm p-5 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-background rounded-lg">
-            <CreditCard size={16} className="text-muted-foreground" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-foreground">{t('settings.paymentInstructions')}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{t('settings.paymentHelp')}</p>
-          </div>
-        </div>
-        <textarea
-          ref={paymentRef}
-          value={paymentInfo}
-          onChange={(e) => setPaymentInfo(e.target.value)}
-          rows={5}
-          placeholder={t('settings.paymentPlaceholder')}
-          className="w-full border border-border rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-ring resize-none text-foreground"
-        />
-
-        {/* Merge tokens — resolved per family when the instructions are shown */}
-        <div className="space-y-2">
-          <p className="text-xs font-bold text-foreground">{t('settings.paymentTokens')}</p>
-          <p className="text-xs text-muted-foreground">{t('settings.paymentTokensHelp')}</p>
-          <div className="flex flex-wrap gap-1.5">
-            {PAYMENT_TOKENS.map(({ token }) => (
-              <button
-                key={token}
-                type="button"
-                onClick={() => insertPaymentToken(token)}
-                title={t(`settings.paymentToken_${token}`)}
-                className="px-2 py-1 rounded-lg border border-border bg-background text-xs font-mono font-semibold text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-              >
-                {`{${token}}`}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground">{t('settings.paymentMathHelp')}</p>
-        </div>
-
-        {/* Live preview against sample numbers */}
-        {paymentInfo.trim() && (
-          <div className="rounded-lg border border-border bg-background p-3 space-y-1.5">
-            <p className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
-              <Eye size={12} /> {t('settings.paymentPreview')}
-            </p>
-            <PaymentInstructionsText
-              template={paymentInfo}
-              tokens={previewTokens}
-              className="text-xs text-foreground"
-            />
-          </div>
         )}
 
-        <div className="flex justify-end">
-          <button
-            onClick={handleSavePayment}
-            disabled={isSavingPayment}
-            className="flex items-center gap-1.5 px-5 py-2 bg-accent hover:bg-accent/90 text-accent-foreground text-xs font-bold rounded-lg disabled:opacity-50 transition-colors"
+        {section === 'payments' && (
+          <AdminCard
+            title={t('settings.paymentInstructions')}
+            icon={CreditCard}
+            footer={
+              <div className="flex justify-end">
+                <SaveButton onClick={handleSavePayment} busy={isSavingPayment}>
+                  {t('common.save')}
+                </SaveButton>
+              </div>
+            }
+            bodyClassName="space-y-4"
           >
-            {isSavingPayment ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-            {t('common.save')}
-          </button>
-        </div>
-      </div>
+            <FormRow label={t('settings.paymentInstructions')} htmlFor="payment-info" help={t('settings.paymentHelp')}>
+              <textarea
+                id="payment-info"
+                ref={paymentRef}
+                value={paymentInfo}
+                onChange={(e) => setPaymentInfo(e.target.value)}
+                rows={5}
+                placeholder={t('settings.paymentPlaceholder')}
+                className={`${formControl} resize-none`}
+              />
+            </FormRow>
+
+            {/* Merge tokens — resolved per family when the instructions are shown */}
+            <FormRow label={t('settings.paymentTokens')} help={t('settings.paymentMathHelp')}>
+              <p className="text-xs text-muted-foreground">{t('settings.paymentTokensHelp')}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {PAYMENT_TOKENS.map(({ token }) => (
+                  <button
+                    key={token}
+                    type="button"
+                    onClick={() => insertPaymentToken(token)}
+                    title={t(`settings.paymentToken_${token}`)}
+                    className="rounded-md border border-border bg-background px-2 py-1 font-mono text-xs font-semibold text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                  >
+                    {`{${token}}`}
+                  </button>
+                ))}
+              </div>
+            </FormRow>
+
+            {/* Live preview against sample numbers */}
+            {paymentInfo.trim() && (
+              <FormRow label={t('settings.paymentPreview')}>
+                <div className="flex gap-2 rounded-lg border border-border bg-background p-3">
+                  <Eye size={12} className="mt-0.5 shrink-0 text-muted-foreground" />
+                  <PaymentInstructionsText
+                    template={paymentInfo}
+                    tokens={previewTokens}
+                    className="text-xs text-foreground"
+                  />
+                </div>
+              </FormRow>
+            )}
+          </AdminCard>
+        )}
+
+        {section === 'links' && (
+          <AdminCard
+            title={t('settings.reeplayerLinks')}
+            icon={Link2}
+            footer={
+              <div className="flex justify-end">
+                <SaveButton onClick={handleSaveReeplayer} busy={isSavingReeplayer}>
+                  {t('common.save')}
+                </SaveButton>
+              </div>
+            }
+            bodyClassName="space-y-4"
+          >
+            <p className="text-xs text-muted-foreground">{t('settings.reeplayerLinksHelp')}</p>
+            <FormRow
+              label={t('settings.reeplayerPlayerLink')}
+              htmlFor="reeplayer-player"
+              help={t('settings.reeplayerPlayerLinkHelp')}
+            >
+              <input
+                id="reeplayer-player"
+                type="url"
+                value={reeplayerPlayerLink}
+                onChange={(e) => setReeplayerPlayerLink(e.target.value)}
+                placeholder={t('settings.reeplayerPlayerLinkPlaceholder')}
+                className={formControl}
+              />
+            </FormRow>
+            <FormRow
+              label={t('settings.reeplayerFanLink')}
+              htmlFor="reeplayer-fan"
+              help={t('settings.reeplayerFanLinkHelp')}
+            >
+              <input
+                id="reeplayer-fan"
+                type="url"
+                value={reeplayerFanLink}
+                onChange={(e) => setReeplayerFanLink(e.target.value)}
+                placeholder={t('settings.reeplayerFanLinkPlaceholder')}
+                className={formControl}
+              />
+            </FormRow>
+          </AdminCard>
+        )}
+      </SettingsShell>
     </div>
+  );
+}
+
+/** AdminLTE puts the primary action alone in the `.card-footer`. */
+function SaveButton({ onClick, busy, disabled, children }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy || disabled}
+      className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+    >
+      {busy ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+      {children}
+    </button>
+  );
+}
+
+/** Configured/not-configured line that used to sit under the card title. */
+function StatusLine({ ok, okText, warnText }) {
+  if (!ok) {
+    return (
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+        <AlertCircle size={12} /> {warnText}
+      </p>
+    );
+  }
+  return (
+    <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <CheckCircle2 size={12} className="shrink-0 text-emerald-700 dark:text-emerald-400" />
+      <span className="truncate font-medium">{okText}</span>
+    </p>
   );
 }
