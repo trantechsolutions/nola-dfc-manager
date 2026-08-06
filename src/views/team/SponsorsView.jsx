@@ -708,7 +708,7 @@ export default function SponsorsView({
 
       {/* --- WATERFALL MODAL --- */}
       {showDistribute && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[1050] p-4">
           <div className="bg-card rounded-lg p-8 w-full max-w-md shadow-md animate-in zoom-in-95 duration-200">
             <h3 className="text-xl font-bold text-foreground mb-6 flex items-center gap-2">
               <ArrowDownNarrowWide className="text-emerald-700 dark:text-emerald-400" />{' '}

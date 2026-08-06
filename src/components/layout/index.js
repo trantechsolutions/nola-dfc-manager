@@ -4,6 +4,7 @@ export { default as AppHeader } from './AppHeader';
 export { default as AppFooter } from './AppFooter';
 export { default as ContentHeader } from './ContentHeader';
 export { default as AdminCard } from './AdminCard';
+export { default as ResponsiveModal } from './ResponsiveModal';
 export { default as SettingsShell } from './SettingsShell';
 export { default as FormRow } from './FormRow';
 export { formControl } from './formControl';

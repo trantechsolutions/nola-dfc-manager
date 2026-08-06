@@ -117,6 +117,19 @@
      │           ├───────────┤
      │           │  footer   │
      └───────────┴───────────┘
+
+   Stacking order. AdminLTE parks its chrome in the 1030s, which is above
+   anything Tailwind's z-0..z-50 scale can express — so overlays have to be
+   given explicit values in the same range or the header and the mobile tab
+   bar paint straight over them:
+
+     1030  .app-header
+     1037  mobile drawer scrim
+     1038  .app-sidebar
+     1050  overlay panels (ResponsiveModal and the hand-rolled modals)
+     1060  an overlay opened from inside another overlay
+     1070  ConfirmModal — reachable from inside any of the above
+     1080  toasts — usually the result of an action taken inside an overlay
    ═══════════════════════════════════════════════════════════════════════ */
 @layer components {
   .app-wrapper {

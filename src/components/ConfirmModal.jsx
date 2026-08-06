@@ -6,7 +6,8 @@ export default function ConfirmModal({ message, onConfirm, onCancel }) {
   const { t } = useT();
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[300] p-4">
+    // Above every other overlay: it is reachable from inside them.
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[1070] p-4">
       <div className="bg-card rounded-lg p-8 w-full max-w-sm shadow-md animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center gap-4 mb-6">
           <div className="p-3 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded-full">

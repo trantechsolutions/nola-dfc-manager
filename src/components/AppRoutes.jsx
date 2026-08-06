@@ -787,7 +787,10 @@ export default function AppRoutes({
           onRefresh={fetchData}
           onViewAsParent={(p) => {
             setImpersonatingAs(p);
-            navigate('/dashboard');
+            // Replace rather than push: this leaves from inside the player
+            // panel, so it should consume the panel's history entry instead of
+            // stacking on top of it and costing the user two Back presses.
+            navigate('/dashboard', { replace: true });
           }}
           showToast={showToast}
           showConfirm={showConfirm}
@@ -855,7 +858,9 @@ export default function AppRoutes({
 
       {toast && (
         <div
-          className={`fixed bottom-24 left-1/2 -translate-x-1/2 px-6 py-4 rounded-lg shadow-md font-bold z-[200] border-2 flex items-center gap-3 ${toast.isError ? 'bg-red-600 border-red-400 text-white' : 'bg-foreground border-border text-background'}`}
+          // Tops the stack — most toasts are the result of an action taken
+          // inside an overlay, so it has to clear every one of them.
+          className={`fixed bottom-24 left-1/2 -translate-x-1/2 px-6 py-4 rounded-lg shadow-md font-bold z-[1080] border-2 flex items-center gap-3 ${toast.isError ? 'bg-red-600 border-red-400 text-white' : 'bg-foreground border-border text-background'}`}
         >
           {toast.isError && <Settings size={20} className="animate-spin" />}
           <span>{toast.msg}</span>
