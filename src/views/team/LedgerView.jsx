@@ -67,7 +67,6 @@ export default function LedgerView({
       {/* ── HEADER ── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">{t('ledger.title')}</h2>
           <p className="text-xs text-muted-foreground font-semibold mt-0.5">
             {filteredTransactions.length}{' '}
             {filteredTransactions.length === 1 ? t('ledger.transaction') : t('ledger.transactions')}

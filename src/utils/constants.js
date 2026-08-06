@@ -1,3 +1,8 @@
+// ── App Identity ────────────────────────────────────────────
+// Fallback shown before a club is resolved. Kept here so the tab title and the
+// sidebar/mobile headers cannot drift apart.
+export const APP_NAME = 'Cantera Manager';
+
 // ── Document Types ──────────────────────────────────────────
 export const DOC_TYPE_LABELS = {
   medical_release: 'Medical Release',

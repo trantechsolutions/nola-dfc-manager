@@ -1,9 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Shield, Users, Save, UserPlus, X, CheckCircle2, CalendarDays } from 'lucide-react';
+import { Building2, Shield, Save, UserPlus, X, CalendarDays, Loader2 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { ALL_ROLES, CLUB_ROLES } from '../../utils/roles';
+import AdminCard from '../../components/layout/AdminCard';
+import FormRow from '../../components/layout/FormRow';
+import { formControl } from '../../components/layout/formControl';
+import ViewScopeCard from '../../components/ViewScopeCard';
+import { VIEW_SCOPE } from '../../utils/viewScope';
 
-export default function ClubSettings({ club, teams, userRoles, showToast, showConfirm, refreshContext }) {
+export default function ClubSettings({
+  club,
+  teams,
+  userRoles,
+  showToast,
+  showConfirm,
+  refreshContext,
+  viewScope,
+  onChangeViewScope,
+  canSetViewScope = false,
+}) {
   const [clubName, setClubName] = useState(club?.name || '');
   const [isSaving, setIsSaving] = useState(false);
   const [allRoles, setAllRoles] = useState([]);
@@ -123,121 +138,116 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
   });
 
   return (
-    <div className="space-y-6 pb-24 md:pb-6 max-w-3xl">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2.5 bg-muted rounded-lg">
-          <Building2 size={20} className="text-white" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Club Settings</h2>
-          <p className="text-xs text-muted-foreground font-semibold">
-            {club?.name} · {teams.length} teams
-          </p>
-        </div>
-      </div>
+    <div className="pb-24 md:pb-0">
+      <p className="mb-4 text-xs font-semibold text-muted-foreground">
+        {club?.name} · {teams.length} {teams.length === 1 ? 'team' : 'teams'}
+      </p>
 
-      {/* Club Info */}
-      <div className="bg-card p-5 rounded-lg border border-border shadow-sm">
-        <h3 className="font-bold text-foreground text-sm mb-4 flex items-center gap-2">
-          <Building2 size={16} className="text-blue-700 dark:text-blue-400" /> Club Information
-        </h3>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground">Club Name</label>
-            <input
-              type="text"
-              value={clubName}
-              onChange={(e) => setClubName(e.target.value)}
-              className="w-full border border-border rounded-lg p-3 font-semibold text-sm outline-none focus:ring-2 focus:ring-ring mt-1"
-            />
+      {/* ── Club Information ── */}
+      <AdminCard
+        title="Club Information"
+        icon={Building2}
+        footer={
+          <div className="flex justify-end">
+            <SaveButton onClick={handleSaveClub} busy={isSaving} disabled={!clubName.trim()}>
+              Save changes
+            </SaveButton>
           </div>
-          <div className="flex gap-3">
-            <div className="flex-grow">
-              <label className="text-xs font-semibold text-muted-foreground">Slug</label>
-              <p className="text-sm font-mono text-muted-foreground mt-1">{club?.slug}</p>
-            </div>
-            <div className="flex-grow">
-              <label className="text-xs font-semibold text-muted-foreground">Teams</label>
-              <p className="text-sm font-bold text-foreground mt-1">{teams.length}</p>
-            </div>
+        }
+        bodyClassName="space-y-4"
+      >
+        <FormRow label="Club name" htmlFor="club-name">
+          <input
+            id="club-name"
+            type="text"
+            value={clubName}
+            onChange={(e) => setClubName(e.target.value)}
+            className={formControl}
+          />
+        </FormRow>
+        <FormRow label="Slug" help="Set when the club is created — used in public links.">
+          <p className="pt-1.5 font-mono text-sm text-muted-foreground">{club?.slug}</p>
+        </FormRow>
+        <FormRow label="Teams">
+          <p className="pt-1.5 text-sm font-semibold text-foreground">{teams.length}</p>
+        </FormRow>
+      </AdminCard>
+
+      {/* ── Default Season ── */}
+      <AdminCard
+        title="Default Season"
+        icon={CalendarDays}
+        footer={
+          <div className="flex justify-end">
+            <SaveButton onClick={handleSaveDefaultSeason} busy={isSavingSeason}>
+              Save default season
+            </SaveButton>
           </div>
-          <button
-            onClick={handleSaveClub}
-            disabled={isSaving}
-            className="flex items-center gap-1.5 px-4 py-2 bg-accent text-accent-foreground text-xs font-bold rounded-lg hover:bg-accent/90 disabled:opacity-50"
+        }
+      >
+        <FormRow
+          label="Season"
+          htmlFor="default-season"
+          help="The season loaded when members open the app. Leave on “Auto” to follow the active season on the calendar."
+        >
+          <select
+            id="default-season"
+            value={defaultSeason}
+            onChange={(e) => setDefaultSeason(e.target.value)}
+            className={formControl}
           >
-            <Save size={14} /> Save Changes
-          </button>
-        </div>
-      </div>
+            <option value="">Auto (current season)</option>
+            {seasons.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name || s.id}
+              </option>
+            ))}
+          </select>
+        </FormRow>
+      </AdminCard>
 
-      {/* Default Season */}
-      <div className="bg-card p-5 rounded-lg border border-border shadow-sm">
-        <h3 className="font-bold text-foreground text-sm mb-4 flex items-center gap-2">
-          <CalendarDays size={16} className="text-blue-700 dark:text-blue-400" /> Default Season
-        </h3>
-        <div className="space-y-3">
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            The season loaded by default when members open the app. Leave on “Auto (current season)” to pick the active
-            season automatically from the calendar.
-          </p>
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground">Season</label>
-            <select
-              value={defaultSeason}
-              onChange={(e) => setDefaultSeason(e.target.value)}
-              className="w-full border border-border rounded-lg p-3 font-semibold text-sm outline-none focus:ring-2 focus:ring-ring mt-1 bg-card"
-            >
-              <option value="">Auto (current season)</option>
-              {seasons.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name || s.id}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
-            onClick={handleSaveDefaultSeason}
-            disabled={isSavingSeason}
-            className="flex items-center gap-1.5 px-4 py-2 bg-accent text-accent-foreground text-xs font-bold rounded-lg hover:bg-accent/90 disabled:opacity-50"
-          >
-            <Save size={14} /> Save Default Season
-          </button>
-        </div>
-      </div>
+      {/* ── View Scope ── personal preference; also lives in Team Settings so
+          an admin who hides the club section can get back to it. */}
+      {canSetViewScope && onChangeViewScope && (
+        <ViewScopeCard
+          viewScope={viewScope}
+          onChange={(scope) => {
+            onChangeViewScope(scope);
+            if (showToast && scope === VIEW_SCOPE.TEAM) {
+              showToast('Showing team-level items only. Switch back from Team → Settings.');
+            }
+          }}
+        />
+      )}
 
-      {/* Club-Level Roles */}
-      <div className="bg-card p-5 rounded-lg border border-border shadow-sm">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="font-bold text-foreground text-sm flex items-center gap-2">
-            <Shield size={16} className="text-blue-700 dark:text-blue-400" /> Club Administrators
-          </h3>
+      {/* ── Club Administrators ── */}
+      <AdminCard
+        title="Club Administrators"
+        icon={Shield}
+        tools={
           <button
             onClick={() => setShowInvite(!showInvite)}
-            className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 flex items-center gap-1"
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-primary transition-colors hover:bg-muted"
           >
-            <UserPlus size={12} /> Add Admin
+            <UserPlus size={13} /> Add admin
           </button>
-        </div>
-
+        }
+      >
         {showInvite && (
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700 space-y-2">
-            <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">
-              Assign a club-level role by email address
-            </p>
-            <div className="flex gap-2">
+          <div className="mb-4 space-y-2 rounded-lg border border-border bg-background p-3">
+            <p className="text-xs font-semibold text-foreground">Assign a club-level role by email address</p>
+            <div className="flex flex-wrap gap-2">
               <input
                 type="email"
                 placeholder="admin@example.com"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                className="flex-grow bg-card border border-blue-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-1 focus:ring-ring"
+                className={`${formControl} min-w-0 flex-1`}
               />
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value)}
-                className="bg-card border border-blue-200 rounded-lg px-2 py-1.5 text-xs font-semibold outline-none"
+                className={`${formControl} w-auto`}
               >
                 {Object.entries(CLUB_ROLES).map(([key, def]) => (
                   <option key={key} value={key}>
@@ -249,17 +259,17 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
             <p className="text-xs text-muted-foreground">
               User must have an existing account. If they don't, use the Invite flow in Club → Users instead.
             </p>
-            <div className="flex gap-2">
+            <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowInvite(false)}
-                className="text-xs font-semibold text-muted-foreground px-3 py-1.5"
+                className="rounded-md px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAssignClubRole}
                 disabled={isSaving || !inviteEmail.trim()}
-                className="text-xs font-bold text-white bg-blue-600 px-4 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="rounded-md bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
               >
                 Assign
               </button>
@@ -269,97 +279,98 @@ export default function ClubSettings({ club, teams, userRoles, showToast, showCo
 
         {/* All role holders */}
         {loadingRoles ? (
-          <p className="text-xs text-muted-foreground animate-pulse py-4">Loading roles...</p>
+          <p className="animate-pulse py-4 text-xs text-muted-foreground">Loading roles...</p>
         ) : Object.keys(rolesByUser).length === 0 ? (
-          <p className="text-xs text-muted-foreground italic py-4">No roles assigned yet.</p>
+          <p className="py-4 text-xs italic text-muted-foreground">No roles assigned yet.</p>
         ) : (
-          <div className="space-y-2">
+          <ul className="divide-y divide-border">
             {Object.values(rolesByUser).map(({ userId, roles }) => {
               const firstWithEmail = roles.find((r) => r.email || r.displayName);
               const displayLabel = firstWithEmail?.displayName || firstWithEmail?.email || userId.slice(0, 12) + '...';
               return (
-                <div key={userId} className="bg-background p-3 rounded-lg">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-semibold text-foreground">{displayLabel}</span>
-                  </div>
+                <li key={userId} className="py-3 first:pt-0 last:pb-0">
+                  <p className="mb-1.5 text-sm font-semibold text-foreground">{displayLabel}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {roles.map((r) => (
-                      <div
+                      <span
                         key={r.id}
-                        className="inline-flex items-center gap-1.5 bg-card border border-border rounded-lg px-2 py-1 group"
+                        className="group inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1"
                       >
                         {r.scope === 'team' && (
                           <span
-                            className="w-1.5 h-1.5 rounded-full"
+                            className="h-1.5 w-1.5 rounded-full"
                             style={{ backgroundColor: r.teamColor || '#94a3b8' }}
                           />
                         )}
-                        <span
-                          className={`text-xs font-bold uppercase ${
-                            r.role === 'club_admin'
-                              ? 'text-red-700 dark:text-red-400'
-                              : r.role === 'club_manager'
-                                ? 'text-violet-700 dark:text-violet-400'
-                                : r.role === 'team_manager'
-                                  ? 'text-blue-700 dark:text-blue-400'
-                                  : r.role === 'treasurer'
-                                    ? 'text-emerald-700 dark:text-emerald-400'
-                                    : r.role === 'scheduler'
-                                      ? 'text-violet-700 dark:text-violet-400'
-                                      : r.role === 'head_coach'
-                                        ? 'text-amber-700 dark:text-amber-400'
-                                        : 'text-muted-foreground'
-                          }`}
-                        >
+                        <span className={`text-xs font-bold uppercase ${roleToneClass(r.role)}`}>
                           {ALL_ROLES[r.role]?.label || r.role}
                         </span>
                         <span className="text-xs text-muted-foreground">{r.scopeName}</span>
                         <button
                           onClick={() => handleRevokeRole(r.id)}
-                          className="text-muted-foreground hover:text-red-700 dark:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label={`Remove ${ALL_ROLES[r.role]?.label || r.role} on ${r.scopeName}`}
+                          className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus:opacity-100 group-hover:opacity-100"
                         >
-                          <X size={10} />
+                          <X size={11} />
                         </button>
-                      </div>
+                      </span>
                     ))}
                   </div>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
-      </div>
+      </AdminCard>
 
-      {/* Role Legend */}
-      <div className="bg-card p-5 rounded-lg border border-border shadow-sm">
-        <h3 className="font-bold text-foreground text-sm mb-3">Role Permissions</h3>
-        <div className="space-y-2">
+      {/* ── Role Legend ── */}
+      <AdminCard title="Role Permissions" icon={Shield}>
+        <ul className="divide-y divide-border">
           {Object.entries(ALL_ROLES).map(([key, def]) => (
-            <div key={key} className="flex items-start gap-3 p-2.5 bg-background rounded-lg">
+            <li key={key} className="flex items-start gap-3 py-2.5 first:pt-0 last:pb-0">
               <span
-                className={`text-xs font-bold uppercase px-2 py-0.5 rounded shrink-0 mt-0.5 ${
-                  key === 'club_admin'
-                    ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-                    : key === 'club_manager'
-                      ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300'
-                      : key === 'team_manager'
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                        : key === 'treasurer'
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
-                          : key === 'scheduler'
-                            ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300'
-                            : key === 'head_coach'
-                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                              : 'bg-muted text-foreground'
-                }`}
+                className={`mt-0.5 shrink-0 rounded px-2 py-0.5 text-xs font-bold uppercase ${roleBadgeClass(key)}`}
               >
                 {def.label}
               </span>
-              <p className="text-xs text-muted-foreground leading-relaxed">{def.description}</p>
-            </div>
+              <p className="text-xs leading-relaxed text-muted-foreground">{def.description}</p>
+            </li>
           ))}
-        </div>
-      </div>
+        </ul>
+      </AdminCard>
     </div>
   );
+}
+
+/** AdminLTE puts the primary action alone in the `.card-footer`. */
+function SaveButton({ onClick, busy, disabled, children }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy || disabled}
+      className="flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+    >
+      {busy ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+      {children}
+    </button>
+  );
+}
+
+function roleToneClass(role) {
+  if (role === 'club_admin') return 'text-red-700 dark:text-red-400';
+  if (role === 'club_manager' || role === 'scheduler') return 'text-violet-700 dark:text-violet-400';
+  if (role === 'team_manager') return 'text-blue-700 dark:text-blue-400';
+  if (role === 'treasurer') return 'text-emerald-700 dark:text-emerald-400';
+  if (role === 'head_coach') return 'text-amber-700 dark:text-amber-400';
+  return 'text-muted-foreground';
+}
+
+function roleBadgeClass(role) {
+  if (role === 'club_admin') return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
+  if (role === 'club_manager' || role === 'scheduler')
+    return 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300';
+  if (role === 'team_manager') return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300';
+  if (role === 'treasurer') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300';
+  if (role === 'head_coach') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+  return 'bg-muted text-foreground';
 }

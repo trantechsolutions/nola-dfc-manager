@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Eye, FileText, Trash2, FolderOpen } from 'lucide-react';
+import { Eye, FileText, Trash2, FolderOpen, Upload, Camera } from 'lucide-react';
 import MedicalReleaseForm from './MedicalReleaseForm';
 import { supabaseService } from '../services/supabaseService';
 import { useT } from '../i18n/I18nContext';
@@ -7,8 +7,10 @@ import { getUSAgeGroup, getAge, formatDateOnly } from '../utils/ageGroup';
 import { formatPhone } from '../utils/phone';
 import { getCompliance } from '../utils/compliance';
 import { DOC_TYPE_LABELS, DOC_STATUS_COLORS } from '../utils/constants';
+import { compressImageFile } from '../utils/imageCompression';
 
 const STATUS_COLORS = DOC_STATUS_COLORS;
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 export default function PlayerModal({
   player,
@@ -22,11 +24,15 @@ export default function PlayerModal({
   onViewAsParent,
   showToast,
   showConfirm,
+  canUploadMedical = false,
 }) {
   const { t } = useT();
   const [showMedicalForm, setShowMedicalForm] = useState(false);
   const [playerDocs, setPlayerDocs] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
+  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const fetchPlayerDocs = useCallback(async () => {
     if (!player?.id) return;
@@ -73,6 +79,46 @@ export default function PlayerModal({
       fetchPlayerDocs();
     } catch {
       showToast?.(t('parent.docDeleteFail'), true);
+    }
+  };
+
+  const resetUpload = () => {
+    setShowUploadForm(false);
+    setUploadFile(null);
+  };
+
+  // Admin-side counterpart to the parent upload in ParentView. Files under
+  // doc_type 'medical_release' so it lands inside the tighter RLS scope
+  // (guardian + team_manager/club_admin) rather than general club-staff access.
+  const handleUploadMedical = async () => {
+    if (!uploadFile || !player?.id) return;
+    setUploading(true);
+    try {
+      // Phone snapshots arrive at full sensor resolution — downscale before the
+      // size check so a legitimate photo of a form isn't rejected outright.
+      const file = await compressImageFile(uploadFile);
+      if (file.size > MAX_UPLOAD_BYTES) {
+        showToast?.(t('parent.docTooLarge'), true);
+        return;
+      }
+
+      await supabaseService.uploadDocument(file, player.id, {
+        clubId: clubId || null,
+        teamId: player.teamId || null,
+        seasonId: selectedSeason || null,
+        docType: 'medical_release',
+        title: `${DOC_TYPE_LABELS.medical_release} - ${file.name}`,
+      });
+      await supabaseService.setSeasonCompliance(player.id, selectedSeason, 'medicalRelease', true);
+      onRefresh?.();
+      showToast?.(t('parent.docUploaded'));
+      resetUpload();
+      fetchPlayerDocs();
+    } catch (err) {
+      console.error('Upload failed:', err);
+      showToast?.(t('parent.docUploadFail'), true);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -286,9 +332,70 @@ export default function PlayerModal({
 
           {/* Documents Section */}
           <div className="mt-6 bg-background p-4 rounded-lg border border-border">
-            <h4 className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-              <FolderOpen size={13} /> {t('parent.documents')} ({playerDocs.length})
-            </h4>
+            <div className="flex items-center justify-between mb-3 gap-2">
+              <h4 className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
+                <FolderOpen size={13} /> {t('parent.documents')} ({playerDocs.length})
+              </h4>
+              {canUploadMedical && (
+                <button
+                  onClick={() => (showUploadForm ? resetUpload() : setShowUploadForm(true))}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                >
+                  <Upload size={12} />
+                  {t('parent.uploadMedical')}
+                </button>
+              )}
+            </div>
+
+            {canUploadMedical && showUploadForm && (
+              <div className="mb-3 p-3 rounded-lg bg-card border border-border space-y-3">
+                <p className="text-xs text-muted-foreground">{t('parent.medicalUploadHelp')}</p>
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground block mb-1">{t('parent.selectFile')}</label>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    onChange={(e) => setUploadFile(e.target.files[0] || null)}
+                    className="block w-full text-xs text-foreground
+                      file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0
+                      file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700
+                      dark:file:bg-blue-900/30 dark:file:text-blue-300
+                      hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50
+                      file:cursor-pointer file:transition-colors"
+                  />
+                  {/* Separate camera entry point — `capture` on the picker above
+                      would force the camera and hide the photo library. */}
+                  <label className="sm:hidden mt-2 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-muted text-foreground hover:bg-muted/80 cursor-pointer transition-colors">
+                    <Camera size={13} />
+                    {t('parent.takePhoto')}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => setUploadFile(e.target.files[0] || null)}
+                    />
+                  </label>
+                </div>
+                {uploadFile && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleUploadMedical}
+                      disabled={uploading}
+                      className="px-3 py-2 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {uploading ? t('parent.uploading') : t('parent.submitUpload')}
+                    </button>
+                    <button
+                      onClick={resetUpload}
+                      className="px-3 py-2 rounded-lg text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {docsLoading ? (
               <p className="text-xs text-muted-foreground font-semibold animate-pulse py-2">{t('common.loading')}...</p>

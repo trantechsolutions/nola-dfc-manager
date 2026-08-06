@@ -317,10 +317,9 @@ ${playerSummary}`;
   const m = matchReport;
 
   return (
-    <div className="space-y-5 pb-24 md:pb-6">
+    <div className="space-y-5">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">{t('insights.title')}</h2>
           <p className="text-xs text-muted-foreground font-semibold mt-0.5">
             {selectedSeason} (Jul {selectedSeason.split('-')[0]} – Jun {selectedSeason.split('-')[1]}) ·{' '}
             {seasonEvents.upcoming.length + seasonEvents.past.length} events ·{' '}

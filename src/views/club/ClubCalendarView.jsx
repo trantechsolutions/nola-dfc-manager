@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar, Loader2, Filter, X } from 'lucide-react';
+import { Loader2, Filter, X } from 'lucide-react';
 import ICAL from 'ical.js';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -103,11 +103,8 @@ export default function ClubCalendarView({ club, teams }) {
     );
 
   return (
-    <div className="space-y-5 pb-24 md:pb-6">
+    <div className="space-y-5">
       <div>
-        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Calendar size={24} className="text-blue-700 dark:text-blue-400" /> Club Calendar
-        </h2>
         <p className="text-xs text-muted-foreground font-semibold">
           {allEvents.length} events from {teamsWithEvents.length} teams
         </p>

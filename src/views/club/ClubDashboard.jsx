@@ -158,9 +158,7 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
               <Building2 size={20} className="text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-foreground">
-                {club?.name || 'Club'} {t('clubDash.overview')}
-              </h2>
+              <p className="text-sm font-semibold text-foreground">{club?.name || 'Club'}</p>
               <p className="text-xs text-muted-foreground font-semibold">
                 {selectedSeason} · {teams.length} teams · {totals.totalPlayers} players
               </p>

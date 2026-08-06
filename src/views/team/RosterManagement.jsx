@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Users,
-  Search,
-  Filter,
   ChevronDown,
   ChevronUp,
   Plus,
@@ -36,6 +34,9 @@ import { formatPhone, phoneDigits, phoneHref } from '../../utils/phone';
 import { getCompliance, isFullyCompliant } from '../../utils/compliance';
 import { DOC_TYPE_LABELS, DOC_STATUS_COLORS } from '../../utils/constants';
 import JerseyBadge from '../../components/JerseyBadge';
+import DirectoryCard, { DetailRow, EmptyRow } from '../../components/layout/DirectoryCard';
+import { DirectoryToolbar, SearchInput, FilterSelect, ToolbarButton } from '../../components/layout/DirectoryControls';
+import { paginate } from '../../utils/pagination';
 import BulkUploadModal from '../../components/BulkUploadModal';
 import MedicalReleaseForm from '../../components/MedicalReleaseForm';
 
@@ -187,8 +188,14 @@ export default function RosterManagement({
     setCurrentPage(1);
   }, [searchTerm, statusFilter, complianceFilter, sortField, sortDir]);
 
-  const totalRosterPages = Math.ceil(filteredPlayers.length / ROSTER_PAGE_SIZE);
-  const pagedPlayers = filteredPlayers.slice((currentPage - 1) * ROSTER_PAGE_SIZE, currentPage * ROSTER_PAGE_SIZE);
+  const {
+    slice: pagedPlayers,
+    page: rosterPage,
+    pageCount: totalRosterPages,
+    total: rosterTotal,
+    from: rosterFrom,
+    to: rosterTo,
+  } = paginate(filteredPlayers, currentPage, ROSTER_PAGE_SIZE);
 
   // ── Stats ──
   const activePlayers = players.filter((p) => p.status === 'active');
@@ -316,6 +323,29 @@ export default function RosterManagement({
     URL.revokeObjectURL(url);
   };
 
+  // `className` is repeated on the matching <td> so a column hides as a whole.
+  const columns = [
+    {
+      key: 'jersey',
+      label: '#',
+      className: 'hidden md:table-cell',
+      sortable: true,
+      sortDir: sortField === 'jerseyNumber' ? sortDir : null,
+      onSort: () => handleSort('jerseyNumber'),
+    },
+    {
+      key: 'player',
+      label: 'Player',
+      sortable: true,
+      sortDir: sortField === 'lastName' ? sortDir : null,
+      onSort: () => handleSort('lastName'),
+    },
+    { key: 'contacts', label: 'Contacts', className: 'hidden md:table-cell' },
+    { key: 'compliance', label: 'Compliance', className: 'hidden md:table-cell' },
+    { key: 'seasons', label: 'Seasons', className: 'hidden md:table-cell' },
+    { key: 'actions', label: '', align: 'right' },
+  ];
+
   // ── Sort handler ──
   const handleSort = (field) => {
     if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -325,167 +355,104 @@ export default function RosterManagement({
     }
   };
 
-  const SortIcon = ({ field }) => {
-    if (sortField !== field) return <ChevronDown size={10} className="text-muted-foreground" />;
-    return sortDir === 'asc' ? (
-      <ChevronUp size={10} className="text-blue-700 dark:text-blue-400" />
-    ) : (
-      <ChevronDown size={10} className="text-blue-700 dark:text-blue-400" />
-    );
-  };
-
   return (
-    <div className="space-y-5 pb-24 md:pb-6">
-      {/* ── HEADER ── */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Users size={22} className="text-blue-700 dark:text-blue-400" /> Roster Management
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Manage all players, contacts, and season enrollment for {selectedTeam?.name || 'your team'}.
-          </p>
-        </div>
-        {canEdit && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-foreground bg-card border border-border rounded-lg hover:bg-background transition-all"
-            >
-              <Download size={14} /> Export
-            </button>
-            <button
-              onClick={() => setShowBulkUpload(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-foreground bg-card border border-border rounded-lg hover:bg-background transition-all"
-            >
-              <Upload size={14} /> {t('rosterMgmt.bulkUpload')}
-            </button>
-            <button
-              onClick={onAddPlayer}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-accent-foreground bg-accent dark:bg-blue-600 rounded-lg hover:bg-accent/90 dark:hover:bg-blue-700 transition-all shadow-sm"
-            >
-              <Plus size={14} /> {t('rosterMgmt.addPlayer')}
-            </button>
-          </div>
-        )}
-      </div>
+    <div className="space-y-5">
+      <p className="text-xs font-semibold text-muted-foreground">
+        {selectedTeam?.name} · {activePlayers.length} active · {enrolledInSeason} in {selectedSeason} · {compliantCount}
+        /{activePlayers.length} compliant · {archivedPlayers.length} archived
+      </p>
 
-      {/* ── STATS ROW ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-card p-4 rounded-lg border border-border shadow-sm text-center">
-          <p className="text-2xl font-bold text-foreground">{activePlayers.length}</p>
-          <p className="text-xs font-semibold text-muted-foreground">Active</p>
-        </div>
-        <div className="bg-card p-4 rounded-lg border border-border shadow-sm text-center">
-          <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{enrolledInSeason}</p>
-          <p className="text-xs font-semibold text-muted-foreground">In {selectedSeason}</p>
-        </div>
-        <div className="bg-card p-4 rounded-lg border border-border shadow-sm text-center">
-          <p
-            className={`text-2xl font-bold ${compliantCount === activePlayers.length ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}
-          >
-            {compliantCount}/{activePlayers.length}
-          </p>
-          <p className="text-xs font-semibold text-muted-foreground">Compliant</p>
-        </div>
-        <div className="bg-card p-4 rounded-lg border border-border shadow-sm text-center">
-          <p className="text-2xl font-bold text-muted-foreground">{archivedPlayers.length}</p>
-          <p className="text-xs font-semibold text-muted-foreground">Archived</p>
-        </div>
-      </div>
-
-      {/* ── SEARCH + FILTERS ── */}
-      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
-        <div className="p-4 flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-grow">
-            <Search className="absolute left-3 top-2.5 text-muted-foreground" size={16} />
-            <input
-              type="text"
-              placeholder={t('rosterMgmt.searchPlaceholder')}
+      <DirectoryCard
+        title="Player Directory"
+        columns={columns}
+        noun={tp('common.player', 1)}
+        nounPlural={tp('common.player', 2)}
+        page={rosterPage}
+        pageCount={totalRosterPages}
+        total={rosterTotal}
+        from={rosterFrom}
+        to={rosterTo}
+        onPageChange={setCurrentPage}
+        toolbar={
+          <DirectoryToolbar>
+            <SearchInput
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-ring outline-none"
+              onChange={setSearchTerm}
+              placeholder={t('rosterMgmt.searchPlaceholder')}
+              label="Search players"
             />
-          </div>
-          <div className="flex gap-2 items-center">
-            <select
+            <FilterSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs font-semibold text-foreground bg-background border border-border rounded-lg px-3 py-2 outline-none"
-            >
-              <option value="active">{t('common.active')}</option>
-              <option value="archived">{t('common.archived')}</option>
-              <option value="all">{t('common.all')}</option>
-            </select>
-            <select
+              onChange={setStatusFilter}
+              label="Filter by status"
+              options={[
+                { value: 'active', label: t('common.active') },
+                { value: 'archived', label: t('common.archived') },
+                { value: 'all', label: t('common.all') },
+              ]}
+            />
+            <FilterSelect
               value={complianceFilter}
-              onChange={(e) => setComplianceFilter(e.target.value)}
-              className="text-xs font-semibold text-foreground bg-background border border-border rounded-lg px-3 py-2 outline-none"
-            >
-              <option value="all">{t('common.all')}</option>
-              <option value="compliant">{t('rosterMgmt.compliant')}</option>
-              <option value="non-compliant">{t('rosterMgmt.nonCompliant')}</option>
-            </select>
-          </div>
-        </div>
-
-        {/* ── TABLE HEADER ── */}
-        <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2 bg-background border-y border-border text-xs font-semibold text-muted-foreground">
-          <div
-            className="col-span-1 flex items-center gap-1 cursor-pointer select-none"
-            onClick={() => handleSort('jerseyNumber')}
-          >
-            # <SortIcon field="jerseyNumber" />
-          </div>
-          <div
-            className="col-span-3 flex items-center gap-1 cursor-pointer select-none"
-            onClick={() => handleSort('lastName')}
-          >
-            Player <SortIcon field="lastName" />
-          </div>
-          <div className="col-span-3">Contacts</div>
-          <div className="col-span-2">Compliance</div>
-          <div className="col-span-2">Seasons</div>
-          <div className="col-span-1 text-right">Actions</div>
-        </div>
-
-        {/* ── PLAYER ROWS ── */}
+              onChange={setComplianceFilter}
+              label="Filter by compliance"
+              options={[
+                { value: 'all', label: t('common.all') },
+                { value: 'compliant', label: t('rosterMgmt.compliant') },
+                { value: 'non-compliant', label: t('rosterMgmt.nonCompliant') },
+              ]}
+            />
+            {canEdit && (
+              <>
+                <ToolbarButton icon={Download} onClick={handleExportCSV}>
+                  Export
+                </ToolbarButton>
+                <ToolbarButton icon={Upload} onClick={() => setShowBulkUpload(true)}>
+                  {t('rosterMgmt.bulkUpload')}
+                </ToolbarButton>
+                <ToolbarButton icon={Plus} tone="primary" onClick={onAddPlayer}>
+                  {t('rosterMgmt.addPlayer')}
+                </ToolbarButton>
+              </>
+            )}
+          </DirectoryToolbar>
+        }
+      >
         {filteredPlayers.length === 0 ? (
-          <div className="py-12 text-center text-muted-foreground font-semibold italic">
+          <EmptyRow colSpan={6}>
             {searchTerm
               ? 'No players match your search.'
               : statusFilter === 'archived'
                 ? 'No archived players.'
                 : 'No players on this roster yet.'}
-          </div>
+          </EmptyRow>
         ) : (
-          <div className="divide-y divide-border">
-            {pagedPlayers.map((player) => {
-              const isExpanded = expandedPlayerId === player.id;
-              const comp = getCompliance(player, selectedSeason);
-              const missingCount = Object.values(comp).filter((v) => !v).length;
-              const isCompliant = missingCount === 0;
-              const enrolledSeasons = Object.keys(player.seasonProfiles || {});
-              const isArchived = player.status === 'archived';
+          pagedPlayers.map((player) => {
+            const isExpanded = expandedPlayerId === player.id;
+            const comp = getCompliance(player, selectedSeason);
+            const missingCount = Object.values(comp).filter((v) => !v).length;
+            const isCompliant = missingCount === 0;
+            const enrolledSeasons = Object.keys(player.seasonProfiles || {});
+            const isArchived = player.status === 'archived';
 
-              return (
-                <div key={player.id} className={`${isArchived ? 'opacity-60' : ''}`}>
-                  {/* ── Main Row ── */}
-                  <div
-                    className={`grid grid-cols-1 md:grid-cols-12 gap-2 px-4 py-3 items-center cursor-pointer hover:bg-background/80 transition-colors ${isExpanded ? 'bg-blue-50/30 dark:bg-blue-900/20' : ''}`}
-                    onClick={() => setExpandedPlayerId(isExpanded ? null : player.id)}
-                  >
-                    {/* Jersey */}
-                    <div className="hidden md:flex col-span-1 items-center">
-                      <JerseyBadge
-                        number={player.jerseyNumber}
-                        size={32}
-                        color={isArchived ? 'slate' : isCompliant ? 'slate' : 'amber'}
-                      />
-                    </div>
+            return (
+              <React.Fragment key={player.id}>
+                {/* Main row — clicking anywhere toggles the detail panel */}
+                <tr
+                  className={`cursor-pointer border-b border-border align-middle transition-colors hover:bg-foreground/[0.03] ${isArchived ? 'opacity-60' : ''} ${isExpanded ? 'bg-foreground/[0.03]' : ''}`}
+                  onClick={() => setExpandedPlayerId(isExpanded ? null : player.id)}
+                >
+                  {/* Jersey */}
+                  <td className="hidden px-4 py-2.5 md:table-cell">
+                    <JerseyBadge
+                      number={player.jerseyNumber}
+                      size={32}
+                      color={isArchived ? 'slate' : isCompliant ? 'slate' : 'amber'}
+                    />
+                  </td>
 
-                    {/* Name */}
-                    <div className="col-span-1 md:col-span-3 flex items-center gap-3">
+                  {/* Name */}
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-3">
                       <div className="md:hidden">
                         <JerseyBadge
                           number={player.jerseyNumber}
@@ -515,44 +482,46 @@ export default function RosterManagement({
                         )}
                       </div>
                     </div>
+                  </td>
 
-                    {/* Contacts (desktop) */}
-                    <div className="hidden md:block col-span-3">
-                      {player.guardians?.length > 0 ? (
-                        <div className="space-y-0.5">
-                          {player.guardians.slice(0, 2).map((g, i) => (
-                            <p key={i} className="text-xs text-muted-foreground truncate">
-                              <span className="font-semibold text-foreground">{g.name}</span>
-                              {g.email && <span className="text-muted-foreground"> · {g.email}</span>}
-                            </p>
-                          ))}
-                          {player.guardians.length > 2 && (
-                            <p className="text-xs text-blue-700 dark:text-blue-400 font-semibold">
-                              +{player.guardians.length - 2} more
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground italic">No contacts</p>
-                      )}
-                    </div>
+                  {/* Contacts (desktop) */}
+                  <td className="hidden px-4 py-2.5 md:table-cell">
+                    {player.guardians?.length > 0 ? (
+                      <div className="space-y-0.5">
+                        {player.guardians.slice(0, 2).map((g, i) => (
+                          <p key={i} className="text-xs text-muted-foreground truncate">
+                            <span className="font-semibold text-foreground">{g.name}</span>
+                            {g.email && <span className="text-muted-foreground"> · {g.email}</span>}
+                          </p>
+                        ))}
+                        {player.guardians.length > 2 && (
+                          <p className="text-xs text-blue-700 dark:text-blue-400 font-semibold">
+                            +{player.guardians.length - 2} more
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">No contacts</p>
+                    )}
+                  </td>
 
-                    {/* Compliance (desktop) */}
-                    <div className="hidden md:flex col-span-2 items-center gap-1.5">
-                      {isCompliant ? (
-                        <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-lg">
-                          <ShieldCheck size={12} /> Complete
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded-lg">
-                          <AlertCircle size={12} />
-                          {missingCount} missing
-                        </span>
-                      )}
-                    </div>
+                  {/* Compliance (desktop) */}
+                  <td className="hidden px-4 py-2.5 md:table-cell">
+                    {isCompliant ? (
+                      <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-lg">
+                        <ShieldCheck size={12} /> Complete
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded-lg">
+                        <AlertCircle size={12} />
+                        {missingCount} missing
+                      </span>
+                    )}
+                  </td>
 
-                    {/* Seasons (desktop) */}
-                    <div className="hidden md:flex col-span-2 flex-wrap gap-1">
+                  {/* Seasons (desktop) */}
+                  <td className="hidden px-4 py-2.5 md:table-cell">
+                    <div className="flex flex-wrap gap-1">
                       {enrolledSeasons.length > 0 ? (
                         enrolledSeasons.map((sid) => (
                           <span
@@ -566,20 +535,22 @@ export default function RosterManagement({
                         <span className="text-xs text-muted-foreground italic">None</span>
                       )}
                     </div>
+                  </td>
 
-                    {/* Expand indicator */}
-                    <div className="hidden md:flex col-span-1 justify-end">
-                      {isExpanded ? (
-                        <ChevronUp size={14} className="text-blue-700 dark:text-blue-400" />
-                      ) : (
-                        <ChevronDown size={14} className="text-muted-foreground" />
-                      )}
-                    </div>
-                  </div>
+                  {/* Expand indicator */}
+                  <td className="px-4 py-2.5 text-right">
+                    {isExpanded ? (
+                      <ChevronUp size={14} className="ml-auto text-primary" />
+                    ) : (
+                      <ChevronDown size={14} className="ml-auto text-muted-foreground" />
+                    )}
+                  </td>
+                </tr>
 
-                  {/* ── Expanded Detail Panel ── */}
-                  {isExpanded && (
-                    <div className="bg-background/50 border-t border-border p-4 md:px-6 space-y-4">
+                {/* ── Expanded Detail Panel ── */}
+                {isExpanded && (
+                  <DetailRow colSpan={6}>
+                    <div className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* ── Contacts Section ── */}
                         <div className="bg-card rounded-lg border border-border p-4">
@@ -872,43 +843,13 @@ export default function RosterManagement({
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  </DetailRow>
+                )}
+              </React.Fragment>
+            );
+          })
         )}
-
-        {/* ── Footer count + pagination ── */}
-        <div className="px-4 py-3 bg-background border-t border-border flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground">
-            Showing {Math.min((currentPage - 1) * ROSTER_PAGE_SIZE + 1, filteredPlayers.length)}–
-            {Math.min(currentPage * ROSTER_PAGE_SIZE, filteredPlayers.length)} of {filteredPlayers.length}{' '}
-            {tp('common.player', filteredPlayers.length)}
-          </span>
-          {totalRosterPages > 1 && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-2 py-1 text-xs font-semibold text-muted-foreground disabled:opacity-30 hover:text-blue-700 dark:text-blue-400 transition-colors"
-              >
-                ‹ Prev
-              </button>
-              <span className="text-xs font-semibold text-muted-foreground">
-                {currentPage} / {totalRosterPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalRosterPages, p + 1))}
-                disabled={currentPage === totalRosterPages}
-                className="px-2 py-1 text-xs font-semibold text-muted-foreground disabled:opacity-30 hover:text-blue-700 dark:text-blue-400 transition-colors"
-              >
-                Next ›
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      </DirectoryCard>
 
       {/* ── BULK UPLOAD MODAL ── */}
       <BulkUploadModal

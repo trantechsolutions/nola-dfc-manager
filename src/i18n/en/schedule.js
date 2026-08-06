@@ -89,6 +89,14 @@ export default {
 
   settings: {
     title: 'Team Settings',
+    viewScope: 'View Scope',
+    viewScopeHelp:
+      'Applies to your account on this browser only. Your permissions are unchanged — switch back any time from Team Settings.',
+    viewScopeClub: 'Club + Team',
+    viewScopeClubHelp: 'Show the club overview, teams, players, and club settings alongside your team.',
+    viewScopeTeam: 'Team only',
+    viewScopeTeamHelp: 'Hide the club and app-admin sections so only team management is on screen.',
+    sectionAccounts: 'Accounts',
     calendarFeed: 'Calendar Feed',
     noFeed: "No feed configured — schedule won't sync",
     addFeed: 'Add Feed',

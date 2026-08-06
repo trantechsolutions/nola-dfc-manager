@@ -235,14 +235,10 @@ export default function SuperAdminView({
   }
 
   return (
-    <div className="space-y-6 pb-24 md:pb-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Shield size={24} className="text-violet-700 dark:text-violet-400" />
-            App Administration
-          </h2>
           <p className="text-xs text-muted-foreground font-semibold mt-1">
             {clubs.length} club{clubs.length !== 1 ? 's' : ''} registered
           </p>

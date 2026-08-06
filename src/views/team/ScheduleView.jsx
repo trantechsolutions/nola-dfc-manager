@@ -342,11 +342,10 @@ export default function ScheduleView({
   );
 
   return (
-    <div className="space-y-5 pb-20 md:pb-6">
-      {/* ── Header ── */}
+    <div className="space-y-5">
+      {/* ── Header ── (page title now comes from the shell's content header) */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">{t('schedule.title')}</h2>
           <p className="text-xs text-muted-foreground font-semibold mt-0.5">
             {t('schedule.upcomingStat', { n: seasonEvents.upcoming.length })} ·{' '}
             {t('schedule.pastStat', { n: seasonEvents.past.length })}
@@ -469,12 +468,10 @@ export default function ScheduleView({
       )}
 
       {/* ── Calendar ── */}
+      {/* CalendarView now owns its own two-column layout and inner scroll —
+          no outer min-width wrapper, which would defeat the left rail. */}
       {tab === 'calendar' && (
-        <div className="w-full overflow-x-auto pb-4">
-          <div className="min-w-[640px]">
-            <CalendarView events={events} blackoutDates={blackoutDates} onToggleBlackout={onToggleBlackout} />
-          </div>
-        </div>
+        <CalendarView events={events} blackoutDates={blackoutDates} onToggleBlackout={onToggleBlackout} />
       )}
 
       {/* ── Planner (inter-team matchup scheduling) ── */}

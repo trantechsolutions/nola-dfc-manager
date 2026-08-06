@@ -61,7 +61,12 @@ export default function AppRoutes({
   refreshContext,
 
   // App-wide settings / single-team mode
-  singleTeam,
+  // True when club + app-admin surfaces are hidden — either app-wide
+  // (single-team mode) or because this admin narrowed their own view scope.
+  clubUiHidden,
+  viewScope,
+  onChangeViewScope,
+  canSetViewScope,
   singleTeamEnabled,
   onToggleSingleTeam,
   evaluationsHidden,
@@ -201,7 +206,7 @@ export default function AppRoutes({
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-            {!singleTeam && isSuperAdmin && (
+            {!clubUiHidden && isSuperAdmin && (
               <Route
                 path="/app-admin"
                 element={
@@ -224,7 +229,7 @@ export default function AppRoutes({
               />
             )}
 
-            {!singleTeam && (isClubAdmin || isSuperAdmin) && (
+            {!clubUiHidden && (isClubAdmin || isSuperAdmin) && (
               <>
                 <Route
                   path="/club-overview"
@@ -262,7 +267,17 @@ export default function AppRoutes({
                   path="/club-admin"
                   element={
                     <ClubAdminHub
-                      settingsProps={{ club, teams, userRoles, showToast, showConfirm, refreshContext }}
+                      settingsProps={{
+                        club,
+                        teams,
+                        userRoles,
+                        showToast,
+                        showConfirm,
+                        refreshContext,
+                        viewScope,
+                        onChangeViewScope,
+                        canSetViewScope,
+                      }}
                       usersProps={{ club, teams, showToast, showConfirm, refreshContext }}
                       categoriesProps={{
                         customCategories,
@@ -331,7 +346,6 @@ export default function AppRoutes({
               element={
                 effectiveIsStaff ? (
                   <TeamOverviewView
-                    selectedTeam={effectiveTeam}
                     players={seasonalPlayers}
                     archivedPlayers={archivedPlayers}
                     teamBalance={teamBalance}
@@ -340,9 +354,7 @@ export default function AppRoutes({
                     selectedSeasonData={currentSeasonData}
                     transactions={seasonalTransactions}
                     calculatePlayerFinancials={calculatePlayerFinancials}
-                    seasons={seasons}
                     selectedSeason={selectedSeason}
-                    setSelectedSeason={setSelectedSeason}
                     canViewFinancials={can(PERMISSIONS.TEAM_VIEW_BUDGET) || can(PERMISSIONS.TEAM_VIEW_LEDGER)}
                     onAddPlayer={() => {
                       setPlayerToEdit(null);
@@ -435,6 +447,9 @@ export default function AppRoutes({
                     onSaveAccount={saveAccount}
                     onDeleteAccount={deleteAccount}
                     isAccountSaving={isAccountSaving}
+                    viewScope={viewScope}
+                    onChangeViewScope={onChangeViewScope}
+                    canSetViewScope={canSetViewScope}
                   />
                 }
               />
@@ -776,6 +791,7 @@ export default function AppRoutes({
           }}
           showToast={showToast}
           showConfirm={showConfirm}
+          canUploadMedical={can(PERMISSIONS.TEAM_VIEW_MEDICAL_DOCS)}
         />
       )}
 

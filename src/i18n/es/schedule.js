@@ -89,6 +89,14 @@ export default {
 
   settings: {
     title: 'Configuración del Equipo',
+    viewScope: 'Alcance de la Vista',
+    viewScopeHelp:
+      'Aplica solo a tu cuenta en este navegador. Tus permisos no cambian — puedes volver cuando quieras desde Configuración del Equipo.',
+    viewScopeClub: 'Club + Equipo',
+    viewScopeClubHelp: 'Muestra el resumen del club, los equipos, los jugadores y la configuración del club.',
+    viewScopeTeam: 'Solo Equipo',
+    viewScopeTeamHelp: 'Oculta las secciones de club y administración para dejar solo la gestión de equipos.',
+    sectionAccounts: 'Cuentas',
     calendarFeed: 'Fuente del Calendario',
     noFeed: 'No hay fuente configurada — el calendario no se sincronizará',
     addFeed: 'Agregar Fuente',

@@ -30,10 +30,7 @@ import ResetPasswordView from './views/general/ResetPasswordView';
 import PublicCalendarView from './views/general/PublicCalendarView';
 
 // Components
-import DesktopSidebar from './components/DesktopSidebar';
-import MobileHeader from './components/MobileHeader';
-import MobileMenu from './components/MobileMenu';
-import MobileBottomNav from './components/MobileBottomNav';
+import AppShell from './components/layout/AppShell';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppRoutes from './components/AppRoutes';
 import NotificationPermissionBanner from './components/NotificationPermissionBanner';
@@ -61,7 +58,10 @@ import { useCategoryManager } from './hooks/useCategoryManager';
 import { useAccounts } from './hooks/useAccounts';
 import { useBookBalance } from './hooks/useBookBalance';
 import { useAppSettings } from './hooks/useAppSettings';
+import { useDocumentTitle } from './hooks/useDocumentTitle';
+import { useViewScope } from './hooks/useViewScope';
 import { resolveSingleTeamMode, setAdminOverride } from './utils/singleTeamMode';
+import { isClubUiHidden } from './utils/viewScope';
 import { swCacheService } from './services/swCacheService';
 
 function App() {
@@ -134,6 +134,11 @@ function App() {
     [saveSetting],
   );
 
+  // ── PER-USER VIEW SCOPE ──
+  // A club admin can narrow their own view to team level. Local preference
+  // only — it hides club chrome, it does not change what they're allowed to do.
+  const { viewScope, setViewScope } = useViewScope(user?.id);
+
   const {
     showPlayerForm,
     setShowPlayerForm,
@@ -152,10 +157,6 @@ function App() {
     setImpersonatingAs,
     toast,
     setToast,
-    mobileMenuOpen,
-    setMobileMenuOpen,
-    sidebarSettingsOpen,
-    setSidebarSettingsOpen,
     showToast,
     showConfirm,
   } = useModalState();
@@ -247,6 +248,11 @@ function App() {
   }, [effectiveIsStaff, parentTeamId]);
 
   const effectiveTeam = selectedTeam || parentTeam;
+
+  // Tab title tracks the team in context — for parents that is the team derived
+  // from their player, not a staff team selection.
+  useDocumentTitle(effectiveTeam?.name, club?.name);
+
   const { events, blackoutDates, toggleBlackout, syncCalendar } = useSchedule(user, effectiveTeam);
   const {
     matchups,
@@ -538,12 +544,18 @@ function App() {
 
   // ── NAV ──
   const singleTeam = resolveSingleTeamMode(appSettings);
+  // App-wide single-team mode and the personal team-only scope hide the same
+  // surfaces — collapse them into one flag so nav and routes can't drift.
+  const clubUiHidden = isClubUiHidden({ singleTeam, viewScope });
+  // The scope picker is pointless under single-team mode (club UI is already
+  // gone for everyone) and meaningless for users with no club-level role.
+  const canSetViewScope = (isClubAdmin || isSuperAdmin) && !singleTeam;
 
   const appNavItems =
-    isSuperAdmin && !singleTeam ? [{ id: 'app-admin', label: 'App Admin', icon: Shield, section: 'app' }] : [];
+    isSuperAdmin && !clubUiHidden ? [{ id: 'app-admin', label: 'App Admin', icon: Shield, section: 'app' }] : [];
 
   const clubNavItems =
-    (isClubAdmin || isSuperAdmin) && !singleTeam
+    (isClubAdmin || isSuperAdmin) && !clubUiHidden
       ? [
           { id: 'club-overview', label: t('nav.overview'), icon: Building2, section: 'club' },
           { id: 'club-teams', label: t('nav.teams'), icon: ListTree, section: 'club' },
@@ -556,42 +568,53 @@ function App() {
         ]
       : [];
 
+  // `section` drives the sidebar group header and the breadcrumb trail
+  // (see utils/pageMeta.js) — keep it set on every nav item.
   const seasonNavItems = effectiveIsStaff
     ? [
-        { id: 'dashboard', label: t('nav.seasonOverview'), icon: LayoutDashboard },
+        { id: 'dashboard', label: t('nav.seasonOverview'), icon: LayoutDashboard, section: 'season' },
         ...(can(PERMISSIONS.TEAM_VIEW_BUDGET)
-          ? [{ id: 'finance/budget', label: t('nav.budget'), icon: FileSpreadsheet }]
+          ? [{ id: 'finance/budget', label: t('nav.budget'), icon: FileSpreadsheet, section: 'season' }]
           : []),
         ...(can(PERMISSIONS.TEAM_VIEW_LEDGER)
-          ? [{ id: 'finance/ledger', label: t('nav.ledger'), icon: ReceiptText }]
+          ? [{ id: 'finance/ledger', label: t('nav.ledger'), icon: ReceiptText, section: 'season' }]
           : []),
         ...(can(PERMISSIONS.TEAM_VIEW_SPONSORS)
-          ? [{ id: 'finance/fundraising', label: t('nav.fundraising'), icon: Handshake }]
+          ? [{ id: 'finance/fundraising', label: t('nav.fundraising'), icon: Handshake, section: 'season' }]
           : []),
         ...(can(PERMISSIONS.TEAM_VIEW_LEDGER)
-          ? [{ id: 'finance/book-balance', label: t('nav.bookBalance'), icon: BookOpen }]
+          ? [{ id: 'finance/book-balance', label: t('nav.bookBalance'), icon: BookOpen, section: 'season' }]
           : []),
       ]
-    : [{ id: 'dashboard', label: t('nav.myPlayer'), icon: Users }];
+    : [{ id: 'dashboard', label: t('nav.myPlayer'), icon: Users, section: 'season' }];
 
   const teamNavItems = effectiveIsStaff
     ? [
-        { id: 'schedule', label: t('nav.schedule'), icon: Calendar },
-        ...(can(PERMISSIONS.TEAM_VIEW_ROSTER) ? [{ id: 'people', label: t('nav.players'), icon: Users }] : []),
+        { id: 'schedule', label: t('nav.schedule'), icon: Calendar, section: 'team' },
+        ...(can(PERMISSIONS.TEAM_VIEW_ROSTER)
+          ? [{ id: 'people', label: t('nav.players'), icon: Users, section: 'team' }]
+          : []),
         ...(can(PERMISSIONS.TEAM_MANAGE_USERS)
-          ? [{ id: 'team-users', label: t('nav.users', 'Users'), icon: Shield }]
+          ? [{ id: 'team-users', label: t('nav.users', 'Users'), icon: Shield, section: 'team' }]
           : []),
         ...(can(PERMISSIONS.TEAM_VIEW_INSIGHTS) && !insightsHidden
-          ? [{ id: 'insights', label: t('nav.insights'), icon: Sparkles }]
+          ? [{ id: 'insights', label: t('nav.insights'), icon: Sparkles, section: 'team' }]
           : []),
         ...(can(PERMISSIONS.TEAM_VIEW_ROSTER) && !evaluationsHidden
-          ? [{ id: 'season-evaluations', label: t('nav.evaluations', 'Evaluations'), icon: ClipboardCheck }]
+          ? [
+              {
+                id: 'season-evaluations',
+                label: t('nav.evaluations', 'Evaluations'),
+                icon: ClipboardCheck,
+                section: 'team',
+              },
+            ]
           : []),
         ...(can(PERMISSIONS.TEAM_EDIT_SCHEDULE)
-          ? [{ id: 'team-admin', label: t('nav.settings'), icon: SlidersHorizontal }]
+          ? [{ id: 'team-admin', label: t('nav.settings'), icon: SlidersHorizontal, section: 'team' }]
           : []),
       ]
-    : [{ id: 'schedule', label: t('nav.schedule'), icon: Calendar }];
+    : [{ id: 'schedule', label: t('nav.schedule'), icon: Calendar, section: 'team' }];
 
   const canEditSchedule = can(PERMISSIONS.TEAM_EDIT_SCHEDULE);
   const canEditLedger = can(PERMISSIONS.TEAM_EDIT_LEDGER);
@@ -619,10 +642,6 @@ function App() {
     cycleTheme,
     theme,
     ThemeIcon,
-    sidebarSettingsOpen,
-    setSidebarSettingsOpen,
-    mobileMenuOpen,
-    setMobileMenuOpen,
     supabase,
     effectiveIsStaff,
     isClubAdmin,
@@ -689,125 +708,124 @@ function App() {
       <DataContext.Provider value={dataContextValue}>
         <FinanceContext.Provider value={financeContextValue}>
           <ScheduleContext.Provider value={scheduleContextValue}>
-            <div className="min-h-screen bg-background flex flex-col transition-colors">
-              {/* ═══ IMPERSONATION BANNER ═══ */}
-              {viewingAsParent && (
-                <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between z-[60] shrink-0">
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <Eye size={14} />
-                    <span>
-                      {t('impersonation.viewingAs')}{' '}
-                      <span className="font-bold">
-                        {impersonatingAs.firstName} {impersonatingAs.lastName}
-                      </span>
-                      {impersonatingAs.guardians?.[0]?.name && (
-                        <span className="opacity-80"> ({impersonatingAs.guardians[0].name})</span>
-                      )}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setImpersonatingAs(null);
-                      navigate('/dashboard');
-                    }}
-                    className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold transition-colors"
-                  >
-                    {t('common.exit')}
-                  </button>
-                </div>
-              )}
-
-              <div className="flex flex-1 md:flex-row flex-col">
-                <DesktopSidebar />
-                <MobileHeader />
-                <MobileMenu />
-
-                <main className="flex-grow p-4 md:p-8 pb-32 md:pb-8 max-w-6xl mx-auto w-full">
-                  <AppRoutes
-                    user={user}
-                    club={club}
-                    teams={teams}
-                    selectedTeam={selectedTeam}
-                    selectedTeamId={selectedTeamId}
-                    setSelectedTeamId={setSelectedTeamId}
-                    userRoles={userRoles}
-                    effectiveRole={effectiveRole}
-                    isClubAdmin={isClubAdmin}
-                    isSuperAdmin={isSuperAdmin}
-                    effectiveIsStaff={effectiveIsStaff}
-                    can={can}
-                    refreshContext={refreshContext}
-                    seasons={seasons}
-                    teamSeasons={teamSeasons}
-                    selectedSeason={selectedSeason}
-                    setSelectedSeason={setSelectedSeason}
-                    currentSeasonData={currentSeasonData}
-                    currentTeamSeason={currentTeamSeason}
-                    teamSeasonId={teamSeasonId}
-                    refreshSeasons={refreshSeasons}
-                    formatMoney={formatMoney}
-                    customCategories={customCategories}
-                    categoryLabels={categoryLabels}
-                    categoryColors={categoryColors}
-                    categoryOptions={categoryOptions}
-                    saveCategory={saveCategory}
-                    deleteCategory={deleteCategory}
-                    isCategorySaving={isCategorySaving}
-                    accounts={accounts}
-                    activeAccounts={activeAccounts}
-                    accountsByHolding={accountsByHolding}
-                    accountMap={accountMap}
-                    saveAccount={saveAccount}
-                    deleteAccount={deleteAccount}
-                    isAccountSaving={isAccountSaving}
-                    effectiveTeam={effectiveTeam}
-                    canEditSchedule={canEditSchedule}
-                    canEditLedger={canEditLedger}
-                    handleSaveTransaction={handleSaveTransaction}
-                    handleDeleteTransaction={handleDeleteTransaction}
-                    handleBulkUpload={handleBulkUpload}
-                    isBulkUploading={isBulkUploading}
-                    setIsBulkUploading={setIsBulkUploading}
-                    handleSavePlayer={handleSavePlayer}
-                    handleArchivePlayer={handleArchivePlayer}
-                    handleToggleWaiveFee={handleToggleWaiveFee}
-                    showPlayerForm={showPlayerForm}
-                    setShowPlayerForm={setShowPlayerForm}
-                    playerToEdit={playerToEdit}
-                    setPlayerToEdit={setPlayerToEdit}
-                    showPlayerModal={showPlayerModal}
-                    setShowPlayerModal={setShowPlayerModal}
-                    playerToView={playerToView}
-                    setPlayerToView={setPlayerToView}
-                    showTxForm={showTxForm}
-                    setShowTxForm={setShowTxForm}
-                    txToEdit={txToEdit}
-                    setTxToEdit={setTxToEdit}
-                    confirmDialog={confirmDialog}
-                    impersonatingAs={impersonatingAs}
-                    setImpersonatingAs={setImpersonatingAs}
-                    toast={toast}
-                    setToast={setToast}
-                    showToast={showToast}
-                    showConfirm={showConfirm}
-                    navigate={navigate}
-                    bookBalance={bookBalance}
-                    singleTeam={singleTeam}
-                    singleTeamEnabled={singleTeamEnabled}
-                    onToggleSingleTeam={handleToggleSingleTeam}
-                    evaluationsHidden={evaluationsHidden}
-                    onToggleHideEvaluations={handleToggleHideEvaluations}
-                    insightsHidden={insightsHidden}
-                    onToggleHideInsights={handleToggleHideInsights}
-                  />
-                </main>
-
-                <MobileBottomNav />
-              </div>
+            <>
+              <AppShell
+                banner={
+                  viewingAsParent ? (
+                    /* Sticks directly beneath the app header (3.5rem) and below
+                       it in the stack, so the "who am I acting as" answer stays
+                       on screen no matter how far the page scrolls. */
+                    <div className="sticky top-14 z-[1029] flex items-center justify-between gap-3 border-b border-black/10 bg-warning px-4 py-2 text-warning-foreground shadow-sm">
+                      <div className="flex items-center gap-2 text-sm font-semibold">
+                        <Eye size={14} />
+                        <span>
+                          {t('impersonation.viewingAs')}{' '}
+                          <span className="font-bold">
+                            {impersonatingAs.firstName} {impersonatingAs.lastName}
+                          </span>
+                          {impersonatingAs.guardians?.[0]?.name && (
+                            <span className="opacity-80"> ({impersonatingAs.guardians[0].name})</span>
+                          )}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setImpersonatingAs(null);
+                          navigate('/dashboard');
+                        }}
+                        className="rounded-md bg-black/15 px-3 py-1 text-xs font-bold transition-colors hover:bg-black/25"
+                      >
+                        {t('common.exit')}
+                      </button>
+                    </div>
+                  ) : null
+                }
+              >
+                <AppRoutes
+                  user={user}
+                  club={club}
+                  teams={teams}
+                  selectedTeam={selectedTeam}
+                  selectedTeamId={selectedTeamId}
+                  setSelectedTeamId={setSelectedTeamId}
+                  userRoles={userRoles}
+                  effectiveRole={effectiveRole}
+                  isClubAdmin={isClubAdmin}
+                  isSuperAdmin={isSuperAdmin}
+                  effectiveIsStaff={effectiveIsStaff}
+                  can={can}
+                  refreshContext={refreshContext}
+                  seasons={seasons}
+                  teamSeasons={teamSeasons}
+                  selectedSeason={selectedSeason}
+                  setSelectedSeason={setSelectedSeason}
+                  currentSeasonData={currentSeasonData}
+                  currentTeamSeason={currentTeamSeason}
+                  teamSeasonId={teamSeasonId}
+                  refreshSeasons={refreshSeasons}
+                  formatMoney={formatMoney}
+                  customCategories={customCategories}
+                  categoryLabels={categoryLabels}
+                  categoryColors={categoryColors}
+                  categoryOptions={categoryOptions}
+                  saveCategory={saveCategory}
+                  deleteCategory={deleteCategory}
+                  isCategorySaving={isCategorySaving}
+                  accounts={accounts}
+                  activeAccounts={activeAccounts}
+                  accountsByHolding={accountsByHolding}
+                  accountMap={accountMap}
+                  saveAccount={saveAccount}
+                  deleteAccount={deleteAccount}
+                  isAccountSaving={isAccountSaving}
+                  effectiveTeam={effectiveTeam}
+                  canEditSchedule={canEditSchedule}
+                  canEditLedger={canEditLedger}
+                  handleSaveTransaction={handleSaveTransaction}
+                  handleDeleteTransaction={handleDeleteTransaction}
+                  handleBulkUpload={handleBulkUpload}
+                  isBulkUploading={isBulkUploading}
+                  setIsBulkUploading={setIsBulkUploading}
+                  handleSavePlayer={handleSavePlayer}
+                  handleArchivePlayer={handleArchivePlayer}
+                  handleToggleWaiveFee={handleToggleWaiveFee}
+                  showPlayerForm={showPlayerForm}
+                  setShowPlayerForm={setShowPlayerForm}
+                  playerToEdit={playerToEdit}
+                  setPlayerToEdit={setPlayerToEdit}
+                  showPlayerModal={showPlayerModal}
+                  setShowPlayerModal={setShowPlayerModal}
+                  playerToView={playerToView}
+                  setPlayerToView={setPlayerToView}
+                  showTxForm={showTxForm}
+                  setShowTxForm={setShowTxForm}
+                  txToEdit={txToEdit}
+                  setTxToEdit={setTxToEdit}
+                  confirmDialog={confirmDialog}
+                  impersonatingAs={impersonatingAs}
+                  setImpersonatingAs={setImpersonatingAs}
+                  toast={toast}
+                  setToast={setToast}
+                  showToast={showToast}
+                  showConfirm={showConfirm}
+                  navigate={navigate}
+                  bookBalance={bookBalance}
+                  clubUiHidden={clubUiHidden}
+                  viewScope={viewScope}
+                  onChangeViewScope={setViewScope}
+                  canSetViewScope={canSetViewScope}
+                  singleTeamEnabled={singleTeamEnabled}
+                  onToggleSingleTeam={handleToggleSingleTeam}
+                  evaluationsHidden={evaluationsHidden}
+                  onToggleHideEvaluations={handleToggleHideEvaluations}
+                  insightsHidden={insightsHidden}
+                  onToggleHideInsights={handleToggleHideInsights}
+                />
+              </AppShell>
               <NotificationPermissionBanner />
               <OutboxIndicator />
               <OfflineBanner />
-            </div>
+            </>
           </ScheduleContext.Provider>
         </FinanceContext.Provider>
       </DataContext.Provider>

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SeasonPicker from '../../components/SeasonPicker';
 import OnboardingChecklist from '../../components/OnboardingChecklist';
+import SmallBox from '../../components/layout/SmallBox';
 import {
   Users,
   Archive,
@@ -15,9 +15,9 @@ import {
   BadgeCheck,
   LayoutDashboard,
   UsersRound,
-  ArrowUp,
-  ArrowDown,
-  Minus,
+  Wallet,
+  PiggyBank,
+  Receipt,
 } from 'lucide-react';
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup } from '../../utils/ageGroup';
@@ -25,33 +25,7 @@ import { getCompliance, isFullyCompliant } from '../../utils/compliance';
 import JerseyBadge from '../../components/JerseyBadge';
 import { TRACKED_HOLDINGS, HOLDING_LABELS, HOLDING_ICONS } from '../../utils/holdings';
 
-// Small flat KPI tile. status.tone: 'good' | 'warn' | 'bad' | 'muted'.
-function KpiTile({ label, value, valueTone = 'default', status }) {
-  const valueColor =
-    valueTone === 'bad' ? 'text-destructive' : valueTone === 'good' ? 'text-success' : 'text-foreground';
-  const toneClass = {
-    good: 'text-success',
-    warn: 'text-warning',
-    bad: 'text-destructive',
-    muted: 'text-muted-foreground',
-  }[status?.tone || 'muted'];
-  const Icon = status?.tone === 'good' ? ArrowUp : status?.tone === 'bad' ? ArrowDown : Minus;
-  return (
-    <div className="bg-card border border-border rounded-lg p-4 md:p-5 flex flex-col gap-1.5">
-      <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-      <p className={`text-2xl font-bold tracking-tight tabular-nums ${valueColor}`}>{value}</p>
-      {status?.text && (
-        <p className={`text-xs font-medium flex items-center gap-1 ${toneClass}`}>
-          <Icon size={12} strokeWidth={2.5} />
-          <span>{status.text}</span>
-        </p>
-      )}
-    </div>
-  );
-}
-
 export default function TeamOverviewView({
-  selectedTeam,
   players,
   archivedPlayers = [],
   teamBalance,
@@ -63,9 +37,7 @@ export default function TeamOverviewView({
   selectedSeasonData,
   transactions = [],
   calculatePlayerFinancials,
-  seasons = [],
   selectedSeason,
-  setSelectedSeason,
   canViewFinancials = true,
   accountMap = {},
 }) {
@@ -243,19 +215,10 @@ export default function TeamOverviewView({
   }, [players.length, canViewFinancials, baseFee, paymentStats, complianceStats, formatMoney, tp]);
 
   return (
-    <div className="space-y-6 pb-20 md:pb-6">
-      {/* ── PAGE HEADER ── */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 pb-4 border-b border-border">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-foreground tracking-tight truncate">
-            {selectedTeam?.name || t('common.team')}
-          </h1>
-          {healthSummary && <p className="text-sm text-muted-foreground mt-1">{healthSummary}</p>}
-        </div>
-        <div className="shrink-0">
-          <SeasonPicker seasons={seasons} selectedSeason={selectedSeason} onSeasonChange={setSelectedSeason} compact />
-        </div>
-      </div>
+    <div className="space-y-6">
+      {/* The shell's content header owns the page title and breadcrumb, and the
+          sidebar owns the season picker — this view only adds the health lede. */}
+      {healthSummary && <p className="-mt-1 text-sm text-muted-foreground">{healthSummary}</p>}
 
       {/* ── Draft budget notice ── */}
       {!isFinalized &&
@@ -348,56 +311,65 @@ export default function TeamOverviewView({
             navigate={navigate}
           />
 
-          {/* ── KPI strip: flat, status-aware ── */}
+          {/* ── KPI strip: AdminLTE small-boxes, tone carries the status ── */}
           {canViewFinancials && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-              {/* Available Cash — overall holdings; pending shown as inline delta */}
-              <KpiTile
-                label={t('overview.availableCash')}
+            <div className="-mb-5 grid grid-cols-1 gap-x-4 sm:grid-cols-2 lg:grid-cols-4">
+              {/* Available Cash — overall holdings; pending shown as the sub-label */}
+              <SmallBox
                 value={formatMoney(teamBalance)}
-                status={
+                label={
                   pendingDelta !== 0
-                    ? {
-                        tone: pendingDelta < 0 ? 'warn' : 'good',
-                        text: `${pendingDelta < 0 ? '−' : '+'}${formatMoney(Math.abs(pendingDelta))} pending`,
-                      }
-                    : { tone: teamBalance >= 0 ? 'good' : 'bad', text: teamBalance >= 0 ? 'healthy' : 'overdrawn' }
+                    ? `${t('overview.availableCash')} · ${pendingDelta < 0 ? '−' : '+'}${formatMoney(Math.abs(pendingDelta))} pending`
+                    : t('overview.availableCash')
                 }
+                icon={Wallet}
+                tone={teamBalance < 0 ? 'destructive' : 'accent'}
+                onClick={() => navigate('/finance/ledger')}
+                linkLabel={t('nav.ledger')}
               />
 
-              {/* Budget Left — burn % becomes the status indicator */}
-              <KpiTile
-                label={`${t('overview.remainingBudget')}${!isFinalized ? ' (est.)' : ''}`}
+              {/* Budget Left — burn % rides along as the sub-label */}
+              <SmallBox
                 value={formatMoney(remainingBudget)}
-                valueTone={remainingBudget < 0 ? 'bad' : 'default'}
-                status={
-                  projectedSpend > 0
-                    ? {
-                        tone: spendPercentage > 90 ? 'bad' : spendPercentage > 60 ? 'warn' : 'good',
-                        text: `${Math.round(spendPercentage)}% spent`,
-                      }
-                    : { tone: 'muted', text: !isFinalized ? 'draft' : '—' }
+                label={`${t('overview.remainingBudget')}${!isFinalized ? ' (est.)' : ''}${
+                  projectedSpend > 0 ? ` · ${Math.round(spendPercentage)}% spent` : ''
+                }`}
+                icon={PiggyBank}
+                tone={
+                  remainingBudget < 0 || spendPercentage > 90
+                    ? 'destructive'
+                    : spendPercentage > 60
+                      ? 'warning'
+                      : 'success'
                 }
+                onClick={() => navigate('/finance/budget')}
+                linkLabel={t('nav.budget')}
               />
 
-              {/* Season Fee — locked / draft as status */}
-              <KpiTile
-                label={t('overview.seasonFeePlayer')}
+              {/* Season Fee — locked vs draft drives the tone */}
+              <SmallBox
                 value={formatMoney(baseFee)}
-                status={{
-                  tone: isFinalized ? 'good' : 'warn',
-                  text: isFinalized ? 'locked' : 'draft',
-                }}
+                label={`${t('overview.seasonFeePlayer')} · ${isFinalized ? 'locked' : 'draft'}`}
+                icon={Receipt}
+                tone={isFinalized ? 'primary' : 'warning'}
+                onClick={() => navigate('/finance/budget')}
+                linkLabel={t('nav.budget')}
               />
 
               {/* Collection rate */}
-              <KpiTile
-                label={t('overview.collectionRate')}
+              <SmallBox
                 value={`${paymentStats.collectionRate}%`}
-                status={{
-                  tone: paymentStats.collectionRate >= 90 ? 'good' : paymentStats.collectionRate >= 60 ? 'warn' : 'bad',
-                  text: `${paymentStats.paid.length}/${paymentStats.nonWaived.length} paid`,
-                }}
+                label={`${t('overview.collectionRate')} · ${paymentStats.paid.length}/${paymentStats.nonWaived.length} paid`}
+                icon={Users}
+                tone={
+                  paymentStats.collectionRate >= 90
+                    ? 'success'
+                    : paymentStats.collectionRate >= 60
+                      ? 'warning'
+                      : 'destructive'
+                }
+                onClick={() => navigate('/people')}
+                linkLabel={t('nav.players')}
               />
             </div>
           )}
