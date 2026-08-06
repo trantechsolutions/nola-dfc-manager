@@ -9,10 +9,15 @@ import {
   Info,
   ArrowRight,
   FileSearch,
+  Calculator,
+  Wallet,
+  Scale,
 } from 'lucide-react';
 import AccountBalanceCard from '../../components/AccountBalanceCard';
 import BankAggregateCard from '../../components/BankAggregateCard';
 import StatementImportModal from '../../components/StatementImportModal';
+import AdminCard from '../../components/layout/AdminCard';
+import InfoBox from '../../components/layout/InfoBox';
 import { useT } from '../../i18n/I18nContext';
 import { TRACKED_HOLDINGS } from '../../utils/holdings';
 import { monthKeyToLabel, SEASON_KEY } from '../../utils/computeBookBalance';
@@ -106,7 +111,7 @@ export default function BookBalanceView({
   }
 
   return (
-    <div className="space-y-5 max-w-5xl">
+    <div className="space-y-5">
       {/* ══ HEADER ══ */}
       <div className="flex flex-col sm:flex-row sm:items-start gap-4">
         <div className="flex-1 min-w-0">
@@ -164,9 +169,7 @@ export default function BookBalanceView({
                         setShowMonthPicker(false);
                       }}
                       className={`w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-background transition-colors ${
-                        key === selectedMonth
-                          ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                          : 'text-foreground'
+                        key === selectedMonth ? 'bg-primary/10 text-primary' : 'text-foreground'
                       }`}
                     >
                       {monthKeyToLabel(key)}
@@ -184,7 +187,7 @@ export default function BookBalanceView({
                 <button
                   onClick={handleUnlockClick}
                   disabled={isSaving}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 disabled:opacity-40 transition-all focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-warning/40 bg-warning/10 text-amber-700 transition-all hover:bg-warning/20 focus:outline-none focus:ring-2 focus:ring-warning disabled:opacity-40 dark:text-amber-400"
                 >
                   <Unlock size={13} aria-hidden="true" />
                   {t('bookBalance.unlockMonth')}
@@ -194,11 +197,7 @@ export default function BookBalanceView({
               <button
                 onClick={handleLockClick}
                 disabled={isSaving || totalAccounts === 0}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all
-                bg-card text-white
-                hover:bg-accent/90
-                disabled:opacity-30 disabled:cursor-not-allowed
-                focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-ring dark:focus:ring-white"
+                className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground transition-all hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <Lock size={13} aria-hidden="true" />
                 {t('bookBalance.lockMonth')}
@@ -207,35 +206,42 @@ export default function BookBalanceView({
         </div>
       </div>
 
-      {/* ══ HOW IT WORKS ══ */}
+      {/* ══ HOW IT WORKS ══ AdminLTE card with the `remove` tool, so the X in
+          the header dismisses it the same way the toolbar button does. */}
       {showInstructions && (
-        <div
-          role="region"
-          aria-label="How book balance works"
-          className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg p-5"
+        <AdminCard
+          title={t('bookBalance.howItWorks')}
+          icon={Info}
+          variant="accent"
+          className="mb-0"
+          onRemove={() => setShowInstructions(false)}
         >
-          <p className="text-xs font-bold text-blue-700 dark:text-blue-300 mb-3">{t('bookBalance.howItWorks')}</p>
           <ol className="space-y-2.5" aria-label="Steps">
             {[t('bookBalance.step1'), t('bookBalance.step2'), t('bookBalance.step3')].map((step, i) => (
               <li key={i} className="flex items-start gap-3">
-                <span className="shrink-0 w-5 h-5 rounded-full bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-200 text-xs font-bold flex items-center justify-center mt-0.5">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary">
                   {i + 1}
                 </span>
-                <p className="text-sm text-blue-800 dark:text-blue-200 font-medium leading-snug">{step}</p>
+                <p className="text-sm font-medium leading-snug text-foreground">{step}</p>
               </li>
             ))}
           </ol>
-        </div>
+        </AdminCard>
       )}
 
-      {/* ══ STATUS BAR ══ */}
+      {/* ══ STATUS BAR ══
+          Surfaces and borders use the semantic tokens so they track the theme.
+          The success/warning TEXT stays on the emerald/amber ramp: dark mode
+          does not re-light --success/--warning (see index.css), so `text-success`
+          would drop to ~3:1 on the dark background. `text-destructive` is kept
+          as a token because #dc3545 clears AA on both surfaces. */}
       {totalAccounts > 0 && !isMonthLocked && !isSeasonView && (
         <div
           className={`flex items-center gap-3 px-4 py-3 rounded-lg border text-sm font-medium transition-all ${
             allBalanced
-              ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
+              ? 'border-success/40 bg-success/10 text-emerald-700 dark:text-emerald-400'
               : enteredCount > 0
-                ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300'
+                ? 'border-warning/40 bg-warning/10 text-amber-700 dark:text-amber-400'
                 : 'bg-background border-border text-muted-foreground'
           }`}
           role="status"
@@ -262,70 +268,44 @@ export default function BookBalanceView({
         </div>
       )}
 
-      {/* ══ OVERVIEW PANEL ══ */}
+      {/* ══ OVERVIEW ══ AdminLTE card carrying three `.info-box` stat tiles
+          over the per-account reconciliation list. */}
       {totalAccounts > 0 && (
-        <div
-          className={`rounded-lg border-2 p-5 ${
-            totalIsBalanced
-              ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800'
-              : 'bg-card border-border'
-          }`}
-          aria-label="Balance overview"
+        <AdminCard
+          title={`${monthKeyToLabel(selectedMonth)} — ${isSeasonView ? 'Running Total' : 'Overview'}`}
+          icon={Scale}
+          variant={totalIsBalanced ? 'success' : 'none'}
+          className="mb-0"
+          bodyClassName="space-y-4"
         >
-          <p className="text-xs font-bold text-muted-foreground mb-4">
-            {monthKeyToLabel(selectedMonth)} — {isSeasonView ? 'Running Total' : 'Overview'}
-          </p>
-
           {/* Top-line totals */}
-          <div className="grid grid-cols-3 gap-4 text-center mb-4">
-            <div>
-              <p className="text-xs font-bold text-muted-foreground mb-1">{t('bookBalance.totalLedger')}</p>
-              <p className="text-xl font-bold text-foreground tabular-nums">{formatMoney(totals.totalLedger)}</p>
-              <p className="text-xs text-muted-foreground font-medium mt-0.5">calculated by the app</p>
-            </div>
-            <div className="flex flex-col items-center justify-center gap-1">
-              <div className="w-px h-6 bg-muted" />
-              <span className="text-xs font-bold text-muted-foreground">vs</span>
-              <div className="w-px h-6 bg-muted" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-muted-foreground mb-1">{t('bookBalance.totalStated')}</p>
-              <p
-                className={`text-xl font-bold tabular-nums ${enteredCount === 0 ? 'text-muted-foreground' : 'text-foreground'}`}
-              >
-                {enteredCount === 0 ? '—' : formatMoney(totals.totalStated)}
-              </p>
-              <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                {enteredCount === 0 ? 'not yet entered' : 'what you counted'}
-              </p>
-            </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <InfoBox
+              className="mb-0"
+              icon={Calculator}
+              tone="muted"
+              label={t('bookBalance.totalLedger')}
+              value={formatMoney(totals.totalLedger)}
+            />
+            <InfoBox
+              className="mb-0"
+              icon={Wallet}
+              tone="muted"
+              label={t('bookBalance.totalStated')}
+              value={enteredCount === 0 ? '—' : formatMoney(totals.totalStated)}
+            />
+            <InfoBox
+              className="mb-0"
+              icon={totalIsBalanced ? CheckCircle2 : Scale}
+              tone={enteredCount === 0 ? 'muted' : totalIsBalanced ? 'success' : 'destructive'}
+              label={t('bookBalance.totalDelta')}
+              value={enteredCount === 0 ? '—' : formatMoney(totals.delta)}
+            />
           </div>
-
-          {/* Net delta */}
-          {enteredCount > 0 && (
-            <div
-              className={`pt-4 border-t flex items-center justify-center gap-2 mb-4 ${
-                totalIsBalanced ? 'border-emerald-200 dark:border-emerald-800' : 'border-border'
-              }`}
-            >
-              <span className="text-xs font-semibold text-muted-foreground">{t('bookBalance.totalDelta')}</span>
-              <span
-                className={`text-xl font-bold tabular-nums flex items-center gap-1.5 ${
-                  totalIsBalanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
-                }`}
-                aria-live="polite"
-              >
-                {totalIsBalanced && <CheckCircle2 size={18} aria-hidden="true" />}
-                {formatMoney(totals.delta)}
-              </span>
-            </div>
-          )}
 
           {/* Per-account status rows */}
           <div
-            className={`rounded-lg overflow-hidden border ${
-              totalIsBalanced ? 'border-emerald-200 dark:border-emerald-800' : 'border-border'
-            }`}
+            className={`overflow-hidden rounded-lg border ${totalIsBalanced ? 'border-success/40' : 'border-border'}`}
           >
             {/* Bank aggregate row */}
             {hasBankAccounts &&
@@ -341,7 +321,7 @@ export default function BookBalanceView({
                         balanced ? (
                           <CheckCircle2 size={13} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
                         ) : (
-                          <AlertCircle size={13} className="text-red-400 shrink-0" />
+                          <AlertCircle size={13} className="shrink-0 text-destructive" />
                         )
                       ) : (
                         <div className="w-3.5 h-3.5 rounded-full border-2 border-border shrink-0" />
@@ -352,7 +332,7 @@ export default function BookBalanceView({
                       <span className="text-muted-foreground">{formatMoney(ledger)}</span>
                       {delta !== null && (
                         <span
-                          className={`font-bold ${balanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}
+                          className={`font-bold ${balanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}
                         >
                           {balanced ? '✓' : formatMoney(delta)}
                         </span>
@@ -368,7 +348,7 @@ export default function BookBalanceView({
                               _allBankIds: bankAccounts.map((a) => a.id),
                             })
                           }
-                          className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-400 transition-colors"
+                          className="flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-primary"
                           aria-label="Compare bank statement"
                         >
                           <FileSearch size={12} />
@@ -398,7 +378,7 @@ export default function BookBalanceView({
                       balanced ? (
                         <CheckCircle2 size={13} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
                       ) : (
-                        <AlertCircle size={13} className="text-red-400 shrink-0" />
+                        <AlertCircle size={13} className="shrink-0 text-destructive" />
                       )
                     ) : (
                       <div className="w-3.5 h-3.5 rounded-full border-2 border-border shrink-0" />
@@ -414,7 +394,7 @@ export default function BookBalanceView({
                     <span className="text-muted-foreground">{formatMoney(ledger)}</span>
                     {delta !== null && (
                       <span
-                        className={`font-bold ${balanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}
+                        className={`font-bold ${balanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}`}
                       >
                         {balanced ? '✓' : formatMoney(delta)}
                       </span>
@@ -422,7 +402,7 @@ export default function BookBalanceView({
                     {!isMonthLocked && !isSeasonView && (
                       <button
                         onClick={() => setStatementAccount(acct)}
-                        className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-400 transition-colors"
+                        className="flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-primary"
                         aria-label={`Compare statement for ${acct.name}`}
                       >
                         <FileSearch size={12} />
@@ -434,21 +414,23 @@ export default function BookBalanceView({
               );
             })}
           </div>
-        </div>
+        </AdminCard>
       )}
 
       {/* ══ EMPTY STATE ══ */}
       {!loading && totalAccounts === 0 && (
-        <div className="text-center py-16 px-6 border-2 border-dashed border-border rounded-lg">
-          <BookOpen size={32} className="mx-auto text-muted-foreground mb-3" aria-hidden="true" />
-          <p className="font-semibold text-foreground text-sm mb-1">{t('bookBalance.noAccounts')}</p>
-          <p className="text-xs text-muted-foreground">{t('bookBalance.noAccountsHint')}</p>
-        </div>
+        <AdminCard title={t('bookBalance.noAccounts')} icon={BookOpen} className="mb-0">
+          <div className="px-6 py-10 text-center">
+            <BookOpen size={32} className="mx-auto mb-3 text-muted-foreground" aria-hidden="true" />
+            <p className="text-xs text-muted-foreground">{t('bookBalance.noAccountsHint')}</p>
+          </div>
+        </AdminCard>
       )}
 
-      {/* ══ ACCOUNT CARDS ══ */}
+      {/* ══ ACCOUNT CARDS ══ Column count climbs with the viewport — the page is
+          uncapped, so two columns would stretch each card to half a wide monitor. */}
       {totalAccounts > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {/* Bank aggregate card — one card for all bank accounts combined */}
           {hasBankAccounts && (
             <BankAggregateCard
