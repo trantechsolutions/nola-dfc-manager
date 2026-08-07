@@ -14,6 +14,7 @@ import TransactionModal from './TransactionModal';
 import PlayerFormModal from './PlayerFormModal';
 import PlayerModal from './PlayerModal';
 import ConfirmModal from './ConfirmModal';
+import RouteNotFound from './RouteNotFound';
 
 // Eagerly loaded: always needed on first render
 import TeamOverviewView from '../views/team/TeamOverviewView';
@@ -751,7 +752,8 @@ export default function AppRoutes({
               </>
             )}
 
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            {/* Renders a dead end rather than redirecting — see RouteNotFound. */}
+            <Route path="*" element={<RouteNotFound />} />
           </Routes>
         </Suspense>
       </ErrorBoundary>

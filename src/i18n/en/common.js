@@ -41,4 +41,9 @@ export default {
   noResults: 'No results found.',
   confirmAction: 'Confirm Action',
   offlineNotice: 'You are offline — showing cached data',
+  notFound: {
+    title: 'Page not available',
+    body: "This page doesn't exist, or your current role doesn't have access to it. If you just switched teams or scopes, try selecting a different team.",
+    backToDashboard: 'Back to dashboard',
+  },
 };

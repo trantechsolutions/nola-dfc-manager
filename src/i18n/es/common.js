@@ -41,4 +41,9 @@ export default {
   noResults: 'No se encontraron resultados.',
   confirmAction: 'Confirmar Acción',
   offlineNotice: 'Estás sin conexión — mostrando datos en caché',
+  notFound: {
+    title: 'Página no disponible',
+    body: 'Esta página no existe, o tu rol actual no tiene acceso a ella. Si acabas de cambiar de equipo o de alcance, intenta seleccionar otro equipo.',
+    backToDashboard: 'Volver al panel',
+  },
 };

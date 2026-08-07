@@ -25,6 +25,14 @@ export const useTeamContext = (user) => {
   const [teams, setTeams] = useState([]);
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Which user id the state above was actually fetched for. `loading` alone is
+  // not enough: it flips to false the instant fetchContext short-circuits on a
+  // null user, so the commit where App sets `user` (batched with its own auth
+  // `setLoading(false)`) renders with loading=false but roles still empty. Route
+  // guards read false for every permission in that window and the catch-all
+  // eats the URL. Comparing against the requested user id keeps the context
+  // "loading" until the roles for *this* user have landed.
+  const [loadedUserId, setLoadedUserId] = useState(undefined);
   const initializedRef = useRef(false);
 
   // ── Fetch roles and teams on login ──
@@ -35,6 +43,7 @@ export const useTeamContext = (user) => {
       setTeams([]);
       setSelectedTeamId(null);
       initializedRef.current = false;
+      setLoadedUserId(null);
       setLoading(false);
       return;
     }
@@ -100,6 +109,9 @@ export const useTeamContext = (user) => {
     } catch (e) {
       console.error('Team context fetch error:', e);
     } finally {
+      // Mark resolved even on failure — otherwise a fetch error strands the app
+      // on the loading spinner forever.
+      setLoadedUserId(user.id);
       setLoading(false);
     }
   }, [user]);
@@ -148,6 +160,9 @@ export const useTeamContext = (user) => {
   // Is super admin (app-level)?
   const isSuperAdmin = useMemo(() => userRoles.some((r) => APP_ROLES[r.role]), [userRoles]);
 
+  // Not ready until the roles/club/teams in state belong to the current user.
+  const contextResolved = loadedUserId === (user?.id ?? null);
+
   return {
     // Data
     userRoles,
@@ -161,7 +176,7 @@ export const useTeamContext = (user) => {
     isClubAdmin,
     isSuperAdmin,
     navItems,
-    loading,
+    loading: loading || !contextResolved,
 
     // Helpers
     can, // can('team:edit_budget') → boolean

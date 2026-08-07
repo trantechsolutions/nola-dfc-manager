@@ -11,6 +11,7 @@ export default {
   common,
   nav,
   auth,
+  notFound: common.notFound,
   impersonation: schedule.impersonation,
   schedule: schedule.schedule,
   eventTypes: schedule.eventTypes,
