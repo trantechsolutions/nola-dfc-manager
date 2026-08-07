@@ -2,6 +2,8 @@
 // Fallback shown before a club is resolved. Kept here so the tab title and the
 // sidebar/mobile headers cannot drift apart.
 export const APP_NAME = 'Cantera Manager';
+export const PUB_NAME = 'TranTech Solutions, LLC';
+export const PUB_URL = 'https://trantech.solutions/';
 
 // ── Document Types ──────────────────────────────────────────
 export const DOC_TYPE_LABELS = {
