@@ -5,7 +5,12 @@
  * Reads recent commits, sends to Groq (Llama 3.1) for summarization,
  * and writes the result to Supabase changelogs table.
  *
- * Required env vars: GROQ_API_KEY, VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ * Required env vars (read from .env.local, then .env):
+ *   GROQ_API_KEY, VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ *
+ * Usage:
+ *   node scripts/generate-changelog.js          last 20 commits, with AI summary
+ *   node scripts/generate-changelog.js --all    backfill full history, no AI summary
  *
  * Supabase table DDL:
  *   CREATE TABLE changelogs (
@@ -24,7 +29,7 @@ import { execSync } from 'child_process';
 import { config } from 'dotenv';
 import { resolve } from 'path';
 
-config({ path: resolve(process.cwd(), '.env') });
+config({ path: [resolve(process.cwd(), '.env.local'), resolve(process.cwd(), '.env')] });
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -36,12 +41,22 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 async function getExistingHashes() {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/changelogs?select=commit_hash&order=created_at.desc&limit=100`, {
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return new Set(data.map((r) => r.commit_hash));
+  const hashes = new Set();
+  const pageSize = 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/changelogs?select=commit_hash`, {
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        Range: `${offset}-${offset + pageSize - 1}`,
+      },
+    });
+    if (!res.ok) break;
+    const data = await res.json();
+    data.forEach((r) => hashes.add(r.commit_hash));
+    if (data.length < pageSize) break;
+  }
+  return hashes;
 }
 
 async function summarizeWithGroq(commits) {
@@ -104,14 +119,15 @@ ${commits.map((c) => `- ${c.message}`).join('\n')}`;
 }
 
 async function main() {
-  // Get recent commits
-  const log = execSync('git log --pretty=format:"%H||%h||%s||%aI" -20', { encoding: 'utf-8' });
+  // Get recent commits (pass --all to backfill the entire history)
+  const limit = process.argv.includes('--all') ? '' : '-20';
+  const log = execSync(`git log --pretty=format:"%H||%h||%s||%aI" ${limit}`, { encoding: 'utf-8' });
   const commits = log
     .trim()
     .split('\n')
-    .map((line) => {
+    .map((line, i) => {
       const [hash, short, message, date] = line.split('||');
-      return { hash, short, message, date };
+      return { hash, short, message, date, depth: i };
     });
 
   if (commits.length === 0) {
@@ -130,15 +146,17 @@ async function main() {
 
   console.log(`📝 Changelog: Processing ${newCommits.length} new commit(s)...`);
 
-  // Get AI summary for the batch of new commits
-  const aiSummary = await summarizeWithGroq(newCommits);
+  // Get AI summary for the batch of new commits.
+  // A full backfill records raw history only — summarizing months of commits at once
+  // produces a wall of stale bullets on the "What's Changed" panel.
+  const aiSummary = process.argv.includes('--all') ? null : await summarizeWithGroq(newCommits);
 
   // Get build number
   const buildNumber = parseInt(execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim(), 10);
 
   // Insert new commits into Supabase
   const rows = newCommits.map((c, i) => ({
-    build_number: buildNumber - i,
+    build_number: buildNumber - c.depth,
     commit_hash: c.hash,
     commit_short: c.short,
     commit_message: c.message,
