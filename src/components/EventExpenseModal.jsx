@@ -158,7 +158,10 @@ export default function EventExpenseModal({
 
   return (
     <ResponsiveModal onClose={onClose} size="lg">
-      <ResponsiveModal.Header className={`${eventType.color} text-white`}>
+      {/* items-start: the header stacks four lines, and the default centring
+          parks the dismiss control alongside the event title instead of in the
+          corner where it reads as a close button. */}
+      <ResponsiveModal.Header className={`${eventType.color} items-start text-white`}>
         <p className="text-xs font-bold opacity-70 mb-0.5">{t('expenses.title', { type: eventType.label })}</p>
         <h3 className="font-semibold text-lg leading-tight">{dbEvent.title}</h3>
         <p className="text-xs opacity-80 mt-1">{eventDate}</p>
