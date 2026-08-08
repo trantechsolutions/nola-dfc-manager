@@ -32,6 +32,10 @@ serviceAccountKey.json
 supabase*.json
 supabase*.md
 
+# Supabase CLI scratch — linked project ref and per-machine service versions,
+# rewritten on every `supabase link` / `db` command.
+supabase/.temp/
+
 # Claude Code
 # Ignore .claude/ by default, but track the team agent definitions — they're generic
 # and worth versioning. Note: a bare `.claude/` would make the negations below
