@@ -63,6 +63,8 @@ export default {
     compliance: 'Cumplimiento',
     complete: 'Completo',
     incomplete: 'Incompleto',
+    allComplete: 'Todo completo — no hay nada pendiente',
+    noRequirements: 'No se requiere nada esta temporada',
     budgetFinalized: 'Presupuesto Finalizado',
     budgetDraft: 'Presupuesto en Borrador',
     feeWaived: 'Cuota Exenta',

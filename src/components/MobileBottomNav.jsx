@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Calendar, Plus, ReceiptText } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Plus, ReceiptText, ListChecks } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { useNavigation } from '../context/NavigationContext';
 
@@ -58,8 +58,11 @@ export default function MobileBottomNav() {
               { id: 'people', label: t('nav.players'), icon: Users },
               { id: 'schedule', label: t('nav.schedule'), icon: Calendar },
             ]
-          : [
+          : // Three fits comfortably here; the staff bar is already full at four
+            // plus the add-transaction button, which is why it stays as it is.
+            [
               { id: 'dashboard', label: t('nav.myPlayer'), icon: Users },
+              { id: 'checklist', label: t('nav.checklist'), icon: ListChecks },
               { id: 'schedule', label: t('nav.schedule'), icon: Calendar },
             ]
         ).map((item) => {

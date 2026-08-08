@@ -15,13 +15,14 @@ import {
   Download,
   FileCheck2,
   Camera,
+  ListChecks,
   Loader2,
 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { ALL_ROLES } from '../../utils/roles';
 import { DOC_TYPES, DOC_STATUS_COLORS } from '../../utils/constants';
-import { getCompliance } from '../../utils/compliance';
+import { getCompliance, isCompliant, outstandingFor, EMPTY_COMPLIANCE } from '../../utils/compliance';
 import { downloadDocumentsAsZip } from '../../utils/downloadDocumentsZip';
 import { compressImageFile } from '../../utils/imageCompression';
 
@@ -37,6 +38,8 @@ export default function DocumentManager({
   can,
   PERMISSIONS,
   onPlayerUpdate,
+  // Season compliance index — see utils/compliance.js.
+  compliance = EMPTY_COMPLIANCE,
 }) {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,21 +98,22 @@ export default function DocumentManager({
         (d) => d.playerId === p.id && (canViewMedical || d.docType !== 'medical_release'),
       );
       const hasMedical = getCompliance(p, selectedSeason).medicalRelease;
-      const hasReeplayer = getCompliance(p, selectedSeason).reePlayerWaiver;
       map[p.id] = {
         hasMedical,
-        hasReeplayer,
-        isComplete: hasMedical && hasReeplayer,
+        // Completeness is the season checklist now, not medical + ReePlayer.
+        // hasMedical stays because this view is about the medical DOCUMENT.
+        isComplete: isCompliant(compliance, p.id),
+        outstanding: outstandingFor(compliance, p.id),
         docCount: playerDocs.length,
         docs: playerDocs,
       };
     });
     return map;
-  }, [players, documents, selectedSeason, canViewMedical]);
+  }, [players, documents, selectedSeason, canViewMedical, compliance]);
 
   const compliantCount = Object.values(playerCompliance).filter((c) => c.isComplete).length;
   const missingMedical = Object.values(playerCompliance).filter((c) => !c.hasMedical).length;
-  const missingReeplayer = players.filter((p) => !getCompliance(p, selectedSeason).reePlayerWaiver).length;
+  const missingChecklist = Object.values(playerCompliance).filter((c) => !c.isComplete).length;
 
   const medicalDocsForDownload = useMemo(
     () => documents.filter((d) => d.docType === 'medical_release' && ['uploaded', 'verified'].includes(d.status)),
@@ -296,16 +300,16 @@ export default function DocumentManager({
           <p className="text-xs font-semibold text-muted-foreground">Missing Waiver</p>
         </div>
         <div
-          className={`p-4 rounded-lg border shadow-sm ${missingReeplayer === 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700' : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700'}`}
+          className={`p-4 rounded-lg border shadow-sm ${missingChecklist === 0 ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700' : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700'}`}
         >
-          <Camera
+          <ListChecks
             size={16}
             className={
-              missingReeplayer === 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'
+              missingChecklist === 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'
             }
           />
-          <p className="text-xl font-bold mt-1">{missingReeplayer}</p>
-          <p className="text-xs font-semibold text-muted-foreground">No ReePlayer Acct</p>
+          <p className="text-xl font-bold mt-1">{missingChecklist}</p>
+          <p className="text-xs font-semibold text-muted-foreground">Checklist Incomplete</p>
         </div>
         <div className="p-4 rounded-lg border shadow-sm bg-card border-border">
           <Upload size={16} className="text-blue-700 dark:text-blue-400" />
@@ -374,11 +378,19 @@ export default function DocumentManager({
                         className={comp.hasMedical ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-400'}
                       />
                     </span>
-                    <span title={comp.hasReeplayer ? 'ReePlayer account created' : 'No ReePlayer account'}>
-                      <Camera
+                    <span
+                      title={comp.isComplete ? 'Checklist complete' : comp.outstanding.map((i) => i.label).join(', ')}
+                      className="flex items-center gap-1"
+                    >
+                      <ListChecks
                         size={13}
-                        className={comp.hasReeplayer ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}
+                        className={comp.isComplete ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'}
                       />
+                      {comp.outstanding.length > 0 && (
+                        <span className="text-xs font-semibold text-muted-foreground tabular-nums">
+                          {comp.outstanding.length}
+                        </span>
+                      )}
                     </span>
                     {comp.docCount > 0 && (
                       <span className="text-xs font-semibold text-muted-foreground">

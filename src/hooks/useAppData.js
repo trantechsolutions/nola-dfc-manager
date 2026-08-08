@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabaseService } from '../services/supabaseService';
+import { checklistService } from '../services/checklistService';
+import { buildCompliance } from '../utils/compliance';
 import { useRealtimeRefresh } from './useRealtimeRefresh';
 
 /**
@@ -22,6 +24,11 @@ export function useAppData({
   const [playerFinancials, setPlayerFinancials] = useState({});
   const [teamEvents, setTeamEvents] = useState([]);
   const [loading, setLoading] = useState(false);
+  // The season checklist backs compliance for every roster view, so it is
+  // fetched once here rather than per-view — RosterManagement, TeamOverviewView,
+  // and DocumentManager all read the same index off DataContext.
+  const [checklist, setChecklist] = useState(null);
+  const [checklistResponses, setChecklistResponses] = useState([]);
 
   const fetchIdRef = useRef(0);
   // Applied once: the first time we learn a parent's enrolled seasons, default
@@ -128,6 +135,39 @@ export function useAppData({
       });
   }, [currentTeamSeason?.id, selectedSeason]);
 
+  // ── SEASON CHECKLIST (compliance source of truth) ──
+  const complianceTeamId = selectedTeamId || parentTeamId;
+  const loadChecklist = useCallback(async () => {
+    if (!complianceTeamId || !selectedSeason) {
+      setChecklist(null);
+      setChecklistResponses([]);
+      return;
+    }
+    try {
+      const found = await checklistService.getChecklist(complianceTeamId, selectedSeason);
+      setChecklist(found);
+      // A guardian's RLS grant covers only their own player's rows, so this
+      // returns their slice rather than failing — enough to judge their own
+      // player, which is all the parent views ask of it.
+      setChecklistResponses(found ? await checklistService.getResponses(found.id) : []);
+    } catch (e) {
+      console.warn('Checklist refresh failed:', e.message);
+      setChecklist(null);
+      setChecklistResponses([]);
+    }
+  }, [complianceTeamId, selectedSeason]);
+
+  useEffect(() => {
+    loadChecklist();
+  }, [loadChecklist]);
+
+  useRealtimeRefresh(
+    checklist?.id ? `realtime-compliance-${checklist.id}` : null,
+    [{ table: 'checklist_responses', filter: `checklist_id=eq.${checklist?.id}` }],
+    loadChecklist,
+    Boolean(checklist?.id),
+  );
+
   // Real-time subscriptions: keep players, transactions, and team_events in sync
   // when other users make changes. Scoped to the active team to avoid noise.
   // `transactions` has no team_id column — it's scoped by team_season_id, so
@@ -196,6 +236,20 @@ export function useAppData({
     return [...others, ...grouped].sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate));
   }, [teamEvents]);
 
+  // Season compliance, indexed by player. Recomputed when the roster, the
+  // checklist, or anyone's responses change — including the medical-release
+  // flag on a player's season profile, which a linked item reads.
+  const compliance = useMemo(
+    () =>
+      buildCompliance({
+        items: checklist?.items || [],
+        responses: checklistResponses,
+        players,
+        seasonId: selectedSeason,
+      }),
+    [checklist, checklistResponses, players, selectedSeason],
+  );
+
   return {
     players,
     setPlayers,
@@ -209,5 +263,9 @@ export function useAppData({
     fetchData,
     updateTeamEvent,
     refreshTeamEvents,
+    checklist,
+    checklistResponses,
+    compliance,
+    refreshChecklist: loadChecklist,
   };
 }

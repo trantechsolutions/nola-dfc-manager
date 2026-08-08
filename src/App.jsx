@@ -20,6 +20,7 @@ import {
   Monitor,
   ClipboardCheck,
   BookOpen,
+  ListChecks,
 } from 'lucide-react';
 import { useT } from './i18n/I18nContext';
 import { useTheme } from './theme/ThemeContext';
@@ -199,6 +200,9 @@ function App() {
     fetchData,
     updateTeamEvent,
     refreshTeamEvents,
+    checklist,
+    compliance,
+    refreshChecklist,
   } = useAppData({
     userEmail: user?.email || null,
     selectedTeamId,
@@ -609,6 +613,9 @@ function App() {
         ...(can(PERMISSIONS.TEAM_VIEW_ROSTER)
           ? [{ id: 'people', label: t('nav.players'), icon: Users, section: 'team' }]
           : []),
+        ...(can(PERMISSIONS.TEAM_VIEW_CHECKLIST)
+          ? [{ id: 'checklist', label: t('nav.checklist'), icon: ListChecks, section: 'team' }]
+          : []),
         ...(can(PERMISSIONS.TEAM_MANAGE_USERS)
           ? [{ id: 'team-users', label: t('nav.users', 'Users'), icon: Shield, section: 'team' }]
           : []),
@@ -629,7 +636,12 @@ function App() {
           ? [{ id: 'team-admin', label: t('nav.settings'), icon: SlidersHorizontal, section: 'team' }]
           : []),
       ]
-    : [{ id: 'schedule', label: t('nav.schedule'), icon: Calendar, section: 'team' }];
+    : // Parents get the checklist first: it is the only surface here that asks
+      // something of them, and burying it cost them a tab dive to find it.
+      [
+        { id: 'checklist', label: t('nav.checklist'), icon: ListChecks, section: 'team' },
+        { id: 'schedule', label: t('nav.schedule'), icon: Calendar, section: 'team' },
+      ];
 
   const canEditSchedule = can(PERMISSIONS.TEAM_EDIT_SCHEDULE);
   const canEditLedger = can(PERMISSIONS.TEAM_EDIT_LEDGER);
@@ -681,6 +693,10 @@ function App() {
     fetchData,
     viewingAsParent,
     impersonatingAs,
+    // Season compliance, derived from the team's checklist — see utils/compliance.js.
+    checklist,
+    compliance,
+    refreshChecklist,
   };
 
   const financeContextValue = {

@@ -63,6 +63,8 @@ export default {
     compliance: 'Compliance',
     complete: 'Complete',
     incomplete: 'Incomplete',
+    allComplete: 'All complete — nothing to do',
+    noRequirements: 'Nothing required this season',
     budgetFinalized: 'Budget Finalized',
     budgetDraft: 'Budget in Draft',
     feeWaived: 'Fee Waived',

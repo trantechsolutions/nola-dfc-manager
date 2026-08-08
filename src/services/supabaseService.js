@@ -23,6 +23,7 @@ import { documentService } from './documentService';
 import { seasonService } from './seasonService';
 import { categoryService } from './categoryService';
 import { rubricService } from './rubricService';
+import { checklistService } from './checklistService';
 import { settingsService } from './settingsService';
 
 export const supabaseService = {
@@ -39,6 +40,7 @@ export const supabaseService = {
   ...seasonService,
   ...categoryService,
   ...rubricService,
+  ...checklistService,
   ...settingsService,
 };
 

@@ -16,6 +16,7 @@ export default {
   budget: 'Presupuesto',
   fundraising: 'Recaudación',
   documents: 'Documentos',
+  checklist: 'Lista',
   users: 'Usuarios',
   categories: 'Categorías',
   bookBalance: 'Balance de Libros',

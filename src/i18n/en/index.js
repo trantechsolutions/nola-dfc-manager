@@ -6,6 +6,7 @@ import finance from './finance';
 import people from './people';
 import club from './club';
 import evaluations from './evaluations';
+import checklist from './checklist';
 
 export default {
   common,
@@ -39,4 +40,5 @@ export default {
   toast: club.toast,
   confirm: club.confirm,
   evaluations: evaluations.evaluations,
+  checklist: checklist.checklist,
 };

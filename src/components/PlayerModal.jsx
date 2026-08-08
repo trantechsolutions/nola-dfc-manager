@@ -5,7 +5,8 @@ import { supabaseService } from '../services/supabaseService';
 import { useT } from '../i18n/I18nContext';
 import { getUSAgeGroup, getAge, formatDateOnly } from '../utils/ageGroup';
 import { formatPhone } from '../utils/phone';
-import { getCompliance } from '../utils/compliance';
+import { EMPTY_COMPLIANCE } from '../utils/compliance';
+import PlayerCompliancePanel from './PlayerCompliancePanel';
 import { DOC_TYPE_LABELS, DOC_STATUS_COLORS } from '../utils/constants';
 import { compressImageFile } from '../utils/imageCompression';
 import ResponsiveModal from './layout/ResponsiveModal';
@@ -18,7 +19,6 @@ export default function PlayerModal({
   selectedSeason,
   stats,
   onClose,
-  onToggleCompliance,
   formatMoney,
   clubId,
   onRefresh,
@@ -26,6 +26,13 @@ export default function PlayerModal({
   showToast,
   showConfirm,
   canUploadMedical = false,
+  // Season compliance — the team's checklist. Replaced the three fixed
+  // medical / ReePlayer / club-registration switches.
+  compliance = EMPTY_COMPLIANCE,
+  checklist = null,
+  canManageChecklist = false,
+  onComplianceChanged,
+  user,
 }) {
   const { t } = useT();
   const [showMedicalForm, setShowMedicalForm] = useState(false);
@@ -136,7 +143,6 @@ export default function PlayerModal({
     feeWaived: false,
   };
   const isWaived = fin.feeWaived || player.seasonProfiles?.[selectedSeason]?.feeWaived === true;
-  const comp = getCompliance(player, selectedSeason);
 
   return (
     <>
@@ -187,57 +193,18 @@ export default function PlayerModal({
           {/* Compliance Section */}
           <div className="mb-6 bg-background p-4 rounded-lg border border-border">
             <h4 className="text-xs font-semibold text-muted-foreground mb-3">{t('playerModal.playerSetup')}</h4>
-            <div className="space-y-3">
-              {/* Waiver — read-only, derived from uploaded documents */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="font-medium text-foreground text-sm">{t('playerModal.medicalRelease')}</span>
-                  <p className="text-xs text-muted-foreground mt-0.5">{t('playerModal.medicalAuto')}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowMedicalForm(true)}
-                    className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
-                      comp.medicalRelease
-                        ? 'bg-emerald-100 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200'
-                        : 'bg-red-100 text-red-700 dark:text-red-400 hover:bg-red-200'
-                    }`}
-                  >
-                    {comp.medicalRelease ? t('playerModal.onFile') + ' ✎' : t('playerModal.fillOut') + ' →'}
-                  </button>
-                </div>
-              </div>
-              {/* ReePlayer — manual switch, indicates account creation */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="font-medium text-foreground text-sm">{t('playerModal.reeplayerAccount')}</span>
-                  <p className="text-xs text-muted-foreground mt-0.5">{t('playerModal.reeplayerHelp')}</p>
-                </div>
-                <button
-                  onClick={() => onToggleCompliance(player.id, 'reePlayerWaiver', comp.reePlayerWaiver)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${comp.reePlayerWaiver ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${comp.reePlayerWaiver ? 'translate-x-6' : 'translate-x-1'}`}
-                  />
-                </button>
-              </div>
-              {/* Club Registration — manual switch, set once the player is registered with the club */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="font-medium text-foreground text-sm">{t('playerModal.clubRegistration')}</span>
-                  <p className="text-xs text-muted-foreground mt-0.5">{t('playerModal.clubRegistrationHelp')}</p>
-                </div>
-                <button
-                  onClick={() => onToggleCompliance(player.id, 'clubRegistration', comp.clubRegistration)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${comp.clubRegistration ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${comp.clubRegistration ? 'translate-x-6' : 'translate-x-1'}`}
-                  />
-                </button>
-              </div>
-            </div>
+            {/* Compliance is the season checklist, not three fixed switches —
+                see PlayerCompliancePanel. */}
+            <PlayerCompliancePanel
+              player={player}
+              compliance={compliance}
+              checklistId={checklist?.id}
+              canManage={canManageChecklist}
+              user={user}
+              showToast={showToast}
+              onChanged={onComplianceChanged}
+              onOpenMedicalForm={() => setShowMedicalForm(true)}
+            />
           </div>
 
           {/* Guardians */}

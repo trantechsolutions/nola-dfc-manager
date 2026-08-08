@@ -35,6 +35,11 @@ const Changelog = lazy(() => import('./Changelog'));
 const SuperAdminView = lazy(() => import('../views/admin/SuperAdminView'));
 const ClubPlayersView = lazy(() => import('../views/club/ClubPlayersView'));
 const SeasonEvaluationView = lazy(() => import('../views/team/SeasonEvaluationView'));
+const ChecklistManager = lazy(() => import('../views/team/ChecklistManager'));
+const ParentChecklistView = lazy(() => import('../views/team/ParentChecklistView'));
+// Used by the /evaluate/:sessionId deep link below. Was referenced without ever
+// being imported, so that route threw ReferenceError on entry.
+const EvaluatorScoringView = lazy(() => import('../views/club/evaluations/EvaluatorScoringView'));
 
 // Inline route fallback — matches the app's existing loading spinner
 function RouteFallback() {
@@ -162,6 +167,9 @@ export default function AppRoutes({
     collapsedTeamEvents,
     fetchData,
     viewingAsParent,
+    compliance,
+    checklist,
+    refreshChecklist,
   } = useData();
 
   const { isReadOnly, guardedAction } = useImpersonationGuard(user);
@@ -358,6 +366,7 @@ export default function AppRoutes({
                     calculatePlayerFinancials={calculatePlayerFinancials}
                     selectedSeason={selectedSeason}
                     canViewFinancials={can(PERMISSIONS.TEAM_VIEW_BUDGET) || can(PERMISSIONS.TEAM_VIEW_LEDGER)}
+                    compliance={compliance}
                     onAddPlayer={() => {
                       setPlayerToEdit(null);
                       setShowPlayerForm(true);
@@ -394,10 +403,51 @@ export default function AppRoutes({
                     user={user}
                     accounts={accounts}
                     isReadOnly={isReadOnly}
+                    compliance={compliance}
                   />
                 )
               }
             />
+
+            {/* Season Checklist — its own route on both sides rather than a tab
+                buried in People / My Player. Staff get the roster-wide manager;
+                parents get their own players' cards. */}
+            {effectiveIsStaff && can(PERMISSIONS.TEAM_VIEW_CHECKLIST) && (
+              <Route
+                path="/checklist"
+                element={
+                  <ChecklistManager
+                    players={seasonalPlayers}
+                    teamId={selectedTeam?.id}
+                    teamName={selectedTeam?.name}
+                    seasonId={selectedSeason}
+                    seasonLabel={seasons.find((s) => s.id === selectedSeason)?.name}
+                    user={user}
+                    showToast={showToast}
+                    showConfirm={showConfirm}
+                    // Impersonating a parent must not let staff write through the
+                    // admin surface — same guard the rest of the team views use.
+                    canManage={can(PERMISSIONS.TEAM_MANAGE_CHECKLIST) && !isReadOnly}
+                  />
+                }
+              />
+            )}
+            {!effectiveIsStaff && (
+              <Route
+                path="/checklist"
+                element={
+                  <ParentChecklistView
+                    players={myPlayers}
+                    selectedSeason={selectedSeason}
+                    clubId={club?.id}
+                    user={user}
+                    showToast={showToast}
+                    onRefresh={fetchData}
+                    isReadOnly={isReadOnly}
+                  />
+                }
+              />
+            )}
 
             <Route
               path="/schedule"
@@ -704,6 +754,10 @@ export default function AppRoutes({
                                   navigate('/dashboard');
                                 },
                                 refreshData: fetchData,
+                                compliance,
+                                checklist,
+                                onComplianceChanged: refreshChecklist,
+                                user,
                               }
                             : null
                         }
@@ -719,6 +773,7 @@ export default function AppRoutes({
                                 can,
                                 PERMISSIONS,
                                 onPlayerUpdate: fetchData,
+                                compliance,
                               }
                             : null
                         }
@@ -780,25 +835,14 @@ export default function AppRoutes({
             setShowPlayerModal(false);
             setPlayerToView(null);
           }}
-          onToggleCompliance={async (id, field, currentState) => {
-            const next = !currentState;
-            setPlayerToView((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    seasonProfiles: {
-                      ...prev.seasonProfiles,
-                      [selectedSeason]: { ...(prev.seasonProfiles?.[selectedSeason] || {}), [field]: next },
-                    },
-                  }
-                : prev,
-            );
-            await supabaseService.setSeasonCompliance(id, selectedSeason, field, next);
-            fetchData();
-          }}
           formatMoney={formatMoney}
           clubId={club?.id}
           onRefresh={fetchData}
+          compliance={compliance}
+          checklist={checklist}
+          canManageChecklist={can(PERMISSIONS.TEAM_MANAGE_CHECKLIST) && !isReadOnly}
+          onComplianceChanged={refreshChecklist}
+          user={user}
           onViewAsParent={(p) => {
             setImpersonatingAs(p);
             // Replace rather than push: this leaves from inside the player

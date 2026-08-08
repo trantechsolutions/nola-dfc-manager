@@ -27,7 +27,7 @@ import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup, getAge, formatDateOnly } from '../../utils/ageGroup';
 import { formatPhone, formatPhoneInput, phoneHref } from '../../utils/phone';
-import { getCompliance } from '../../utils/compliance';
+import { getCompliance, progressFor, EMPTY_COMPLIANCE } from '../../utils/compliance';
 
 import { CATEGORY_LABELS, CATEGORY_TEXT_COLORS as CATEGORY_COLORS, DOC_TYPE_LABELS } from '../../utils/constants';
 import PaymentOptions from '../../components/PaymentOptions';
@@ -78,6 +78,8 @@ export default function ParentView({
   user,
   accounts = [],
   isReadOnly = false,
+  // Season compliance index — see utils/compliance.js.
+  compliance = EMPTY_COMPLIANCE,
 }) {
   const { t } = useT();
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -349,14 +351,18 @@ export default function ParentView({
     }
   };
 
-  // ── COMPLIANCE ITEMS (per selected season) ──
+  // ── COMPLIANCE (per selected season) ──
+  // The season checklist defines this now, so the summary lists whatever the
+  // team actually asked for rather than three fixed rows. `parentComp` still
+  // reads the raw flags for the Paperwork tab's medical / ReePlayer sections.
   const parentComp = getCompliance(activePlayer, selectedSeason);
-  const complianceItems = [
-    { label: t('medical.medicalRelease'), done: parentComp.medicalRelease },
-    { label: t('medical.reeplayerWaiver'), done: parentComp.reePlayerWaiver },
-    { label: t('medical.clubRegistration'), done: parentComp.clubRegistration },
-  ];
-  const isFullyCompliant = complianceItems.every((c) => c.done);
+  const parentProgress = progressFor(compliance, activePlayer?.id);
+  const outstandingKeys = new Set(parentProgress.outstanding.map((item) => item.key));
+  const complianceItems = compliance.requiredItems.map((item) => ({
+    label: item.label,
+    done: !outstandingKeys.has(item.key),
+  }));
+  const isFullyCompliant = parentProgress.complete;
 
   return (
     <div className="space-y-4">
@@ -430,7 +436,9 @@ export default function ParentView({
               <li className="flex items-center justify-between py-2">
                 <span className="text-muted-foreground">{t('parent.compliance', 'Paperwork')}</span>
                 {isFullyCompliant ? (
-                  <Badge tone="success">{t('parent.complete', 'Complete')}</Badge>
+                  <Badge tone="success">
+                    {complianceItems.length === 0 ? t('parent.noRequirements') : t('parent.allComplete')}
+                  </Badge>
                 ) : (
                   <Badge tone="warning">
                     {complianceItems.filter((c) => !c.done).length} {t('parent.missing', 'missing')}
@@ -473,14 +481,33 @@ export default function ParentView({
                 <p className="flex items-center gap-1.5 font-semibold text-foreground">
                   <ShieldCheck size={13} className="text-muted-foreground" /> {t('parent.compliance', 'Paperwork')}
                 </p>
-                <p className="flex flex-wrap gap-1 pt-1">
-                  {complianceItems.map((item, i) => (
-                    <Badge key={i} tone={item.done ? 'success' : 'danger'}>
-                      {item.done ? <ShieldCheck size={10} /> : <ShieldX size={10} />}
-                      {item.label}
+                {/* A bare row of badges left a parent counting green pills to
+                    work out whether anything was outstanding — and rendered
+                    nothing at all for a season with no checklist, which reads as
+                    broken rather than "nothing to do". Both now say so plainly. */}
+                {complianceItems.length === 0 ? (
+                  <p className="pt-1">
+                    <Badge tone="success">
+                      <ShieldCheck size={10} /> {t('parent.noRequirements')}
                     </Badge>
-                  ))}
-                </p>
+                  </p>
+                ) : (
+                  <>
+                    {isFullyCompliant && (
+                      <p className="flex items-center gap-1.5 pt-1 text-xs font-semibold text-success">
+                        <ShieldCheck size={12} /> {t('parent.allComplete')}
+                      </p>
+                    )}
+                    <p className="flex flex-wrap gap-1 pt-1">
+                      {complianceItems.map((item, i) => (
+                        <Badge key={i} tone={item.done ? 'success' : 'danger'}>
+                          {item.done ? <ShieldCheck size={10} /> : <ShieldX size={10} />}
+                          {item.label}
+                        </Badge>
+                      ))}
+                    </p>
+                  </>
+                )}
               </div>
 
               {activePlayer.guardians?.length > 0 && (
@@ -818,6 +845,10 @@ export default function ParentView({
 
             {tab === 'paperwork' && (
               <div className="space-y-4 p-4">
+                {/* The season checklist used to sit here. It has its own nav
+                    entry now (ParentChecklistView) so parents aren't three
+                    clicks from the one surface they're asked to act on. */}
+
                 {/* Medical Release Form */}
                 <div
                   className={`p-4 rounded-lg border shadow-sm ${

@@ -31,7 +31,8 @@ import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup, getAge, formatDateOnly } from '../../utils/ageGroup';
 import { formatPhone, phoneDigits, phoneHref } from '../../utils/phone';
-import { getCompliance, isFullyCompliant } from '../../utils/compliance';
+import { isCompliant, outstandingFor, itemStatusFor, ITEM_STATUS, EMPTY_COMPLIANCE } from '../../utils/compliance';
+import PlayerCompliancePanel from '../../components/PlayerCompliancePanel';
 import { DOC_TYPE_LABELS, DOC_STATUS_COLORS } from '../../utils/constants';
 import JerseyBadge from '../../components/JerseyBadge';
 import DirectoryCard, { DetailRow, EmptyRow } from '../../components/layout/DirectoryCard';
@@ -58,6 +59,13 @@ export default function RosterManagement({
   onViewPlayer,
   onViewAsParent,
   refreshData,
+  // Season compliance index: the team's checklist rolled up per player. Built
+  // once in useAppData so this view, the overview, and the documents view all
+  // agree. See utils/compliance.js.
+  compliance = EMPTY_COMPLIANCE,
+  checklist = null,
+  onComplianceChanged,
+  user,
 }) {
   const { t, tp } = useT();
   const [searchTerm, setSearchTerm] = useState('');
@@ -137,9 +145,9 @@ export default function RosterManagement({
 
     // Compliance filter (per selected season)
     if (complianceFilter === 'compliant') {
-      list = list.filter((p) => isFullyCompliant(p, selectedSeason));
+      list = list.filter((p) => isCompliant(compliance, p.id));
     } else if (complianceFilter === 'non-compliant') {
-      list = list.filter((p) => !isFullyCompliant(p, selectedSeason));
+      list = list.filter((p) => !isCompliant(compliance, p.id));
     }
 
     // Search
@@ -181,7 +189,7 @@ export default function RosterManagement({
     });
 
     return list;
-  }, [players, searchTerm, statusFilter, complianceFilter, sortField, sortDir, selectedSeason]);
+  }, [players, searchTerm, statusFilter, complianceFilter, sortField, sortDir, selectedSeason, compliance]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -200,7 +208,7 @@ export default function RosterManagement({
   // ── Stats ──
   const activePlayers = players.filter((p) => p.status === 'active');
   const archivedPlayers = players.filter((p) => p.status === 'archived');
-  const compliantCount = activePlayers.filter((p) => isFullyCompliant(p, selectedSeason)).length;
+  const compliantCount = activePlayers.filter((p) => isCompliant(compliance, p.id)).length;
   const enrolledInSeason = activePlayers.filter((p) => p.seasonProfiles?.[selectedSeason]).length;
 
   // ── Season toggle handling ──
@@ -230,16 +238,6 @@ export default function RosterManagement({
       showToast(t('rosterMgmt.enrollmentFailed'), true);
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  // ── Compliance toggle ──
-  const handleComplianceToggle = async (playerId, field, currentValue) => {
-    try {
-      await supabaseService.setSeasonCompliance(playerId, selectedSeason, field, !currentValue);
-      await refreshData();
-    } catch {
-      showToast('Failed to update compliance.', true);
     }
   };
 
@@ -278,9 +276,10 @@ export default function RosterManagement({
         'Age Group',
         'Shirt Size',
         'Siblings',
-        'Medical Release',
-        'ReePlayer Waiver',
-        'Club Registration',
+        'Compliant',
+        // One column per checklist item — the export follows whatever the team
+        // authored this season rather than three columns that no longer exist.
+        ...compliance.items.map((item) => item.label),
         'Guardian 1 Name',
         'Guardian 1 Email',
         'Guardian 1 Phone',
@@ -292,7 +291,6 @@ export default function RosterManagement({
     filteredPlayers.forEach((p) => {
       const g1 = p.guardians?.[0] || {};
       const g2 = p.guardians?.[1] || {};
-      const comp = getCompliance(p, selectedSeason);
       rows.push([
         p.firstName,
         p.lastName,
@@ -302,9 +300,10 @@ export default function RosterManagement({
         getUSAgeGroup(p.birthdate, selectedSeason) || '',
         p.shirtSize || '',
         p.siblingsCount ?? '',
-        comp.medicalRelease ? 'Yes' : 'No',
-        comp.reePlayerWaiver ? 'Yes' : 'No',
-        comp.clubRegistration ? 'Yes' : 'No',
+        isCompliant(compliance, p.id) ? 'Yes' : 'No',
+        ...compliance.items.map((item) =>
+          itemStatusFor(compliance, p.id, item) === ITEM_STATUS.COMPLETE ? 'Yes' : 'No',
+        ),
         g1.name || '',
         g1.email || '',
         g1.phone || '',
@@ -428,9 +427,9 @@ export default function RosterManagement({
         ) : (
           pagedPlayers.map((player) => {
             const isExpanded = expandedPlayerId === player.id;
-            const comp = getCompliance(player, selectedSeason);
-            const missingCount = Object.values(comp).filter((v) => !v).length;
-            const isCompliant = missingCount === 0;
+            const missing = outstandingFor(compliance, player.id);
+            const missingCount = missing.length;
+            const playerCompliant = missingCount === 0;
             const enrolledSeasons = Object.keys(player.seasonProfiles || {});
             const isArchived = player.status === 'archived';
 
@@ -446,7 +445,7 @@ export default function RosterManagement({
                     <JerseyBadge
                       number={player.jerseyNumber}
                       size={32}
-                      color={isArchived ? 'slate' : isCompliant ? 'slate' : 'amber'}
+                      color={isArchived ? 'slate' : playerCompliant ? 'slate' : 'amber'}
                     />
                   </td>
 
@@ -457,7 +456,7 @@ export default function RosterManagement({
                         <JerseyBadge
                           number={player.jerseyNumber}
                           size={32}
-                          color={isArchived ? 'slate' : isCompliant ? 'slate' : 'amber'}
+                          color={isArchived ? 'slate' : playerCompliant ? 'slate' : 'amber'}
                         />
                       </div>
                       <div className="min-w-0">
@@ -507,7 +506,7 @@ export default function RosterManagement({
 
                   {/* Compliance (desktop) */}
                   <td className="hidden px-4 py-2.5 md:table-cell">
-                    {isCompliant ? (
+                    {playerCompliant ? (
                       <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-lg">
                         <ShieldCheck size={12} /> Complete
                       </span>
@@ -591,71 +590,18 @@ export default function RosterManagement({
                           <h4 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-1.5">
                             <Shield size={12} /> Compliance
                           </h4>
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <span className="text-xs font-semibold text-foreground">
-                                  {t('medical.medicalRelease')}
-                                </span>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                  {comp.medicalRelease ? t('parent.completedOnFile') : t('parent.requiredNotSubmitted')}
-                                </p>
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setMedicalPlayer(player);
-                                }}
-                                className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
-                                  comp.medicalRelease
-                                    ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/60'
-                                    : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/60'
-                                }`}
-                              >
-                                {comp.medicalRelease ? t('playerModal.onFile') + ' ✎' : t('playerModal.fillOut') + ' →'}
-                              </button>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-semibold text-foreground">ReePlayer Waiver</span>
-                              {canEdit ? (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleComplianceToggle(player.id, 'reePlayerWaiver', comp.reePlayerWaiver);
-                                  }}
-                                  className={`w-8 h-5 rounded-full transition-colors relative ${comp.reePlayerWaiver ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                                >
-                                  <div
-                                    className={`absolute top-0.5 w-4 h-4 bg-card rounded-full shadow transition-transform ${comp.reePlayerWaiver ? 'translate-x-3.5' : 'translate-x-0.5'}`}
-                                  />
-                                </button>
-                              ) : comp.reePlayerWaiver ? (
-                                <ShieldCheck size={16} className="text-emerald-700 dark:text-emerald-400" />
-                              ) : (
-                                <ShieldX size={16} className="text-red-400" />
-                              )}
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-semibold text-foreground">Club Registration</span>
-                              {canEdit ? (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleComplianceToggle(player.id, 'clubRegistration', comp.clubRegistration);
-                                  }}
-                                  className={`w-8 h-5 rounded-full transition-colors relative ${comp.clubRegistration ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                                >
-                                  <div
-                                    className={`absolute top-0.5 w-4 h-4 bg-card rounded-full shadow transition-transform ${comp.clubRegistration ? 'translate-x-3.5' : 'translate-x-0.5'}`}
-                                  />
-                                </button>
-                              ) : comp.clubRegistration ? (
-                                <ShieldCheck size={16} className="text-emerald-700 dark:text-emerald-400" />
-                              ) : (
-                                <ShieldX size={16} className="text-red-400" />
-                              )}
-                            </div>
-                          </div>
+                          {/* Compliance is the season checklist, not three fixed
+                              switches — see PlayerCompliancePanel. */}
+                          <PlayerCompliancePanel
+                            player={player}
+                            compliance={compliance}
+                            checklistId={checklist?.id}
+                            canManage={canEdit}
+                            user={user}
+                            showToast={showToast}
+                            onChanged={onComplianceChanged}
+                            onOpenMedicalForm={() => setMedicalPlayer(player)}
+                          />
                         </div>
 
                         {/* ── Season Enrollment Section ── */}

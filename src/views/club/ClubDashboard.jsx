@@ -13,7 +13,8 @@ import {
   CalendarRange,
 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
-import { getCompliance, isFullyCompliant } from '../../utils/compliance';
+import { buildCompliance, isCompliant, outstandingFor } from '../../utils/compliance';
+import { checklistService } from '../../services/checklistService';
 import { useT } from '../../i18n/I18nContext';
 import ClubCalendarView from './ClubCalendarView';
 
@@ -31,40 +32,41 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
       await Promise.all(
         teams.map(async (team) => {
           try {
-            const [players, docs, staffRoles] = await Promise.all([
+            const [players, docs, staffRoles, checklist] = await Promise.all([
               supabaseService.getPlayersByTeam(team.id),
               supabaseService.getTeamDocuments(team.id).catch(() => []),
               supabaseService.getTeamRoles(team.id).catch(() => []),
+              checklistService.getChecklist(team.id, selectedSeason).catch(() => null),
             ]);
             const seasonPlayers = players.filter((p) => p.seasonProfiles?.[selectedSeason]);
 
-            const medical = seasonPlayers.filter((p) => getCompliance(p, selectedSeason).medicalRelease).length;
-            const reeplayer = seasonPlayers.filter((p) => getCompliance(p, selectedSeason).reePlayerWaiver).length;
-            const clubReg = seasonPlayers.filter((p) => getCompliance(p, selectedSeason).clubRegistration).length;
-            const fullyCompliant = seasonPlayers.filter((p) => isFullyCompliant(p, selectedSeason)).length;
+            // Compliance is this team's own checklist. Teams author different
+            // items, so the club roll-up counts PLAYERS outstanding rather than
+            // trying to line up per-item columns that would not match.
+            const responses = checklist ? await checklistService.getResponses(checklist.id).catch(() => []) : [];
+            const compliance = buildCompliance({
+              items: checklist?.items || [],
+              responses,
+              players: seasonPlayers,
+              seasonId: selectedSeason,
+            });
+            const fullyCompliant = seasonPlayers.filter((p) => isCompliant(compliance, p.id)).length;
 
             const docsUploaded = docs.length;
             const docsVerified = docs.filter((d) => d.status === 'verified').length;
             const docsPending = docs.filter((d) => d.status === 'uploaded').length;
 
             const missingCompliance = seasonPlayers
-              .filter((p) => !isFullyCompliant(p, selectedSeason))
-              .map((p) => {
-                const c = getCompliance(p, selectedSeason);
-                return {
-                  name: `${p.firstName} ${p.lastName}`,
-                  jersey: p.jerseyNumber,
-                  missingMedical: !c.medicalRelease,
-                  missingReeplayer: !c.reePlayerWaiver,
-                  missingClubReg: !c.clubRegistration,
-                };
-              });
+              .filter((p) => !isCompliant(compliance, p.id))
+              .map((p) => ({
+                name: `${p.firstName} ${p.lastName}`,
+                jersey: p.jerseyNumber,
+                missing: outstandingFor(compliance, p.id).map((item) => item.label),
+              }));
 
             data[team.id] = {
               playerCount: seasonPlayers.length,
-              medical,
-              reeplayer,
-              clubReg,
+              hasChecklist: compliance.hasChecklist,
               fullyCompliant,
               complianceRate:
                 seasonPlayers.length > 0 ? Math.round((fullyCompliant / seasonPlayers.length) * 100) : 100,
@@ -84,6 +86,7 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
               clubReg: 0,
               fullyCompliant: 0,
               complianceRate: 100,
+              hasChecklist: false,
               docsUploaded: 0,
               docsVerified: 0,
               docsPending: 0,
@@ -104,17 +107,17 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
     const vals = Object.values(teamData);
     const totalPlayers = vals.reduce((s, d) => s + d.playerCount, 0);
     const totalCompliant = vals.reduce((s, d) => s + d.fullyCompliant, 0);
-    const totalMissingMedical = vals.reduce((s, d) => s + (d.playerCount - d.medical), 0);
-    const totalMissingReeplayer = vals.reduce((s, d) => s + (d.playerCount - d.reeplayer), 0);
-    const totalMissingClubReg = vals.reduce((s, d) => s + (d.playerCount - d.clubReg), 0);
+    const totalOutstanding = vals.reduce((s, d) => s + (d.missingCompliance?.length || 0), 0);
+    // Teams still without a checklist for this season — worth surfacing, since
+    // they read as 100% compliant precisely because nothing has been asked yet.
+    const teamsWithoutChecklist = vals.filter((d) => d.playerCount > 0 && !d.hasChecklist).length;
     const totalDocs = vals.reduce((s, d) => s + d.docsUploaded, 0);
     const totalStaff = new Set(vals.flatMap((d) => d.staffRoles.map((r) => r.userId))).size;
     return {
       totalPlayers,
       totalCompliant,
-      totalMissingMedical,
-      totalMissingReeplayer,
-      totalMissingClubReg,
+      totalOutstanding,
+      teamsWithoutChecklist,
       totalDocs,
       totalStaff,
     };
@@ -280,7 +283,7 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
           </div>
 
           {/* Compliance Alerts */}
-          {(totals.totalMissingMedical > 0 || totals.totalMissingReeplayer > 0 || totals.totalMissingClubReg > 0) && (
+          {(totals.totalOutstanding > 0 || totals.teamsWithoutChecklist > 0) && (
             <div className="bg-gradient-to-r from-amber-50 to-red-50 dark:from-amber-900/20 dark:to-red-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-5">
               <h3 className="font-bold text-amber-800 dark:text-amber-300 text-sm flex items-center gap-2 mb-3">
                 <AlertTriangle size={16} className="text-amber-700 dark:text-amber-400" /> Missing Compliance — All
@@ -288,16 +291,18 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
               </h3>
               <div className="grid grid-cols-3 gap-3 mb-4">
                 <div className="bg-card border border-border rounded-lg p-3 text-center">
-                  <p className="text-xl font-bold text-red-700 dark:text-red-400">{totals.totalMissingMedical}</p>
-                  <p className="text-xs font-semibold text-muted-foreground">Missing Medical Release</p>
+                  <p className="text-xl font-bold text-red-700 dark:text-red-400">{totals.totalOutstanding}</p>
+                  <p className="text-xs font-semibold text-muted-foreground">Players With Outstanding Items</p>
                 </div>
                 <div className="bg-card border border-border rounded-lg p-3 text-center">
-                  <p className="text-xl font-bold text-red-700 dark:text-red-400">{totals.totalMissingReeplayer}</p>
-                  <p className="text-xs font-semibold text-muted-foreground">Missing ReePlayer Waiver</p>
+                  <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400">{totals.totalCompliant}</p>
+                  <p className="text-xs font-semibold text-muted-foreground">Players Fully Compliant</p>
                 </div>
                 <div className="bg-card border border-border rounded-lg p-3 text-center">
-                  <p className="text-xl font-bold text-red-700 dark:text-red-400">{totals.totalMissingClubReg}</p>
-                  <p className="text-xs font-semibold text-muted-foreground">Missing Club Registration</p>
+                  <p className="text-xl font-bold text-amber-700 dark:text-amber-400">{totals.teamsWithoutChecklist}</p>
+                  {/* These teams read as 100% because nothing has been asked of
+                      them yet — worth calling out rather than hiding. */}
+                  <p className="text-xs font-semibold text-muted-foreground">Teams With No Checklist</p>
                 </div>
               </div>
 
@@ -323,12 +328,11 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
                             <span className="text-foreground">
                               #{p.jersey || '?'} {p.name}
                             </span>
-                            {p.missingMedical && <ShieldX size={10} className="text-red-400" title="Missing medical" />}
-                            {p.missingReeplayer && (
-                              <ShieldX size={10} className="text-amber-400" title="Missing ReePlayer" />
-                            )}
-                            {p.missingClubReg && (
-                              <ShieldX size={10} className="text-blue-400" title="Missing club registration" />
+                            {p.missing.length > 0 && (
+                              <span className="inline-flex items-center gap-1" title={p.missing.join(', ')}>
+                                <ShieldX size={10} className="text-red-400" />
+                                <span className="text-muted-foreground tabular-nums">{p.missing.length}</span>
+                              </span>
                             )}
                           </span>
                         ))}
@@ -346,21 +350,18 @@ export default function ClubDashboard({ club, teams, seasons, selectedSeason, on
           )}
 
           {/* All Compliant Banner */}
-          {totals.totalMissingMedical === 0 &&
-            totals.totalMissingReeplayer === 0 &&
-            totals.totalMissingClubReg === 0 &&
-            totals.totalPlayers > 0 && (
-              <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-5 flex items-center gap-3">
-                <CheckCircle2 size={24} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
-                <div>
-                  <p className="font-bold text-emerald-800 text-sm">All Players Compliant</p>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                    Every player across all {teams.length} teams has their medical release, ReePlayer waiver, and club
-                    registration on file.
-                  </p>
-                </div>
+          {totals.totalOutstanding === 0 && totals.teamsWithoutChecklist === 0 && totals.totalPlayers > 0 && (
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-5 flex items-center gap-3">
+              <CheckCircle2 size={24} className="text-emerald-700 dark:text-emerald-400 shrink-0" />
+              <div>
+                <p className="font-bold text-emerald-800 text-sm">All Players Compliant</p>
+                <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                  Every player across all {teams.length} teams has their medical release, ReePlayer waiver, and club
+                  registration on file.
+                </p>
               </div>
-            )}
+            </div>
+          )}
         </>
       )}
     </div>

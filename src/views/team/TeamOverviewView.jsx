@@ -10,18 +10,16 @@ import {
   ChevronRight,
   AlertCircle,
   CheckCircle2,
-  FileCheck2,
-  Camera,
-  BadgeCheck,
   LayoutDashboard,
   UsersRound,
   Wallet,
   PiggyBank,
   Receipt,
+  ListChecks,
 } from 'lucide-react';
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup } from '../../utils/ageGroup';
-import { getCompliance, isFullyCompliant } from '../../utils/compliance';
+import { isCompliant, outstandingFor, EMPTY_COMPLIANCE } from '../../utils/compliance';
 import JerseyBadge from '../../components/JerseyBadge';
 import { TRACKED_HOLDINGS, HOLDING_LABELS, HOLDING_ICONS } from '../../utils/holdings';
 
@@ -40,6 +38,8 @@ export default function TeamOverviewView({
   selectedSeason,
   canViewFinancials = true,
   accountMap = {},
+  // Season compliance index — see utils/compliance.js.
+  compliance = EMPTY_COMPLIANCE,
 }) {
   const { t, tp } = useT();
   const navigate = useNavigate();
@@ -99,17 +99,17 @@ export default function TeamOverviewView({
     [players, playerFinancials],
   );
 
-  // Compliance
+  // Compliance — the season checklist, not the old fixed three flags. The
+  // breakdown below is now one bar per REQUIRED item, so it follows whatever the
+  // team actually asked for this season.
   const complianceStats = useMemo(
     () => ({
       total: players.length,
-      medical: players.filter((p) => getCompliance(p, selectedSeason).medicalRelease).length,
-      reeplayer: players.filter((p) => getCompliance(p, selectedSeason).reePlayerWaiver).length,
-      clubReg: players.filter((p) => getCompliance(p, selectedSeason).clubRegistration).length,
       waived: players.filter((p) => p.seasonProfiles?.[selectedSeasonData?.id]?.feeWaived).length,
-      fullyCompliant: players.filter((p) => isFullyCompliant(p, selectedSeason)).length,
+      fullyCompliant: players.filter((p) => isCompliant(compliance, p.id)).length,
+      perItem: compliance.perItem.filter((row) => row.item.required),
     }),
-    [players, selectedSeasonData, selectedSeason],
+    [players, selectedSeasonData, compliance],
   );
 
   // Holding balances — group cleared transactions by account, then roll up
@@ -498,9 +498,7 @@ export default function TeamOverviewView({
             <h3 className="font-semibold text-foreground text-sm mb-4">{t('overview.docCompliance')}</h3>
             <div className="space-y-3">
               {[
-                { label: t('medical.medicalRelease'), count: complianceStats.medical },
-                { label: t('medical.reeplayerWaiver'), count: complianceStats.reeplayer },
-                { label: t('medical.clubRegistration'), count: complianceStats.clubReg },
+                ...complianceStats.perItem.map((row) => ({ label: row.item.label, count: row.completed })),
                 { label: t('overview.fullyCompliant'), count: complianceStats.fullyCompliant },
               ].map(({ label, count }) => {
                 const pct = complianceStats.total > 0 ? Math.round((count / complianceStats.total) * 100) : 0;
@@ -628,10 +626,8 @@ export default function TeamOverviewView({
               ) : (
                 filteredPlayers.map((player) => {
                   const isWaived = player.seasonProfiles?.[selectedSeasonData?.id]?.feeWaived;
-                  const playerCompliance = getCompliance(player, selectedSeason);
-                  const hasMedical = playerCompliance.medicalRelease;
-                  const hasReeplayer = playerCompliance.reePlayerWaiver;
-                  const hasClubReg = playerCompliance.clubRegistration;
+                  const outstanding = outstandingFor(compliance, player.id);
+                  const playerCompliant = outstanding.length === 0;
                   const fin = playerFinancials[player.id];
                   const hasBalance = canViewFinancials && fin && fin.remainingBalance > 0 && !isWaived;
                   const paidPct =
@@ -674,30 +670,29 @@ export default function TeamOverviewView({
                                 {t('overview.waived')}
                               </span>
                             )}
-                            {/* Waiver doc status */}
-                            <span title={hasMedical ? 'Waiver on file' : 'Waiver missing'}>
-                              <FileCheck2
+                            {/* Checklist compliance. One indicator instead of the
+                                old three fixed icons: the items are now whatever
+                                the team authored, so a per-flag row no longer
+                                describes what is actually outstanding. */}
+                            <span
+                              title={
+                                playerCompliant
+                                  ? t('overview.fullyCompliant')
+                                  : outstanding.map((i) => i.label).join(', ')
+                              }
+                              className="flex items-center gap-1"
+                            >
+                              <ListChecks
                                 size={13}
                                 className={
-                                  hasMedical ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'
+                                  playerCompliant ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'
                                 }
                               />
-                            </span>
-                            {/* ReePlayer account status */}
-                            <span title={hasReeplayer ? 'ReePlayer account created' : 'No ReePlayer account'}>
-                              <Camera
-                                size={13}
-                                className={hasReeplayer ? 'text-blue-700 dark:text-blue-400' : 'text-muted-foreground'}
-                              />
-                            </span>
-                            {/* Club registration status */}
-                            <span title={hasClubReg ? 'Registered with club' : 'Not registered with club'}>
-                              <BadgeCheck
-                                size={13}
-                                className={
-                                  hasClubReg ? 'text-violet-700 dark:text-violet-400' : 'text-muted-foreground'
-                                }
-                              />
+                              {!playerCompliant && outstanding.length > 0 && (
+                                <span className="text-xs font-semibold text-muted-foreground tabular-nums">
+                                  {outstanding.length}
+                                </span>
+                              )}
                             </span>
                             {hasBalance && (
                               <span className="text-xs font-bold text-red-700 dark:text-red-400">
