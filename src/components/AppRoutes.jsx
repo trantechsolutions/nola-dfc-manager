@@ -184,6 +184,7 @@ export default function AppRoutes({
     handleSaveExpense,
     handleToggleCleared,
     handleDeleteExpense,
+    handleBulkAddExpenses,
     matchups,
     matchupsLoading,
     createMatchup,
@@ -414,6 +415,17 @@ export default function AppRoutes({
                   onSaveExpense={canEditSchedule ? handleSaveExpense : null}
                   onToggleCleared={canEditSchedule ? handleToggleCleared : null}
                   onDeleteExpense={canEditSchedule ? handleDeleteExpense : null}
+                  onBulkAddExpenses={
+                    canEditSchedule
+                      ? async (rows) => {
+                          const r = await handleBulkAddExpenses(rows);
+                          if (!r || r.success !== false) {
+                            showToast(t('toast.bulkExpensesAdded', { n: rows.length }));
+                          }
+                          return r;
+                        }
+                      : null
+                  }
                   seasonIds={seasons.map((s) => s.id)}
                   selectedSeason={selectedSeason}
                   activeAccounts={activeAccounts}

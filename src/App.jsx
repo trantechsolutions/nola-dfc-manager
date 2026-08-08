@@ -507,6 +507,10 @@ function App() {
     await handleDeleteTransaction(txId);
   };
 
+  // One insert and one refetch for the whole batch — going through
+  // handleSaveExpense per row would refetch the world dozens of times.
+  const handleBulkAddExpenses = async (rows) => await handleBulkUpload(rows);
+
   // ── PASSWORD RECOVERY ── (short-circuits before team-context loading,
   // which never resolves here since `user` is intentionally never set)
   if (isPasswordRecovery) {
@@ -698,6 +702,7 @@ function App() {
     handleSaveExpense,
     handleToggleCleared,
     handleDeleteExpense,
+    handleBulkAddExpenses,
     matchups,
     matchupsLoading,
     createMatchup,

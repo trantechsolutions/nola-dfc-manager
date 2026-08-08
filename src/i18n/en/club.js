@@ -42,6 +42,7 @@ export default {
     importSuccess: '{{n}} transactions imported!',
     importFailed: 'Import failed',
     syncedEvents: 'Synced {{n}} events to database.',
+    bulkExpensesAdded: '{{n}} expenses added across the schedule.',
     deleteCategoryConfirm:
       'Delete this custom category? Existing transactions will keep their category code but the label may not display correctly.',
     archivePlayerConfirm: 'Archive this player?',

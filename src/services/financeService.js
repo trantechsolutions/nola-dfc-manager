@@ -148,6 +148,9 @@ export const financeService = {
       account_id: tx.accountId || null,
       transfer_from_account_id: tx.transferFromAccountId || null,
       transfer_to_account_id: tx.transferToAccountId || null,
+      // Carried so bulk-adding expenses from the schedule keeps each row tied to
+      // its event; CSV imports simply have none.
+      event_id: tx.eventId || null,
       ...(teamSeasonId ? { team_season_id: teamSeasonId } : {}),
     }));
 

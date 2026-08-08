@@ -42,6 +42,7 @@ export default {
     importSuccess: '¡{{n}} transacciones importadas!',
     importFailed: 'Error en importación',
     syncedEvents: '{{n}} eventos sincronizados.',
+    bulkExpensesAdded: '{{n}} gastos agregados al calendario.',
     deleteCategoryConfirm:
       '¿Eliminar esta categoría? Las transacciones existentes conservarán su código pero la etiqueta podría no mostrarse correctamente.',
     archivePlayerConfirm: '¿Archivar a este jugador?',

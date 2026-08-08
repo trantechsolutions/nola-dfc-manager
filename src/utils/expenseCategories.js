@@ -47,3 +47,17 @@ export function getExpenseTemplates(t) {
     ],
   };
 }
+
+/** Flattened, de-duplicated suggestions — the bulk form spans event types, so it
+ *  can't pick a single type's list. */
+export function getSuggestedExpenses(t) {
+  const seen = new Set();
+  return Object.values(getExpenseTemplates(t))
+    .flat()
+    .filter((tmpl) => {
+      const key = tmpl.title.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}

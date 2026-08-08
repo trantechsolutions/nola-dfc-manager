@@ -14,9 +14,11 @@ import {
   DollarSign,
   CheckCircle2,
   ClipboardList,
+  Layers,
 } from 'lucide-react';
 import CalendarView from '../../components/CalendarView';
 import EventExpenseModal from '../../components/EventExpenseModal';
+import BulkExpenseModal from '../../components/BulkExpenseModal';
 import MatchupPlanner from '../../components/MatchupPlanner';
 import OpponentContactsPanel from '../../components/OpponentContactsPanel';
 import { EVENT_TYPES } from '../../utils/eventClassifier';
@@ -174,6 +176,7 @@ export default function ScheduleView({
   onSaveExpense = null,
   onToggleCleared = null,
   onDeleteExpense = null,
+  onBulkAddExpenses = null,
   seasonIds = [],
   selectedSeason,
   activeAccounts = [],
@@ -197,6 +200,7 @@ export default function ScheduleView({
   const [tab, setTab] = useState('upcoming');
   const [isSyncing, setIsSyncing] = useState(false);
   const [expenseModalEvent, setExpenseModalEvent] = useState(null);
+  const [showBulkExpenses, setShowBulkExpenses] = useState(false);
 
   // Map iCal event UID → DB event so EventCards can show/edit the locked type
   const dbEventsByUid = useMemo(() => {
@@ -236,6 +240,24 @@ export default function ScheduleView({
     if (!selectedSeason) return events;
     return filterEventsBySeason(events, selectedSeason);
   }, [events, selectedSeason]);
+
+  // Only events synced into the DB can carry an expense (a transaction keys off
+  // the team_events row), so the bulk picker is built from those alone.
+  const bulkCandidates = useMemo(() => {
+    const build = (list, isPast) =>
+      list
+        .map((e) => ({ e, db: dbEventsByUid[e.id] }))
+        .filter(({ db }) => !!db)
+        .map(({ e, db }) => ({
+          id: db.id,
+          title: e.title,
+          displayDate: e.displayDate,
+          eventDate: db.eventDate,
+          eventType: db.eventType || e.eventType,
+          isPast,
+        }));
+    return [...build(seasonEvents.upcoming, false), ...build(seasonEvents.past, true)];
+  }, [seasonEvents, dbEventsByUid]);
 
   const handleSync = async () => {
     if (!onSyncCalendar) return;
@@ -352,6 +374,15 @@ export default function ScheduleView({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {onBulkAddExpenses && bulkCandidates.length > 0 && (
+            <button
+              onClick={() => setShowBulkExpenses(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted text-foreground text-xs font-semibold rounded-lg transition-colors"
+            >
+              <Layers size={12} />
+              {t('bulkExpenses.open')}
+            </button>
+          )}
           {canEditSchedule && currentIcsUrl && (
             <button
               onClick={handleSync}
@@ -513,6 +544,17 @@ export default function ScheduleView({
         seasonIds={seasonIds}
         activeAccounts={activeAccounts}
         accountMap={accountMap}
+      />
+
+      {/* ── Bulk Expense Modal ── */}
+      <BulkExpenseModal
+        show={showBulkExpenses}
+        onClose={() => setShowBulkExpenses(false)}
+        candidates={bulkCandidates}
+        existingByEventId={txByEventId}
+        onBulkAddExpenses={onBulkAddExpenses}
+        seasonIds={seasonIds}
+        activeAccounts={activeAccounts}
       />
     </div>
   );

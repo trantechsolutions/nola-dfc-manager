@@ -16,6 +16,7 @@ export default {
   schedule: schedule.schedule,
   eventTypes: schedule.eventTypes,
   expenses: schedule.expenses,
+  bulkExpenses: schedule.bulkExpenses,
   settings: schedule.settings,
   ledger: finance.ledger,
   txModal: finance.txModal,
