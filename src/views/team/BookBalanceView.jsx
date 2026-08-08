@@ -102,12 +102,16 @@ export default function BookBalanceView({
   const allBalanced = balancedCount === totalAccounts && totalAccounts > 0;
   const totalIsBalanced = Math.abs(totals.delta) < 0.01 && allEntered;
 
-  function handleLockClick() {
-    showConfirm(t('bookBalance.lockMonthConfirm', { month: monthKeyToLabel(selectedMonth) }), lockMonth);
+  // showConfirm resolves to the user's answer and takes no callback — passing
+  // one silently dropped it, so Proceed did nothing and the month never locked.
+  async function handleLockClick() {
+    const ok = await showConfirm(t('bookBalance.lockMonthConfirm', { month: monthKeyToLabel(selectedMonth) }));
+    if (ok) await lockMonth();
   }
 
-  function handleUnlockClick() {
-    showConfirm(t('bookBalance.unlockMonthConfirm', { month: monthKeyToLabel(selectedMonth) }), unlockMonth);
+  async function handleUnlockClick() {
+    const ok = await showConfirm(t('bookBalance.unlockMonthConfirm', { month: monthKeyToLabel(selectedMonth) }));
+    if (ok) await unlockMonth();
   }
 
   return (
