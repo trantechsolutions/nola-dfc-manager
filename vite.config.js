@@ -30,8 +30,9 @@ export const buildDate = ${JSON.stringify(new Date().toISOString())};`;
 }
 
 // Hosts that serve the marketing entry instead of the app. Mirrors the host
-// rewrite in vercel.json — production is the source of truth; this list only
-// exists so `npm run dev` and `npm run preview` behave the same way.
+// rules in middleware.js (root path) and vercel.json (everything else) —
+// production is the source of truth; this list only exists so `npm run dev` and
+// `npm run preview` behave the same way.
 //
 // `*.localhost` resolves to 127.0.0.1 in every current browser with no hosts-file
 // entry, so http://landing.localhost:5173/ is a real local stand-in for the apex.
