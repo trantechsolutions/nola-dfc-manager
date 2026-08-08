@@ -11,6 +11,11 @@
       "has": [{ "type": "host", "value": "www.canteramanager.com" }],
       "destination": "/landing.html"
     },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": ".*\\.vercel\\.app" }],
+      "destination": "/landing.html"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
