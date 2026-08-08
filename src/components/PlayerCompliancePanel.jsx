@@ -72,13 +72,19 @@ export default function PlayerCompliancePanel({
         return (
           <div key={item.key} className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <span className="text-sm font-medium text-foreground">{item.label}</span>
-              {!item.required && (
-                <Badge tone="secondary" className="ml-2">
-                  {t('checklist.optional')}
-                </Badge>
-              )}
-              {item.description && <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>}
+              {/* Title only — the description is parent-facing instructions, and
+                  inline it buried the status controls under paragraphs of text.
+                  Kept as a tooltip so staff can still read it on demand. */}
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="truncate text-sm font-medium text-foreground" title={item.description || undefined}>
+                  {item.label}
+                </span>
+                {!item.required && (
+                  <Badge tone="secondary" className="shrink-0">
+                    {t('checklist.optional')}
+                  </Badge>
+                )}
+              </div>
               {/* Says why the row is not clickable, rather than leaving a dead control. */}
               {canManage && !actionable && status !== ITEM_STATUS.COMPLETE && !isMedical && (
                 <p className="mt-0.5 text-xs text-muted-foreground">{t('checklist.parentAnswersThis')}</p>
