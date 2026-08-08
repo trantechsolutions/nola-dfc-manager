@@ -94,6 +94,7 @@ export const useSoccerYear = (user, teamId = null, defaultSeason = null) => {
         baseFee: currentTeamSeason.baseFee ?? 0,
         calculatedBaseFee: currentTeamSeason.baseFee || globalSeason.calculatedBaseFee || 0,
         bufferPercent: currentTeamSeason.bufferPercent ?? globalSeason.bufferPercent ?? 5,
+        carryoverAmount: currentTeamSeason.carryoverAmount ?? 0,
         expectedRosterSize: currentTeamSeason.expectedRosterSize ?? globalSeason.expectedRosterSize ?? null,
         totalProjectedExpenses: currentTeamSeason.totalProjectedExpenses ?? globalSeason.totalProjectedExpenses ?? null,
         totalProjectedIncome: currentTeamSeason.totalProjectedIncome ?? globalSeason.totalProjectedIncome ?? null,

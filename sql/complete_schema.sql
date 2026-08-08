@@ -72,6 +72,9 @@ CREATE TABLE IF NOT EXISTS team_seasons (
   is_finalized boolean DEFAULT false,
   base_fee numeric(10,2) DEFAULT 0,
   buffer_percent numeric DEFAULT 5,
+  -- Funds rolled forward from the prior season. Subtracted from the amount
+  -- player fees have to cover (see the player_financials view).
+  carryover_amount numeric(10,2) NOT NULL DEFAULT 0,
   expected_roster_size integer,
   total_projected_expenses numeric(10,2),
   total_projected_income numeric(10,2),
@@ -444,7 +447,10 @@ SELECT
     WHEN ps.fee_waived THEN 0
     ELSE COALESCE(
       ceil((
-        (ts.total_projected_expenses * (1 + ts.buffer_percent / 100.0))
+        GREATEST(0,
+          (ts.total_projected_expenses * (1 + ts.buffer_percent / 100.0))
+          - COALESCE(ts.carryover_amount, 0)
+        )
         / NULLIF(ts.expected_roster_size, 0)
       ) / 50) * 50, 0)
   END AS base_fee,
@@ -456,7 +462,10 @@ SELECT
     CASE WHEN ps.fee_waived THEN 0
     ELSE COALESCE(
       ceil((
-        (ts.total_projected_expenses * (1 + ts.buffer_percent / 100.0))
+        GREATEST(0,
+          (ts.total_projected_expenses * (1 + ts.buffer_percent / 100.0))
+          - COALESCE(ts.carryover_amount, 0)
+        )
         / NULLIF(ts.expected_roster_size, 0)
       ) / 50) * 50, 0)
     END
@@ -469,7 +478,8 @@ FROM player_seasons ps
 LEFT JOIN team_seasons ts ON ts.id = ps.team_season_id
 LEFT JOIN transactions t ON t.player_id = ps.player_id AND t.season_id = ps.season_id
 GROUP BY ps.player_id, ps.season_id, ps.team_season_id, ps.fee_waived,
-         ts.total_projected_expenses, ts.buffer_percent, ts.expected_roster_size;
+         ts.total_projected_expenses, ts.buffer_percent, ts.expected_roster_size,
+         ts.carryover_amount;
 
 -- Seasonal Roster
 CREATE OR REPLACE VIEW seasonal_roster AS

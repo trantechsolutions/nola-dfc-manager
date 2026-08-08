@@ -30,6 +30,7 @@ import { useBudgetForecast } from '../../hooks/useBudgetForecast';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { exportBudgetActualsPDF, exportBudgetActualsCSV } from '../../utils/exportUtils';
 import { buildCategoryAdvice, varianceTone, TONE_STYLES } from '../../utils/budgetInsights';
+import { computeSeasonFee } from '../../utils/feeCalculator';
 
 // Fallback budget categories used when no categoryOptions prop is provided
 const FALLBACK_BUDGET_CATEGORIES = [
@@ -69,6 +70,9 @@ export default function BudgetView({
   const [rosterSize, setRosterSize] = useState(13);
   const [rosterSizeManual, setRosterSizeManual] = useState(false);
   const [bufferPercent, setBufferPercent] = useState(5);
+  // Optional funds rolled over from the prior season. Held as the raw input
+  // string so the field can be cleared without snapping back to "0".
+  const [carryoverInput, setCarryoverInput] = useState('');
   const [cloneSource, setCloneSource] = useState('');
   const [collapsedCats, setCollapsedCats] = useState({});
 
@@ -116,10 +120,12 @@ export default function BudgetView({
       if (currentTeamSeason) {
         setRosterSize(currentTeamSeason.expectedRosterSize || 13);
         setBufferPercent(currentTeamSeason.bufferPercent ?? 5);
+        setCarryoverInput(currentTeamSeason.carryoverAmount ? String(currentTeamSeason.carryoverAmount) : '');
         setIsFinalized(currentTeamSeason.isFinalized || false);
       } else {
         setRosterSize(13);
         setBufferPercent(5);
+        setCarryoverInput('');
         setIsFinalized(false);
       }
 
@@ -304,9 +310,18 @@ export default function BudgetView({
     [subtotals, expenseCodes],
   );
 
-  const bufferAmount = totalExpenseAmount * (bufferPercent / 100);
-  const rawFee = rosterSize > 0 ? (totalExpenseAmount + bufferAmount) / rosterSize : 0;
-  const roundedBaseFee = Math.ceil(rawFee / 50) * 50;
+  const carryoverAmount = Math.max(0, parseFloat(carryoverInput) || 0);
+  const {
+    bufferAmount,
+    needsCovered,
+    rawFee,
+    roundedFee: roundedBaseFee,
+  } = computeSeasonFee({
+    totalExpenses: totalExpenseAmount,
+    bufferPercent,
+    carryoverAmount,
+    rosterSize,
+  });
 
   // ─── PROJECTIONS ───
   // CHANGED: Use teamSeasons (which have isFinalized) instead of ghost season fields
@@ -458,6 +473,7 @@ export default function BudgetView({
         seasonId: selectedSeason,
         expectedRosterSize: Number(rosterSize),
         bufferPercent: Number(bufferPercent),
+        carryoverAmount,
         totalProjectedExpenses: totalExpenseAmount,
         totalProjectedIncome: grandTotals.income,
         baseFee: roundedBaseFee,
@@ -530,6 +546,7 @@ export default function BudgetView({
         isFinalized: true,
         baseFee: roundedBaseFee,
         bufferPercent: Number(bufferPercent),
+        carryoverAmount,
         expectedRosterSize: Number(rosterSize),
         totalProjectedExpenses: totalExpenseAmount,
         totalProjectedIncome: grandTotals.income,
@@ -602,6 +619,9 @@ export default function BudgetView({
             teamSeasonId: undefined,
           })),
         );
+      // Buffer is a policy setting and travels with the template. Carryover is
+      // this season's actual cash on hand — copying another season's would
+      // discount fees against money the team does not have.
       if (sourceTs) setBufferPercent(sourceTs.bufferPercent || 5);
       if (showToast) showToast(`Cloned from ${sourceId}`);
     } catch (e) {
@@ -1292,9 +1312,31 @@ export default function BudgetView({
                   <span className="text-muted-foreground">Buffer ({bufferPercent}%)</span>
                   <span className="font-semibold">{formatMoney(bufferAmount)}</span>
                 </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Carryover</span>
+                  {!isFinalized || isAmending ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted-foreground">−$</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={carryoverInput}
+                        placeholder="0"
+                        title="Optional funds left over from last season. Lowers what players are charged."
+                        onChange={(e) => setCarryoverInput(e.target.value)}
+                        className="w-20 text-right font-semibold bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded px-1.5 py-1 text-xs outline-none focus:ring-1 focus:ring-emerald-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      />
+                    </div>
+                  ) : (
+                    <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                      {carryoverAmount > 0 ? `−${formatMoney(carryoverAmount)}` : '—'}
+                    </span>
+                  )}
+                </div>
                 <div className="border-t border-border pt-3 flex justify-between">
                   <span className="text-muted-foreground">Needs Covered</span>
-                  <span className="font-semibold text-amber-400">{formatMoney(totalExpenseAmount + bufferAmount)}</span>
+                  <span className="font-semibold text-amber-400">{formatMoney(needsCovered)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">÷ Paying Players</span>
@@ -1339,6 +1381,11 @@ export default function BudgetView({
                 <p className="text-xs text-blue-200 font-semibold mt-3 pt-3 border-t border-blue-500/50">
                   Actual: {formatMoney(rawFee)}
                 </p>
+                {carryoverAmount > 0 && rosterSize > 0 && (
+                  <p className="text-xs text-emerald-200 font-semibold mt-1">
+                    Carryover saves {formatMoney(carryoverAmount / rosterSize)}/player
+                  </p>
+                )}
               </div>
             </div>
 

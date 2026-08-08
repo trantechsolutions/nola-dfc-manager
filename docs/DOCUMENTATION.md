@@ -254,17 +254,18 @@ Global season reference (shared across all clubs).
 
 Per-team, per-season budget authority. **This is the source of truth for fees and finalization.**
 
-| Column                     | Type              | Notes                                   |
-| -------------------------- | ----------------- | --------------------------------------- |
-| `id`                       | uuid PK           |                                         |
-| `team_id`                  | uuid FK → teams   |                                         |
-| `season_id`                | text FK → seasons |                                         |
-| `is_finalized`             | boolean           | Lock flag — budget immutable after true |
-| `base_fee`                 | numeric           | Calculated per-player fee               |
-| `buffer_percent`           | numeric           | Contingency % (default 5)               |
-| `expected_roster_size`     | integer           | Used in fee calculation                 |
-| `total_projected_expenses` | numeric           | Sum of budget_items                     |
-| `total_projected_income`   | numeric           | Sum of budget income lines              |
+| Column                     | Type              | Notes                                    |
+| -------------------------- | ----------------- | ---------------------------------------- |
+| `id`                       | uuid PK           |                                          |
+| `team_id`                  | uuid FK → teams   |                                          |
+| `season_id`                | text FK → seasons |                                          |
+| `is_finalized`             | boolean           | Lock flag — budget immutable after true  |
+| `base_fee`                 | numeric           | Calculated per-player fee                |
+| `buffer_percent`           | numeric           | Contingency % (default 5)                |
+| `carryover_amount`         | numeric           | Optional prior-season funds; reduces fee |
+| `expected_roster_size`     | integer           | Used in fee calculation                  |
+| `total_projected_expenses` | numeric           | Sum of budget_items                      |
+| `total_projected_income`   | numeric           | Sum of budget income lines               |
 
 #### `player_seasons`
 
@@ -747,11 +748,12 @@ deleteCustomCategory(catId)
    → saveTeamSeason() creates team_seasons row
    → saveBudgetItems() creates budget line items
 
-2. Manager sets roster size and buffer percent
-   → Updates team_seasons.expected_roster_size, buffer_percent
+2. Manager sets roster size, buffer percent, and (optionally) a carryover
+   → Updates team_seasons.expected_roster_size, buffer_percent, carryover_amount
 
 3. System calculates base_fee:
-   base_fee = ceil((total_expenses × (1 + buffer%)) / roster_size / 50) × 50
+   base_fee = ceil(max(0, total_expenses × (1 + buffer%) − carryover) / roster_size / 50) × 50
+   (carryover = funds rolled over from the prior season; 0 when unused)
 
 4. Manager reviews and clicks "Finalize Budget"
    → team_seasons.is_finalized = true
