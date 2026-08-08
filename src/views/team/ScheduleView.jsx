@@ -23,7 +23,7 @@ import MatchupPlanner from '../../components/MatchupPlanner';
 import OpponentContactsPanel from '../../components/OpponentContactsPanel';
 import { EVENT_TYPES } from '../../utils/eventClassifier';
 import { useT } from '../../i18n/I18nContext';
-import { filterEventsBySeason } from '../../utils/seasonUtils';
+import { filterEventsBySeason, getSeasonForDate } from '../../utils/seasonUtils';
 
 // ── Event card ────────────────────────────────────────────────
 const EventCard = ({
@@ -195,6 +195,10 @@ export default function ScheduleView({
   onCreateOpponentContact = null,
   onUpdateOpponentContact = null,
   onDeleteOpponentContact = null,
+  onPushEventToBudget = null,
+  budgetContributions = [],
+  budgetLocked = false,
+  budgetRecalculatesFee = true,
 }) {
   const { t } = useT();
   const [tab, setTab] = useState('upcoming');
@@ -544,6 +548,21 @@ export default function ScheduleView({
         seasonIds={seasonIds}
         activeAccounts={activeAccounts}
         accountMap={accountMap}
+        onPushToBudget={
+          onPushEventToBudget && expenseModalEvent
+            ? () => onPushEventToBudget(expenseModalEvent, txByEventId[expenseModalEvent.id] || [])
+            : null
+        }
+        budgetContributions={
+          expenseModalEvent ? budgetContributions.filter((c) => c.eventId === expenseModalEvent.id) : []
+        }
+        budgetLocked={budgetLocked}
+        budgetRecalculatesFee={budgetRecalculatesFee}
+        // An event outside the selected season has no budget of its own to move,
+        // and pushing it would silently spend another season's money.
+        budgetAvailable={
+          !!expenseModalEvent && getSeasonForDate(expenseModalEvent.eventDate?.split('T')[0], [selectedSeason]) !== null
+        }
       />
 
       {/* ── Bulk Expense Modal ── */}

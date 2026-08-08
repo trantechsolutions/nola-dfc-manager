@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, CheckCircle2, Clock, DollarSign, Trash2, Receipt, Pencil } from 'lucide-react';
+import { X, Plus, CheckCircle2, Clock, DollarSign, Trash2, Receipt, Pencil, PiggyBank, Lock } from 'lucide-react';
 import { EVENT_TYPES } from '../utils/eventClassifier';
 import { useT } from '../i18n/I18nContext';
 import { getSeasonForDate } from '../utils/seasonUtils';
+import { totalsByCategory } from '../utils/eventBudgetPush';
 import ResponsiveModal from './layout/ResponsiveModal';
 
 const CATEGORY_COLORS = {
@@ -26,9 +27,21 @@ export default function EventExpenseModal({
   seasonIds = [],
   activeAccounts = [],
   accountMap = {},
+  onPushToBudget = null,
+  budgetContributions = [],
+  budgetLocked = false,
+  budgetAvailable = true,
+  budgetRecalculatesFee = true,
 }) {
   const { t } = useT();
   const [adding, setAdding] = useState(false);
+  // Two-step only when the budget is locked — an amendment goes on the record,
+  // so it should not be one stray tap away.
+  const [confirmingAmend, setConfirmingAmend] = useState(false);
+  const [pushing, setPushing] = useState(false);
+  // Separate from `error`, which only renders inside the add/edit form — a push
+  // failure there would never be seen.
+  const [pushError, setPushError] = useState('');
   // Non-null while the form is editing an existing expense rather than adding one.
   const [editingId, setEditingId] = useState(null);
   const defaultAccountId = activeAccounts[0]?.id || '';
@@ -42,6 +55,7 @@ export default function EventExpenseModal({
     setAdding(false);
     setEditingId(null);
     setError('');
+    setConfirmingAmend(false);
   }, [dbEvent?.id]);
 
   const accountsByHolding = HOLDINGS.reduce((acc, h) => {
@@ -156,6 +170,38 @@ export default function EventExpenseModal({
   // Which template titles already have an expense created?
   const existingTitles = new Set(expenses.map((tx) => tx.title.toLowerCase()));
 
+  // ── Budget push state ──
+  // The delta is derived from the same totals the service will plan against, so
+  // what the panel promises is what the budget gets: the event's spend now, less
+  // whatever this event already put in.
+  const budgetedNow = budgetContributions.reduce((sum, c) => sum + (Number(c.appliedAmount) || 0), 0);
+  const eventTotal = Object.values(totalsByCategory(expenses)).reduce((sum, n) => sum + n, 0);
+  const budgetDelta = Math.round((eventTotal - budgetedNow) * 100) / 100;
+  const hasBudgeted = budgetContributions.length > 0;
+  const canPush = !!onPushToBudget && budgetAvailable && budgetDelta !== 0;
+
+  const handlePush = async () => {
+    if (!canPush) return;
+    if (budgetLocked && !confirmingAmend) {
+      setConfirmingAmend(true);
+      return;
+    }
+    setPushing(true);
+    setPushError('');
+    try {
+      const result = await onPushToBudget();
+      if (result && result.success === false) {
+        setPushError(result.error || t('expenses.budgetFailed'));
+        return;
+      }
+      setConfirmingAmend(false);
+    } catch (e) {
+      setPushError(e?.message || t('expenses.budgetFailed'));
+    } finally {
+      setPushing(false);
+    }
+  };
+
   return (
     <ResponsiveModal onClose={onClose} size="lg">
       {/* items-start: the header stacks four lines, and the default centring
@@ -192,6 +238,78 @@ export default function EventExpenseModal({
             </span>
           )}
         </div>
+
+        {/* ── Season budget ── */}
+        {canManage && onPushToBudget && (
+          <div className="px-6 py-3 bg-card border-b border-border">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+                  <PiggyBank size={13} /> {t('expenses.budgetTitle')}
+                  {budgetLocked && (
+                    <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400">
+                      <Lock size={11} /> {t('expenses.budgetLocked')}
+                    </span>
+                  )}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {!budgetAvailable
+                    ? t('expenses.budgetNoSeason')
+                    : hasBudgeted
+                      ? t('expenses.budgetInBudget', { amount: `$${budgetedNow.toFixed(2)}` })
+                      : t('expenses.budgetNotAdded')}
+                </p>
+                {budgetAvailable && budgetDelta !== 0 && (
+                  <p
+                    className={`mt-0.5 text-xs font-semibold ${budgetDelta > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-blue-700 dark:text-blue-400'}`}
+                  >
+                    {budgetDelta > 0
+                      ? t('expenses.budgetPendingAdd', { amount: `$${budgetDelta.toFixed(2)}` })
+                      : t('expenses.budgetPendingRemove', { amount: `$${Math.abs(budgetDelta).toFixed(2)}` })}
+                  </p>
+                )}
+                {budgetAvailable && budgetDelta === 0 && hasBudgeted && (
+                  <p className="mt-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                    {t('expenses.budgetUpToDate')}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={handlePush}
+                disabled={!canPush || pushing}
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors disabled:opacity-50 disabled:cursor-default flex items-center gap-1 ${
+                  budgetLocked ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
+              >
+                <PiggyBank size={12} />
+                {pushing
+                  ? t('common.saving')
+                  : confirmingAmend
+                    ? t('expenses.budgetConfirmAmend')
+                    : hasBudgeted
+                      ? t('expenses.budgetUpdate')
+                      : t('expenses.budgetAdd')}
+              </button>
+            </div>
+            {confirmingAmend && (
+              <div className="mt-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 p-2.5">
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                  {t('expenses.budgetLockedMsg')}
+                </p>
+                <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
+                  {budgetRecalculatesFee ? t('expenses.budgetLockedFees') : t('expenses.budgetLockedFeesOff')}
+                </p>
+                <button
+                  onClick={() => setConfirmingAmend(false)}
+                  className="mt-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
+            )}
+            {pushError && <p className="mt-2 text-xs font-semibold text-red-700 dark:text-red-400">{pushError}</p>}
+          </div>
+        )}
 
         {/* Existing expenses */}
         <div className="px-6 py-4 space-y-2">

@@ -88,6 +88,27 @@ export default {
     checkInFees: 'Tarifas de Check-in',
     fieldRental: 'Alquiler de Cancha',
     eventFees: 'Tarifas del Evento',
+
+    // ── Añadir al presupuesto de la temporada ──
+    budgetTitle: 'Presupuesto de la Temporada',
+    budgetNotAdded: 'Aún no está en el presupuesto',
+    budgetInBudget: '{{amount}} en el presupuesto',
+    budgetUpToDate: 'El presupuesto está al día',
+    budgetPendingAdd: 'Faltan {{amount}} por agregar',
+    budgetPendingRemove: '{{amount}} deben salir del presupuesto',
+    budgetAdd: 'Agregar al Presupuesto',
+    budgetUpdate: 'Actualizar Presupuesto',
+    budgetLocked: 'El presupuesto está finalizado',
+    budgetLockedMsg: 'Esto se registrará como una enmienda al presupuesto.',
+    budgetLockedFees: 'La cuota de la temporada se recalcula, así que cambiará lo que debe cada jugador.',
+    budgetLockedFeesOff: 'Las cuotas de los jugadores no cambian — este equipo enmienda sin recalcular.',
+    budgetConfirmAmend: 'Registrar Enmienda',
+    budgetNoSeason:
+      'Este evento está fuera de la temporada seleccionada, así que no tiene presupuesto al que agregarse.',
+    budgetPushed: 'Agregado al presupuesto.',
+    budgetAmended: 'Registrado como enmienda al presupuesto.',
+    budgetNoChange: 'El presupuesto ya coincide con este evento.',
+    budgetFailed: 'No se pudo actualizar el presupuesto.',
   },
 
   bulkExpenses: {

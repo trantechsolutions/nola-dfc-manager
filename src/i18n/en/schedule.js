@@ -88,6 +88,26 @@ export default {
     checkInFees: 'Check-in Fees',
     fieldRental: 'Field Rental',
     eventFees: 'Event Fees',
+
+    // ── Push to season budget ──
+    budgetTitle: 'Season Budget',
+    budgetNotAdded: 'Not in the budget yet',
+    budgetInBudget: '{{amount}} in the budget',
+    budgetUpToDate: 'Budget is up to date',
+    budgetPendingAdd: '{{amount}} still to add',
+    budgetPendingRemove: '{{amount}} to come back out',
+    budgetAdd: 'Add to Budget',
+    budgetUpdate: 'Update Budget',
+    budgetLocked: 'Budget is finalized',
+    budgetLockedMsg: 'This will be recorded as a budget amendment.',
+    budgetLockedFees: 'The season fee is recalculated, so what every player owes will change.',
+    budgetLockedFeesOff: 'Player fees stay as they are — this team amends without repricing.',
+    budgetConfirmAmend: 'Record Amendment',
+    budgetNoSeason: 'This event is outside the selected season, so it has no budget to add to.',
+    budgetPushed: 'Added to the budget.',
+    budgetAmended: 'Recorded as a budget amendment.',
+    budgetNoChange: 'The budget already matches this event.',
+    budgetFailed: 'Could not update the budget.',
   },
 
   bulkExpenses: {

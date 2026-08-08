@@ -80,6 +80,11 @@ export default function BudgetView({
   const [isAmending, setIsAmending] = useState(false);
   const [amendmentReason, setAmendmentReason] = useState('');
   const [amendments, setAmendments] = useState([]);
+  // Team policy: does amending a finalized budget re-price the roster, or record
+  // the change and leave what families owe alone? Stored per team-season, and
+  // written by its own setter so a plain budget save can't clobber it.
+  const [amendRecalcFee, setAmendRecalcFee] = useState(true);
+  const [savingAmendPolicy, setSavingAmendPolicy] = useState(false);
 
   // Roster
   const [availablePlayers, setAvailablePlayers] = useState([]);
@@ -122,11 +127,13 @@ export default function BudgetView({
         setBufferPercent(currentTeamSeason.bufferPercent ?? 5);
         setCarryoverInput(currentTeamSeason.carryoverAmount ? String(currentTeamSeason.carryoverAmount) : '');
         setIsFinalized(currentTeamSeason.isFinalized || false);
+        setAmendRecalcFee(currentTeamSeason.amendRecalculatesFee !== false);
       } else {
         setRosterSize(13);
         setBufferPercent(5);
         setCarryoverInput('');
         setIsFinalized(false);
+        setAmendRecalcFee(true);
       }
 
       // Budget items — THIS TEAM ONLY via team_season_id
@@ -530,6 +537,26 @@ export default function BudgetView({
     }
   };
 
+  // Written on its own rather than folded into the next budget save: the toggle
+  // is a standing policy, and leaving it unsaved until someone happens to press
+  // Save Draft would let an amendment run under a rule the screen isn't showing.
+  const handleToggleAmendRecalc = async (next) => {
+    const tsId = currentTeamSeason?.id;
+    setAmendRecalcFee(next);
+    if (!tsId) return; // No team-season row yet; the initial save carries the default.
+    setSavingAmendPolicy(true);
+    try {
+      await supabaseService.setAmendRecalculatesFee(tsId, next);
+      await refreshSeasons();
+    } catch (e) {
+      console.error('Save amendment fee policy failed:', e);
+      setAmendRecalcFee(!next);
+      if (showToast) showToast(`Could not save that setting: ${e.message || 'unknown error'}`, true);
+    } finally {
+      setSavingAmendPolicy(false);
+    }
+  };
+
   const handleSaveAmendment = async () => {
     const tsId = currentTeamSeason?.id;
     if (!tsId) return;
@@ -538,13 +565,19 @@ export default function BudgetView({
       // Save the updated budget items
       await supabaseService.saveBudgetItems(selectedSeason, budgetItems, tsId);
 
+      // The amended totals are always recorded; whether the fee follows them is
+      // the team's policy (amendRecalcFee). Off means the finalized fee stands
+      // and the overrun comes out of the buffer or carryover instead of being
+      // re-billed to families mid-season.
+      const amendedBaseFee = amendRecalcFee ? roundedBaseFee : Number(currentTeamSeason?.baseFee) || 0;
+
       // Update team_seasons totals and base fee
       await supabaseService.saveTeamSeason({
         id: tsId,
         teamId: selectedTeamId,
         seasonId: selectedSeason,
         isFinalized: true,
-        baseFee: roundedBaseFee,
+        baseFee: amendedBaseFee,
         bufferPercent: Number(bufferPercent),
         carryoverAmount,
         expectedRosterSize: Number(rosterSize),
@@ -558,7 +591,7 @@ export default function BudgetView({
         reason: amendmentReason.trim(),
         totalExpenses: totalExpenseAmount,
         totalIncome: grandTotals.income,
-        baseFee: roundedBaseFee,
+        baseFee: amendedBaseFee,
       });
 
       setIsAmending(false);
@@ -1386,6 +1419,28 @@ export default function BudgetView({
                     Carryover saves {formatMoney(carryoverAmount / rosterSize)}/player
                   </p>
                 )}
+              </div>
+
+              {/* Amendment policy — governs both the Amend Budget button above
+                  and any event expenses pushed in from the schedule. */}
+              <div className="mt-4 pt-4 border-t border-border">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={amendRecalcFee}
+                    disabled={savingAmendPolicy}
+                    onChange={(e) => handleToggleAmendRecalc(e.target.checked)}
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-blue-500 cursor-pointer disabled:opacity-50"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold text-foreground">Amendments reprice the season</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {amendRecalcFee
+                        ? 'Amending a finalized budget recalculates the fee, changing what every player owes.'
+                        : 'Amending records the new totals and leaves the finalized fee — and player balances — alone.'}
+                    </span>
+                  </span>
+                </label>
               </div>
             </div>
 

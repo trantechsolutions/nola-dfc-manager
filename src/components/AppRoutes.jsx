@@ -8,6 +8,7 @@ import { useData } from '../context/DataContext';
 import { useFinanceContext } from '../context/FinanceContext';
 import { useScheduleContext } from '../context/ScheduleContext';
 import { useImpersonationGuard } from '../hooks/useImpersonationGuard';
+import { useEventBudgetPush } from '../hooks/useEventBudgetPush';
 
 import ErrorBoundary from './ErrorBoundary';
 import TransactionModal from './TransactionModal';
@@ -173,6 +174,17 @@ export default function AppRoutes({
   } = useData();
 
   const { isReadOnly, guardedAction } = useImpersonationGuard(user);
+
+  // "Add to Budget" on an event. Held here rather than in ScheduleView so the
+  // contribution list survives the modal opening and closing.
+  const { contributions: budgetContributions, pushEventToBudget } = useEventBudgetPush({
+    selectedSeason,
+    currentTeamSeason,
+    selectedTeamId,
+    showToast,
+    onDataChange: fetchData,
+    t,
+  });
 
   const {
     teamBalance,
@@ -498,6 +510,14 @@ export default function AppRoutes({
                   onCreateOpponentContact={canEditSchedule ? createOpponentContact : null}
                   onUpdateOpponentContact={canEditSchedule ? updateOpponentContact : null}
                   onDeleteOpponentContact={canEditSchedule ? deleteOpponentContact : null}
+                  onPushEventToBudget={
+                    canEditSchedule && can(PERMISSIONS.TEAM_EDIT_BUDGET)
+                      ? guardedAction(pushEventToBudget, { action: 'push_event_budget', tableName: 'budget_items' })
+                      : null
+                  }
+                  budgetContributions={budgetContributions}
+                  budgetLocked={!!currentTeamSeason?.isFinalized}
+                  budgetRecalculatesFee={currentTeamSeason?.amendRecalculatesFee !== false}
                 />
               }
             />

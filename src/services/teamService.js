@@ -125,6 +125,7 @@ export const teamService = {
       bufferPercent: ts.buffer_percent,
       carryoverAmount: Number(ts.carryover_amount) || 0,
       distributionMethod: ts.distribution_method || 'waterfall',
+      amendRecalculatesFee: ts.amend_recalculates_fee ?? true,
       expectedRosterSize: ts.expected_roster_size,
       totalProjectedExpenses: ts.total_projected_expenses ? Number(ts.total_projected_expenses) : null,
       totalProjectedIncome: ts.total_projected_income ? Number(ts.total_projected_income) : null,
@@ -149,6 +150,7 @@ export const teamService = {
       bufferPercent: data.buffer_percent,
       carryoverAmount: Number(data.carryover_amount) || 0,
       distributionMethod: data.distribution_method || 'waterfall',
+      amendRecalculatesFee: data.amend_recalculates_fee ?? true,
       expectedRosterSize: data.expected_roster_size,
       totalProjectedExpenses: data.total_projected_expenses ? Number(data.total_projected_expenses) : null,
       totalProjectedIncome: data.total_projected_income ? Number(data.total_projected_income) : null,
@@ -208,10 +210,20 @@ export const teamService = {
     if (error) throw error;
   },
 
-  // NOTE: distribution_method is intentionally NOT written here. saveTeamSeason
-  // upserts the full budget row without knowing the method, so including it
-  // would clobber an existing choice back to the default on every budget save.
-  // Use setDistributionMethod for that column.
+  // Whether a budget amendment re-derives base_fee. Its own setter for the same
+  // reason distribution_method has one — see the note on saveTeamSeason.
+  setAmendRecalculatesFee: async (teamSeasonId, enabled) => {
+    const { error } = await supabase
+      .from('team_seasons')
+      .update({ amend_recalculates_fee: !!enabled })
+      .eq('id', teamSeasonId);
+    if (error) throw error;
+  },
+
+  // NOTE: distribution_method and amend_recalculates_fee are intentionally NOT
+  // written here. saveTeamSeason upserts the full budget row without knowing
+  // either, so including them would clobber an existing choice back to the
+  // default on every budget save. Use their dedicated setters.
   saveTeamSeason: async (teamSeasonData) => {
     const row = {
       team_id: teamSeasonData.teamId,
