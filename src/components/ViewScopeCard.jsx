@@ -13,18 +13,10 @@ import { VIEW_SCOPE } from '../utils/viewScope';
  */
 export default function ViewScopeCard({ viewScope, onChange }) {
   const { t } = useT();
-  const current = viewScope === VIEW_SCOPE.TEAM ? VIEW_SCOPE.TEAM : VIEW_SCOPE.CLUB;
+  const current = viewScope === VIEW_SCOPE.CLUB ? VIEW_SCOPE.CLUB : VIEW_SCOPE.TEAM;
 
+  // Team only leads the list because it is the default scope.
   const options = [
-    {
-      id: VIEW_SCOPE.CLUB,
-      icon: Building2,
-      label: t('settings.viewScopeClub', 'Club + Team'),
-      help: t(
-        'settings.viewScopeClubHelp',
-        'Show the club overview, teams, players, and club settings alongside your team.',
-      ),
-    },
     {
       id: VIEW_SCOPE.TEAM,
       icon: Layers,
@@ -32,6 +24,15 @@ export default function ViewScopeCard({ viewScope, onChange }) {
       help: t(
         'settings.viewScopeTeamHelp',
         'Hide the club and app-admin sections so only team management is on screen.',
+      ),
+    },
+    {
+      id: VIEW_SCOPE.CLUB,
+      icon: Building2,
+      label: t('settings.viewScopeClub', 'Club + Team'),
+      help: t(
+        'settings.viewScopeClubHelp',
+        'Show the club overview, teams, players, and club settings alongside your team.',
       ),
     },
   ];

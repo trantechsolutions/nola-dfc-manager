@@ -16,7 +16,7 @@ export const useViewScope = (userId) => {
 
   const setViewScope = useCallback(
     (next) => {
-      const scope = next === VIEW_SCOPE.TEAM ? VIEW_SCOPE.TEAM : VIEW_SCOPE.CLUB;
+      const scope = next === VIEW_SCOPE.CLUB ? VIEW_SCOPE.CLUB : VIEW_SCOPE.TEAM;
       writeViewScope(userId, scope);
       setScope(scope);
     },

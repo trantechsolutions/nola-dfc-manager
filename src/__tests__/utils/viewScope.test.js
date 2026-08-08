@@ -6,30 +6,30 @@ describe('viewScope', () => {
     localStorage.clear();
   });
 
-  it('defaults to club scope when nothing is stored', () => {
-    expect(readViewScope('user-1')).toBe(VIEW_SCOPE.CLUB);
-  });
-
-  it('round-trips the team scope for a user', () => {
-    writeViewScope('user-1', VIEW_SCOPE.TEAM);
+  it('defaults to team scope when nothing is stored', () => {
     expect(readViewScope('user-1')).toBe(VIEW_SCOPE.TEAM);
   });
 
-  it('keeps each user’s preference separate on a shared browser', () => {
-    writeViewScope('user-1', VIEW_SCOPE.TEAM);
-    expect(readViewScope('user-2')).toBe(VIEW_SCOPE.CLUB);
-  });
-
-  it('clears the stored value when switching back to club scope', () => {
-    writeViewScope('user-1', VIEW_SCOPE.TEAM);
+  it('round-trips the club scope for a user', () => {
     writeViewScope('user-1', VIEW_SCOPE.CLUB);
-    expect(localStorage.getItem('nola_view_scope:user-1')).toBeNull();
     expect(readViewScope('user-1')).toBe(VIEW_SCOPE.CLUB);
   });
 
-  it('treats an unrecognized stored value as club scope', () => {
+  it('keeps each user’s preference separate on a shared browser', () => {
+    writeViewScope('user-1', VIEW_SCOPE.CLUB);
+    expect(readViewScope('user-2')).toBe(VIEW_SCOPE.TEAM);
+  });
+
+  it('clears the stored value when switching back to team scope', () => {
+    writeViewScope('user-1', VIEW_SCOPE.CLUB);
+    writeViewScope('user-1', VIEW_SCOPE.TEAM);
+    expect(localStorage.getItem('nola_view_scope:user-1')).toBeNull();
+    expect(readViewScope('user-1')).toBe(VIEW_SCOPE.TEAM);
+  });
+
+  it('treats an unrecognized stored value as team scope', () => {
     localStorage.setItem('nola_view_scope:user-1', 'nonsense');
-    expect(readViewScope('user-1')).toBe(VIEW_SCOPE.CLUB);
+    expect(readViewScope('user-1')).toBe(VIEW_SCOPE.TEAM);
   });
 
   describe('isClubUiHidden', () => {
@@ -45,8 +45,8 @@ describe('viewScope', () => {
       expect(isClubUiHidden({ singleTeam: true, viewScope: VIEW_SCOPE.CLUB })).toBe(true);
     });
 
-    it('defaults to showing club UI with no arguments', () => {
-      expect(isClubUiHidden()).toBe(false);
+    it('defaults to hiding club UI with no arguments', () => {
+      expect(isClubUiHidden()).toBe(true);
     });
   });
 });
