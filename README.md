@@ -345,9 +345,65 @@ Full schema details: [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md)
 
 The app deploys to **Vercel** automatically on every push to `main`. Preview deployments are created for every pull request.
 
-**Custom domain:** `portal.noladfc2015boys.com`
+### Hosts
 
-Vercel environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) must be set in the Vercel dashboard.
+One Vercel project serves two audiences. [vercel.json](vercel.json) maps host → entry point, and [vite.config.js](vite.config.js) builds both:
+
+| Host                           | Entry          | What it is                                                      |
+| ------------------------------ | -------------- | --------------------------------------------------------------- |
+| `canteramanager.com` (+ `www`) | `landing.html` | Public marketing page. No auth, no Supabase, no PWA.            |
+| `app.canteramanager.com`       | `index.html`   | The product.                                                    |
+| `portal.noladfc2015boys.com`   | `index.html`   | The product, on NOLA DFC's own domain. Kept for existing users. |
+
+Anything not matching a marketing host falls through to the app's SPA rewrite, so preview deployments serve the app at `/` and the landing page at `/landing.html`.
+
+The split is real, not cosmetic: the landing entry pulls neither the app bundle nor the app's translation vocabulary (see [src/i18n/landingConfig.js](src/i18n/landingConfig.js)), and it never registers the service worker — the installable PWA belongs to the app hosts only.
+
+### Environment variables
+
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` must be set in the Vercel dashboard, plus:
+
+| Variable           | Value                            | Why                                                        |
+| ------------------ | -------------------------------- | ---------------------------------------------------------- |
+| `VITE_APP_URL`     | `https://app.canteramanager.com` | Landing page CTAs cross to the app host. Unset = relative. |
+| `VITE_LANDING_URL` | `https://canteramanager.com`     | "Home" link on the sign-in screen. Unset = link is hidden. |
+
+Both are optional — leaving them unset keeps every link same-origin, which is what previews and local dev want.
+
+Sign-in redirects are built from `window.location.origin`, so every app host must be listed in **Supabase → Authentication → URL Configuration** (and in the Google OAuth authorized origins).
+
+### Testing the host split locally
+
+`npm run dev` and `npm run preview` both apply the same host → entry mapping as production (see `marketingHostPlugin` in [vite.config.js](vite.config.js)):
+
+| URL                                  | Serves                                                 |
+| ------------------------------------ | ------------------------------------------------------ |
+| `http://localhost:5173/`             | The app — sign-in form                                 |
+| `http://landing.localhost:5173/`     | The landing page, on any path — stands in for the apex |
+| `http://localhost:5173/landing.html` | The landing page, direct                               |
+
+`*.localhost` resolves to 127.0.0.1 in every current browser, so no hosts-file entry is needed.
+
+To exercise the cross-origin links (landing → app, and the "Home" link back), start dev with the two URLs pointing at the same server:
+
+```bash
+VITE_APP_URL=http://localhost:5173 VITE_LANDING_URL=http://landing.localhost:5173 npm run dev
+```
+
+Without them, every link stays relative and still works — that is the preview-deployment behaviour.
+
+To confirm the landing bundle has not started pulling the app back in:
+
+```bash
+npm run build
+grep -o '/assets/[^"]*' dist/landing.html   # must not list main-*, supabase-*, or pdf-*
+```
+
+`vercel.json` itself (host rewrites, `X-Robots-Tag`) is only exercised by Vercel. With the CLI installed (`npm i -g vercel`), `vercel dev` plus an explicit Host header is the closest check:
+
+```bash
+curl -sI -H 'Host: canteramanager.com' http://localhost:3000/ | head -1
+```
 
 ---
 

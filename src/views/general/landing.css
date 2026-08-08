@@ -1,0 +1,148 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   LANDING — public marketing page only (LandingView.jsx)
+   ═══════════════════════════════════════════════════════════════════════
+   Everything here is decoration that Tailwind utilities cannot express:
+   the pitch (mow stripes + markings), the floodlight wash, and two slow
+   ambient animations. Colors resolve to design tokens so the page follows
+   the theme like the rest of the app.
+
+   The dark slabs (hero, closing CTA) sit on --sidebar deliberately — that
+   token is the one surface in the system that is dark in BOTH themes, so a
+   night-match hero does not become an "always-dark" one-off (DESIGN.md §11).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Token tints.
+   The palette stores each token as a finished color (`--primary: #0d6efd`),
+   not as channel triplets, so Tailwind's slash-opacity syntax — bg-primary/10,
+   bg-sidebar/95 — compiles to an invalid value and silently renders
+   TRANSPARENT. Any translucent take on a token has to be mixed explicitly.
+   White/black utilities are unaffected and stay inline. */
+.landing-header {
+  background-color: color-mix(in srgb, var(--sidebar) 96%, transparent);
+}
+
+@supports (backdrop-filter: blur(8px)) {
+  .landing-header {
+    background-color: color-mix(in srgb, var(--sidebar) 82%, transparent);
+    backdrop-filter: blur(8px);
+  }
+}
+
+.landing-chip-primary {
+  background-color: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
+.landing-chip-accent {
+  background-color: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* Cards warm to the brand hue on hover instead of jumping a shade. */
+.landing-card {
+  transition: border-color 150ms ease-out;
+}
+
+.landing-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+}
+
+.landing-btn-primary:hover {
+  background-color: color-mix(in srgb, var(--primary) 88%, black);
+}
+
+.landing-pitch {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--sidebar);
+  overflow: hidden;
+}
+
+/* Mow stripes — the alternating bands a groundskeeper leaves behind.
+   Vertical on the pitch, faint enough to read as texture, not pattern. */
+.landing-pitch::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.035) 0 6.25%,
+    rgba(255, 255, 255, 0) 6.25% 12.5%
+  );
+}
+
+/* Floodlights — two cool washes off the top corners plus a warm-blue core.
+   Primary/accent tokens keep it on-brand instead of generic neon. */
+.landing-pitch::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(70% 55% at 12% -10%, color-mix(in srgb, var(--accent) 30%, transparent) 0%, transparent 60%),
+    radial-gradient(65% 60% at 88% -5%, color-mix(in srgb, var(--primary) 45%, transparent) 0%, transparent 62%),
+    radial-gradient(120% 90% at 50% 120%, color-mix(in srgb, var(--primary) 22%, transparent) 0%, transparent 55%);
+}
+
+/* Pitch markings — halfway line, center circle, spot. Drawn rather than
+   imaged so it stays crisp at any width and costs no request. */
+.landing-markings {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Score-strip numerals: fixed-width so the four cells never jitter. */
+.landing-figure {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Page title — the one place DESIGN.md §10 allows fluid type. */
+.landing-title {
+  font-size: clamp(2.25rem, 6vw, 3.5rem);
+  line-height: 1.05;
+}
+
+/* Hairline that fades out at both ends — used to separate dark sections
+   without drawing a hard rule across the whole viewport. */
+.landing-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The sample panel breathes, ~5px over 9s — enough to feel live on a
+     static page, slow enough that it is never the thing you look at. */
+  .landing-float {
+    animation: landing-float 9s ease-in-out infinite;
+  }
+
+  .landing-dot {
+    animation: landing-dot 2.4s ease-in-out infinite;
+  }
+}
+
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes landing-dot {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 60%, transparent);
+  }
+  50% {
+    opacity: 0.65;
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--success) 0%, transparent);
+  }
+}

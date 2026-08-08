@@ -30,6 +30,11 @@ import LoginView from './views/general/LoginView';
 import ResetPasswordView from './views/general/ResetPasswordView';
 import PublicCalendarView from './views/general/PublicCalendarView';
 
+// Marketing origin. Set in Vercel for the app hosts so the sign-in screen can
+// offer a way back to canteramanager.com; unset locally, where the link is
+// simply not rendered rather than pointing somewhere that does not exist.
+const LANDING_URL = (import.meta.env.VITE_LANDING_URL || '').replace(/\/$/, '');
+
 // Components
 import AppShell from './components/layout/AppShell';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -537,25 +542,41 @@ function App() {
     );
 
   // ── PUBLIC / UNAUTHENTICATED ──
+  // This bundle only ever serves the app host (app.canteramanager.com and the
+  // club's portal.* domain), so `/` is the sign-in form, not the landing page —
+  // that is a separate entry mapped to the apex in vercel.json. Every unmatched
+  // path falls through to the form as well, so a deep link or bookmark (say
+  // /finance/ledger) lands on auth and resolves to the requested route once the
+  // session is established — see the routing fix in 01927cb.
+  const signInScreen = (
+    <div className="relative">
+      <LoginView />
+      <div className="absolute right-4 top-4 flex items-center gap-2">
+        {LANDING_URL && (
+          <a
+            href={LANDING_URL}
+            className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-muted"
+          >
+            {t('common.home')}
+          </a>
+        )}
+        <button
+          onClick={() => navigate('/calendar')}
+          className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-muted"
+        >
+          {t('common.calendar')}
+        </button>
+      </div>
+    </div>
+  );
+
   if (!user) {
     return (
       <ErrorBoundary>
         <Routes>
           <Route path="/calendar/:teamId?" element={<PublicCalendarView onBack={() => navigate('/')} />} />
-          <Route
-            path="*"
-            element={
-              <div className="relative">
-                <LoginView />
-                <button
-                  onClick={() => navigate('/calendar')}
-                  className="absolute top-4 right-4 bg-white/20 px-4 py-2 rounded-lg text-white font-semibold"
-                >
-                  📅 Calendar
-                </button>
-              </div>
-            }
-          />
+          <Route path="/login" element={signInScreen} />
+          <Route path="*" element={signInScreen} />
         </Routes>
       </ErrorBoundary>
     );

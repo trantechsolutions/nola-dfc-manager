@@ -215,6 +215,10 @@ export default function AppRoutes({
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {/* Public-only paths. A signed-in user who follows a link to the
+                landing page or the sign-in form belongs in the app, not on a
+                RouteNotFound dead end. */}
+            <Route path="/login" element={<Navigate to="/dashboard" replace />} />
 
             {!clubUiHidden && isSuperAdmin && (
               <Route

@@ -1,0 +1,8 @@
+# Served on every host in this project. The marketing site (canteramanager.com)
+# is the only one meant to be indexed; the app hosts are held back by an
+# X-Robots-Tag header in vercel.json plus a noindex meta in index.html, which
+# take precedence over anything allowed here.
+User-agent: *
+Allow: /
+
+Sitemap: https://canteramanager.com/sitemap.xml

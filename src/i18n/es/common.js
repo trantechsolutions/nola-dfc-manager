@@ -37,6 +37,7 @@ export default {
   club: 'Club',
   logout: 'Cerrar Sesión',
   calendar: 'Calendario',
+  home: 'Inicio',
   clearFilters: 'Limpiar Filtros',
   noResults: 'No se encontraron resultados.',
   confirmAction: 'Confirmar Acción',
