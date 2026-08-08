@@ -494,9 +494,9 @@ function App() {
     updateTeamEvent(dbEventId, { eventType: newType, typeLocked: true });
   };
 
-  const handleSaveExpense = async (txData) => {
-    await handleSaveTransaction(txData);
-  };
+  // Returns the in-band result so the expense form can surface a save failure
+  // instead of silently closing.
+  const handleSaveExpense = async (txData) => await handleSaveTransaction(txData);
 
   const handleToggleCleared = async (txId, cleared) => {
     await supabaseService.updateTransaction(txId, { cleared });
