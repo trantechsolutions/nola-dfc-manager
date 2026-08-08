@@ -23,6 +23,45 @@ import { isCompliant, outstandingFor, EMPTY_COMPLIANCE } from '../../utils/compl
 import JerseyBadge from '../../components/JerseyBadge';
 import { TRACKED_HOLDINGS, HOLDING_LABELS, HOLDING_ICONS } from '../../utils/holdings';
 
+/**
+ * Compliance bars ramp red -> green with completion, so a glance at the card
+ * ranks the checklist items without reading a single number. Palette colors
+ * only: the theme vars in tailwind.config carry no alpha channel, so any
+ * `bg-<themeColor>/<n>` utility silently compiles to nothing.
+ */
+const complianceBarColor = (pct) => {
+  if (pct >= 100) return 'bg-emerald-500';
+  if (pct >= 75) return 'bg-lime-500';
+  if (pct >= 50) return 'bg-amber-400';
+  if (pct >= 25) return 'bg-orange-500';
+  return 'bg-red-500';
+};
+
+/** One labelled bar in the compliance card: "<label>  N / M (P%)". */
+function ComplianceBar({ label, count, total, emphasis = false }) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div>
+      <div
+        className={`flex justify-between gap-2 text-xs mb-1 ${emphasis ? 'font-semibold text-foreground' : 'font-medium text-foreground'}`}
+      >
+        <span className="min-w-0 truncate" title={label}>
+          {label}
+        </span>
+        <span className="tabular-nums whitespace-nowrap">
+          {count} / {total} <span className="text-muted-foreground">({pct}%)</span>
+        </span>
+      </div>
+      <div className="h-2 bg-muted rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${complianceBarColor(pct)}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function TeamOverviewView({
   players,
   archivedPlayers = [],
@@ -99,15 +138,21 @@ export default function TeamOverviewView({
     [players, playerFinancials],
   );
 
-  // Compliance — the season checklist, not the old fixed three flags. The
-  // breakdown below is now one bar per REQUIRED item, so it follows whatever the
-  // team actually asked for this season.
+  // Compliance — the season checklist, not the old fixed three flags. One bar per
+  // checklist item, in the checklist's own order, so the card reads as the same
+  // list ChecklistManager shows.
+  //
+  // Split required from optional because only required items define compliance
+  // (see isPlayerCompliant): "Fully Compliant" summarises the required group and
+  // nothing else, so an optional item sitting at 20% must not read as if it were
+  // holding that number down.
   const complianceStats = useMemo(
     () => ({
       total: players.length,
       waived: players.filter((p) => p.seasonProfiles?.[selectedSeasonData?.id]?.feeWaived).length,
       fullyCompliant: players.filter((p) => isCompliant(compliance, p.id)).length,
-      perItem: compliance.perItem.filter((row) => row.item.required),
+      requiredItems: compliance.perItem.filter((row) => row.item.required),
+      optionalItems: compliance.perItem.filter((row) => !row.item.required),
     }),
     [players, selectedSeasonData, compliance],
   );
@@ -496,29 +541,51 @@ export default function TeamOverviewView({
           {/* ── Doc compliance (burn + outlook merged into KPI tiles above) ── */}
           <div className="bg-card p-5 md:p-6 rounded-lg border border-border shadow-sm">
             <h3 className="font-semibold text-foreground text-sm mb-4">{t('overview.docCompliance')}</h3>
-            <div className="space-y-3">
-              {[
-                ...complianceStats.perItem.map((row) => ({ label: row.item.label, count: row.completed })),
-                { label: t('overview.fullyCompliant'), count: complianceStats.fullyCompliant },
-              ].map(({ label, count }) => {
-                const pct = complianceStats.total > 0 ? Math.round((count / complianceStats.total) * 100) : 0;
-                return (
-                  <div key={label}>
-                    <div className="flex justify-between text-xs font-medium text-foreground mb-1">
-                      <span>{label}</span>
-                      <span className="tabular-nums">
-                        {count} / {complianceStats.total} <span className="text-muted-foreground">({pct}%)</span>
-                      </span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-foreground/70 rounded-full transition-all duration-700"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
+            <div className="space-y-5">
+              {/* Required — these define compliance, so the group closes on the roll-up. */}
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                  {t('overview.complianceRequired')}
+                </p>
+                <div className="space-y-3">
+                  {complianceStats.requiredItems.map((row) => (
+                    <ComplianceBar
+                      key={row.item.key}
+                      label={row.item.label}
+                      count={row.completed}
+                      total={complianceStats.total}
+                    />
+                  ))}
+                  <div className="pt-3 border-t border-border">
+                    <ComplianceBar
+                      label={t('overview.fullyCompliant')}
+                      count={complianceStats.fullyCompliant}
+                      total={complianceStats.total}
+                      emphasis
+                    />
                   </div>
-                );
-              })}
+                </div>
+              </div>
+
+              {/* Optional — tracked, but deliberately outside the roll-up above. */}
+              {complianceStats.optionalItems.length > 0 && (
+                <div className="pt-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t('overview.complianceOptional')}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mb-2">{t('overview.complianceOptionalNote')}</p>
+                  <div className="space-y-3">
+                    {complianceStats.optionalItems.map((row) => (
+                      <ComplianceBar
+                        key={row.item.key}
+                        label={row.item.label}
+                        count={row.completed}
+                        total={complianceStats.total}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
