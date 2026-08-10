@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import { planEventBudgetPush, applyPlanToItems, EVENT_LINE_LABEL } from '../utils/eventBudgetPush';
+import { planPlannedCostsPush, applyPlannedPlanToItems, PLANNED_LINE_LABEL } from '../utils/plannedCostBudget';
 import { computeSeasonFee } from '../utils/feeCalculator';
 
 // Unsaved rows carry a client-generated placeholder id (`item_`, `sug_`,
@@ -234,49 +235,15 @@ export const budgetService = {
       data: { user },
     } = await supabase.auth.getUser();
 
-    let amendmentId = null;
-    if (isFinalized) {
-      const totals = savedItems.reduce(
-        (acc, i) => ({
-          expenses: acc.expenses + (Number(i.expensesFall) || 0) + (Number(i.expensesSpring) || 0),
-          income: acc.income + (Number(i.income) || 0),
-        }),
-        { expenses: 0, income: 0 },
-      );
-
-      // Derived here, from the totals AFTER the push — deriving it caller-side
-      // would compute the fee from the pre-push expenses and land one push
-      // behind. Same formula as the budget screen (utils/feeCalculator), which
-      // the player_financials view mirrors.
-      const nextBaseFee = computeSeasonFee({
-        totalExpenses: totals.expenses,
-        bufferPercent: feeInputs?.bufferPercent || 0,
-        carryoverAmount: feeInputs?.carryoverAmount || 0,
-        rosterSize: feeInputs?.rosterSize || 0,
-      }).roundedFee;
-
-      const amendment = await budgetService.saveBudgetAmendment({
-        teamSeasonId,
-        reason: amendmentReason || 'Event expenses pushed to budget',
-        totalExpenses: totals.expenses,
-        totalIncome: totals.income,
-        // Left at the fee already on record unless the caller asked for a
-        // re-derive; raising it changes what every family owes.
-        baseFee: recalculateBaseFee ? nextBaseFee : Number(feeInputs?.currentBaseFee) || 0,
-      });
-      amendmentId = amendment?.id || null;
-
-      // Projected totals are refreshed either way — they describe the budget,
-      // not the billing. Only base_fee is gated, because only base_fee is what
-      // families are charged.
-      const tsUpdate = {
-        total_projected_expenses: totals.expenses,
-        total_projected_income: totals.income,
-        ...(recalculateBaseFee ? { base_fee: nextBaseFee } : {}),
-      };
-      const { error: tsErr } = await supabase.from('team_seasons').update(tsUpdate).eq('id', teamSeasonId);
-      if (tsErr) throw tsErr;
-    }
+    const amendmentId = isFinalized
+      ? await recordAmendmentForPush({
+          savedItems,
+          teamSeasonId,
+          feeInputs,
+          recalculateBaseFee,
+          reason: amendmentReason || 'Event expenses pushed to budget',
+        })
+      : null;
 
     if (plan.removals.length > 0) {
       const removalIds = plan.removals.map((r) => r.id).filter(Boolean);
@@ -309,7 +276,170 @@ export const budgetService = {
 
     return { applied: true, netDelta: plan.netDelta, plan, amendmentId, teamId };
   },
+
+  /** Everything the PLANNER has put into this team-season's budget so far. */
+  getPlanContributions: async (teamSeasonId) => {
+    if (!teamSeasonId) return [];
+    const { data, error } = await supabase
+      .from('budget_plan_contributions')
+      .select('*')
+      .eq('team_season_id', teamSeasonId);
+    if (error) throw error;
+    return (data || []).map(mapPlanContribution);
+  },
+
+  /**
+   * Fold the planner's EXPECTED match costs into the season budget.
+   *
+   * The forecast counterpart of pushEventToBudget: same idempotence guarantee
+   * (a contribution row per matchup/category/half means re-pushing moves each
+   * line by the delta), same amendment path when the budget is already
+   * finalized, but sourced from estimates the manager typed on the planner
+   * rather than from transactions. See utils/plannedCostBudget.
+   *
+   * @returns {{ applied: boolean, netDelta: number, plan: object, amendmentId: string|null }}
+   */
+  pushPlannedCostsToBudget: async ({
+    seasonId,
+    teamSeasonId,
+    entries = [],
+    isFinalized = false,
+    recalculateBaseFee = false,
+    amendmentReason = '',
+    feeInputs = null,
+  }) => {
+    if (!seasonId || !teamSeasonId) {
+      throw new Error('pushPlannedCostsToBudget requires seasonId and teamSeasonId');
+    }
+
+    const [budgetItems, contributions] = await Promise.all([
+      budgetService.getBudgetItems(seasonId, teamSeasonId),
+      budgetService.getPlanContributions(teamSeasonId),
+    ]);
+
+    const plan = planPlannedCostsPush({ entries, contributions, budgetItems });
+    if (plan.noop) return { applied: false, netDelta: 0, plan, amendmentId: null };
+
+    // saveBudgetItems takes the whole set and prunes anything missing from it,
+    // so the plan has to be folded into every item, not just the changed ones.
+    const nextItems = applyPlannedPlanToItems(budgetItems, plan, { seasonId, teamSeasonId });
+    await budgetService.saveBudgetItems(seasonId, nextItems, teamSeasonId);
+
+    // Re-read to learn the ids of any line the plan created — saveBudgetItems
+    // returns nothing, and a contribution has to point at a real row.
+    const savedItems = await budgetService.getBudgetItems(seasonId, teamSeasonId);
+    const idFor = (category) => savedItems.find((i) => i.category === category && i.label === PLANNED_LINE_LABEL)?.id;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const amendmentId = isFinalized
+      ? await recordAmendmentForPush({
+          savedItems,
+          teamSeasonId,
+          feeInputs,
+          recalculateBaseFee,
+          reason: amendmentReason || 'Planned match costs pushed to budget',
+        })
+      : null;
+
+    if (plan.removals.length > 0) {
+      const removalIds = plan.removals.map((r) => r.id).filter(Boolean);
+      if (removalIds.length > 0) {
+        const { error } = await supabase.from('budget_plan_contributions').delete().in('id', removalIds);
+        if (error) throw error;
+      }
+    }
+
+    if (plan.upserts.length > 0) {
+      const rows = plan.upserts.map((u) => ({
+        ...(u.id ? { id: u.id } : {}),
+        team_season_id: teamSeasonId,
+        matchup_id: u.matchupId,
+        category: u.category,
+        half: u.half,
+        budget_item_id: u.budgetItemId || idFor(u.category) || null,
+        applied_amount: u.appliedAmount,
+        applied_at: new Date().toISOString(),
+        applied_by: user?.id || null,
+        amendment_id: amendmentId,
+      }));
+      // Conflict on the natural key, not the primary key: a re-push of a row we
+      // did not read back still has to update in place.
+      const { error } = await supabase
+        .from('budget_plan_contributions')
+        .upsert(rows, { onConflict: 'team_season_id,matchup_id,category,half' });
+      if (error) throw error;
+    }
+
+    return { applied: true, netDelta: plan.netDelta, plan, amendmentId };
+  },
 };
+
+/**
+ * Record a push against a FINALIZED budget as an amendment, and refresh the
+ * team-season totals it changed.
+ *
+ * Shared by the event and planner pushes so a change to a finalized budget is
+ * written down the same way whichever screen it came from. `recalculateBaseFee`
+ * decides whether the amendment also re-prices the roster — projected totals
+ * always follow the budget, but base_fee is what families are actually charged.
+ */
+async function recordAmendmentForPush({ savedItems, teamSeasonId, feeInputs, recalculateBaseFee, reason }) {
+  const totals = savedItems.reduce(
+    (acc, i) => ({
+      expenses: acc.expenses + (Number(i.expensesFall) || 0) + (Number(i.expensesSpring) || 0),
+      income: acc.income + (Number(i.income) || 0),
+    }),
+    { expenses: 0, income: 0 },
+  );
+
+  // Derived here, from the totals AFTER the push — deriving it caller-side
+  // would compute the fee from the pre-push expenses and land one push behind.
+  // Same formula as the budget screen (utils/feeCalculator), which the
+  // player_financials view mirrors.
+  const nextBaseFee = computeSeasonFee({
+    totalExpenses: totals.expenses,
+    bufferPercent: feeInputs?.bufferPercent || 0,
+    carryoverAmount: feeInputs?.carryoverAmount || 0,
+    rosterSize: feeInputs?.rosterSize || 0,
+  }).roundedFee;
+
+  const amendment = await budgetService.saveBudgetAmendment({
+    teamSeasonId,
+    reason,
+    totalExpenses: totals.expenses,
+    totalIncome: totals.income,
+    // Left at the fee already on record unless the caller asked for a
+    // re-derive; raising it changes what every family owes.
+    baseFee: recalculateBaseFee ? nextBaseFee : Number(feeInputs?.currentBaseFee) || 0,
+  });
+
+  const tsUpdate = {
+    total_projected_expenses: totals.expenses,
+    total_projected_income: totals.income,
+    ...(recalculateBaseFee ? { base_fee: nextBaseFee } : {}),
+  };
+  const { error: tsErr } = await supabase.from('team_seasons').update(tsUpdate).eq('id', teamSeasonId);
+  if (tsErr) throw tsErr;
+
+  return amendment?.id || null;
+}
+
+function mapPlanContribution(row) {
+  return {
+    id: row.id,
+    teamSeasonId: row.team_season_id,
+    matchupId: row.matchup_id,
+    category: row.category,
+    half: row.half,
+    budgetItemId: row.budget_item_id,
+    appliedAmount: Number(row.applied_amount),
+    appliedAt: row.applied_at,
+    amendmentId: row.amendment_id,
+  };
+}
 
 function mapContribution(row) {
   return {

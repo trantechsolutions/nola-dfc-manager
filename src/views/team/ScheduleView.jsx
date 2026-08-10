@@ -199,6 +199,17 @@ export default function ScheduleView({
   budgetContributions = [],
   budgetLocked = false,
   budgetRecalculatesFee = true,
+  // Whether this season has a team budget at all — distinct from the per-event
+  // check the expense modal makes below.
+  hasSeasonBudget = true,
+  plannedCosts = null,
+  plannedSummary = null,
+  onAddPlannedCost = null,
+  onUpdatePlannedCost = null,
+  onDeletePlannedCost = null,
+  onPushPlannedCosts = null,
+  onSendCostToLedger = null,
+  isCostBudgeted = () => false,
 }) {
   const { t } = useT();
   const [tab, setTab] = useState('upcoming');
@@ -226,6 +237,10 @@ export default function ScheduleView({
     });
     return map;
   }, [transactions]);
+
+  // Ledger rows by id, so a planner estimate that was filed in the ledger can
+  // show whether it is still pending or has since been approved.
+  const txById = useMemo(() => Object.fromEntries(transactions.map((tx) => [tx.id, tx])), [transactions]);
 
   // Compute expense summary per DB event
   const getExpenseSummary = (dbEvent) => {
@@ -532,6 +547,18 @@ export default function ScheduleView({
             onSetStatus={onSetMatchupStatus}
             onConfirm={onConfirmMatchup}
             onReschedule={onRescheduleMatchup}
+            plannedCosts={plannedCosts}
+            plannedSummary={plannedSummary}
+            onAddPlannedCost={onAddPlannedCost}
+            onUpdatePlannedCost={onUpdatePlannedCost}
+            onDeletePlannedCost={onDeletePlannedCost}
+            onPushPlannedCosts={onPushPlannedCosts}
+            onSendCostToLedger={onSendCostToLedger}
+            isCostBudgeted={isCostBudgeted}
+            ledgerTxById={txById}
+            budgetLocked={budgetLocked}
+            budgetAvailable={hasSeasonBudget}
+            budgetRecalculatesFee={budgetRecalculatesFee}
           />
         </div>
       )}

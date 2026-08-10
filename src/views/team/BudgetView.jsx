@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import PlayerFormModal from '../../components/PlayerFormModal';
+import PlannedCostsBudgetBar from '../../components/PlannedCostsBudgetBar';
 import { useBudgetForecast } from '../../hooks/useBudgetForecast';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { exportBudgetActualsPDF, exportBudgetActualsCSV } from '../../utils/exportUtils';
@@ -59,6 +60,10 @@ export default function BudgetView({
   club = null,
   teamSeasons = [],
   categoryOptions = [],
+  // Expected match costs entered on the schedule planner. The budget is where
+  // they get saved, so the same forecast and the same push live on both screens.
+  plannedSummary = null,
+  onPushPlannedCosts = null,
 }) {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -461,6 +466,16 @@ export default function BudgetView({
       ),
     );
   const removeItem = (id) => setBudgetItems((prev) => prev.filter((i) => i.id !== id));
+
+  // The push writes budget_items straight through, so the screen has to re-read
+  // them — otherwise the next Save Draft would send the pre-push set back and
+  // silently undo the forecast that was just applied.
+  const handlePushPlannedCosts = async (args) => {
+    const result = await onPushPlannedCosts(args);
+    if (!result || result.success !== false) await fetchData();
+    return result;
+  };
+
   const toggleCollapse = (code) => setCollapsedCats((prev) => ({ ...prev, [code]: !prev[code] }));
 
   // CHANGED: Saves to team_seasons instead of seasons table
@@ -1067,6 +1082,19 @@ export default function BudgetView({
                   </button>
                 </div>
               </div>
+            )}
+
+            {/* Planner forecast → budget. Hidden while an amendment is open:
+                the push writes items directly, and the pending amendment would
+                save the pre-push set back over it. */}
+            {plannedSummary && (plannedSummary.plannedTotal !== 0 || plannedSummary.appliedTotal !== 0) && (
+              <PlannedCostsBudgetBar
+                summary={plannedSummary}
+                locked={isFinalized}
+                available={!!currentTeamSeason?.id}
+                recalculatesFee={amendRecalcFee}
+                onPush={onPushPlannedCosts && !isAmending ? handlePushPlannedCosts : null}
+              />
             )}
 
             {/* Budget Table */}

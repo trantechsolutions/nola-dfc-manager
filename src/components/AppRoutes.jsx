@@ -9,6 +9,8 @@ import { useFinanceContext } from '../context/FinanceContext';
 import { useScheduleContext } from '../context/ScheduleContext';
 import { useImpersonationGuard } from '../hooks/useImpersonationGuard';
 import { useEventBudgetPush } from '../hooks/useEventBudgetPush';
+import { usePlannedCosts } from '../hooks/usePlannedCosts';
+import { isCostBudgeted } from '../utils/plannedCostBudget';
 
 import ErrorBoundary from './ErrorBoundary';
 import TransactionModal from './TransactionModal';
@@ -220,6 +222,37 @@ export default function AppRoutes({
     updateOpponentContact,
     deleteOpponentContact,
   } = useScheduleContext();
+
+  // Expected match costs. Held here, alongside the event push, so the planner
+  // and the budget screen read the same forecast and the same record of what
+  // has already been applied.
+  const {
+    plannedCosts,
+    summary: plannedSummary,
+    addPlannedCost,
+    updatePlannedCost,
+    deletePlannedCost,
+    pushPlannedCosts,
+    sendCostToLedger,
+    planContributions,
+  } = usePlannedCosts({
+    team: effectiveTeam,
+    selectedSeason,
+    currentTeamSeason,
+    matchups,
+    eventContributions: budgetContributions,
+    showToast,
+    onDataChange: fetchData,
+    t,
+  });
+
+  // Applying the forecast edits the budget, so it is gated on budget rights —
+  // not on the schedule rights that merely let someone type an estimate.
+  const canPushPlannedCosts = can(PERMISSIONS.TEAM_EDIT_BUDGET) && !!currentTeamSeason?.id;
+
+  // Filing an estimate writes a (pending) ledger row, so it takes ledger rights.
+  const canFilePlannedCosts = canEditLedger && !!currentTeamSeason?.id;
+  const isPlannedCostBudgeted = (cost, matchup) => isCostBudgeted(cost, matchup, planContributions);
 
   return (
     <>
@@ -518,6 +551,26 @@ export default function AppRoutes({
                   budgetContributions={budgetContributions}
                   budgetLocked={!!currentTeamSeason?.isFinalized}
                   budgetRecalculatesFee={currentTeamSeason?.amendRecalculatesFee !== false}
+                  hasSeasonBudget={!!currentTeamSeason?.id}
+                  plannedCosts={plannedCosts}
+                  plannedSummary={plannedSummary}
+                  onAddPlannedCost={canEditSchedule ? addPlannedCost : null}
+                  onUpdatePlannedCost={canEditSchedule ? updatePlannedCost : null}
+                  onDeletePlannedCost={canEditSchedule ? deletePlannedCost : null}
+                  onPushPlannedCosts={
+                    canPushPlannedCosts
+                      ? guardedAction(pushPlannedCosts, { action: 'push_planned_costs', tableName: 'budget_items' })
+                      : null
+                  }
+                  onSendCostToLedger={
+                    canFilePlannedCosts
+                      ? guardedAction(sendCostToLedger, {
+                          action: 'file_planned_cost',
+                          tableName: 'transactions',
+                        })
+                      : null
+                  }
+                  isCostBudgeted={isPlannedCostBudgeted}
                 />
               }
             />
@@ -656,6 +709,13 @@ export default function AppRoutes({
                                 club,
                                 teamSeasons,
                                 categoryOptions,
+                                plannedSummary,
+                                onPushPlannedCosts: canPushPlannedCosts
+                                  ? guardedAction(pushPlannedCosts, {
+                                      action: 'push_planned_costs',
+                                      tableName: 'budget_items',
+                                    })
+                                  : null,
                               }
                             : null
                         }

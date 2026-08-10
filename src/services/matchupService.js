@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import { canTransition, buildDuplicatePayload } from '../utils/matchupStatus';
+import { financeService } from './financeService';
 
 const mapMatchup = (m) => ({
   id: m.id,
@@ -42,6 +43,15 @@ const toRow = (m) => ({
   ...(m.rescheduleOfId !== undefined ? { reschedule_of_id: m.rescheduleOfId } : {}),
 });
 
+const mapPlannedCost = (c) => ({
+  id: c.id,
+  matchupId: c.matchup_id,
+  category: c.category,
+  label: c.label || '',
+  amount: Number(c.amount) || 0,
+  ledgerTxId: c.ledger_tx_id || null,
+});
+
 export const matchupService = {
   getMatchups: async (teamId, seasonId) => {
     if (!teamId || !seasonId) return [];
@@ -71,6 +81,94 @@ export const matchupService = {
   deleteMatchup: async (id) => {
     const { error } = await supabase.from('matchups').delete().eq('id', id);
     if (error) throw error;
+  },
+
+  /**
+   * Expected costs entered on the planner, for every matchup in a team-season.
+   *
+   * Fetched by (team, season) rather than per matchup so the planner can render
+   * every row's estimate without a query per game. The inner join keeps the RLS
+   * story identical to matchups themselves.
+   */
+  getPlannedCosts: async (teamId, seasonId) => {
+    if (!teamId || !seasonId) return [];
+    const { data, error } = await supabase
+      .from('matchup_planned_costs')
+      .select('*, matchups!inner(team_id, season_id)')
+      .eq('matchups.team_id', teamId)
+      .eq('matchups.season_id', seasonId);
+    if (error) throw error;
+    return (data || []).map(mapPlannedCost);
+  },
+
+  createPlannedCost: async ({ matchupId, category = 'OPE', label = '', amount = 0 }) => {
+    const { data, error } = await supabase
+      .from('matchup_planned_costs')
+      .insert({ matchup_id: matchupId, category, label, amount })
+      .select()
+      .single();
+    if (error) throw error;
+    return mapPlannedCost(data);
+  },
+
+  updatePlannedCost: async (id, updates) => {
+    const row = {
+      ...(updates.category !== undefined ? { category: updates.category } : {}),
+      ...(updates.label !== undefined ? { label: updates.label } : {}),
+      ...(updates.amount !== undefined ? { amount: updates.amount } : {}),
+    };
+    const { data, error } = await supabase.from('matchup_planned_costs').update(row).eq('id', id).select().single();
+    if (error) throw error;
+    return mapPlannedCost(data);
+  },
+
+  deletePlannedCost: async (id) => {
+    const { error } = await supabase.from('matchup_planned_costs').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  /**
+   * File an estimate in the ledger as a PENDING expense.
+   *
+   * The row lands uncleared on purpose: uncleared transactions are excluded
+   * from every balance, actuals and player-fee calculation in the app, so a
+   * forecast that has been budgeted can sit in the ledger waiting for the
+   * treasurer to confirm it actually happened. No account is chosen either —
+   * that is part of approving it, since nobody knows yet which account will pay.
+   *
+   * The estimate keeps the transaction id, so the action can only be taken once.
+   * If the treasurer later deletes that transaction the link nulls itself and
+   * the estimate offers the action again.
+   */
+  addPlannedCostToLedger: async ({ cost, matchup, seasonId, teamSeasonId, title, date }) => {
+    if (!cost?.id || !seasonId) throw new Error('addPlannedCostToLedger requires a cost and a season');
+
+    const amount = Math.abs(Number(cost.amount) || 0);
+    if (amount === 0) throw new Error('Cannot file a $0 estimate in the ledger');
+
+    const tx = await financeService.addTransaction({
+      seasonId,
+      teamSeasonId: teamSeasonId || null,
+      title,
+      // Expenses are stored negative, same as every other spend row.
+      amount: -amount,
+      date: date || matchup?.matchDate || new Date().toISOString().split('T')[0],
+      category: cost.category || 'OPE',
+      // Only a confirmed matchup has an event to hang the expense on; before
+      // that the row stands on its own until the game is promoted.
+      eventId: matchup?.promotedEventId || null,
+      cleared: false,
+    });
+
+    const { data, error } = await supabase
+      .from('matchup_planned_costs')
+      .update({ ledger_tx_id: tx.id })
+      .eq('id', cost.id)
+      .select()
+      .single();
+    if (error) throw error;
+
+    return { transaction: tx, cost: mapPlannedCost(data) };
   },
 
   /**

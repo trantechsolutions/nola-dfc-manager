@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, CheckCircle2, RotateCcw, AlertTriangle, Copy } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, RotateCcw, AlertTriangle, Copy, PiggyBank } from 'lucide-react';
 import { MATCHUP_STATUS_META, nextStatuses } from '../utils/matchupStatus';
+import { matchupPlannedTotal, FORECAST_STATUSES } from '../utils/plannedCostBudget';
+import MatchupCostEditor from './MatchupCostEditor';
+import PlannedCostsBudgetBar from './PlannedCostsBudgetBar';
 import { useT } from '../i18n/I18nContext';
 
 const UNSCHEDULED_KEY = '__unscheduled__';
@@ -77,11 +80,24 @@ const MatchupRow = ({
   onReschedule,
   onDuplicate,
   onDelete,
+  costs = [],
+  showCosts = false,
+  onAddCost,
+  onUpdateCost,
+  onDeleteCost,
+  onSendCostToLedger,
+  isCostBudgeted,
+  ledgerTxById,
 }) => {
   const { t } = useT();
+  const [costsOpen, setCostsOpen] = useState(false);
   const meta = MATCHUP_STATUS_META[matchup.status] || MATCHUP_STATUS_META.open;
   const editableTerminal = matchup.status === 'dns' || matchup.status === 'cancelled';
   const canConfirm = nextStatuses(matchup.status).includes('confirmed') && !!matchup.matchDate;
+  const plannedTotal = matchupPlannedTotal(matchup.id, costs);
+  // A cancelled or never-scheduled game keeps its numbers on screen for the
+  // record, but they are struck from the forecast — see plannedCostBudget.
+  const countsTowardBudget = FORECAST_STATUSES.has(matchup.status);
 
   const commit = (field, value) => {
     if (matchup[field] === value) return;
@@ -184,6 +200,22 @@ const MatchupRow = ({
         </span>
       )}
 
+      {showCosts && (
+        <button
+          type="button"
+          onClick={() => setCostsOpen((v) => !v)}
+          title={t('planCosts.toggle')}
+          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold border transition-colors ${
+            plannedTotal > 0
+              ? 'border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30'
+              : 'border-border text-muted-foreground hover:text-foreground'
+          } ${countsTowardBudget ? '' : 'line-through opacity-60'}`}
+        >
+          <PiggyBank size={13} />
+          {plannedTotal > 0 ? `$${plannedTotal.toFixed(2)}` : t('planCosts.addShort')}
+        </button>
+      )}
+
       {canEdit && (
         <div className="flex items-center gap-1 ml-auto">
           {canConfirm && (
@@ -220,6 +252,19 @@ const MatchupRow = ({
           </button>
         </div>
       )}
+
+      {showCosts && costsOpen && (
+        <MatchupCostEditor
+          costs={costs.filter((c) => c.matchupId === matchup.id)}
+          canEdit={canEdit && !editableTerminal}
+          onAdd={(cost) => onAddCost(matchup.id, cost)}
+          onUpdate={onUpdateCost}
+          onDelete={onDeleteCost}
+          onSendToLedger={onSendCostToLedger ? (cost) => onSendCostToLedger(cost, matchup) : null}
+          isBudgeted={(cost) => isCostBudgeted(cost, matchup)}
+          ledgerTxById={ledgerTxById}
+        />
+      )}
     </div>
   );
 };
@@ -236,12 +281,29 @@ export default function MatchupPlanner({
   onSetStatus,
   onConfirm,
   onReschedule,
+  // ── Expected costs (preseason budgeting) ──
+  plannedCosts = null,
+  plannedSummary = null,
+  onAddPlannedCost = null,
+  onUpdatePlannedCost = null,
+  onDeletePlannedCost = null,
+  onPushPlannedCosts = null,
+  onSendCostToLedger = null,
+  isCostBudgeted = () => false,
+  ledgerTxById = {},
+  budgetLocked = false,
+  budgetAvailable = true,
+  budgetRecalculatesFee = true,
 }) {
   const { t } = useT();
   const [newWeekLabel, setNewWeekLabel] = useState('');
 
   const blackoutSet = useMemo(() => new Set(blackoutDates), [blackoutDates]);
   const groups = useMemo(() => groupByWeek(matchups), [matchups]);
+
+  // Costs are opt-in: a caller that does not pass them (a read-only embed, a
+  // parent-facing view) gets exactly the planner it had before.
+  const showCosts = Array.isArray(plannedCosts);
 
   const handleAdd = () => {
     onCreate({ weekLabel: newWeekLabel.trim() || null });
@@ -254,6 +316,16 @@ export default function MatchupPlanner({
 
   return (
     <div className="space-y-4">
+      {showCosts && plannedSummary && (
+        <PlannedCostsBudgetBar
+          summary={plannedSummary}
+          locked={budgetLocked}
+          available={budgetAvailable}
+          recalculatesFee={budgetRecalculatesFee}
+          onPush={onPushPlannedCosts}
+        />
+      )}
+
       {canEdit && (
         <div className="bg-card p-3 rounded-lg border border-border shadow-sm flex items-center gap-2">
           <input
@@ -297,6 +369,14 @@ export default function MatchupPlanner({
                 onReschedule={onReschedule}
                 onDuplicate={onDuplicate}
                 onDelete={onDelete}
+                costs={showCosts ? plannedCosts : []}
+                showCosts={showCosts}
+                onAddCost={onAddPlannedCost}
+                onUpdateCost={onUpdatePlannedCost}
+                onDeleteCost={onDeletePlannedCost}
+                onSendCostToLedger={onSendCostToLedger}
+                isCostBudgeted={isCostBudgeted}
+                ledgerTxById={ledgerTxById}
               />
             ))}
           </div>
