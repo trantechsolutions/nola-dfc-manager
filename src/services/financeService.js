@@ -26,6 +26,7 @@ export const financeService = {
       distributed: tx.distributed,
       waterfallBatchId: tx.waterfall_batch_id,
       originalTxId: tx.original_tx_id,
+      refundOfTxId: tx.refund_of_tx_id || null,
       accountId: tx.account_id || null,
       transferFromAccountId: tx.transfer_from_account_id || null,
       transferToAccountId: tx.transfer_to_account_id || null,
@@ -48,6 +49,7 @@ export const financeService = {
       distributed: txData.distributed ?? false,
       waterfall_batch_id: txData.waterfallBatchId || null,
       original_tx_id: txData.originalTxId || null,
+      refund_of_tx_id: txData.refundOfTxId || null,
       ...(txData.teamSeasonId ? { team_season_id: txData.teamSeasonId } : {}),
       account_id: txData.accountId || null,
       transfer_from_account_id: txData.transferFromAccountId || null,
@@ -108,6 +110,9 @@ export const financeService = {
 
   deleteTransaction: async (txId) => {
     await supabase.from('transactions').delete().eq('original_tx_id', txId);
+    // The FK cascades, but deleting the reversals first keeps this correct on
+    // databases where the column was added without ON DELETE CASCADE.
+    await supabase.from('transactions').delete().eq('refund_of_tx_id', txId);
     const { error } = await supabase.from('transactions').delete().eq('id', txId);
     if (error) throw error;
 
@@ -183,6 +188,7 @@ export const financeService = {
       distributed: tx.distributed,
       waterfallBatchId: tx.waterfall_batch_id,
       originalTxId: tx.original_tx_id,
+      refundOfTxId: tx.refund_of_tx_id || null,
       accountId: tx.account_id || null,
       transferFromAccountId: tx.transfer_from_account_id || null,
       transferToAccountId: tx.transfer_to_account_id || null,

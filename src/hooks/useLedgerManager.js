@@ -4,6 +4,7 @@
 
 import { supabaseService } from '../services/supabaseService';
 import { validateTransaction } from '../utils/validation';
+import { buildRefundTransaction, refundableRemaining } from '../utils/refunds';
 
 // Postgres RLS rejections surface verbatim ("new row violates row-level
 // security policy for table ..."), which tells a coach nothing. Every path
@@ -87,6 +88,33 @@ export const useLedgerManager = (
     }
   };
 
+  // A refund is recorded as its own reversing row rather than by editing the
+  // original, so the ledger keeps both sides of the story and every downstream
+  // total (book balance, player financials, exports) nets out without changes.
+  const handleRefundTransaction = async (
+    originalTx,
+    { amount, date, notes, cleared = true } = {},
+    refundIndex = {},
+  ) => {
+    if (!originalTx?.id) return { success: false, error: 'Nothing to refund.' };
+
+    const remaining = refundableRemaining(originalTx, refundIndex);
+    const magnitude = Math.round((Math.abs(Number(amount)) || 0) * 100) / 100;
+    if (!magnitude) return { success: false, error: 'Enter a refund amount.' };
+    if (magnitude > remaining) {
+      return { success: false, error: `Refund cannot exceed the ${remaining.toFixed(2)} still outstanding.` };
+    }
+
+    return handleSaveTransaction(
+      buildRefundTransaction(originalTx, {
+        amount: magnitude,
+        date: date || new Date().toISOString().split('T')[0],
+        notes,
+        cleared,
+      }),
+    );
+  };
+
   const handleDeleteTransaction = async (txId) => {
     let snapshot = null;
     try {
@@ -140,5 +168,5 @@ export const useLedgerManager = (
     }
   };
 
-  return { handleSaveTransaction, handleDeleteTransaction, handleBulkUpload };
+  return { handleSaveTransaction, handleRefundTransaction, handleDeleteTransaction, handleBulkUpload };
 };

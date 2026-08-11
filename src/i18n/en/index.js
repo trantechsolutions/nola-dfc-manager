@@ -22,6 +22,7 @@ export default {
   settings: schedule.settings,
   ledger: finance.ledger,
   txModal: finance.txModal,
+  refundModal: finance.refundModal,
   categories: finance.categories,
   insights: finance.insights,
   catMgr: finance.catMgr,

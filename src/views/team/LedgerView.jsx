@@ -10,6 +10,7 @@ export default function LedgerView({
   onAddTx,
   onEditTx,
   onDeleteTx,
+  onRefundTx,
   formatMoney,
   // Dynamic categories
   categoryLabels,
@@ -180,6 +181,7 @@ export default function LedgerView({
         transactions={filteredTransactions}
         onEditTx={onEditTx}
         onDeleteTx={onDeleteTx}
+        onRefundTx={onRefundTx}
         formatMoney={formatMoney}
         categoryLabels={categoryLabels}
         categoryColors={categoryColors}

@@ -229,6 +229,7 @@ fee per player = ⌈ (expenses + buffer − carryover) ÷ roster size ⌉  round
 
 - **Add Transaction** — title, amount, date, category, payment method, and the **account** the money moved through. Link it to a player (a fee payment) or to a schedule event (a tournament cost). Mark it **Funds Cleared** when the money has actually landed; uncleared entries show as pending.
 - **Transfers** move money between the team's own accounts without counting as income or expense.
+- **Refund** — the ↩ button on a row records money going back. It writes a linked reversing entry instead of making you type a second transaction, and that entry folds into the original row rather than taking a line of its own: the row shows the original amount struck through with the net beside it, tagged **Refunded**. Expand the row with the ▸ arrow to see each refund, its date and status, and to delete one if it was recorded in error. Refund the full amount or part of it, as many times as needed. Use the **Refunds** filter to find every affected transaction. Transfers cannot be refunded — reverse those with another transfer.
 - **Filters** cover category, type, account, cleared status, date range, and free text.
 - **Bulk Upload** imports transactions from CSV; the statement importer reads a bank or wallet export.
 - **Export** produces a CSV or PDF of what you are looking at.

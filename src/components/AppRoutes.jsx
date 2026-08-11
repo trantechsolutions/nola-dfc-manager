@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import { Settings } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { PERMISSIONS } from '../utils/roles';
@@ -11,9 +11,11 @@ import { useImpersonationGuard } from '../hooks/useImpersonationGuard';
 import { useEventBudgetPush } from '../hooks/useEventBudgetPush';
 import { usePlannedCosts } from '../hooks/usePlannedCosts';
 import { isCostBudgeted } from '../utils/plannedCostBudget';
+import { buildRefundIndex } from '../utils/refunds';
 
 import ErrorBoundary from './ErrorBoundary';
 import TransactionModal from './TransactionModal';
+import RefundModal from './RefundModal';
 import PlayerFormModal from './PlayerFormModal';
 import PlayerModal from './PlayerModal';
 import ConfirmModal from './ConfirmModal';
@@ -123,6 +125,7 @@ export default function AppRoutes({
   // Transaction handlers
   canEditLedger,
   handleSaveTransaction,
+  handleRefundTransaction,
   handleDeleteTransaction,
   handleBulkUpload,
   isBulkUploading,
@@ -177,6 +180,12 @@ export default function AppRoutes({
   } = useData();
 
   const { isReadOnly, guardedAction } = useImpersonationGuard(user);
+
+  // Refunds get their own dialog rather than reusing the transaction form —
+  // the entry it creates is derived from the original, not typed from scratch.
+  const [txToRefund, setTxToRefund] = useState(null);
+  const [isRefunding, setIsRefunding] = useState(false);
+  const refundIndex = useMemo(() => buildRefundIndex(seasonalTransactions), [seasonalTransactions]);
 
   // "Add to Budget" on an event. Held here rather than in ScheduleView so the
   // contribution list survives the modal opening and closing.
@@ -667,6 +676,7 @@ export default function AppRoutes({
                                         { action: 'delete_transaction', tableName: 'transactions' },
                                       )
                                     : null,
+                                onRefundTx: canEditLedger && !isReadOnly ? (tx) => setTxToRefund(tx) : null,
                                 categoryLabels,
                                 categoryColors,
                                 categoryOptions,
@@ -991,6 +1001,33 @@ export default function AppRoutes({
         categoryOptions={categoryOptions}
         teamEvents={collapsedTeamEvents}
         activeAccounts={activeAccounts}
+      />
+
+      <RefundModal
+        key={txToRefund?.id || 'refund-none'}
+        show={Boolean(txToRefund)}
+        transaction={txToRefund}
+        refundIndex={refundIndex}
+        formatMoney={formatMoney}
+        isSubmitting={isRefunding}
+        onClose={() => setTxToRefund(null)}
+        onSubmit={guardedAction(
+          async (details) => {
+            setIsRefunding(true);
+            try {
+              const r = await handleRefundTransaction(txToRefund, details, refundIndex);
+              if (r && r.success === false) {
+                showToast(r.error, true);
+              } else {
+                setTxToRefund(null);
+                showToast(t('toast.txRefunded'));
+              }
+            } finally {
+              setIsRefunding(false);
+            }
+          },
+          { action: 'refund_transaction', tableName: 'transactions' },
+        )}
       />
 
       {confirmDialog && (

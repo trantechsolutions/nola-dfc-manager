@@ -13,9 +13,11 @@ import {
   X,
   ArrowRightLeft,
   Link2,
+  Undo2,
 } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { HOLDINGS, HOLDING_LABELS } from '../utils/holdings';
+import { buildRefundIndex, canRefund, refundableRemaining } from '../utils/refunds';
 
 const DEFAULT_CATEGORY_COLORS = {
   TMF: 'bg-blue-50 text-blue-700 dark:text-blue-300',
@@ -33,6 +35,7 @@ export default function Ledger({
   transactions,
   onEditTx,
   onDeleteTx,
+  onRefundTx,
   formatMoney,
   categoryLabels: propLabels, // NEW: dynamic labels from useCategoryManager
   categoryColors: propColors, // NEW: dynamic colors from useCategoryManager
@@ -59,6 +62,10 @@ export default function Ledger({
   );
   const CATEGORY_COLORS = useMemo(() => ({ ...DEFAULT_CATEGORY_COLORS, ...(propColors || {}) }), [propColors]);
 
+  // originalTxId -> amount already refunded. Built from the full list so the
+  // badge on an original is right even when its refund row is filtered out.
+  const refundIndex = useMemo(() => buildRefundIndex(transactions), [transactions]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [accountFilter, setAccountFilter] = useState('all');
@@ -67,6 +74,7 @@ export default function Ledger({
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedIds, setExpandedIds] = useState(() => new Set());
   const pageSize = 20;
 
   // Accounts that actually appear in the current transaction list (account_id,
@@ -129,6 +137,7 @@ export default function Ledger({
     if (flowFilter === 'income') result = result.filter((tx) => tx.amount > 0 && tx.category !== 'TRF');
     if (flowFilter === 'expense') result = result.filter((tx) => tx.amount < 0 && tx.category !== 'TRF');
     if (flowFilter === 'transfer') result = result.filter((tx) => tx.category === 'TRF');
+    if (flowFilter === 'refund') result = result.filter((tx) => tx.refundOfTxId || refundIndex[tx.id] > 0);
 
     if (statusFilter === 'cleared') result = result.filter((tx) => tx.cleared);
     if (statusFilter === 'pending') result = result.filter((tx) => !tx.cleared);
@@ -150,8 +159,11 @@ export default function Ledger({
     flowFilter,
     statusFilter,
     sortOrder,
+    refundIndex,
   ]);
 
+  // Totals stay over the flat list: a nested refund is still real money moving,
+  // it just doesn't get a line of its own.
   const totalIncome = filteredTransactions
     .filter((tx) => tx.amount > 0 && tx.category !== 'TRF')
     .reduce((s, tx) => s + tx.amount, 0);
@@ -159,9 +171,25 @@ export default function Ledger({
     .filter((tx) => tx.amount < 0 && tx.category !== 'TRF')
     .reduce((s, tx) => s + tx.amount, 0);
 
-  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / pageSize));
+  // One visible row per transaction, with its reversals folded in behind an
+  // expand toggle. A refund whose original fell outside the current filters
+  // still gets its own row — nothing may silently vanish from the ledger.
+  const rows = useMemo(() => {
+    const visible = new Set(filteredTransactions.map((tx) => tx.id));
+    const children = {};
+    filteredTransactions.forEach((tx) => {
+      if (tx.refundOfTxId && visible.has(tx.refundOfTxId)) {
+        (children[tx.refundOfTxId] ||= []).push(tx);
+      }
+    });
+    return filteredTransactions
+      .filter((tx) => !(tx.refundOfTxId && visible.has(tx.refundOfTxId)))
+      .map((tx) => ({ tx, refunds: children[tx.id] || [] }));
+  }, [filteredTransactions]);
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
-  const pagedTransactions = filteredTransactions.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const pagedRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const hasActiveFilters =
     searchTerm ||
@@ -193,6 +221,40 @@ export default function Ledger({
       </span>
     );
   };
+
+  // Two faces of the same link: the reversing row is marked REFUND, the row it
+  // reverses carries how much of it has been given back.
+  const RefundBadge = ({ tx }) => {
+    if (tx.refundOfTxId) {
+      return (
+        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded whitespace-nowrap">
+          <Undo2 size={10} /> {t('ledger.refund')}
+        </span>
+      );
+    }
+    const refunded = refundIndex[tx.id] || 0;
+    if (!refunded) return null;
+    const isFull = refundableRemaining(tx, refundIndex) === 0;
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded whitespace-nowrap">
+        <Undo2 size={10} />{' '}
+        {isFull ? t('ledger.refunded') : t('ledger.refundedAmount', { amount: formatMoney(refunded) })}
+      </span>
+    );
+  };
+
+  const toggleExpanded = (id) =>
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  // What the transaction is actually worth once its reversals are applied.
+  const netOf = (tx, refunds) => refunds.reduce((sum, r) => sum + r.amount, tx.amount);
+
+  const formatSigned = (amount) => `${amount < 0 ? '-' : '+'}${formatMoney(Math.abs(amount))}`;
 
   const amountColor = (tx) => {
     if (tx.category === 'TRF') return 'text-indigo-700 dark:text-indigo-400';
@@ -285,6 +347,7 @@ export default function Ledger({
               { val: 'income', label: t('ledger.income') },
               { val: 'expense', label: t('ledger.expense') },
               { val: 'transfer', label: t('ledger.transfers') },
+              { val: 'refund', label: t('ledger.refunds') },
             ].map((opt) => (
               <button
                 key={opt.val}
@@ -332,7 +395,7 @@ export default function Ledger({
         {hasActiveFilters && (
           <div className="flex justify-between items-center pt-2 border-t border-border">
             <span className="text-xs text-muted-foreground font-semibold">
-              {filteredTransactions.length} result{filteredTransactions.length !== 1 && 's'}
+              {rows.length} result{rows.length !== 1 && 's'}
               <span className="text-emerald-700 dark:text-emerald-400 ml-3">+{formatMoney(totalIncome)}</span>
               <span className="text-red-700 dark:text-red-400 ml-2">{formatMoney(totalExpense)}</span>
             </span>
@@ -357,94 +420,180 @@ export default function Ledger({
               <th className="px-5 py-3.5">{t('accountMgr.title')}</th>
               <th className="px-5 py-3.5">{t('common.status')}</th>
               <th className="px-5 py-3.5 text-right">{t('common.amount')}</th>
-              <th className="px-3 py-3.5 text-center w-14"></th>
+              <th className="px-3 py-3.5 text-center w-20"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {pagedTransactions.map((tx) => {
+            {pagedRows.map(({ tx, refunds }) => {
               const isDraft = !tx.cleared && tx.eventId;
+              const isExpanded = expandedIds.has(tx.id);
+              const net = netOf(tx, refunds);
               return (
-                <tr
-                  key={tx.id}
-                  className={`hover:bg-blue-50/30 transition-colors cursor-pointer ${isDraft ? 'border-l-2 border-l-amber-400 bg-amber-50/20 dark:bg-amber-900/20' : ''}`}
-                  onClick={() => onEditTx(tx)}
-                >
-                  <td className="px-5 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">
-                    {tx.date?.seconds
-                      ? new Date(tx.date.seconds * 1000).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: '2-digit',
-                        })
-                      : '—'}
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-2">
+                <React.Fragment key={tx.id}>
+                  <tr
+                    className={`hover:bg-blue-50/30 transition-colors cursor-pointer ${isDraft ? 'border-l-2 border-l-amber-400 bg-amber-50/20 dark:bg-amber-900/20' : ''}`}
+                    onClick={() => onEditTx(tx)}
+                  >
+                    <td className="px-5 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap">
+                      {tx.date?.seconds
+                        ? new Date(tx.date.seconds * 1000).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: '2-digit',
+                          })
+                        : '—'}
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2">
+                        {refunds.length > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleExpanded(tx.id);
+                            }}
+                            aria-expanded={isExpanded}
+                            aria-label={t('ledger.showRefunds', { n: refunds.length })}
+                            className="text-muted-foreground hover:text-foreground shrink-0 -ml-1"
+                          >
+                            <ChevronRight
+                              size={14}
+                              className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                            />
+                          </button>
+                        )}
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded whitespace-nowrap ${
+                            CATEGORY_COLORS[tx.category] || 'bg-muted text-foreground'
+                          }`}
+                        >
+                          {CATEGORY_LABELS[tx.category] || tx.category}
+                        </span>
+                        <span className="text-sm font-semibold text-foreground truncate max-w-[250px]">{tx.title}</span>
+                        <RefundBadge tx={tx} />
+                      </div>
+                      {tx.category === 'TRF' && <TransferBadge tx={tx} />}
+                      {tx.eventTitle && (
+                        <p className="text-xs text-blue-700 dark:text-blue-400 font-semibold mt-0.5 flex items-center gap-1">
+                          <Link2 size={9} /> {tx.eventTitle}
+                        </p>
+                      )}
+                      {tx.notes && (
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[350px]">{tx.notes}</p>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-foreground">{tx.playerName || '—'}</td>
+                    <td className="px-5 py-3 text-xs text-foreground whitespace-nowrap">
+                      {tx.category === 'TRF' ? (
+                        <span className="inline-flex items-center gap-1">
+                          <span>{accountMap[tx.transferFromAccountId]?.name || '—'}</span>
+                          <ArrowRightLeft size={10} className="text-indigo-400 shrink-0" />
+                          <span>{accountMap[tx.transferToAccountId]?.name || '—'}</span>
+                        </span>
+                      ) : (
+                        accountMap[tx.accountId]?.name || '—'
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      {tx.cleared ? (
+                        <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
+                          <CheckCircle2 size={12} /> {t('ledger.cleared')}
+                        </span>
+                      ) : isDraft ? (
+                        <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 text-xs font-bold">
+                          <Clock size={12} /> {t('ledger.draft')}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 text-xs font-semibold">
+                          <Clock size={12} /> {t('ledger.pending')}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-right whitespace-nowrap">
                       <span
-                        className={`text-xs font-semibold px-2 py-0.5 rounded whitespace-nowrap ${
-                          CATEGORY_COLORS[tx.category] || 'bg-muted text-foreground'
-                        }`}
+                        className={`text-sm font-bold ${amountColor(tx)} ${refunds.length > 0 ? 'line-through opacity-60' : ''}`}
                       >
-                        {CATEGORY_LABELS[tx.category] || tx.category}
+                        {tx.category === 'TRF' && '↔ '}
+                        {tx.amount < 0 ? '-' : tx.category !== 'TRF' ? '+' : ''}
+                        {formatMoney(Math.abs(tx.amount))}
                       </span>
-                      <span className="text-sm font-semibold text-foreground truncate max-w-[250px]">{tx.title}</span>
-                    </div>
-                    {tx.category === 'TRF' && <TransferBadge tx={tx} />}
-                    {tx.eventTitle && (
-                      <p className="text-xs text-blue-700 dark:text-blue-400 font-semibold mt-0.5 flex items-center gap-1">
-                        <Link2 size={9} /> {tx.eventTitle}
-                      </p>
-                    )}
-                    {tx.notes && (
-                      <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[350px]">{tx.notes}</p>
-                    )}
-                  </td>
-                  <td className="px-5 py-3 text-xs text-foreground">{tx.playerName || '—'}</td>
-                  <td className="px-5 py-3 text-xs text-foreground whitespace-nowrap">
-                    {tx.category === 'TRF' ? (
-                      <span className="inline-flex items-center gap-1">
-                        <span>{accountMap[tx.transferFromAccountId]?.name || '—'}</span>
-                        <ArrowRightLeft size={10} className="text-indigo-400 shrink-0" />
-                        <span>{accountMap[tx.transferToAccountId]?.name || '—'}</span>
-                      </span>
-                    ) : (
-                      accountMap[tx.accountId]?.name || '—'
-                    )}
-                  </td>
-                  <td className="px-5 py-3">
-                    {tx.cleared ? (
-                      <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
-                        <CheckCircle2 size={12} /> {t('ledger.cleared')}
-                      </span>
-                    ) : isDraft ? (
-                      <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 text-xs font-bold">
-                        <Clock size={12} /> {t('ledger.draft')}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 text-xs font-semibold">
-                        <Clock size={12} /> {t('ledger.pending')}
-                      </span>
-                    )}
-                  </td>
-                  <td className={`px-5 py-3 text-right text-sm font-bold whitespace-nowrap ${amountColor(tx)}`}>
-                    {tx.category === 'TRF' && '↔ '}
-                    {tx.amount < 0 ? '-' : tx.category !== 'TRF' ? '+' : ''}
-                    {formatMoney(Math.abs(tx.amount))}
-                  </td>
-                  <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                    {onDeleteTx && (
-                      <button
-                        onClick={() => onDeleteTx(tx.id)}
-                        className="text-muted-foreground hover:text-red-700 dark:text-red-400 transition-colors p-1"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </td>
-                </tr>
+                      {refunds.length > 0 && (
+                        <span className="block text-sm font-bold text-foreground">{formatSigned(net)}</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      {onRefundTx && canRefund(tx, refundIndex) && (
+                        <button
+                          onClick={() => onRefundTx(tx)}
+                          title={t('ledger.refund')}
+                          aria-label={t('ledger.refund')}
+                          className="text-muted-foreground hover:text-amber-700 dark:hover:text-amber-400 transition-colors p-1"
+                        >
+                          <Undo2 size={14} />
+                        </button>
+                      )}
+                      {onDeleteTx && (
+                        <button
+                          onClick={() => onDeleteTx(tx.id)}
+                          title={t('common.delete')}
+                          aria-label={t('common.delete')}
+                          className="text-muted-foreground hover:text-red-700 dark:text-red-400 transition-colors p-1"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                  {isExpanded &&
+                    refunds.map((r) => (
+                      <tr key={r.id} className="bg-amber-50/40 dark:bg-amber-900/10 text-xs">
+                        <td className="px-5 py-2 font-medium text-muted-foreground whitespace-nowrap">
+                          {r.date?.seconds
+                            ? new Date(r.date.seconds * 1000).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: '2-digit',
+                              })
+                            : '—'}
+                        </td>
+                        <td className="px-5 py-2" colSpan={3}>
+                          <span className="inline-flex items-center gap-2 pl-5">
+                            <Undo2 size={12} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                            <span className="font-semibold text-foreground">{r.title}</span>
+                            {r.notes && <span className="text-muted-foreground truncate max-w-[280px]">{r.notes}</span>}
+                          </span>
+                        </td>
+                        <td className="px-5 py-2">
+                          {r.cleared ? (
+                            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
+                              <CheckCircle2 size={11} /> {t('ledger.cleared')}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 font-semibold">
+                              <Clock size={11} /> {t('ledger.pending')}
+                            </span>
+                          )}
+                        </td>
+                        <td className={`px-5 py-2 text-right font-bold whitespace-nowrap ${amountColor(r)}`}>
+                          {formatSigned(r.amount)}
+                        </td>
+                        <td className="px-3 py-2 text-center whitespace-nowrap">
+                          {onDeleteTx && (
+                            <button
+                              onClick={() => onDeleteTx(r.id)}
+                              title={t('ledger.undoRefund')}
+                              aria-label={t('ledger.undoRefund')}
+                              className="text-muted-foreground hover:text-red-700 dark:hover:text-red-400 transition-colors p-1"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                </React.Fragment>
               );
             })}
-            {pagedTransactions.length === 0 && (
+            {pagedRows.length === 0 && (
               <tr>
                 <td colSpan={7} className="text-center py-10 text-muted-foreground text-sm font-semibold">
                   {hasActiveFilters ? t('ledger.noFilterMatch') : t('ledger.noTransactions')}
@@ -457,8 +606,10 @@ export default function Ledger({
 
       {/* ── MOBILE CARDS ── */}
       <div className="md:hidden space-y-2">
-        {pagedTransactions.map((tx) => {
+        {pagedRows.map(({ tx, refunds }) => {
           const isDraft = !tx.cleared && tx.eventId;
+          const isExpanded = expandedIds.has(tx.id);
+          const net = netOf(tx, refunds);
           return (
             <div
               key={tx.id}
@@ -484,6 +635,7 @@ export default function Ledger({
                     ) : (
                       <Clock size={12} className="text-amber-400 shrink-0" />
                     )}
+                    <RefundBadge tx={tx} />
                   </div>
                   <p className="text-sm font-semibold text-foreground truncate">{tx.title}</p>
                   {tx.category === 'TRF' && <TransferBadge tx={tx} />}
@@ -493,11 +645,18 @@ export default function Ledger({
                     </p>
                   )}
                 </div>
-                <span className={`text-sm font-bold whitespace-nowrap ${amountColor(tx)}`}>
-                  {tx.category === 'TRF' && '↔ '}
-                  {tx.amount < 0 ? '-' : tx.category !== 'TRF' ? '+' : ''}
-                  {formatMoney(Math.abs(tx.amount))}
-                </span>
+                <div className="text-right whitespace-nowrap">
+                  <span
+                    className={`text-sm font-bold ${amountColor(tx)} ${refunds.length > 0 ? 'line-through opacity-60' : ''}`}
+                  >
+                    {tx.category === 'TRF' && '↔ '}
+                    {tx.amount < 0 ? '-' : tx.category !== 'TRF' ? '+' : ''}
+                    {formatMoney(Math.abs(tx.amount))}
+                  </span>
+                  {refunds.length > 0 && (
+                    <span className="block text-sm font-bold text-foreground">{formatSigned(net)}</span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground font-medium">
                 <span>
@@ -517,11 +676,74 @@ export default function Ledger({
                     <span>{accountMap[tx.accountId].name}</span>
                   </>
                 )}
+                {onRefundTx && canRefund(tx, refundIndex) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRefundTx(tx);
+                    }}
+                    className="ml-auto inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-400"
+                  >
+                    <Undo2 size={12} /> {t('ledger.refund')}
+                  </button>
+                )}
+                {refunds.length > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExpanded(tx.id);
+                    }}
+                    aria-expanded={isExpanded}
+                    className="ml-auto inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-400"
+                  >
+                    <ChevronRight size={12} className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                    {t('ledger.refundCount', { n: refunds.length })}
+                  </button>
+                )}
               </div>
+
+              {isExpanded && refunds.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-dashed border-amber-300 dark:border-amber-700 space-y-2">
+                  {refunds.map((r) => (
+                    <div key={r.id} className="flex items-start justify-between gap-2 text-xs">
+                      <span className="inline-flex items-start gap-1.5 min-w-0">
+                        <Undo2 size={11} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <span className="min-w-0">
+                          <span className="block font-semibold text-foreground truncate">{r.title}</span>
+                          <span className="block text-muted-foreground">
+                            {r.date?.seconds
+                              ? new Date(r.date.seconds * 1000).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                })
+                              : '—'}
+                            {r.cleared ? ` · ${t('ledger.cleared')}` : ` · ${t('ledger.pending')}`}
+                          </span>
+                        </span>
+                      </span>
+                      <span className="flex items-center gap-2 shrink-0">
+                        <span className={`font-bold ${amountColor(r)}`}>{formatSigned(r.amount)}</span>
+                        {onDeleteTx && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteTx(r.id);
+                            }}
+                            aria-label={t('ledger.undoRefund')}
+                            className="text-muted-foreground p-0.5"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
-        {pagedTransactions.length === 0 && (
+        {pagedRows.length === 0 && (
           <div className="text-center py-10 text-muted-foreground text-sm font-semibold">
             {hasActiveFilters ? t('ledger.noFilterMatch') : t('ledger.noTransactions')}
           </div>
