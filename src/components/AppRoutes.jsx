@@ -35,6 +35,7 @@ const TeamUserManagement = lazy(() => import('../views/team/TeamUserManagement')
 const ClubAdminHub = lazy(() => import('../views/club/ClubAdminHub'));
 const TeamSettingsView = lazy(() => import('../views/team/TeamSettingsView'));
 const Changelog = lazy(() => import('./Changelog'));
+const HelpView = lazy(() => import('../views/general/HelpView'));
 const SuperAdminView = lazy(() => import('../views/admin/SuperAdminView'));
 const ClubPlayersView = lazy(() => import('../views/club/ClubPlayersView'));
 const SeasonEvaluationView = lazy(() => import('../views/team/SeasonEvaluationView'));
@@ -617,6 +618,8 @@ export default function AppRoutes({
           */}
 
             <Route path="/changelog" element={<Changelog />} />
+            {/* Open to every signed-in user — the guide covers parents and staff alike. */}
+            <Route path="/help" element={<HelpView />} />
 
             {effectiveIsStaff && (
               <>

@@ -9,6 +9,7 @@
 
 const STATIC_PAGES = {
   changelog: { key: 'nav.changelog', fallback: 'Update Log', section: null },
+  help: { key: 'nav.help', fallback: 'Help & User Guide', section: null },
   'club-onboard': { key: 'nav.onboardTeam', fallback: 'Onboard Team', section: 'club' },
   'club-players': { key: 'nav.players', fallback: 'Players', section: 'club' },
 };

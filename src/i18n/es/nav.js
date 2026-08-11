@@ -20,4 +20,5 @@ export default {
   users: 'Usuarios',
   categories: 'Categorías',
   bookBalance: 'Balance de Libros',
+  help: 'Ayuda y Guía del Usuario',
 };

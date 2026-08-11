@@ -1,5 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, ChevronDown, GitCommit, Globe, LogOut, Megaphone, Menu, PanelLeft, User } from 'lucide-react';
+import {
+  Bell,
+  ChevronDown,
+  CircleHelp,
+  GitCommit,
+  Globe,
+  LogOut,
+  Megaphone,
+  Menu,
+  PanelLeft,
+  User,
+} from 'lucide-react';
 import { useT } from '../../i18n/I18nContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useLayout } from '../../context/LayoutContext';
@@ -100,6 +111,14 @@ export default function AppHeader() {
               <p className="truncate text-sm font-semibold text-popover-foreground">{user?.email}</p>
               <p className="truncate text-xs capitalize text-muted-foreground">{effectiveRole?.replace(/_/g, ' ')}</p>
             </div>
+            <MenuItem
+              icon={CircleHelp}
+              label={t('nav.help')}
+              onClick={() => {
+                navigate('/help');
+                close();
+              }}
+            />
             <MenuItem
               icon={GitCommit}
               label="Update Log"
