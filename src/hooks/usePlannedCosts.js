@@ -10,7 +10,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabaseService } from '../services/supabaseService';
-import { buildPlannedEntries, summarizePlannedCosts, isCostBudgeted } from '../utils/plannedCostBudget';
+import {
+  buildPlannedEntries,
+  summarizePlannedCosts,
+  isCostBudgeted,
+  costsReadyForLedger,
+} from '../utils/plannedCostBudget';
 
 // Whether pushing into a FINALIZED budget also re-derives the base fee is the
 // team's call, set on the budget screen and stored per team-season — the same
@@ -109,14 +114,17 @@ export function usePlannedCosts({
   }, []);
 
   /**
-   * File a budgeted estimate in the ledger as a pending expense.
+   * File one budgeted estimate in the ledger as a pending expense.
    *
    * Refuses anything the budget has not seen: a cost that was never pushed has
    * no fee behind it, so putting it on the books would quietly overspend the
    * season. The row lands uncleared — it shows in the ledger as unpaid until
    * the treasurer approves it by hand.
+   *
+   * Deliberately quiet — no toast, no refresh — so the bulk action can call it
+   * in a loop without firing one of each per estimate.
    */
-  const sendCostToLedger = useCallback(
+  const fileCost = useCallback(
     async (cost, matchup) => {
       if (cost?.ledgerTxId) {
         return { success: false, error: t ? t('planCosts.alreadyInLedger') : 'Already in the ledger.' };
@@ -138,18 +146,64 @@ export function usePlannedCosts({
           title,
         });
         setPlannedCosts((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
-        onDataChange?.();
-        if (showToast && t) showToast(t('planCosts.ledgerAdded'));
         return { success: true, cost: updated };
       } catch (e) {
         console.error('Add planned cost to ledger failed:', e);
-        const message = e?.message || (t ? t('planCosts.ledgerFailed') : 'Could not file that in the ledger.');
-        if (showToast) showToast(message, true);
-        return { success: false, error: message };
+        return { success: false, error: e?.message || (t ? t('planCosts.ledgerFailed') : 'Could not file that.') };
       }
     },
-    [planContributions, selectedSeason, teamSeasonId, onDataChange, showToast, t],
+    [planContributions, selectedSeason, teamSeasonId, t],
   );
+
+  const sendCostToLedger = useCallback(
+    async (cost, matchup) => {
+      const result = await fileCost(cost, matchup);
+      if (result.success) {
+        onDataChange?.();
+        if (showToast && t) showToast(t('planCosts.ledgerAdded'));
+      }
+      return result;
+    },
+    [fileCost, onDataChange, showToast, t],
+  );
+
+  // Every estimate the ledger is still waiting on. Drives both the bulk button's
+  // count and what it files, so the two cannot disagree.
+  const ledgerReady = useMemo(
+    () => costsReadyForLedger({ plannedCosts, matchups, contributions: planContributions }),
+    [plannedCosts, matchups, planContributions],
+  );
+
+  /**
+   * File every ready estimate at once.
+   *
+   * Sequential on purpose: each one writes a transaction and stamps the estimate
+   * that points at it, and a failure partway through has to leave the estimates
+   * before it correctly filed rather than half-written in parallel. One refresh
+   * and one toast at the end instead of one of each per row.
+   */
+  const sendAllCostsToLedger = useCallback(async () => {
+    if (ledgerReady.length === 0) {
+      const error = t ? t('planCosts.bulkNone') : 'Nothing to file.';
+      if (showToast) showToast(error, true);
+      return { success: false, filed: 0, failed: 0, error };
+    }
+
+    let filed = 0;
+    const errors = [];
+    for (const { cost, matchup } of ledgerReady) {
+      const result = await fileCost(cost, matchup);
+      if (result.success) filed += 1;
+      else errors.push(result.error);
+    }
+
+    if (filed > 0) onDataChange?.();
+    if (showToast && t) {
+      if (errors.length === 0) showToast(t('planCosts.bulkFiled', { n: filed }));
+      else showToast(t('planCosts.bulkPartial', { n: filed, failed: errors.length }), true);
+    }
+    return { success: errors.length === 0, filed, failed: errors.length, errors };
+  }, [ledgerReady, fileCost, onDataChange, showToast, t]);
 
   // Estimates for games that are still on, minus any whose real spend the event
   // push has already put in the budget.
@@ -164,7 +218,7 @@ export function usePlannedCosts({
   );
 
   const pushPlannedCosts = useCallback(
-    async ({ reason = '' } = {}) => {
+    async ({ reason = '', targets = {}, linkOnly = {} } = {}) => {
       if (!teamSeasonId || !selectedSeason) {
         return { success: false, error: t ? t('planCosts.noBudget') : 'No season budget available.' };
       }
@@ -186,6 +240,13 @@ export function usePlannedCosts({
           seasonId: selectedSeason,
           teamSeasonId,
           entries,
+          // Per-category budget lines the treasurer attached the forecast to on
+          // the budget screen; empty means each category uses this feature's
+          // own line, as it always has.
+          targets,
+          // Categories the treasurer says are already covered by the line they
+          // picked: record the link, leave the amount alone.
+          linkOnly,
           isFinalized,
           recalculateBaseFee: recalcPolicyFor(currentTeamSeason),
           amendmentReason: reason,
@@ -196,7 +257,10 @@ export function usePlannedCosts({
         onDataChange?.();
 
         if (showToast && t) {
-          if (!result.applied) showToast(t('planCosts.noChange'));
+          // The budget change itself has landed by this point; a failed history
+          // row is worth flagging but is not a failed push.
+          if (result.amendmentError) showToast(t('planCosts.amendNotLogged'), true);
+          else if (!result.applied) showToast(t('planCosts.noChange'));
           else showToast(isFinalized ? t('planCosts.amended') : t('planCosts.pushed'));
         }
         return { success: true, ...result };
@@ -221,6 +285,8 @@ export function usePlannedCosts({
     deletePlannedCost,
     pushPlannedCosts,
     sendCostToLedger,
+    sendAllCostsToLedger,
+    ledgerReady,
     refreshPlannedCosts: loadCosts,
   };
 }

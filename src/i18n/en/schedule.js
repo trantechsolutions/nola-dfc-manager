@@ -28,6 +28,11 @@ export default {
     home: 'Home',
     away: 'Away',
     opponentPlaceholder: 'Opponent...',
+    half: 'Season half',
+    halfAuto: 'Auto ({{half}})',
+    halfFall: 'Fall',
+    halfSpring: 'Spring',
+    halfHint: 'Which half of the season this game is budgeted in. Auto follows the match date.',
     matchIdPlaceholder: 'Match ID',
     locationPlaceholder: 'Location...',
     fieldPlaceholder: 'Field',
@@ -88,8 +93,27 @@ export default {
     amended: 'Recorded as a budget amendment.',
     noChange: 'The budget already matches the plan.',
     failed: 'Could not update the budget.',
+    amendNotLogged: 'The budget was updated, but the amendment could not be recorded in the history.',
+
+    // ── Attaching the forecast to a line the treasurer already wrote ──
+    attachTitle: 'Attach to existing budget lines',
+    attachPending: 'moves on next update',
+    attachHint:
+      'By default the forecast keeps its own "Planned Match Costs" line in each category. Pick a line you already budgeted and the forecast moves onto it the next time you update the budget — the total does not change, only where it sits.',
+    attachOwn: 'Planned Match Costs (its own line)',
+    attachLinkOnly: 'Already budgeted here',
+    attachLinkOnlyHint:
+      "Record the link without changing this line's amount. Use it when you already typed the cost into the budget yourself — the forecast then counts as budgeted and can be filed in the ledger.",
 
     // ── Forecast → pending ledger row ──
+    bulkTitle: 'Estimates waiting for the ledger',
+    bulkHint:
+      '{{n}} budgeted estimates are not in the ledger yet. Filing them adds one pending expense each, unpaid until you approve it.',
+    bulkFile: 'File {{n}} in Ledger',
+    bulkConfirm: 'File all {{n}}?',
+    bulkNone: 'Nothing to file — an estimate has to be in the budget first, and games already filed are skipped.',
+    bulkFiled: '{{n}} estimates filed in the ledger as pending.',
+    bulkPartial: '{{n}} filed, {{failed}} could not be.',
     toLedger: 'To Ledger',
     toLedgerHint: 'File this in the ledger as a pending expense. It stays unpaid until you approve it.',
     needsBudgetFirst: 'Add this to the budget first — only budgeted costs can be filed in the ledger.',

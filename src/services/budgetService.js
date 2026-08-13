@@ -235,7 +235,7 @@ export const budgetService = {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const amendmentId = isFinalized
+    const { amendmentId, error: amendmentError } = isFinalized
       ? await recordAmendmentForPush({
           savedItems,
           teamSeasonId,
@@ -243,7 +243,7 @@ export const budgetService = {
           recalculateBaseFee,
           reason: amendmentReason || 'Event expenses pushed to budget',
         })
-      : null;
+      : { amendmentId: null, error: null };
 
     if (plan.removals.length > 0) {
       const removalIds = plan.removals.map((r) => r.id).filter(Boolean);
@@ -274,7 +274,7 @@ export const budgetService = {
       if (error) throw error;
     }
 
-    return { applied: true, netDelta: plan.netDelta, plan, amendmentId, teamId };
+    return { applied: true, netDelta: plan.netDelta, plan, amendmentId, amendmentError, teamId };
   },
 
   /** Everything the PLANNER has put into this team-season's budget so far. */
@@ -303,6 +303,8 @@ export const budgetService = {
     seasonId,
     teamSeasonId,
     entries = [],
+    targets = {},
+    linkOnly = {},
     isFinalized = false,
     recalculateBaseFee = false,
     amendmentReason = '',
@@ -317,32 +319,41 @@ export const budgetService = {
       budgetService.getPlanContributions(teamSeasonId),
     ]);
 
-    const plan = planPlannedCostsPush({ entries, contributions, budgetItems });
+    const plan = planPlannedCostsPush({ entries, contributions, budgetItems, targets, linkOnly });
     if (plan.noop) return { applied: false, netDelta: 0, plan, amendmentId: null };
+
+    // A pure link moves no money: the treasurer already typed the cost into the
+    // line themselves and only wants the forecast recorded against it. Rewriting
+    // the budget would be a no-op at best, and recording an amendment for it
+    // would put a change on the finalized record that never happened.
+    const touchesItems = plan.changes.length > 0;
 
     // saveBudgetItems takes the whole set and prunes anything missing from it,
     // so the plan has to be folded into every item, not just the changed ones.
-    const nextItems = applyPlannedPlanToItems(budgetItems, plan, { seasonId, teamSeasonId });
-    await budgetService.saveBudgetItems(seasonId, nextItems, teamSeasonId);
+    if (touchesItems) {
+      const nextItems = applyPlannedPlanToItems(budgetItems, plan, { seasonId, teamSeasonId });
+      await budgetService.saveBudgetItems(seasonId, nextItems, teamSeasonId);
+    }
 
     // Re-read to learn the ids of any line the plan created — saveBudgetItems
     // returns nothing, and a contribution has to point at a real row.
-    const savedItems = await budgetService.getBudgetItems(seasonId, teamSeasonId);
+    const savedItems = touchesItems ? await budgetService.getBudgetItems(seasonId, teamSeasonId) : budgetItems;
     const idFor = (category) => savedItems.find((i) => i.category === category && i.label === PLANNED_LINE_LABEL)?.id;
 
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const amendmentId = isFinalized
-      ? await recordAmendmentForPush({
-          savedItems,
-          teamSeasonId,
-          feeInputs,
-          recalculateBaseFee,
-          reason: amendmentReason || 'Planned match costs pushed to budget',
-        })
-      : null;
+    const { amendmentId, error: amendmentError } =
+      isFinalized && touchesItems
+        ? await recordAmendmentForPush({
+            savedItems,
+            teamSeasonId,
+            feeInputs,
+            recalculateBaseFee,
+            reason: amendmentReason || 'Planned match costs pushed to budget',
+          })
+        : { amendmentId: null, error: null };
 
     if (plan.removals.length > 0) {
       const removalIds = plan.removals.map((r) => r.id).filter(Boolean);
@@ -373,7 +384,7 @@ export const budgetService = {
       if (error) throw error;
     }
 
-    return { applied: true, netDelta: plan.netDelta, plan, amendmentId };
+    return { applied: true, netDelta: plan.netDelta, plan, amendmentId, amendmentError };
   },
 };
 
@@ -385,6 +396,15 @@ export const budgetService = {
  * written down the same way whichever screen it came from. `recalculateBaseFee`
  * decides whether the amendment also re-prices the roster — projected totals
  * always follow the budget, but base_fee is what families are actually charged.
+ *
+ * The history row is recorded on a best-effort basis. By the time this runs the
+ * budget items are already written, and throwing here would abandon the push
+ * before its contribution rows are saved — leaving money in the budget that
+ * nothing records, which the NEXT push would then add all over again. Losing an
+ * audit row is recoverable; double-billing every family is not. The failure is
+ * returned so the screen can say the change landed but was not logged.
+ *
+ * @returns {{ amendmentId: string|null, error: string|null }}
  */
 async function recordAmendmentForPush({ savedItems, teamSeasonId, feeInputs, recalculateBaseFee, reason }) {
   const totals = savedItems.reduce(
@@ -406,16 +426,26 @@ async function recordAmendmentForPush({ savedItems, teamSeasonId, feeInputs, rec
     rosterSize: feeInputs?.rosterSize || 0,
   }).roundedFee;
 
-  const amendment = await budgetService.saveBudgetAmendment({
-    teamSeasonId,
-    reason,
-    totalExpenses: totals.expenses,
-    totalIncome: totals.income,
-    // Left at the fee already on record unless the caller asked for a
-    // re-derive; raising it changes what every family owes.
-    baseFee: recalculateBaseFee ? nextBaseFee : Number(feeInputs?.currentBaseFee) || 0,
-  });
+  let amendment = null;
+  let error = null;
+  try {
+    amendment = await budgetService.saveBudgetAmendment({
+      teamSeasonId,
+      reason,
+      totalExpenses: totals.expenses,
+      totalIncome: totals.income,
+      // Left at the fee already on record unless the caller asked for a
+      // re-derive; raising it changes what every family owes.
+      baseFee: recalculateBaseFee ? nextBaseFee : Number(feeInputs?.currentBaseFee) || 0,
+    });
+  } catch (e) {
+    console.error('Recording the budget amendment failed:', e);
+    error = e?.message || 'The amendment could not be recorded.';
+  }
 
+  // Runs either way: the totals describe the budget as it now stands, and
+  // leaving them behind would make the season screen disagree with its own
+  // budget over a history row that failed to write.
   const tsUpdate = {
     total_projected_expenses: totals.expenses,
     total_projected_income: totals.income,
@@ -424,7 +454,7 @@ async function recordAmendmentForPush({ savedItems, teamSeasonId, feeInputs, rec
   const { error: tsErr } = await supabase.from('team_seasons').update(tsUpdate).eq('id', teamSeasonId);
   if (tsErr) throw tsErr;
 
-  return amendment?.id || null;
+  return { amendmentId: amendment?.id || null, error };
 }
 
 function mapPlanContribution(row) {

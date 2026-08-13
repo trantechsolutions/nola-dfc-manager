@@ -43,11 +43,16 @@ const keyOf = (category, half) => `${category}::${half}`;
 /**
  * Which half of the season a matchup's costs land in.
  *
- * An undated matchup — the normal state in preseason — is counted in fall.
- * That matches getSeasonHalf's own default and keeps the forecast whole; the
- * planner labels those rows so nobody mistakes the bucket for a decision.
+ * An explicit season_half set on the planner wins: in preseason the date is the
+ * last thing to be agreed, and until then every undated matchup would fall to
+ * fall — loading one side of the budget with games the manager already knows
+ * are spring. Failing that it is derived from the date, and an undated matchup
+ * with no half named still counts as fall, matching getSeasonHalf's own default
+ * so the forecast stays whole rather than silently dropping games.
  */
 export function halfForMatchup(matchup) {
+  const explicit = matchup?.seasonHalf;
+  if (explicit === 'fall' || explicit === 'spring') return explicit;
   return getSeasonHalf(matchup?.matchDate || null);
 }
 
@@ -106,8 +111,22 @@ const countable = (entries) => entries.filter((e) => !e.superseded && !e.exclude
  * @param {object[]} entries       From buildPlannedEntries.
  * @param {object[]} contributions Prior budget_plan_contributions rows.
  * @param {object[]} budgetItems   The team-season's current budget items.
+ * @param {object}   targets       Optional { [category]: budgetItemId } chosen by
+ *                                 the treasurer on the budget screen, attaching
+ *                                 the forecast to a line they already wrote
+ *                                 instead of this feature's own line.
+ * @param {object}   linkOnly      Optional { [category]: true } for a target the
+ *                                 treasurer has ALREADY sized by hand. The link
+ *                                 is recorded and the line's amount is left
+ *                                 exactly as typed — see below.
  */
-export function planPlannedCostsPush({ entries = [], contributions = [], budgetItems = [] } = {}) {
+export function planPlannedCostsPush({
+  entries = [],
+  contributions = [],
+  budgetItems = [],
+  targets = {},
+  linkOnly = {},
+} = {}) {
   const desired = new Map(); // key -> { total, byMatchup: Map }
   for (const entry of countable(entries)) {
     const key = keyOf(entry.category, entry.half);
@@ -129,6 +148,12 @@ export function planPlannedCostsPush({ entries = [], contributions = [], budgetI
   const changes = [];
   const upserts = [];
   const removals = [];
+  // Whether any contribution row would actually be written. A pure link changes
+  // no budget line at all, so without this the push would read as a no-op and
+  // the link would never be recorded.
+  let contributionsChanged = false;
+  // Lines this push emptied because the forecast moved off them.
+  const vacated = new Set();
   // One placeholder per category: a single line carries both halves, so two
   // changes must not each invent their own row.
   const created = new Map();
@@ -139,7 +164,6 @@ export function planPlannedCostsPush({ entries = [], contributions = [], budgetI
     const target = round2(desired.get(key)?.total || 0);
     const priorRows = applied.get(key)?.rows || [];
     const appliedTotal = round2(applied.get(key)?.total || 0);
-    const delta = round2(target - appliedTotal);
 
     // Every contribution whose matchup no longer forecasts this line goes away:
     // that is how a deleted, cancelled, or now-actualised matchup gets its
@@ -152,11 +176,33 @@ export function planPlannedCostsPush({ entries = [], contributions = [], budgetI
 
     if (target === 0 && appliedTotal === 0) continue;
 
-    // Match by category, but only to a line this feature owns — a category
-    // routinely holds several hand-authored items, and silently inflating one
-    // of those would make the budget no longer say what the treasurer wrote.
+    // An explicit target wins: the treasurer asked for the forecast to ride on
+    // a line they already wrote, so that is where it goes. Constrained to the
+    // same category, because a line's category is what the whole budget groups,
+    // reports and reconciles on.
+    const chosenId = targets?.[category] || null;
+    const chosen = chosenId ? budgetItems.find((i) => i.id === chosenId && i.category === category) || null : null;
+
+    // "I already budgeted this — just link it." The treasurer typed the cost
+    // into that line themselves, so adding the forecast on top would budget the
+    // same games twice and re-price the roster for money already provided for.
+    // The contribution is still written, which is what makes the forecast count
+    // as budgeted: the plan reads as up to date and the estimates become
+    // filable in the ledger. Only meaningful against a line that exists, so a
+    // flag without a target is ignored.
+    //
+    // It adopts the line as it stands rather than latching permanently: the
+    // contribution now records what this line covers, so if the forecast later
+    // grows, the NEXT push tops the line up by that difference alone.
+    const linked = !!linkOnly?.[category] && !!chosen;
+
+    // Otherwise match by category, but only to a line this feature owns — a
+    // category routinely holds several hand-authored items, and silently
+    // inflating one of those would make the budget no longer say what the
+    // treasurer wrote.
     const priorWithItem = priorRows.find((r) => r.budgetItemId) || null;
     let item =
+      chosen ||
       created.get(category) ||
       (priorWithItem && budgetItems.find((i) => i.id === priorWithItem.budgetItemId)) ||
       budgetItems.find((i) => i.category === category && i.label === PLANNED_LINE_LABEL) ||
@@ -175,6 +221,42 @@ export function planPlannedCostsPush({ entries = [], contributions = [], budgetI
       created.set(category, item);
     }
 
+    // What each line is already carrying for this key. Re-attaching moves the
+    // money: the old line gives it back in the same push that the new one takes
+    // it, so the season total is unchanged and neither line double-counts.
+    const priorByItem = new Map();
+    for (const row of priorRows) {
+      if (!row.budgetItemId) continue;
+      priorByItem.set(row.budgetItemId, round2((priorByItem.get(row.budgetItemId) || 0) + round2(row.appliedAmount)));
+    }
+
+    for (const [itemId, amount] of priorByItem) {
+      if (itemId === item.id || amount === 0) continue;
+      const stale = budgetItems.find((i) => i.id === itemId);
+      // A line the treasurer deleted by hand took its share of the budget with
+      // it (the contribution's item id was nulled), so there is nothing left to
+      // back out — the destination simply gets the full forecast below.
+      if (!stale) continue;
+      changes.push({
+        category,
+        half,
+        field,
+        item: stale,
+        from: round2(stale[field]),
+        to: round2(round2(stale[field]) - amount),
+        delta: round2(-amount),
+        isNew: false,
+        vacating: true,
+      });
+      vacated.add(itemId);
+    }
+
+    // Measured against the DESTINATION only. Money on a line that is gone, or
+    // on a line we just backed out of, is not in the budget any more and must
+    // be re-added here rather than assumed present.
+    const heldHere = round2(priorByItem.get(item.id) || 0);
+    const delta = linked ? 0 : round2(target - heldHere);
+
     if (delta !== 0) {
       changes.push({
         category,
@@ -190,22 +272,26 @@ export function planPlannedCostsPush({ entries = [], contributions = [], budgetI
 
     for (const [matchupId, amount] of stillWanted) {
       const prior = priorRows.find((r) => r.matchupId === matchupId) || null;
+      // Resolved to a real id by the caller once a new line is persisted.
+      const budgetItemId = isNew ? null : item.id;
+      if (!prior || round2(prior.appliedAmount) !== amount || (prior.budgetItemId || null) !== budgetItemId) {
+        contributionsChanged = true;
+      }
       upserts.push({
         id: prior?.id || null,
         matchupId,
         category,
         half,
         appliedAmount: amount,
-        // Resolved to a real id by the caller once a new line is persisted.
-        budgetItemId: isNew ? null : item.id,
+        budgetItemId,
         placeholderItemId: isNew ? item.id : null,
       });
     }
   }
 
   const netDelta = round2(changes.reduce((sum, c) => sum + c.delta, 0));
-  const noop = changes.length === 0 && removals.length === 0;
-  return { changes, upserts, removals, netDelta, noop };
+  const noop = changes.length === 0 && removals.length === 0 && !contributionsChanged;
+  return { changes, upserts, removals, vacated: [...vacated], netDelta, noop };
 }
 
 /**
@@ -237,7 +323,58 @@ export function applyPlannedPlanToItems(budgetItems, plan, { seasonId, teamSeaso
     const target = next.find((i) => i.id === change.item.id);
     if (target) target[change.field] = change.to;
   }
-  return next;
+
+  // A line this feature created and just emptied — because the forecast was
+  // re-attached to one the treasurer wrote — is swept up rather than left
+  // behind as a $0 row nobody can explain. Hand-authored lines are never
+  // removed, however empty: the treasurer put them there on purpose.
+  const vacated = plan.vacated || [];
+  if (vacated.length === 0) return next;
+  const isEmpty = (i) => round2(i.income) === 0 && round2(i.expensesFall) === 0 && round2(i.expensesSpring) === 0;
+  return next.filter((i) => !(vacated.includes(i.id) && i.label === PLANNED_LINE_LABEL && isEmpty(i)));
+}
+
+/**
+ * The forecast broken out per category, for the budget screen's attach control:
+ * how much this category forecasts, how much of it the budget already carries,
+ * and which line is carrying it today.
+ *
+ * @returns {{ category: string, plannedTotal: number, appliedTotal: number,
+ *             attachedItemId: string|null }[]}
+ */
+export function plannedCategoryTargets({ entries = [], contributions = [] } = {}) {
+  const byCategory = new Map();
+  const bucket = (category) => {
+    if (!byCategory.has(category)) {
+      byCategory.set(category, { category, plannedTotal: 0, appliedTotal: 0, itemIds: new Set() });
+    }
+    return byCategory.get(category);
+  };
+
+  for (const entry of countable(entries)) {
+    const row = bucket(entry.category);
+    row.plannedTotal = round2(row.plannedTotal + entry.amount);
+  }
+
+  for (const c of contributions) {
+    const amount = round2(c.appliedAmount);
+    const row = bucket(c.category);
+    row.appliedTotal = round2(row.appliedTotal + amount);
+    if (c.budgetItemId && amount !== 0) row.itemIds.add(c.budgetItemId);
+  }
+
+  return [...byCategory.values()]
+    .filter((row) => row.plannedTotal !== 0 || row.appliedTotal !== 0)
+    .map(({ category, plannedTotal, appliedTotal, itemIds }) => ({
+      category,
+      plannedTotal,
+      appliedTotal,
+      // One line per category is the invariant. Anything else means a line was
+      // deleted or half-migrated, and the control says "unattached" rather than
+      // picking a winner the next push would disagree with.
+      attachedItemId: itemIds.size === 1 ? [...itemIds][0] : null,
+    }))
+    .sort((a, b) => a.category.localeCompare(b.category));
 }
 
 /**
@@ -278,6 +415,30 @@ export function isCostBudgeted(cost, matchup, contributions = []) {
   return contributions.some(
     (c) => c.matchupId === matchup.id && c.category === category && c.half === half && round2(c.appliedAmount) !== 0,
   );
+}
+
+/**
+ * Estimates that are ready to be filed in the ledger, in planner order.
+ *
+ * The same three gates the single-row action applies, applied in bulk: already
+ * filed is skipped (the ledger row is the truth once it exists), a game that is
+ * cancelled or was never scheduled is skipped (nothing was spent), and anything
+ * the budget has not seen is skipped — filing that would put spend on the books
+ * that no fee was ever sized to cover. Pure so the count on the button and the
+ * set the action actually files can never drift apart.
+ */
+export function costsReadyForLedger({ plannedCosts = [], matchups = [], contributions = [] } = {}) {
+  const byMatchup = new Map(matchups.map((m) => [m.id, m]));
+  const ready = [];
+  for (const cost of plannedCosts) {
+    if (cost?.ledgerTxId) continue;
+    if (round2(cost?.amount) === 0) continue;
+    const matchup = byMatchup.get(cost.matchupId);
+    if (!matchup || !FORECAST_STATUSES.has(matchup.status)) continue;
+    if (!isCostBudgeted(cost, matchup, contributions)) continue;
+    ready.push({ cost, matchup });
+  }
+  return ready;
 }
 
 /** Total estimate on a single matchup, for the planner row's badge. */

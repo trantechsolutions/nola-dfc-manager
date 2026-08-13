@@ -28,6 +28,11 @@ export default {
     home: 'Local',
     away: 'Visitante',
     opponentPlaceholder: 'Oponente...',
+    half: 'Mitad de temporada',
+    halfAuto: 'Auto ({{half}})',
+    halfFall: 'Otoño',
+    halfSpring: 'Primavera',
+    halfHint: 'En qué mitad de la temporada se presupuesta este partido. Auto sigue la fecha del partido.',
     matchIdPlaceholder: 'ID de Partido',
     locationPlaceholder: 'Ubicación...',
     fieldPlaceholder: 'Cancha',
@@ -88,8 +93,28 @@ export default {
     amended: 'Registrado como enmienda al presupuesto.',
     noChange: 'El presupuesto ya coincide con el plan.',
     failed: 'No se pudo actualizar el presupuesto.',
+    amendNotLogged: 'El presupuesto se actualizó, pero la enmienda no se pudo registrar en el historial.',
+
+    // ── Adjuntar el pronóstico a una partida ya escrita ──
+    attachTitle: 'Adjuntar a partidas ya presupuestadas',
+    attachPending: 'se mueve en la próxima actualización',
+    attachHint:
+      'Por defecto el pronóstico mantiene su propia partida "Planned Match Costs" en cada categoría. Elige una partida que ya presupuestaste y el pronóstico se moverá a ella la próxima vez que actualices el presupuesto — el total no cambia, solo dónde queda.',
+    attachOwn: 'Planned Match Costs (partida propia)',
+    attachLinkOnly: 'Ya está presupuestado aquí',
+    attachLinkOnlyHint:
+      'Registra el vínculo sin cambiar el monto de esta partida. Úsalo cuando ya escribiste el costo en el presupuesto — así el pronóstico cuenta como presupuestado y se puede registrar en el libro.',
 
     // ── Pronóstico → asiento pendiente en el libro ──
+    bulkTitle: 'Estimaciones pendientes del libro',
+    bulkHint:
+      '{{n}} estimaciones presupuestadas aún no están en el libro. Al registrarlas se agrega un gasto pendiente por cada una, sin pagar hasta que lo apruebes.',
+    bulkFile: 'Registrar {{n}} en el Libro',
+    bulkConfirm: '¿Registrar las {{n}}?',
+    bulkNone:
+      'Nada que registrar — la estimación debe estar en el presupuesto primero, y las ya registradas se omiten.',
+    bulkFiled: '{{n}} estimaciones registradas en el libro como pendientes.',
+    bulkPartial: '{{n}} registradas, {{failed}} no se pudieron.',
     toLedger: 'Al Libro',
     toLedgerHint: 'Registra esto en el libro como gasto pendiente. Queda sin pagar hasta que lo apruebes.',
     needsBudgetFirst: 'Agrégalo primero al presupuesto — solo los costos presupuestados pueden ir al libro.',

@@ -31,7 +31,12 @@ import { useBudgetForecast } from '../../hooks/useBudgetForecast';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { exportBudgetActualsPDF, exportBudgetActualsCSV } from '../../utils/exportUtils';
 import { buildCategoryAdvice, varianceTone, TONE_STYLES } from '../../utils/budgetInsights';
+import { plannedCategoryTargets, PLANNED_LINE_LABEL } from '../../utils/plannedCostBudget';
 import { computeSeasonFee } from '../../utils/feeCalculator';
+
+// Only a saved row has a database id a contribution can point at; everything
+// else on screen is still a client-side placeholder.
+const PERSISTED_ITEM_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Fallback budget categories used when no categoryOptions prop is provided
 const FALLBACK_BUDGET_CATEGORIES = [
@@ -63,6 +68,8 @@ export default function BudgetView({
   // Expected match costs entered on the schedule planner. The budget is where
   // they get saved, so the same forecast and the same push live on both screens.
   plannedSummary = null,
+  plannedEntries = [],
+  planContributions = [],
   onPushPlannedCosts = null,
 }) {
   const [loading, setLoading] = useState(true);
@@ -80,6 +87,13 @@ export default function BudgetView({
   const [carryoverInput, setCarryoverInput] = useState('');
   const [cloneSource, setCloneSource] = useState('');
   const [collapsedCats, setCollapsedCats] = useState({});
+  // Budget lines the forecast should be attached to, per category, staged until
+  // the next push. Empty for a category means it keeps using the planner's own
+  // "Planned Match Costs" line.
+  const [plannedTargets, setPlannedTargets] = useState({});
+  // Categories whose chosen line already carries the cost by hand. The push
+  // records the link and leaves the amount alone.
+  const [plannedLinkOnly, setPlannedLinkOnly] = useState({});
 
   // Amendments
   const [isAmending, setIsAmending] = useState(false);
@@ -272,6 +286,43 @@ export default function BudgetView({
     });
     return map;
   }, [budgetItems, budgetCategories]);
+
+  // ── Attaching the planner's forecast to a line the treasurer already wrote ──
+  // By default the push maintains its own "Planned Match Costs" line per
+  // category. Teams that already budget "League Referees" would rather see the
+  // forecast land there than carry a second line for the same money, so each
+  // category can name a destination. Only saved lines qualify: a contribution
+  // has to point at a real row, and an unsaved one has no id yet.
+  const plannedAttachments = useMemo(() => {
+    const groups = plannedCategoryTargets({ entries: plannedEntries, contributions: planContributions });
+    return groups.map((group) => {
+      const inCategory = budgetItems.filter((i) => i.category === group.category && PERSISTED_ITEM_ID.test(i.id || ''));
+      const attached = inCategory.find((i) => i.id === group.attachedItemId) || null;
+      return {
+        ...group,
+        categoryName: budgetCategories.find((c) => c.code === group.category)?.name || group.category,
+        // The planner's own line is the "" option, not a pickable destination.
+        currentItemId: attached && attached.label !== PLANNED_LINE_LABEL ? attached.id : '',
+        options: inCategory
+          .filter((i) => i.label !== PLANNED_LINE_LABEL)
+          // The line's own amount comes along so "already budgeted here" can be
+          // checked against the forecast without leaving the card.
+          .map((i) => ({
+            id: i.id,
+            label: i.label?.trim() || 'Untitled',
+            amount: (Number(i.income) || 0) + (Number(i.expensesFall) || 0) + (Number(i.expensesSpring) || 0),
+          })),
+      };
+    });
+  }, [plannedEntries, planContributions, budgetItems, budgetCategories]);
+
+  const setPlannedTarget = (category, itemId) => {
+    setPlannedTargets((prev) => ({ ...prev, [category]: itemId || '' }));
+    // Nothing to link to once the forecast is back on its own line.
+    if (!itemId) setPlannedLinkOnly((prev) => ({ ...prev, [category]: false }));
+  };
+
+  const setPlannedLink = (category, linked) => setPlannedLinkOnly((prev) => ({ ...prev, [category]: linked }));
 
   const subtotals = useMemo(() => {
     const result = {};
@@ -471,8 +522,17 @@ export default function BudgetView({
   // them — otherwise the next Save Draft would send the pre-push set back and
   // silently undo the forecast that was just applied.
   const handlePushPlannedCosts = async (args) => {
-    const result = await onPushPlannedCosts(args);
-    if (!result || result.success !== false) await fetchData();
+    const result = await onPushPlannedCosts({ ...args, targets: plannedTargets, linkOnly: plannedLinkOnly });
+    if (!result || result.success !== false) {
+      // The choice is now recorded on the contributions themselves, so the
+      // staged copy would only shadow whatever the push actually did.
+      setPlannedTargets({});
+      // Link-only is deliberately not remembered: it adopts the line as it
+      // stands, and from here the forecast is maintained against it like any
+      // other, so a later increase tops that line up by the difference alone.
+      setPlannedLinkOnly({});
+      await fetchData();
+    }
     return result;
   };
 
@@ -1094,6 +1154,11 @@ export default function BudgetView({
                 available={!!currentTeamSeason?.id}
                 recalculatesFee={amendRecalcFee}
                 onPush={onPushPlannedCosts && !isAmending ? handlePushPlannedCosts : null}
+                attachments={plannedAttachments}
+                targets={plannedTargets}
+                linkOnly={plannedLinkOnly}
+                onTargetChange={onPushPlannedCosts && !isAmending ? setPlannedTarget : null}
+                onLinkOnlyChange={onPushPlannedCosts && !isAmending ? setPlannedLink : null}
               />
             )}
 
