@@ -404,6 +404,24 @@ CREATE POLICY "budget_items_delete" ON budget_items FOR DELETE TO authenticated
 
 
 -- ============================================================
+-- BUDGET_AMENDMENTS
+-- Append-only history of changes to a finalized budget: same team scope as
+-- budget_items, but no update/delete so a recorded amendment stays on record.
+-- ============================================================
+CREATE POLICY "budget_amendments_select" ON budget_amendments FOR SELECT TO authenticated
+  USING (
+    is_super_admin()
+    OR team_season_id IN (SELECT id FROM team_seasons WHERE team_id IN (SELECT user_team_ids()))
+  );
+
+CREATE POLICY "budget_amendments_insert" ON budget_amendments FOR INSERT TO authenticated
+  WITH CHECK (
+    is_super_admin()
+    OR team_season_id IN (SELECT id FROM team_seasons WHERE team_id IN (SELECT user_team_ids()))
+  );
+
+
+-- ============================================================
 -- DOCUMENTS
 -- Medical release documents are scoped tighter than other doc types:
 -- only the guardian, the team's team_manager, or a club_admin/super_admin
