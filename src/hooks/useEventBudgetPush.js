@@ -90,7 +90,10 @@ export function useEventBudgetPush({ selectedSeason, currentTeamSeason, selected
         onDataChange?.();
 
         if (showToast && t) {
-          if (!result.applied) showToast(t('expenses.budgetNoChange'));
+          // Same as the planner push: the budget moved, only the history row
+          // did not, and saying "failed" here would invite a second push.
+          if (result.amendmentError) showToast(t('planCosts.amendNotLogged'), true);
+          else if (!result.applied) showToast(t('expenses.budgetNoChange'));
           else showToast(isFinalized ? t('expenses.budgetAmended') : t('expenses.budgetPushed'));
         }
         return { success: true, ...result };

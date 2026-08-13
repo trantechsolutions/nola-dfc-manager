@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, CheckCircle2, RotateCcw, AlertTriangle, Copy, PiggyBank } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, RotateCcw, AlertTriangle, Copy, PiggyBank, BookPlus } from 'lucide-react';
 import { MATCHUP_STATUS_META, nextStatuses } from '../utils/matchupStatus';
-import { matchupPlannedTotal, FORECAST_STATUSES } from '../utils/plannedCostBudget';
+import { matchupPlannedTotal, FORECAST_STATUSES, halfForMatchup } from '../utils/plannedCostBudget';
 import MatchupCostEditor from './MatchupCostEditor';
 import PlannedCostsBudgetBar from './PlannedCostsBudgetBar';
 import { useT } from '../i18n/I18nContext';
@@ -44,6 +44,68 @@ const WeekHeader = ({ weekLabel, canEdit, onRename, t }) => {
       }}
       className="text-xs font-bold uppercase text-muted-foreground tracking-wide bg-transparent border-b border-transparent hover:border-border focus:border-ring outline-none px-0.5 -ml-0.5 w-56 max-w-full"
     />
+  );
+};
+
+/**
+ * Files every budgeted estimate the ledger has not seen yet, in one go.
+ *
+ * Two clicks, because it writes one pending expense per estimate and there is
+ * no single undo for that — the second click is the receipt for meaning it.
+ */
+const LedgerBulkBar = ({ count, onFileAll, t }) => {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const handle = async () => {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    setBusy(true);
+    try {
+      await onFileAll();
+    } finally {
+      setBusy(false);
+      setConfirming(false);
+    }
+  };
+
+  return (
+    <div className="bg-card rounded-lg border border-border shadow-sm p-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+          <BookPlus size={13} /> {t('planCosts.bulkTitle')}
+        </p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {count === 0 ? t('planCosts.bulkNone') : t('planCosts.bulkHint', { n: count })}
+        </p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {confirming && (
+          <button
+            type="button"
+            onClick={() => setConfirming(false)}
+            className="text-xs font-semibold text-muted-foreground hover:text-foreground"
+          >
+            {t('common.cancel')}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={handle}
+          disabled={count === 0 || busy}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-default flex items-center gap-1"
+        >
+          <BookPlus size={12} />
+          {busy
+            ? t('common.saving')
+            : confirming
+              ? t('planCosts.bulkConfirm', { n: count })
+              : t('planCosts.bulkFile', { n: count })}
+        </button>
+      </div>
+    </div>
   );
 };
 
@@ -98,6 +160,8 @@ const MatchupRow = ({
   // A cancelled or never-scheduled game keeps its numbers on screen for the
   // record, but they are struck from the forecast — see plannedCostBudget.
   const countsTowardBudget = FORECAST_STATUSES.has(matchup.status);
+  // What Auto would pick, shown in the option so the default is never a guess.
+  const derivedHalf = halfForMatchup({ matchDate: matchup.matchDate });
 
   const commit = (field, value) => {
     if (matchup[field] === value) return;
@@ -154,6 +218,24 @@ const MatchupRow = ({
         onBlur={(e) => commit('matchTime', e.target.value || null)}
         className="px-2 py-1 text-sm bg-background border border-border rounded outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
       />
+
+      {/* Which half of the season this game's cost belongs to. Left on Auto it
+          follows the date, which is all the schedule ever needed — but a game
+          that has no date yet would otherwise land in fall by default, and in
+          preseason that is most of them. */}
+      <select
+        value={matchup.seasonHalf || ''}
+        disabled={!canEdit || editableTerminal}
+        onChange={(e) => commit('seasonHalf', e.target.value || null)}
+        title={t('schedule.halfHint')}
+        className="w-28 px-2 py-1 text-sm bg-background border border-border rounded outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
+      >
+        <option value="">
+          {t('schedule.halfAuto', { half: t(`schedule.half${derivedHalf === 'spring' ? 'Spring' : 'Fall'}`) })}
+        </option>
+        <option value="fall">{t('schedule.halfFall')}</option>
+        <option value="spring">{t('schedule.halfSpring')}</option>
+      </select>
 
       <input
         type="text"
@@ -289,6 +371,8 @@ export default function MatchupPlanner({
   onDeletePlannedCost = null,
   onPushPlannedCosts = null,
   onSendCostToLedger = null,
+  onFileAllCostsToLedger = null,
+  ledgerReadyCount = 0,
   isCostBudgeted = () => false,
   ledgerTxById = {},
   budgetLocked = false,
@@ -324,6 +408,12 @@ export default function MatchupPlanner({
           recalculatesFee={budgetRecalculatesFee}
           onPush={onPushPlannedCosts}
         />
+      )}
+
+      {/* Only for someone who can file in the ledger; hidden entirely when
+          nothing has ever been budgeted, so it does not sit there inert. */}
+      {showCosts && onFileAllCostsToLedger && (
+        <LedgerBulkBar count={ledgerReadyCount} onFileAll={onFileAllCostsToLedger} t={t} />
       )}
 
       {canEdit && (

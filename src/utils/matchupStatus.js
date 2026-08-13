@@ -55,6 +55,7 @@ export function buildDuplicatePayload(matchup) {
     leagueMatchId: matchup.leagueMatchId,
     matchDate: matchup.matchDate,
     matchTime: matchup.matchTime,
+    seasonHalf: matchup.seasonHalf,
     location: matchup.location,
     field: matchup.field,
     deadlineDate: matchup.deadlineDate,

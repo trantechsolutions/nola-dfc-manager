@@ -43,6 +43,14 @@ export default function TransactionModal({
         transferFromAccountId: initialData.transferFromAccountId || '',
         transferToAccountId: initialData.transferToAccountId || '',
         eventId: initialData.eventId || '',
+        // A general expense has no player, and the column comes back null. Left
+        // as null the <select> below is uncontrolled, so it keeps whatever the
+        // DOM node was showing for the LAST transaction opened — the previous
+        // player's name, on a row that is linked to nobody. Same for the
+        // checkbox: an undefined `checked` is an uncontrolled input.
+        playerId: initialData.playerId || '',
+        playerName: initialData.playerName || '',
+        cleared: !!initialData.cleared,
       });
     } else {
       setFormData({
@@ -270,8 +278,11 @@ export default function TransactionModal({
         {/* Player link (hidden for transfers) */}
         {!isTransfer && (
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-1">{t('txModal.linkPlayer')}</label>
+            <label htmlFor="tx-player" className="block text-sm font-semibold text-foreground mb-1">
+              {t('txModal.linkPlayer')}
+            </label>
             <select
+              id="tx-player"
               value={formData.playerId}
               onChange={(e) => {
                 const selectedPlayer = players.find((p) => p.id === e.target.value);

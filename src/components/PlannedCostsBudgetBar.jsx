@@ -10,7 +10,7 @@
 // deliberate confirmation and offers a reason for the record.
 
 import { useState } from 'react';
-import { PiggyBank, Lock, AlertTriangle } from 'lucide-react';
+import { PiggyBank, Lock, AlertTriangle, Link2, ChevronDown, ChevronRight } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 
 const money = (n) => `$${(Math.round((Number(n) || 0) * 100) / 100).toFixed(2)}`;
@@ -21,6 +21,13 @@ export default function PlannedCostsBudgetBar({
   recalculatesFee = true,
   available = true,
   onPush = null,
+  // Per-category attach control, supplied only by the budget screen: that is
+  // the one place the budget's own lines are on screen to choose between.
+  attachments = [],
+  targets = {},
+  linkOnly = {},
+  onTargetChange = null,
+  onLinkOnlyChange = null,
   className = '',
 }) {
   const { t } = useT();
@@ -28,6 +35,7 @@ export default function PlannedCostsBudgetBar({
   const [reason, setReason] = useState('');
   const [pushing, setPushing] = useState(false);
   const [error, setError] = useState('');
+  const [showAttach, setShowAttach] = useState(false);
 
   const {
     plannedTotal = 0,
@@ -39,7 +47,15 @@ export default function PlannedCostsBudgetBar({
     matchupCount = 0,
   } = summary || {};
 
-  const canPush = !!onPush && available && delta !== 0;
+  const showAttachControl = !!onTargetChange && attachments.length > 0;
+  const chosenFor = (a) => (targets[a.category] !== undefined ? targets[a.category] : a.currentItemId || '') || '';
+  // A re-attach can be worth pushing even when the totals already agree: the
+  // same money has to move off one line and onto another.
+  const hasPendingTargets = attachments.some(
+    (a) => chosenFor(a) !== (a.currentItemId || '') || (!!linkOnly[a.category] && !!chosenFor(a)),
+  );
+
+  const canPush = !!onPush && available && (delta !== 0 || hasPendingTargets);
 
   const handlePush = async () => {
     if (!canPush) return;
@@ -156,6 +172,69 @@ export default function PlannedCostsBudgetBar({
       )}
 
       {error && <p className="mt-2 text-xs font-semibold text-rose-600 dark:text-rose-400">{error}</p>}
+
+      {showAttachControl && (
+        <div className="mt-2 border-t border-border pt-2">
+          <button
+            type="button"
+            onClick={() => setShowAttach((v) => !v)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+          >
+            {showAttach ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            <Link2 size={12} /> {t('planCosts.attachTitle')}
+            {hasPendingTargets && (
+              <span className="text-blue-700 dark:text-blue-400">· {t('planCosts.attachPending')}</span>
+            )}
+          </button>
+
+          {showAttach && (
+            <div className="mt-2 space-y-2">
+              <p className="text-xs text-muted-foreground">{t('planCosts.attachHint')}</p>
+              {attachments.map((a) => {
+                const value = chosenFor(a);
+                const moved = value !== (a.currentItemId || '');
+                return (
+                  <div key={a.category} className="flex flex-wrap items-center gap-2">
+                    <span className="w-40 shrink-0 text-xs font-semibold text-foreground">
+                      {a.categoryName}
+                      <span className="ml-1 font-normal text-muted-foreground">{money(a.plannedTotal)}</span>
+                    </span>
+                    <select
+                      value={value}
+                      onChange={(e) => onTargetChange(a.category, e.target.value)}
+                      className="flex-grow min-w-[12rem] bg-card border border-border rounded px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="">{t('planCosts.attachOwn')}</option>
+                      {a.options.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.label} — {money(o.amount)}
+                        </option>
+                      ))}
+                    </select>
+                    {/* Only offered against a real line: there is nothing to
+                        link to while the forecast is on its own line. */}
+                    {onLinkOnlyChange && value && (
+                      <label
+                        className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground cursor-pointer"
+                        title={t('planCosts.attachLinkOnlyHint')}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!linkOnly[a.category]}
+                          onChange={(e) => onLinkOnlyChange(a.category, e.target.checked)}
+                          className="accent-emerald-600"
+                        />
+                        {t('planCosts.attachLinkOnly')}
+                      </label>
+                    )}
+                    {moved && <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">•</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

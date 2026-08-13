@@ -19,6 +19,7 @@ import {
   Moon,
   Monitor,
   ClipboardCheck,
+  ClipboardList,
   BookOpen,
   ListChecks,
 } from 'lucide-react';
@@ -614,6 +615,11 @@ function App() {
   const seasonNavItems = effectiveIsStaff
     ? [
         { id: 'dashboard', label: t('nav.seasonOverview'), icon: LayoutDashboard, section: 'season' },
+        // Ahead of Budget and Ledger on purpose: the season is planned first,
+        // budgeted from that plan, and only then recorded as it is spent.
+        ...(can(PERMISSIONS.TEAM_EDIT_SCHEDULE)
+          ? [{ id: 'planner', label: t('nav.planner'), icon: ClipboardList, section: 'season' }]
+          : []),
         ...(can(PERMISSIONS.TEAM_VIEW_BUDGET)
           ? [{ id: 'finance/budget', label: t('nav.budget'), icon: FileSpreadsheet, section: 'season' }]
           : []),

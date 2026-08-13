@@ -14,6 +14,9 @@ const mapMatchup = (m) => ({
   leagueMatchId: m.league_match_id,
   matchDate: m.match_date,
   matchTime: m.match_time,
+  // Explicit budgeting half. Null means "derive it from the date" — see
+  // utils/plannedCostBudget.halfForMatchup.
+  seasonHalf: m.season_half || null,
   location: m.location,
   field: m.field,
   deadlineDate: m.deadline_date,
@@ -35,6 +38,7 @@ const toRow = (m) => ({
   ...(m.leagueMatchId !== undefined ? { league_match_id: m.leagueMatchId } : {}),
   ...(m.matchDate !== undefined ? { match_date: m.matchDate } : {}),
   ...(m.matchTime !== undefined ? { match_time: m.matchTime } : {}),
+  ...(m.seasonHalf !== undefined ? { season_half: m.seasonHalf || null } : {}),
   ...(m.location !== undefined ? { location: m.location } : {}),
   ...(m.field !== undefined ? { field: m.field } : {}),
   ...(m.deadlineDate !== undefined ? { deadline_date: m.deadlineDate } : {}),
