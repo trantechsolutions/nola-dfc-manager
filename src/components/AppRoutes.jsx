@@ -28,6 +28,7 @@ import ParentView from '../views/team/ParentView';
 // Lazy-loaded: heavy views deferred until navigated to
 const InsightsView = lazy(() => import('../views/team/InsightsView'));
 const ScheduleView = lazy(() => import('../views/team/ScheduleView'));
+const PlannerView = lazy(() => import('../views/team/PlannerView'));
 const ClubDashboard = lazy(() => import('../views/club/ClubDashboard'));
 const TeamList = lazy(() => import('../views/club/TeamList'));
 const TeamOnboarding = lazy(() => import('../views/club/TeamOnboarding'));
@@ -239,11 +240,14 @@ export default function AppRoutes({
   const {
     plannedCosts,
     summary: plannedSummary,
+    entries: plannedEntries,
     addPlannedCost,
     updatePlannedCost,
     deletePlannedCost,
     pushPlannedCosts,
     sendCostToLedger,
+    sendAllCostsToLedger,
+    ledgerReady,
     planContributions,
   } = usePlannedCosts({
     team: effectiveTeam,
@@ -263,6 +267,13 @@ export default function AppRoutes({
   // Filing an estimate writes a (pending) ledger row, so it takes ledger rights.
   const canFilePlannedCosts = canEditLedger && !!currentTeamSeason?.id;
   const isPlannedCostBudgeted = (cost, matchup) => isCostBudgeted(cost, matchup, planContributions);
+
+  // Ledger rows by id, so an estimate that was filed can show on the planner
+  // whether it is still pending or has since been approved.
+  const txById = useMemo(
+    () => Object.fromEntries(seasonalTransactions.map((tx) => [tx.id, tx])),
+    [seasonalTransactions],
+  );
 
   return (
     <>
@@ -539,20 +550,6 @@ export default function AppRoutes({
                   selectedSeason={selectedSeason}
                   activeAccounts={activeAccounts}
                   accountMap={accountMap}
-                  matchups={matchups}
-                  matchupsLoading={matchupsLoading}
-                  onCreateMatchup={canEditSchedule ? createMatchup : null}
-                  onUpdateMatchup={canEditSchedule ? updateMatchup : null}
-                  onDeleteMatchup={canEditSchedule ? deleteMatchup : null}
-                  onDuplicateMatchup={canEditSchedule ? duplicateMatchup : null}
-                  onSetMatchupStatus={canEditSchedule ? setMatchupStatus : null}
-                  onConfirmMatchup={canEditSchedule ? confirmMatchup : null}
-                  onRescheduleMatchup={canEditSchedule ? rescheduleMatchup : null}
-                  opponentContacts={opponentContacts}
-                  opponentContactsLoading={opponentContactsLoading}
-                  onCreateOpponentContact={canEditSchedule ? createOpponentContact : null}
-                  onUpdateOpponentContact={canEditSchedule ? updateOpponentContact : null}
-                  onDeleteOpponentContact={canEditSchedule ? deleteOpponentContact : null}
                   onPushEventToBudget={
                     canEditSchedule && can(PERMISSIONS.TEAM_EDIT_BUDGET)
                       ? guardedAction(pushEventToBudget, { action: 'push_event_budget', tableName: 'budget_items' })
@@ -561,29 +558,70 @@ export default function AppRoutes({
                   budgetContributions={budgetContributions}
                   budgetLocked={!!currentTeamSeason?.isFinalized}
                   budgetRecalculatesFee={currentTeamSeason?.amendRecalculatesFee !== false}
-                  hasSeasonBudget={!!currentTeamSeason?.id}
-                  plannedCosts={plannedCosts}
-                  plannedSummary={plannedSummary}
-                  onAddPlannedCost={canEditSchedule ? addPlannedCost : null}
-                  onUpdatePlannedCost={canEditSchedule ? updatePlannedCost : null}
-                  onDeletePlannedCost={canEditSchedule ? deletePlannedCost : null}
-                  onPushPlannedCosts={
-                    canPushPlannedCosts
-                      ? guardedAction(pushPlannedCosts, { action: 'push_planned_costs', tableName: 'budget_items' })
-                      : null
-                  }
-                  onSendCostToLedger={
-                    canFilePlannedCosts
-                      ? guardedAction(sendCostToLedger, {
-                          action: 'file_planned_cost',
-                          tableName: 'transactions',
-                        })
-                      : null
-                  }
-                  isCostBudgeted={isPlannedCostBudgeted}
                 />
               }
             />
+
+            {/* The planner is its own route rather than a schedule tab: it runs
+                ahead of both the calendar and the budget, and nesting it under
+                the schedule put the first step of the season last. */}
+            {canEditSchedule && (
+              <Route
+                path="/planner"
+                element={
+                  <PlannerView
+                    canEditSchedule={canEditSchedule}
+                    blackoutDates={blackoutDates}
+                    matchups={matchups}
+                    matchupsLoading={matchupsLoading}
+                    onCreateMatchup={canEditSchedule ? createMatchup : null}
+                    onUpdateMatchup={canEditSchedule ? updateMatchup : null}
+                    onDeleteMatchup={canEditSchedule ? deleteMatchup : null}
+                    onDuplicateMatchup={canEditSchedule ? duplicateMatchup : null}
+                    onSetMatchupStatus={canEditSchedule ? setMatchupStatus : null}
+                    onConfirmMatchup={canEditSchedule ? confirmMatchup : null}
+                    onRescheduleMatchup={canEditSchedule ? rescheduleMatchup : null}
+                    opponentContacts={opponentContacts}
+                    opponentContactsLoading={opponentContactsLoading}
+                    onCreateOpponentContact={canEditSchedule ? createOpponentContact : null}
+                    onUpdateOpponentContact={canEditSchedule ? updateOpponentContact : null}
+                    onDeleteOpponentContact={canEditSchedule ? deleteOpponentContact : null}
+                    plannedCosts={plannedCosts}
+                    plannedSummary={plannedSummary}
+                    onAddPlannedCost={canEditSchedule ? addPlannedCost : null}
+                    onUpdatePlannedCost={canEditSchedule ? updatePlannedCost : null}
+                    onDeletePlannedCost={canEditSchedule ? deletePlannedCost : null}
+                    onPushPlannedCosts={
+                      canPushPlannedCosts
+                        ? guardedAction(pushPlannedCosts, { action: 'push_planned_costs', tableName: 'budget_items' })
+                        : null
+                    }
+                    onSendCostToLedger={
+                      canFilePlannedCosts
+                        ? guardedAction(sendCostToLedger, {
+                            action: 'file_planned_cost',
+                            tableName: 'transactions',
+                          })
+                        : null
+                    }
+                    onFileAllCostsToLedger={
+                      canFilePlannedCosts
+                        ? guardedAction(sendAllCostsToLedger, {
+                            action: 'file_planned_costs_bulk',
+                            tableName: 'transactions',
+                          })
+                        : null
+                    }
+                    ledgerReadyCount={ledgerReady.length}
+                    isCostBudgeted={isPlannedCostBudgeted}
+                    ledgerTxById={txById}
+                    budgetLocked={!!currentTeamSeason?.isFinalized}
+                    hasSeasonBudget={!!currentTeamSeason?.id}
+                    budgetRecalculatesFee={currentTeamSeason?.amendRecalculatesFee !== false}
+                  />
+                }
+              />
+            )}
 
             {canEditSchedule && (
               <Route
@@ -723,6 +761,8 @@ export default function AppRoutes({
                                 teamSeasons,
                                 categoryOptions,
                                 plannedSummary,
+                                plannedEntries,
+                                planContributions,
                                 onPushPlannedCosts: canPushPlannedCosts
                                   ? guardedAction(pushPlannedCosts, {
                                       action: 'push_planned_costs',

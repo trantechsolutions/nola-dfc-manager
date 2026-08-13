@@ -13,6 +13,7 @@ export default {
   players: 'Players',
   roster: 'Roster',
   ledger: 'Ledger',
+  planner: 'Planner',
   budget: 'Budget',
   fundraising: 'Fundraising',
   documents: 'Documents',

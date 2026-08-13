@@ -13,6 +13,7 @@ export default {
   players: 'Jugadores',
   roster: 'Plantilla',
   ledger: 'Libro Mayor',
+  planner: 'Planificador',
   budget: 'Presupuesto',
   fundraising: 'Recaudación',
   documents: 'Documentos',
