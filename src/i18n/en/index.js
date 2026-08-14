@@ -7,6 +7,7 @@ import people from './people';
 import club from './club';
 import evaluations from './evaluations';
 import checklist from './checklist';
+import field from './field';
 
 export default {
   common,
@@ -43,4 +44,5 @@ export default {
   confirm: club.confirm,
   evaluations: evaluations.evaluations,
   checklist: checklist.checklist,
+  fieldSchedule: field.fieldSchedule,
 };

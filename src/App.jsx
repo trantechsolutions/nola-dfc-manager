@@ -22,6 +22,7 @@ import {
   ClipboardList,
   BookOpen,
   ListChecks,
+  MapPin,
 } from 'lucide-react';
 import { useT } from './i18n/I18nContext';
 import { useTheme } from './theme/ThemeContext';
@@ -137,6 +138,16 @@ function App() {
   const handleToggleHideInsights = useCallback(
     async (next) => {
       await saveSetting('hide_insights', next);
+    },
+    [saveSetting],
+  );
+
+  // Hide the club field schedule app-wide. Clubs that do not run their own
+  // home field have nothing to book, and the board is noise on their nav.
+  const fieldScheduleHidden = appSettings?.hide_field_schedule === true;
+  const handleToggleHideFieldSchedule = useCallback(
+    async (next) => {
+      await saveSetting('hide_field_schedule', next);
     },
     [saveSetting],
   );
@@ -596,8 +607,8 @@ function App() {
   const appNavItems =
     isSuperAdmin && !clubUiHidden ? [{ id: 'app-admin', label: 'App Admin', icon: Shield, section: 'app' }] : [];
 
-  const clubNavItems =
-    (isClubAdmin || isSuperAdmin) && !clubUiHidden
+  const clubNavItems = [
+    ...((isClubAdmin || isSuperAdmin) && !clubUiHidden
       ? [
           { id: 'club-overview', label: t('nav.overview'), icon: Building2, section: 'club' },
           { id: 'club-teams', label: t('nav.teams'), icon: ListTree, section: 'club' },
@@ -608,7 +619,14 @@ function App() {
           //   ? [{ id: 'club-evaluations', label: 'Evaluations', icon: ClipboardCheck, section: 'club' }]
           //   : []),
         ]
-      : [];
+      : []),
+    // The one club surface every team needs: the shared home field. It sits in
+    // the club group for everyone on staff, not just admins, because booking a
+    // slot is a team's job and approving it is the admin's.
+    ...(effectiveIsStaff && !clubUiHidden && !fieldScheduleHidden
+      ? [{ id: 'field-schedule', label: t('nav.fieldSchedule'), icon: MapPin, section: 'club' }]
+      : []),
+  ];
 
   // `section` drives the sidebar group header and the breadcrumb trail
   // (see utils/pageMeta.js) — keep it set on every nav item.
@@ -672,6 +690,9 @@ function App() {
       ];
 
   const canEditSchedule = can(PERMISSIONS.TEAM_EDIT_SCHEDULE);
+  // A team manager books the home field outright; everyone else with schedule
+  // access files a request for a club admin to settle.
+  const canBookField = can(PERMISSIONS.TEAM_BOOK_FIELD);
   const canEditLedger = can(PERMISSIONS.TEAM_EDIT_LEDGER);
 
   const navContextValue = {
@@ -840,6 +861,7 @@ function App() {
                   isAccountSaving={isAccountSaving}
                   effectiveTeam={effectiveTeam}
                   canEditSchedule={canEditSchedule}
+                  canBookField={canBookField}
                   canEditLedger={canEditLedger}
                   handleSaveTransaction={handleSaveTransaction}
                   handleRefundTransaction={handleRefundTransaction}
@@ -881,6 +903,8 @@ function App() {
                   onToggleHideEvaluations={handleToggleHideEvaluations}
                   insightsHidden={insightsHidden}
                   onToggleHideInsights={handleToggleHideInsights}
+                  fieldScheduleHidden={fieldScheduleHidden}
+                  onToggleHideFieldSchedule={handleToggleHideFieldSchedule}
                 />
               </AppShell>
               <NotificationPermissionBanner />

@@ -137,6 +137,7 @@ export const PERMISSIONS = {
   TEAM_VIEW_CHECKLIST: 'team:view_checklist', // See the season checklist and roster-wide progress
   TEAM_MANAGE_CHECKLIST: 'team:manage_checklist', // Author/clone/publish the checklist, verify items (team_manager+ only — mirrors the RLS in sql/season_checklists_migration.sql)
   TEAM_VIEW_MEDICAL_DOCS: 'team:view_medical_docs', // View/download medical release forms (team_manager+ only, not coaches/treasurer/scheduler/fundraiser)
+  TEAM_BOOK_FIELD: 'team:book_field', // Take a home-field block outright instead of requesting it (team_manager+ only — mirrors guard_field_booking_decision() in sql/field_scheduling_migration.sql)
 
   // Evaluations (club-level)
   CLUB_MANAGE_EVALUATIONS: 'club:manage_evaluations', // Create/configure evaluation sessions
@@ -177,6 +178,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.TEAM_VIEW_CHECKLIST,
     PERMISSIONS.TEAM_MANAGE_CHECKLIST,
     PERMISSIONS.TEAM_VIEW_MEDICAL_DOCS,
+    PERMISSIONS.TEAM_BOOK_FIELD,
     // All evaluation permissions
     PERMISSIONS.CLUB_MANAGE_EVALUATIONS,
     PERMISSIONS.CLUB_EVALUATE_PLAYERS,
@@ -209,6 +211,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.TEAM_VIEW_CHECKLIST,
     PERMISSIONS.TEAM_MANAGE_CHECKLIST,
     PERMISSIONS.TEAM_VIEW_MEDICAL_DOCS,
+    PERMISSIONS.TEAM_BOOK_FIELD,
     // Evaluation permissions
     PERMISSIONS.CLUB_MANAGE_EVALUATIONS,
     PERMISSIONS.CLUB_EVALUATE_PLAYERS,
@@ -248,6 +251,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.TEAM_VIEW_CHECKLIST,
     PERMISSIONS.TEAM_MANAGE_CHECKLIST,
     PERMISSIONS.TEAM_VIEW_MEDICAL_DOCS,
+    PERMISSIONS.TEAM_BOOK_FIELD,
     PERMISSIONS.CLUB_VIEW_EVALUATIONS,
   ],
 

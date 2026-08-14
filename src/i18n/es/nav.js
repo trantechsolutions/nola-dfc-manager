@@ -21,5 +21,6 @@ export default {
   users: 'Usuarios',
   categories: 'Categorías',
   bookBalance: 'Balance de Libros',
+  fieldSchedule: 'Calendario de Cancha',
   help: 'Ayuda y Guía del Usuario',
 };

@@ -432,6 +432,71 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 
 
+-- ── 28. FIELDS (club home-field booking) ──
+-- See sql/field_scheduling_migration.sql for the full rationale, triggers,
+-- RLS policies and the default field seed.
+CREATE TABLE IF NOT EXISTS fields (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  club_id uuid NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  short_name text,
+  location text,
+  sort_order integer NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (club_id, name)
+);
+
+-- ── 29. FIELD BOOKINGS ──
+-- One team's claim on one fixed time block of one field. The blocks
+-- themselves are generated client-side (src/utils/fieldSlots.js), so an
+-- unbooked weekend costs zero rows.
+CREATE TABLE IF NOT EXISTS field_bookings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  club_id uuid NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+  field_id uuid NOT NULL REFERENCES fields(id) ON DELETE CASCADE,
+  team_id uuid REFERENCES teams(id),
+  season_id text REFERENCES seasons(id),
+  booking_date date NOT NULL,
+  slot_time time NOT NULL,
+  status text NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'confirmed', 'declined', 'cancelled')),
+  manager_name text,
+  opponent_name text,
+  age_group text,
+  game_type text,
+  referees_needed integer NOT NULL DEFAULT 0 CHECK (referees_needed >= 0 AND referees_needed <= 9),
+  notes text,
+  requested_by uuid,
+  decided_by uuid,
+  decided_at timestamptz,
+  decline_reason text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Competing requests for a block are allowed; only one can be confirmed.
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_field_booking_confirmed_slot
+  ON field_bookings(field_id, booking_date, slot_time)
+  WHERE status = 'confirmed';
+
+-- ── 30. FIELD CLOSURES ──
+-- A field (null field_id = every field) taken off the board for a date
+-- range, optionally for a single block instead of the whole day.
+CREATE TABLE IF NOT EXISTS field_closures (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  club_id uuid NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+  field_id uuid REFERENCES fields(id) ON DELETE CASCADE,
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  slot_time time,
+  reason text,
+  created_by uuid,
+  created_at timestamptz DEFAULT now(),
+  CHECK (end_date >= start_date)
+);
+
+
 -- ============================================================
 -- VIEWS
 -- ============================================================
@@ -542,6 +607,11 @@ CREATE INDEX IF NOT EXISTS idx_eval_scores_evaluator ON evaluation_scores(evalua
 CREATE INDEX IF NOT EXISTS idx_eval_thresholds_session ON evaluation_team_thresholds(session_id);
 CREATE INDEX IF NOT EXISTS idx_season_eval_player ON season_evaluations(player_id);
 CREATE INDEX IF NOT EXISTS idx_season_eval_team_season ON season_evaluations(team_id, season_id);
+CREATE INDEX IF NOT EXISTS idx_fields_club ON fields(club_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_field_bookings_club_date ON field_bookings(club_id, booking_date);
+CREATE INDEX IF NOT EXISTS idx_field_bookings_field_date ON field_bookings(field_id, booking_date);
+CREATE INDEX IF NOT EXISTS idx_field_bookings_team ON field_bookings(team_id, booking_date);
+CREATE INDEX IF NOT EXISTS idx_field_closures_club_range ON field_closures(club_id, start_date, end_date);
 
 
 -- ============================================================
@@ -566,6 +636,9 @@ ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE blackouts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fields ENABLE ROW LEVEL SECURITY;
+ALTER TABLE field_bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE field_closures ENABLE ROW LEVEL SECURITY;
 ALTER TABLE custom_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE changelogs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE evaluation_sessions ENABLE ROW LEVEL SECURITY;

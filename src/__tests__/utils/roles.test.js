@@ -110,6 +110,34 @@ describe('hasPermission', () => {
       expect(hasPermission(roles.scheduler, PERMISSIONS.TEAM_EDIT_ROSTER, TEAM_A)).toBe(false);
       expect(hasPermission(roles.scheduler, PERMISSIONS.TEAM_EDIT_LEDGER, TEAM_A)).toBe(false);
     });
+
+    // Booking the home field commits a club-wide resource, so a scheduler
+    // files a request and a club admin settles it. Only the team's own
+    // manager takes a block outright — see guard_field_booking_decision()
+    // in sql/field_scheduling_migration.sql, which enforces the same split.
+    it('cannot book a home-field block outright', () => {
+      expect(hasPermission(roles.scheduler, PERMISSIONS.TEAM_BOOK_FIELD, TEAM_A)).toBe(false);
+    });
+  });
+
+  describe('team:book_field', () => {
+    it('is granted to the team manager on their own team', () => {
+      expect(hasPermission(roles.teamManager, PERMISSIONS.TEAM_BOOK_FIELD, TEAM_A)).toBe(true);
+    });
+
+    it('does not follow the manager onto another team', () => {
+      expect(hasPermission(roles.teamManager, PERMISSIONS.TEAM_BOOK_FIELD, TEAM_B)).toBe(false);
+    });
+
+    it('is granted to a club admin on any team', () => {
+      expect(hasPermission(roles.clubAdmin, PERMISSIONS.TEAM_BOOK_FIELD, TEAM_B)).toBe(true);
+    });
+
+    it('is withheld from view-only and money-only roles', () => {
+      expect(hasPermission(roles.clubManager, PERMISSIONS.TEAM_BOOK_FIELD, TEAM_A)).toBe(false);
+      expect(hasPermission(roles.treasurer, PERMISSIONS.TEAM_BOOK_FIELD, TEAM_A)).toBe(false);
+      expect(hasPermission(roles.headCoach, PERMISSIONS.TEAM_BOOK_FIELD, TEAM_A)).toBe(false);
+    });
   });
 
   describe('head_coach', () => {

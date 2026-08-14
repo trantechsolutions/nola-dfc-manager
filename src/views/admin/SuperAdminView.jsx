@@ -11,6 +11,7 @@ import {
   ClipboardCheck,
   Sparkles,
   Ban,
+  MapPin,
 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
@@ -26,6 +27,8 @@ export default function SuperAdminView({
   onToggleHideEvaluations,
   insightsHidden = false,
   onToggleHideInsights,
+  fieldScheduleHidden = false,
+  onToggleHideFieldSchedule,
 }) {
   const { t } = useT();
   const [clubs, setClubs] = useState([]);
@@ -50,6 +53,9 @@ export default function SuperAdminView({
 
   // Hide insights
   const [insightsSaving, setInsightsSaving] = useState(false);
+
+  // Hide the club field schedule
+  const [fieldSaving, setFieldSaving] = useState(false);
 
   const fetchSuperAdmins = async () => {
     setLoadingSAs(true);
@@ -172,6 +178,20 @@ export default function SuperAdminView({
       if (showToast) showToast('Failed to update insights visibility.', true);
     } finally {
       setInsightsSaving(false);
+    }
+  };
+
+  const handleToggleHideFieldSchedule = async () => {
+    if (!onToggleHideFieldSchedule) return;
+    const next = !fieldScheduleHidden;
+    setFieldSaving(true);
+    try {
+      await onToggleHideFieldSchedule(next);
+      if (showToast) showToast(next ? 'Field schedule hidden.' : 'Field schedule shown.');
+    } catch (e) {
+      if (showToast) showToast('Failed to update field schedule visibility.', true);
+    } finally {
+      setFieldSaving(false);
     }
   };
 
@@ -339,6 +359,38 @@ export default function SuperAdminView({
             <span
               className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
                 insightsHidden ? 'translate-x-5' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Hide Field Schedule */}
+      <div className="bg-card rounded-lg border border-border p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-bold text-foreground text-sm flex items-center gap-2">
+              <MapPin size={16} className="text-violet-700 dark:text-violet-400" /> Hide Field Schedule
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-md">
+              Removes the club field schedule — the home-field booking board — from the navigation for every user. For
+              clubs that play on fields they do not control and have nothing to book. Existing bookings and closures are
+              kept.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={fieldScheduleHidden}
+            onClick={handleToggleHideFieldSchedule}
+            disabled={fieldSaving || !onToggleHideFieldSchedule}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-violet-500 ${
+              fieldScheduleHidden ? 'bg-violet-600' : 'bg-muted'
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                fieldScheduleHidden ? 'translate-x-5' : 'translate-x-0.5'
               }`}
             />
           </button>
