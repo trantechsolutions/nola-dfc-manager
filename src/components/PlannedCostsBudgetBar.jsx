@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import { PiggyBank, Lock, AlertTriangle, Link2, ChevronDown, ChevronRight } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
+import { ATTACH_MODES, DEFAULT_ATTACH_MODE } from '../utils/plannedCostBudget';
 
 const money = (n) => `$${(Math.round((Number(n) || 0) * 100) / 100).toFixed(2)}`;
 
@@ -25,9 +26,9 @@ export default function PlannedCostsBudgetBar({
   // the one place the budget's own lines are on screen to choose between.
   attachments = [],
   targets = {},
-  linkOnly = {},
+  modes = {},
   onTargetChange = null,
-  onLinkOnlyChange = null,
+  onModeChange = null,
   className = '',
 }) {
   const { t } = useT();
@@ -49,10 +50,16 @@ export default function PlannedCostsBudgetBar({
 
   const showAttachControl = !!onTargetChange && attachments.length > 0;
   const chosenFor = (a) => (targets[a.category] !== undefined ? targets[a.category] : a.currentItemId || '') || '';
+  const modeFor = (a) => modes[a.category] || a.currentMode || DEFAULT_ATTACH_MODE;
   // A re-attach can be worth pushing even when the totals already agree: the
-  // same money has to move off one line and onto another.
+  // same money has to move off one line and onto another. So can a change of
+  // mind about how the forecast sits on the line it is already attached to —
+  // switching from "add it on top" to "leave the amount alone" takes the money
+  // back out again.
   const hasPendingTargets = attachments.some(
-    (a) => chosenFor(a) !== (a.currentItemId || '') || (!!linkOnly[a.category] && !!chosenFor(a)),
+    (a) =>
+      chosenFor(a) !== (a.currentItemId || '') ||
+      (!!chosenFor(a) && modeFor(a) !== (a.currentMode || DEFAULT_ATTACH_MODE)),
   );
 
   const canPush = !!onPush && available && (delta !== 0 || hasPendingTargets);
@@ -211,21 +218,22 @@ export default function PlannedCostsBudgetBar({
                         </option>
                       ))}
                     </select>
-                    {/* Only offered against a real line: there is nothing to
-                        link to while the forecast is on its own line. */}
-                    {onLinkOnlyChange && value && (
-                      <label
-                        className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground cursor-pointer"
-                        title={t('planCosts.attachLinkOnlyHint')}
+                    {/* Only asked against a line the treasurer wrote: on this
+                        feature's own line the whole amount is the forecast, so
+                        there is no other arrangement to choose between. */}
+                    {onModeChange && value && (
+                      <select
+                        value={modeFor(a)}
+                        onChange={(e) => onModeChange(a.category, e.target.value)}
+                        title={t('planCosts.attachModeHint')}
+                        className="bg-card border border-border rounded px-2 py-1 text-xs font-semibold outline-none focus:ring-1 focus:ring-ring"
                       >
-                        <input
-                          type="checkbox"
-                          checked={!!linkOnly[a.category]}
-                          onChange={(e) => onLinkOnlyChange(a.category, e.target.checked)}
-                          className="accent-emerald-600"
-                        />
-                        {t('planCosts.attachLinkOnly')}
-                      </label>
+                        {ATTACH_MODES.map((m) => (
+                          <option key={m} value={m}>
+                            {t(`planCosts.attachMode_${m}`)}
+                          </option>
+                        ))}
+                      </select>
                     )}
                     {moved && <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">•</span>}
                   </div>

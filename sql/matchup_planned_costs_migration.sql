@@ -117,7 +117,27 @@ CREATE TABLE IF NOT EXISTS budget_plan_contributions (
   -- Nulled rather than cascaded if the treasurer deletes the line by hand:
   -- the next push rebuilds it instead of failing on a dangling reference.
   budget_item_id uuid REFERENCES budget_items(id) ON DELETE SET NULL,
+  -- The forecast this row COVERS. What the budget counts as already planned
+  -- for, and what the "in budget" figures on both screens are summed from.
   applied_amount numeric(10,2) NOT NULL DEFAULT 0,
+  -- What this row actually PUT ON the budget line, which is not the same
+  -- number once the forecast is sharing a line the treasurer wrote themselves:
+  -- under 'keep' it is zero, under 'difference' only the shortfall. Backing
+  -- money out — a re-attach, a cancelled game, a shrinking estimate — has to
+  -- use this, or it would strip the treasurer's own money off the line along
+  -- with ours. Null on rows written before the modes existed; those were all
+  -- 'full', where it equals applied_amount.
+  line_amount    numeric(10,2),
+  -- How the forecast rides on the line it is attached to, chosen by the
+  -- treasurer per category and kept here because a re-push has to maintain the
+  -- same arrangement rather than silently revert to adding the lot:
+  --   full        the line keeps what was typed and carries the forecast too.
+  --   difference  the line ends up equal to the forecast, with what was typed
+  --               counting toward it.
+  --   keep        the amount is left exactly as typed; only the link is
+  --               recorded.
+  attach_mode    text NOT NULL DEFAULT 'full'
+                   CHECK (attach_mode IN ('full', 'difference', 'keep')),
   applied_at     timestamptz NOT NULL DEFAULT now(),
   applied_by     uuid REFERENCES auth.users(id),
   -- Set when the push had to be recorded as an amendment because the budget
@@ -128,6 +148,23 @@ CREATE TABLE IF NOT EXISTS budget_plan_contributions (
 
 CREATE INDEX IF NOT EXISTS idx_budget_plan_contributions_ts
   ON budget_plan_contributions (team_season_id);
+
+-- Added after the fact for projects that already ran this file. Existing rows
+-- are left with a null line_amount on purpose: null reads as "this row put its
+-- whole forecast on the line", which is exactly what every push before the
+-- modes existed did, so nothing has to be backfilled or guessed at.
+ALTER TABLE budget_plan_contributions ADD COLUMN IF NOT EXISTS line_amount numeric(10,2);
+ALTER TABLE budget_plan_contributions ADD COLUMN IF NOT EXISTS attach_mode text NOT NULL DEFAULT 'full';
+
+DO $$
+BEGIN
+  ALTER TABLE budget_plan_contributions
+    ADD CONSTRAINT budget_plan_contributions_attach_mode_check
+    CHECK (attach_mode IN ('full', 'difference', 'keep'));
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END;
+$$;
 
 ALTER TABLE budget_plan_contributions ENABLE ROW LEVEL SECURITY;
 

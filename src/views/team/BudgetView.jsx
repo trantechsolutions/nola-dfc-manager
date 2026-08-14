@@ -31,7 +31,7 @@ import { useBudgetForecast } from '../../hooks/useBudgetForecast';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { exportBudgetActualsPDF, exportBudgetActualsCSV } from '../../utils/exportUtils';
 import { buildCategoryAdvice, varianceTone, TONE_STYLES } from '../../utils/budgetInsights';
-import { plannedCategoryTargets, PLANNED_LINE_LABEL } from '../../utils/plannedCostBudget';
+import { plannedCategoryTargets, PLANNED_LINE_LABEL, DEFAULT_ATTACH_MODE } from '../../utils/plannedCostBudget';
 import { computeSeasonFee } from '../../utils/feeCalculator';
 
 // Only a saved row has a database id a contribution can point at; everything
@@ -91,9 +91,11 @@ export default function BudgetView({
   // the next push. Empty for a category means it keeps using the planner's own
   // "Planned Match Costs" line.
   const [plannedTargets, setPlannedTargets] = useState({});
-  // Categories whose chosen line already carries the cost by hand. The push
-  // records the link and leaves the amount alone.
-  const [plannedLinkOnly, setPlannedLinkOnly] = useState({});
+  // How the forecast should sit on the line each category is attached to —
+  // added on top, topped up to the forecast, or recorded without moving the
+  // amount. Staged the same way, and empty for a category means whatever the
+  // last push agreed to. See ATTACH_MODES.
+  const [plannedModes, setPlannedModes] = useState({});
 
   // Amendments
   const [isAmending, setIsAmending] = useState(false);
@@ -305,8 +307,9 @@ export default function BudgetView({
         currentItemId: attached && attached.label !== PLANNED_LINE_LABEL ? attached.id : '',
         options: inCategory
           .filter((i) => i.label !== PLANNED_LINE_LABEL)
-          // The line's own amount comes along so "already budgeted here" can be
-          // checked against the forecast without leaving the card.
+          // The line's own amount comes along so it can be weighed against the
+          // forecast — which is the whole question the mode answers — without
+          // leaving the card.
           .map((i) => ({
             id: i.id,
             label: i.label?.trim() || 'Untitled',
@@ -318,11 +321,12 @@ export default function BudgetView({
 
   const setPlannedTarget = (category, itemId) => {
     setPlannedTargets((prev) => ({ ...prev, [category]: itemId || '' }));
-    // Nothing to link to once the forecast is back on its own line.
-    if (!itemId) setPlannedLinkOnly((prev) => ({ ...prev, [category]: false }));
+    // Its own line carries nothing but the forecast, so the question of how to
+    // share a line with the treasurer stops applying.
+    if (!itemId) setPlannedModes((prev) => ({ ...prev, [category]: DEFAULT_ATTACH_MODE }));
   };
 
-  const setPlannedLink = (category, linked) => setPlannedLinkOnly((prev) => ({ ...prev, [category]: linked }));
+  const setPlannedMode = (category, mode) => setPlannedModes((prev) => ({ ...prev, [category]: mode }));
 
   const subtotals = useMemo(() => {
     const result = {};
@@ -522,15 +526,14 @@ export default function BudgetView({
   // them — otherwise the next Save Draft would send the pre-push set back and
   // silently undo the forecast that was just applied.
   const handlePushPlannedCosts = async (args) => {
-    const result = await onPushPlannedCosts({ ...args, targets: plannedTargets, linkOnly: plannedLinkOnly });
+    const result = await onPushPlannedCosts({ ...args, targets: plannedTargets, modes: plannedModes });
     if (!result || result.success !== false) {
-      // The choice is now recorded on the contributions themselves, so the
-      // staged copy would only shadow whatever the push actually did.
+      // Both choices are now recorded on the contributions themselves, so the
+      // staged copies would only shadow whatever the push actually did. The
+      // mode in particular has to come back from there: it is the arrangement
+      // every later push maintains, not a one-off instruction.
       setPlannedTargets({});
-      // Link-only is deliberately not remembered: it adopts the line as it
-      // stands, and from here the forecast is maintained against it like any
-      // other, so a later increase tops that line up by the difference alone.
-      setPlannedLinkOnly({});
+      setPlannedModes({});
       await fetchData();
     }
     return result;
@@ -1156,9 +1159,9 @@ export default function BudgetView({
                 onPush={onPushPlannedCosts && !isAmending ? handlePushPlannedCosts : null}
                 attachments={plannedAttachments}
                 targets={plannedTargets}
-                linkOnly={plannedLinkOnly}
+                modes={plannedModes}
                 onTargetChange={onPushPlannedCosts && !isAmending ? setPlannedTarget : null}
-                onLinkOnlyChange={onPushPlannedCosts && !isAmending ? setPlannedLink : null}
+                onModeChange={onPushPlannedCosts && !isAmending ? setPlannedMode : null}
               />
             )}
 

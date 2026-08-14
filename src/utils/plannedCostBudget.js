@@ -41,6 +41,70 @@ const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const keyOf = (category, half) => `${category}::${half}`;
 
 /**
+ * How a category's forecast rides on the budget line it is attached to.
+ *
+ * Attaching to a line the treasurer wrote themselves poses a question only they
+ * can answer — does the amount already on that line cover these games, or not? —
+ * so the three answers are offered explicitly rather than guessed at:
+ *
+ *   full        The line keeps what the treasurer typed and carries the whole
+ *               forecast on top of it. The default, and the only mode that
+ *               means anything on this feature's own line.
+ *   difference  The line ends up equal to the forecast: what is already typed
+ *               there counts toward it and the push adds only the shortfall.
+ *               Nothing is added once the hand-written amount covers it.
+ *   keep        The amount is left exactly as typed. The link is still written,
+ *               so the forecast counts as budgeted and can be filed in the
+ *               ledger, but no money moves.
+ *
+ * Remembered on the contribution rather than re-asked, because a re-push has to
+ * maintain the same relationship it established the first time. A mode picked
+ * for this push wins over the one on record; nothing on record means `full`,
+ * which is what every contribution written before this choice existed did.
+ */
+export const ATTACH_MODES = ['full', 'difference', 'keep'];
+export const DEFAULT_ATTACH_MODE = 'full';
+
+/**
+ * How much of a budget line a contribution is responsible for.
+ *
+ * Distinct from appliedAmount, which is the forecast the contribution COVERS:
+ * under `keep` a line covers the whole forecast while this feature put nothing
+ * on it, and under `difference` it put on only the shortfall. Backing money out
+ * of a line — on a re-attach, a cancelled game, a shrinking estimate — has to
+ * use what was actually added, or it would strip out the treasurer's own money
+ * along with ours. Null is a row written before the distinction existed, and
+ * those were all `full`.
+ */
+const ownedOf = (c) => round2(c?.lineAmount == null ? c?.appliedAmount : c.lineAmount);
+
+/**
+ * Split what a line owes this feature back across the matchups making up the
+ * forecast, so a later push can back out exactly what this one put in.
+ * Proportional to each estimate, with the last row carrying the rounding
+ * remainder so the parts always sum to the whole.
+ */
+function shareOut(byMatchup, total, owned) {
+  const ids = [...byMatchup.keys()];
+  const shares = new Map();
+  if (owned === total) {
+    for (const id of ids) shares.set(id, round2(byMatchup.get(id)));
+    return shares;
+  }
+  if (owned === 0 || total === 0) {
+    for (const id of ids) shares.set(id, 0);
+    return shares;
+  }
+  let left = owned;
+  ids.forEach((id, i) => {
+    const share = i === ids.length - 1 ? round2(left) : round2((owned * byMatchup.get(id)) / total);
+    shares.set(id, share);
+    left = round2(left - share);
+  });
+  return shares;
+}
+
+/**
  * Which half of the season a matchup's costs land in.
  *
  * An explicit season_half set on the planner wins: in preseason the date is the
@@ -115,17 +179,16 @@ const countable = (entries) => entries.filter((e) => !e.superseded && !e.exclude
  *                                 the treasurer on the budget screen, attaching
  *                                 the forecast to a line they already wrote
  *                                 instead of this feature's own line.
- * @param {object}   linkOnly      Optional { [category]: true } for a target the
- *                                 treasurer has ALREADY sized by hand. The link
- *                                 is recorded and the line's amount is left
- *                                 exactly as typed — see below.
+ * @param {object}   modes         Optional { [category]: 'full'|'difference'|
+ *                                 'keep' } — how the forecast should ride on
+ *                                 the line it is attached to. See ATTACH_MODES.
  */
 export function planPlannedCostsPush({
   entries = [],
   contributions = [],
   budgetItems = [],
   targets = {},
-  linkOnly = {},
+  modes = {},
 } = {}) {
   const desired = new Map(); // key -> { total, byMatchup: Map }
   for (const entry of countable(entries)) {
@@ -134,6 +197,13 @@ export function planPlannedCostsPush({
     const bucket = desired.get(key);
     bucket.total = round2(bucket.total + entry.amount);
     bucket.byMatchup.set(entry.matchupId, round2((bucket.byMatchup.get(entry.matchupId) || 0) + entry.amount));
+  }
+
+  // The mode each category was last pushed under, so a re-push maintains the
+  // relationship the treasurer chose instead of reverting to the default.
+  const priorModes = new Map();
+  for (const c of contributions) {
+    if (c.attachMode && !priorModes.has(c.category)) priorModes.set(c.category, c.attachMode);
   }
 
   const applied = new Map(); // key -> { total, rows: [] }
@@ -183,19 +253,6 @@ export function planPlannedCostsPush({
     const chosenId = targets?.[category] || null;
     const chosen = chosenId ? budgetItems.find((i) => i.id === chosenId && i.category === category) || null : null;
 
-    // "I already budgeted this — just link it." The treasurer typed the cost
-    // into that line themselves, so adding the forecast on top would budget the
-    // same games twice and re-price the roster for money already provided for.
-    // The contribution is still written, which is what makes the forecast count
-    // as budgeted: the plan reads as up to date and the estimates become
-    // filable in the ledger. Only meaningful against a line that exists, so a
-    // flag without a target is ignored.
-    //
-    // It adopts the line as it stands rather than latching permanently: the
-    // contribution now records what this line covers, so if the forecast later
-    // grows, the NEXT push tops the line up by that difference alone.
-    const linked = !!linkOnly?.[category] && !!chosen;
-
     // Otherwise match by category, but only to a line this feature owns — a
     // category routinely holds several hand-authored items, and silently
     // inflating one of those would make the budget no longer say what the
@@ -227,7 +284,7 @@ export function planPlannedCostsPush({
     const priorByItem = new Map();
     for (const row of priorRows) {
       if (!row.budgetItemId) continue;
-      priorByItem.set(row.budgetItemId, round2((priorByItem.get(row.budgetItemId) || 0) + round2(row.appliedAmount)));
+      priorByItem.set(row.budgetItemId, round2((priorByItem.get(row.budgetItemId) || 0) + ownedOf(row)));
     }
 
     for (const [itemId, amount] of priorByItem) {
@@ -251,11 +308,28 @@ export function planPlannedCostsPush({
       vacated.add(itemId);
     }
 
+    // How the forecast rides on the destination. Only a line the treasurer
+    // wrote can be shared with them, so this feature's own line is always
+    // `full` — `keep` would freeze it at nothing and `difference` would mean
+    // the same as `full` on a line whose whole amount is already ours.
+    const ownLine = isNew || item.label === PLANNED_LINE_LABEL;
+    const asked = modes?.[category];
+    const mode = ownLine
+      ? DEFAULT_ATTACH_MODE
+      : ATTACH_MODES.includes(asked)
+        ? asked
+        : priorModes.get(category) || DEFAULT_ATTACH_MODE;
+
     // Measured against the DESTINATION only. Money on a line that is gone, or
     // on a line we just backed out of, is not in the budget any more and must
     // be re-added here rather than assumed present.
     const heldHere = round2(priorByItem.get(item.id) || 0);
-    const delta = linked ? 0 : round2(target - heldHere);
+    // The treasurer's own money on this line: what it holds, less our share of
+    // it. Derived every push rather than stored, so a line they edit by hand
+    // afterwards is measured as they left it.
+    const handHere = Math.max(0, round2(round2(item[field]) - heldHere));
+    const owned = mode === 'keep' ? 0 : mode === 'difference' ? Math.max(0, round2(target - handHere)) : target;
+    const delta = round2(owned - heldHere);
 
     if (delta !== 0) {
       changes.push({
@@ -270,11 +344,19 @@ export function planPlannedCostsPush({
       });
     }
 
+    const shares = shareOut(stillWanted, target, owned);
     for (const [matchupId, amount] of stillWanted) {
       const prior = priorRows.find((r) => r.matchupId === matchupId) || null;
       // Resolved to a real id by the caller once a new line is persisted.
       const budgetItemId = isNew ? null : item.id;
-      if (!prior || round2(prior.appliedAmount) !== amount || (prior.budgetItemId || null) !== budgetItemId) {
+      const lineAmount = shares.get(matchupId) || 0;
+      if (
+        !prior ||
+        round2(prior.appliedAmount) !== amount ||
+        ownedOf(prior) !== lineAmount ||
+        (prior.budgetItemId || null) !== budgetItemId ||
+        (prior.attachMode || DEFAULT_ATTACH_MODE) !== mode
+      ) {
         contributionsChanged = true;
       }
       upserts.push({
@@ -283,6 +365,9 @@ export function planPlannedCostsPush({
         category,
         half,
         appliedAmount: amount,
+        // What this row put on the line, which is what a later push backs out.
+        lineAmount,
+        attachMode: mode,
         budgetItemId,
         placeholderItemId: isNew ? item.id : null,
       });
@@ -340,13 +425,13 @@ export function applyPlannedPlanToItems(budgetItems, plan, { seasonId, teamSeaso
  * and which line is carrying it today.
  *
  * @returns {{ category: string, plannedTotal: number, appliedTotal: number,
- *             attachedItemId: string|null }[]}
+ *             attachedItemId: string|null, currentMode: string }[]}
  */
 export function plannedCategoryTargets({ entries = [], contributions = [] } = {}) {
   const byCategory = new Map();
   const bucket = (category) => {
     if (!byCategory.has(category)) {
-      byCategory.set(category, { category, plannedTotal: 0, appliedTotal: 0, itemIds: new Set() });
+      byCategory.set(category, { category, plannedTotal: 0, appliedTotal: 0, itemIds: new Set(), modes: new Set() });
     }
     return byCategory.get(category);
   };
@@ -361,14 +446,19 @@ export function plannedCategoryTargets({ entries = [], contributions = [] } = {}
     const row = bucket(c.category);
     row.appliedTotal = round2(row.appliedTotal + amount);
     if (c.budgetItemId && amount !== 0) row.itemIds.add(c.budgetItemId);
+    row.modes.add(c.attachMode || DEFAULT_ATTACH_MODE);
   }
 
   return [...byCategory.values()]
     .filter((row) => row.plannedTotal !== 0 || row.appliedTotal !== 0)
-    .map(({ category, plannedTotal, appliedTotal, itemIds }) => ({
+    .map(({ category, plannedTotal, appliedTotal, itemIds, modes }) => ({
       category,
       plannedTotal,
       appliedTotal,
+      // What the last push agreed to, and therefore what the control shows
+      // until the treasurer changes it. Disagreeing rows fall back to the
+      // default for the same reason attachedItemId does.
+      currentMode: modes.size === 1 ? [...modes][0] : DEFAULT_ATTACH_MODE,
       // One line per category is the invariant. Anything else means a line was
       // deleted or half-migrated, and the control says "unattached" rather than
       // picking a winner the next push would disagree with.

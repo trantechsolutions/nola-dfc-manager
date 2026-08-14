@@ -383,7 +383,7 @@ describe('planPlannedCostsPush — attaching to an existing line', () => {
   });
 });
 
-describe('planPlannedCostsPush — linking without amending', () => {
+describe('planPlannedCostsPush — attaching to a line the treasurer wrote', () => {
   const handWritten = (overrides = {}) => ({
     id: 'item_manual',
     category: 'LEA',
@@ -394,14 +394,16 @@ describe('planPlannedCostsPush — linking without amending', () => {
     ...overrides,
   });
 
-  it('records the link and leaves the line exactly as the treasurer typed it', () => {
+  // ── keep: the line is already right, only the link is missing ──
+
+  it('leaves the line exactly as the treasurer typed it', () => {
     const entries = buildPlannedEntries({ matchups: [matchup('m1')], plannedCosts: [cost('m1', 360)] });
     const plan = planPlannedCostsPush({
       entries,
       contributions: [],
       budgetItems: [handWritten()],
       targets: { LEA: 'item_manual' },
-      linkOnly: { LEA: true },
+      modes: { LEA: 'keep' },
     });
 
     // No change at all — the money is already in that line.
@@ -409,8 +411,15 @@ describe('planPlannedCostsPush — linking without amending', () => {
     expect(plan.netDelta).toBe(0);
     // But the push must still run, or the link is never written.
     expect(plan.noop).toBe(false);
+    // The forecast counts as budgeted; none of the line is ours to take back.
     expect(plan.upserts).toEqual([
-      expect.objectContaining({ matchupId: 'm1', appliedAmount: 360, budgetItemId: 'item_manual' }),
+      expect.objectContaining({
+        matchupId: 'm1',
+        appliedAmount: 360,
+        lineAmount: 0,
+        attachMode: 'keep',
+        budgetItemId: 'item_manual',
+      }),
     ]);
     expect(applyPlannedPlanToItems([handWritten()], plan)[0].expensesFall).toBe(360);
   });
@@ -419,27 +428,162 @@ describe('planPlannedCostsPush — linking without amending', () => {
     const entries = buildPlannedEntries({ matchups: [matchup('m1')], plannedCosts: [cost('m1', 360)] });
     const plan = planPlannedCostsPush({
       entries,
-      contributions: [contribution('m1', 360, { budgetItemId: 'item_manual' })],
+      contributions: [contribution('m1', 360, { budgetItemId: 'item_manual', lineAmount: 0, attachMode: 'keep' })],
       budgetItems: [handWritten()],
       targets: { LEA: 'item_manual' },
-      linkOnly: { LEA: true },
+      modes: { LEA: 'keep' },
     });
 
     expect(plan.noop).toBe(true);
   });
 
-  it('tops the linked line up by the difference when the forecast later grows', () => {
+  it('holds the line still when the forecast later grows', () => {
     const entries = buildPlannedEntries({ matchups: [matchup('m1')], plannedCosts: [cost('m1', 400)] });
-    // The flag is not sticky: a later push maintains the line normally.
+    // The mode is remembered, so a later push maintains the same arrangement
+    // instead of quietly reverting to adding the lot.
     const plan = planPlannedCostsPush({
       entries,
-      contributions: [contribution('m1', 360, { budgetItemId: 'item_manual' })],
+      contributions: [contribution('m1', 360, { budgetItemId: 'item_manual', lineAmount: 0, attachMode: 'keep' })],
       budgetItems: [handWritten()],
       targets: { LEA: 'item_manual' },
     });
 
-    expect(plan.changes).toHaveLength(1);
-    expect(plan.changes[0]).toMatchObject({ from: 360, to: 400, delta: 40 });
+    expect(plan.changes).toHaveLength(0);
+    // The bigger forecast is still recorded as covered by that line.
+    expect(plan.upserts).toEqual([expect.objectContaining({ appliedAmount: 400, lineAmount: 0 })]);
+    expect(plan.noop).toBe(false);
+  });
+
+  it('takes back what it had added when the treasurer switches to keeping the line', () => {
+    const entries = buildPlannedEntries({ matchups: [matchup('m1')], plannedCosts: [cost('m1', 360)] });
+    const plan = planPlannedCostsPush({
+      entries,
+      // A previous push added the whole forecast on top of the 360 typed by hand.
+      contributions: [contribution('m1', 360, { budgetItemId: 'item_manual', lineAmount: 360, attachMode: 'full' })],
+      budgetItems: [handWritten({ expensesFall: 720 })],
+      targets: { LEA: 'item_manual' },
+      modes: { LEA: 'keep' },
+    });
+
+    // Ours comes back out; the treasurer's own 360 stays where they put it.
+    expect(plan.changes).toEqual([expect.objectContaining({ from: 720, to: 360, delta: -360 })]);
+    expect(plan.upserts).toEqual([expect.objectContaining({ lineAmount: 0, attachMode: 'keep' })]);
+  });
+
+  // ── difference: the line covers part of it, top it up ──
+
+  it('adds only the shortfall between the line and the forecast', () => {
+    const entries = buildPlannedEntries({ matchups: [matchup('m1')], plannedCosts: [cost('m1', 500)] });
+    const plan = planPlannedCostsPush({
+      entries,
+      contributions: [],
+      budgetItems: [handWritten()],
+      targets: { LEA: 'item_manual' },
+      modes: { LEA: 'difference' },
+    });
+
+    expect(plan.changes).toEqual([expect.objectContaining({ from: 360, to: 500, delta: 140 })]);
+    // Only the top-up is ours, so only the top-up ever comes back out.
+    expect(plan.upserts).toEqual([
+      expect.objectContaining({ appliedAmount: 500, lineAmount: 140, attachMode: 'difference' }),
+    ]);
+  });
+
+  it('adds nothing when the hand-written amount already covers the forecast', () => {
+    const entries = buildPlannedEntries({ matchups: [matchup('m1')], plannedCosts: [cost('m1', 200)] });
+    const plan = planPlannedCostsPush({
+      entries,
+      contributions: [],
+      budgetItems: [handWritten()],
+      targets: { LEA: 'item_manual' },
+      modes: { LEA: 'difference' },
+    });
+
+    expect(plan.changes).toHaveLength(0);
+    expect(plan.upserts).toEqual([expect.objectContaining({ appliedAmount: 200, lineAmount: 0 })]);
+  });
+
+  it('tops up by the growth alone, without mistaking its own money for the line', () => {
+    const entries = buildPlannedEntries({ matchups: [matchup('m1')], plannedCosts: [cost('m1', 600)] });
+    const plan = planPlannedCostsPush({
+      entries,
+      // The line reads 500 because the last push topped it up by 140.
+      contributions: [
+        contribution('m1', 500, { budgetItemId: 'item_manual', lineAmount: 140, attachMode: 'difference' }),
+      ],
+      budgetItems: [handWritten({ expensesFall: 500 })],
+      targets: { LEA: 'item_manual' },
+    });
+
+    expect(plan.changes).toEqual([expect.objectContaining({ from: 500, to: 600, delta: 100 })]);
+    expect(plan.upserts).toEqual([expect.objectContaining({ lineAmount: 240, attachMode: 'difference' })]);
+  });
+
+  it('is a no-op on a re-push once the line already equals the forecast', () => {
+    const entries = buildPlannedEntries({ matchups: [matchup('m1')], plannedCosts: [cost('m1', 500)] });
+    const plan = planPlannedCostsPush({
+      entries,
+      contributions: [
+        contribution('m1', 500, { budgetItemId: 'item_manual', lineAmount: 140, attachMode: 'difference' }),
+      ],
+      budgetItems: [handWritten({ expensesFall: 500 })],
+      targets: { LEA: 'item_manual' },
+      modes: { LEA: 'difference' },
+    });
+
+    expect(plan.noop).toBe(true);
+  });
+
+  it('gives the top-up back when the forecast falls below what was typed by hand', () => {
+    const entries = buildPlannedEntries({ matchups: [matchup('m1')], plannedCosts: [cost('m1', 300)] });
+    const plan = planPlannedCostsPush({
+      entries,
+      contributions: [
+        contribution('m1', 500, { budgetItemId: 'item_manual', lineAmount: 140, attachMode: 'difference' }),
+      ],
+      budgetItems: [handWritten({ expensesFall: 500 })],
+      targets: { LEA: 'item_manual' },
+      modes: { LEA: 'difference' },
+    });
+
+    // Back to the 360 the treasurer typed, never below it.
+    expect(plan.changes).toEqual([expect.objectContaining({ from: 500, to: 360, delta: -140 })]);
+    expect(plan.upserts).toEqual([expect.objectContaining({ lineAmount: 0 })]);
+  });
+
+  it('splits the top-up across the matchups that make it up', () => {
+    const entries = buildPlannedEntries({
+      matchups: [matchup('m1'), matchup('m2')],
+      plannedCosts: [cost('m1', 300), cost('m2', 100)],
+    });
+    const plan = planPlannedCostsPush({
+      entries,
+      contributions: [],
+      budgetItems: [handWritten()],
+      targets: { LEA: 'item_manual' },
+      modes: { LEA: 'difference' },
+    });
+
+    // 40 of top-up over a 400 forecast: three quarters of it belongs to m1.
+    expect(plan.changes).toEqual([expect.objectContaining({ delta: 40 })]);
+    const owned = plan.upserts.map((u) => u.lineAmount);
+    expect(owned).toEqual([30, 10]);
+    expect(owned.reduce((a, b) => a + b, 0)).toBe(40);
+  });
+
+  // ── full: the forecast rides on top of what is already there ──
+
+  it('adds the whole forecast on top of the line by default', () => {
+    const entries = buildPlannedEntries({ matchups: [matchup('m1')], plannedCosts: [cost('m1', 500)] });
+    const plan = planPlannedCostsPush({
+      entries,
+      contributions: [],
+      budgetItems: [handWritten()],
+      targets: { LEA: 'item_manual' },
+    });
+
+    expect(plan.changes).toEqual([expect.objectContaining({ from: 360, to: 860, delta: 500 })]);
+    expect(plan.upserts).toEqual([expect.objectContaining({ lineAmount: 500, attachMode: 'full' })]);
   });
 
   it('still backs the money out of a line it previously fed', () => {
@@ -450,10 +594,10 @@ describe('planPlannedCostsPush — linking without amending', () => {
       contributions: [contribution('m1', 360, { budgetItemId: 'item_LEA' })],
       budgetItems: [owned, handWritten()],
       targets: { LEA: 'item_manual' },
-      linkOnly: { LEA: true },
+      modes: { LEA: 'keep' },
     });
 
-    // Linking must not leave the old line funding games the manual line now
+    // Attaching must not leave the old line funding games the manual line now
     // covers — that is the double-count the whole feature exists to avoid.
     expect(plan.changes).toEqual([expect.objectContaining({ item: owned, delta: -360, to: 0 })]);
     const items = applyPlannedPlanToItems([owned, handWritten()], plan);
@@ -461,11 +605,25 @@ describe('planPlannedCostsPush — linking without amending', () => {
     expect(items.find((i) => i.label === PLANNED_LINE_LABEL)).toBeUndefined();
   });
 
-  it('ignores the flag when no line was chosen to link to', () => {
+  it('ignores a mode when the forecast is on its own line', () => {
     const entries = buildPlannedEntries({ matchups: [matchup('m1')], plannedCosts: [cost('m1', 360)] });
-    const plan = planPlannedCostsPush({ entries, contributions: [], budgetItems: [], linkOnly: { LEA: true } });
+    const plan = planPlannedCostsPush({ entries, contributions: [], budgetItems: [], modes: { LEA: 'keep' } });
 
     expect(plan.changes[0]).toMatchObject({ isNew: true, delta: 360 });
+    expect(plan.upserts[0]).toMatchObject({ lineAmount: 360, attachMode: 'full' });
+  });
+
+  it('reads an unknown mode as the default rather than refusing to push', () => {
+    const entries = buildPlannedEntries({ matchups: [matchup('m1')], plannedCosts: [cost('m1', 500)] });
+    const plan = planPlannedCostsPush({
+      entries,
+      contributions: [],
+      budgetItems: [handWritten()],
+      targets: { LEA: 'item_manual' },
+      modes: { LEA: 'nonsense' },
+    });
+
+    expect(plan.upserts[0]).toMatchObject({ attachMode: 'full', lineAmount: 500 });
   });
 });
 
@@ -482,9 +640,20 @@ describe('plannedCategoryTargets', () => {
     });
 
     expect(rows).toEqual([
-      { category: 'LEA', plannedTotal: 100, appliedTotal: 100, attachedItemId: 'item_manual' },
-      { category: 'TOU', plannedTotal: 50, appliedTotal: 0, attachedItemId: null },
+      { category: 'LEA', plannedTotal: 100, appliedTotal: 100, attachedItemId: 'item_manual', currentMode: 'full' },
+      { category: 'TOU', plannedTotal: 50, appliedTotal: 0, attachedItemId: null, currentMode: 'full' },
     ]);
+  });
+
+  it('reports the mode the category was last pushed under', () => {
+    const entries = buildPlannedEntries({ matchups: [matchup('m1')], plannedCosts: [cost('m1', 100)] });
+
+    const [row] = plannedCategoryTargets({
+      entries,
+      contributions: [contribution('m1', 100, { budgetItemId: 'item_manual', lineAmount: 0, attachMode: 'keep' })],
+    });
+
+    expect(row.currentMode).toBe('keep');
   });
 
   it('reports no attachment when a category is split across two lines', () => {

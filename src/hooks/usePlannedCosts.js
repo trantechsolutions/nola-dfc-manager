@@ -218,7 +218,7 @@ export function usePlannedCosts({
   );
 
   const pushPlannedCosts = useCallback(
-    async ({ reason = '', targets = {}, linkOnly = {} } = {}) => {
+    async ({ reason = '', targets = {}, modes = {} } = {}) => {
       if (!teamSeasonId || !selectedSeason) {
         return { success: false, error: t ? t('planCosts.noBudget') : 'No season budget available.' };
       }
@@ -244,9 +244,10 @@ export function usePlannedCosts({
           // the budget screen; empty means each category uses this feature's
           // own line, as it always has.
           targets,
-          // Categories the treasurer says are already covered by the line they
-          // picked: record the link, leave the amount alone.
-          linkOnly,
+          // How the forecast should ride on that line — carried on top of what
+          // is already there, topped up to the forecast, or recorded against it
+          // without moving the amount at all. See ATTACH_MODES.
+          modes,
           isFinalized,
           recalculateBaseFee: recalcPolicyFor(currentTeamSeason),
           amendmentReason: reason,

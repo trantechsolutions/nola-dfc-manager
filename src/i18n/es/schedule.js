@@ -99,11 +99,13 @@ export default {
     attachTitle: 'Adjuntar a partidas ya presupuestadas',
     attachPending: 'se mueve en la próxima actualización',
     attachHint:
-      'Por defecto el pronóstico mantiene su propia partida "Planned Match Costs" en cada categoría. Elige una partida que ya presupuestaste y el pronóstico se moverá a ella la próxima vez que actualices el presupuesto — el total no cambia, solo dónde queda.',
+      'Por defecto el pronóstico mantiene su propia partida "Planned Match Costs" en cada categoría. Elige una partida que ya presupuestaste y el pronóstico se moverá a ella la próxima vez que actualices el presupuesto, y luego indica cómo debe apoyarse en esa partida.',
     attachOwn: 'Planned Match Costs (partida propia)',
-    attachLinkOnly: 'Ya está presupuestado aquí',
-    attachLinkOnlyHint:
-      'Registra el vínculo sin cambiar el monto de esta partida. Úsalo cuando ya escribiste el costo en el presupuesto — así el pronóstico cuenta como presupuestado y se puede registrar en el libro.',
+    attachModeHint:
+      'Cómo se apoya el pronóstico en la partida que elegiste. «Sumar el pronóstico completo» lo agrega sobre lo que ya escribiste. «Completar hasta el pronóstico» cuenta lo escrito y agrega solo lo que falta. «Dejar el monto como está» registra el vínculo sin mover dinero — el pronóstico igual cuenta como presupuestado y se puede registrar en el libro. Tu elección se guarda y se mantiene en cada actualización posterior.',
+    attachMode_full: 'Sumar el pronóstico completo',
+    attachMode_difference: 'Completar hasta el pronóstico',
+    attachMode_keep: 'Dejar el monto como está',
 
     // ── Pronóstico → asiento pendiente en el libro ──
     bulkTitle: 'Estimaciones pendientes del libro',
