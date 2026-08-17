@@ -137,6 +137,13 @@ export default function SponsorsView({
     return Number(stats?.remainingBalance || 0);
   };
 
+  // The named player only takes a credit up to what they still owe. At zero the
+  // money silently moves on — to teammates under waterfall, to the pot under
+  // direct — so say so before the treasurer taps Apply.
+  const primaryPlayer = sourcePlayerId ? seasonalPlayers.find((p) => p.id === sourcePlayerId) : null;
+  const primaryPlayerName = primaryPlayer ? `${primaryPlayer.firstName} ${primaryPlayer.lastName}` : '';
+  const primaryHasNoBalance = !!primaryPlayer && (playerBalance(primaryPlayer) ?? 1) <= 0;
+
   const openDistributeModal = (tx) => {
     setDistAmount(tx.amount);
     setDistTitle(tx.title);
@@ -854,6 +861,11 @@ export default function SponsorsView({
                       </option>
                     ))}
                   </select>
+                  {primaryHasNoBalance && (
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mt-2">
+                      {t('sponsors.modal.primaryZeroBalance', { name: primaryPlayerName })}
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground mt-2">
                     {activeMethod.value === 'waterfall'
                       ? t('sponsors.modal.waterfallHelp')

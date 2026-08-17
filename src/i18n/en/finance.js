@@ -340,6 +340,7 @@ export default {
       waterfallHelp:
         "Any funds exceeding a player's remaining fee will automatically waterfall to the rest of the team.",
       directHelp: "Any funds exceeding the player's remaining fee will go to the team pot.",
+      primaryZeroBalance: '{{name}} owes nothing right now, so no credit will land on them.',
       manualToggle: 'Split manually',
       manualToggleHelp: 'Assign exact amounts to specific players for this deposit only.',
       manualHeading: 'Amount per player',

@@ -342,6 +342,7 @@ export default {
       waterfallHelp:
         'Cualquier fondo que supere el saldo pendiente de un jugador pasará automáticamente en cascada al resto del equipo.',
       directHelp: 'Cualquier fondo que supere el saldo pendiente del jugador irá al bote del equipo.',
+      primaryZeroBalance: '{{name}} no debe nada en este momento, así que no se le aplicará ningún crédito.',
       manualToggle: 'Repartir manualmente',
       manualToggleHelp: 'Asigna montos exactos a jugadores específicos solo para este depósito.',
       manualHeading: 'Monto por jugador',
