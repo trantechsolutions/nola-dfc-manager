@@ -21,5 +21,6 @@ export default {
   users: 'Users',
   categories: 'Categories',
   bookBalance: 'Book Balance',
+  fieldSchedule: 'Field Schedule',
   help: 'Help & User Guide',
 };

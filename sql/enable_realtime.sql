@@ -24,7 +24,11 @@ begin
     'opponent_contacts',
     'budget_items',
     'budget_amendments',
-    'documents'
+    'documents',
+    -- The field board is shared by the whole club: two managers looking at
+    -- the same Saturday need to see a block get taken without reloading.
+    'field_bookings',
+    'field_closures'
   ]
   loop
     execute format('alter table %I replica identity full', t);

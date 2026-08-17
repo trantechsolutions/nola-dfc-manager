@@ -41,6 +41,7 @@ const Changelog = lazy(() => import('./Changelog'));
 const HelpView = lazy(() => import('../views/general/HelpView'));
 const SuperAdminView = lazy(() => import('../views/admin/SuperAdminView'));
 const ClubPlayersView = lazy(() => import('../views/club/ClubPlayersView'));
+const FieldScheduleView = lazy(() => import('../views/club/FieldScheduleView'));
 const SeasonEvaluationView = lazy(() => import('../views/team/SeasonEvaluationView'));
 const ChecklistManager = lazy(() => import('../views/team/ChecklistManager'));
 const ParentChecklistView = lazy(() => import('../views/team/ParentChecklistView'));
@@ -86,6 +87,8 @@ export default function AppRoutes({
   onToggleHideEvaluations,
   insightsHidden,
   onToggleHideInsights,
+  fieldScheduleHidden,
+  onToggleHideFieldSchedule,
 
   // Season
   seasons,
@@ -119,6 +122,7 @@ export default function AppRoutes({
   // Schedule permissions + team
   effectiveTeam,
   canEditSchedule,
+  canBookField,
 
   // Book balance
   bookBalance,
@@ -302,6 +306,8 @@ export default function AppRoutes({
                     onToggleHideEvaluations={onToggleHideEvaluations}
                     insightsHidden={insightsHidden}
                     onToggleHideInsights={onToggleHideInsights}
+                    fieldScheduleHidden={fieldScheduleHidden}
+                    onToggleHideFieldSchedule={onToggleHideFieldSchedule}
                     showToast={showToast}
                     showConfirm={showConfirm}
                   />
@@ -418,6 +424,29 @@ export default function AppRoutes({
                   }
                 />
               </>
+            )}
+
+            {/* The home field belongs to the club, not to a team, so every
+                staff member reaches the same board — but only a club admin can
+                approve a request or close the field. */}
+            {!clubUiHidden && effectiveIsStaff && !fieldScheduleHidden && (
+              <Route
+                path="/field-schedule"
+                element={
+                  <FieldScheduleView
+                    club={club}
+                    teams={teams}
+                    user={user}
+                    selectedTeamId={selectedTeamId}
+                    selectedSeason={selectedSeason}
+                    isClubAdmin={isClubAdmin || isSuperAdmin}
+                    canBook={canEditSchedule || isClubAdmin || isSuperAdmin}
+                    canBookDirectly={canBookField || isClubAdmin || isSuperAdmin}
+                    showToast={showToast}
+                    showConfirm={showConfirm}
+                  />
+                }
+              />
             )}
 
             {/* ── TEAM ROUTES ── */}

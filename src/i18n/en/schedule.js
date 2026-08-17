@@ -99,11 +99,13 @@ export default {
     attachTitle: 'Attach to existing budget lines',
     attachPending: 'moves on next update',
     attachHint:
-      'By default the forecast keeps its own "Planned Match Costs" line in each category. Pick a line you already budgeted and the forecast moves onto it the next time you update the budget — the total does not change, only where it sits.',
+      'By default the forecast keeps its own "Planned Match Costs" line in each category. Pick a line you already budgeted and the forecast moves onto it the next time you update the budget, then say how it should sit on that line.',
     attachOwn: 'Planned Match Costs (its own line)',
-    attachLinkOnly: 'Already budgeted here',
-    attachLinkOnlyHint:
-      "Record the link without changing this line's amount. Use it when you already typed the cost into the budget yourself — the forecast then counts as budgeted and can be filed in the ledger.",
+    attachModeHint:
+      'How the forecast sits on the line you picked. "Add the full forecast" carries it on top of whatever you typed there. "Top up to the forecast" counts what you typed toward it and adds only the shortfall. "Leave the amount as is" records the link and moves no money — the forecast still counts as budgeted and can be filed in the ledger. Your choice is kept and maintained by every later update.',
+    attachMode_full: 'Add the full forecast',
+    attachMode_difference: 'Top up to the forecast',
+    attachMode_keep: 'Leave the amount as is',
 
     // ── Forecast → pending ledger row ──
     bulkTitle: 'Estimates waiting for the ledger',

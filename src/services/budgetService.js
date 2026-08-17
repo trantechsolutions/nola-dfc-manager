@@ -255,7 +255,6 @@ export const budgetService = {
 
     if (plan.upserts.length > 0) {
       const rows = plan.upserts.map((u) => ({
-        ...(u.id ? { id: u.id } : {}),
         team_season_id: teamSeasonId,
         event_id: eventId,
         category: u.category,
@@ -268,6 +267,10 @@ export const budgetService = {
       }));
       // Conflict on the natural key, not the primary key: a re-push of a
       // category whose row we did not read back still has to update in place.
+      // Ids are deliberately left off. PostgREST unions the keys across the
+      // batch and sends NULL for the ones a row is missing, so a batch mixing
+      // rows we already have with rows we do not would post id => null and be
+      // rejected by the primary key before a single row landed.
       const { error } = await supabase
         .from('budget_event_contributions')
         .upsert(rows, { onConflict: 'team_season_id,event_id,category,half' });
@@ -304,7 +307,7 @@ export const budgetService = {
     teamSeasonId,
     entries = [],
     targets = {},
-    linkOnly = {},
+    modes = {},
     isFinalized = false,
     recalculateBaseFee = false,
     amendmentReason = '',
@@ -319,13 +322,14 @@ export const budgetService = {
       budgetService.getPlanContributions(teamSeasonId),
     ]);
 
-    const plan = planPlannedCostsPush({ entries, contributions, budgetItems, targets, linkOnly });
+    const plan = planPlannedCostsPush({ entries, contributions, budgetItems, targets, modes });
     if (plan.noop) return { applied: false, netDelta: 0, plan, amendmentId: null };
 
-    // A pure link moves no money: the treasurer already typed the cost into the
-    // line themselves and only wants the forecast recorded against it. Rewriting
-    // the budget would be a no-op at best, and recording an amendment for it
-    // would put a change on the finalized record that never happened.
+    // A push can legitimately move no money: under `keep` the treasurer already
+    // typed the cost into the line themselves, and under `difference` what they
+    // typed can cover the forecast outright. Rewriting the budget would be a
+    // no-op at best, and recording an amendment for it would put a change on
+    // the finalized record that never happened.
     const touchesItems = plan.changes.length > 0;
 
     // saveBudgetItems takes the whole set and prunes anything missing from it,
@@ -365,19 +369,27 @@ export const budgetService = {
 
     if (plan.upserts.length > 0) {
       const rows = plan.upserts.map((u) => ({
-        ...(u.id ? { id: u.id } : {}),
         team_season_id: teamSeasonId,
         matchup_id: u.matchupId,
         category: u.category,
         half: u.half,
         budget_item_id: u.budgetItemId || idFor(u.category) || null,
         applied_amount: u.appliedAmount,
+        // What this row actually put on the line, and the arrangement it was
+        // put there under — both read back by the next push so it moves the
+        // line by the right amount instead of by the whole forecast.
+        line_amount: u.lineAmount,
+        attach_mode: u.attachMode,
         applied_at: new Date().toISOString(),
         applied_by: user?.id || null,
         amendment_id: amendmentId,
       }));
       // Conflict on the natural key, not the primary key: a re-push of a row we
       // did not read back still has to update in place.
+      // Ids are deliberately left off. PostgREST unions the keys across the
+      // batch and sends NULL for the ones a row is missing, so a batch mixing
+      // rows we already have with rows we do not would post id => null and be
+      // rejected by the primary key before a single row landed.
       const { error } = await supabase
         .from('budget_plan_contributions')
         .upsert(rows, { onConflict: 'team_season_id,matchup_id,category,half' });
@@ -466,6 +478,11 @@ function mapPlanContribution(row) {
     half: row.half,
     budgetItemId: row.budget_item_id,
     appliedAmount: Number(row.applied_amount),
+    // Null on rows written before the attach modes existed. Left null rather
+    // than defaulted here so the planner can read it as "this row put its whole
+    // forecast on the line", which is what those pushes did.
+    lineAmount: row.line_amount == null ? null : Number(row.line_amount),
+    attachMode: row.attach_mode || null,
     appliedAt: row.applied_at,
     amendmentId: row.amendment_id,
   };
