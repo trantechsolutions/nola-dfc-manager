@@ -6,10 +6,10 @@
 // season, you budget what the plan will cost, and only then does the ledger
 // have anything to record.
 //
-// A route-level shell only: the opponent list and the planner itself are the
-// same components the schedule tab rendered, wired to the same handlers.
+// A route-level shell only: the planner draws a card per club you play, with
+// that club's contact on the card and its games underneath (see
+// MatchupPlanner), wired to the same handlers the schedule tab used.
 
-import OpponentContactsPanel from '../../components/OpponentContactsPanel';
 import MatchupPlanner from '../../components/MatchupPlanner';
 
 export default function PlannerView({
@@ -49,14 +49,6 @@ export default function PlannerView({
 }) {
   return (
     <div className="space-y-4">
-      <OpponentContactsPanel
-        contacts={opponentContacts}
-        loading={opponentContactsLoading}
-        canEdit={canEditSchedule}
-        onCreate={onCreateOpponentContact}
-        onUpdate={onUpdateOpponentContact}
-        onDelete={onDeleteOpponentContact}
-      />
       <MatchupPlanner
         matchups={matchups}
         loading={matchupsLoading}
@@ -69,6 +61,11 @@ export default function PlannerView({
         onSetStatus={onSetMatchupStatus}
         onConfirm={onConfirmMatchup}
         onReschedule={onRescheduleMatchup}
+        contacts={opponentContacts}
+        contactsLoading={opponentContactsLoading}
+        onCreateContact={onCreateOpponentContact}
+        onUpdateContact={onUpdateOpponentContact}
+        onDeleteContact={onDeleteOpponentContact}
         plannedCosts={plannedCosts}
         plannedSummary={plannedSummary}
         onAddPlannedCost={onAddPlannedCost}
