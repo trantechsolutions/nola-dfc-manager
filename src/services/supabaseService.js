@@ -18,6 +18,7 @@ import { clubService } from './clubService';
 import { scheduleService } from './scheduleService';
 import { matchupService } from './matchupService';
 import { opponentContactService } from './opponentContactService';
+import { sponsorService } from './sponsorService';
 import { userService } from './userService';
 import { documentService } from './documentService';
 import { seasonService } from './seasonService';
@@ -35,6 +36,7 @@ export const supabaseService = {
   ...scheduleService,
   ...matchupService,
   ...opponentContactService,
+  ...sponsorService,
   ...userService,
   ...documentService,
   ...seasonService,

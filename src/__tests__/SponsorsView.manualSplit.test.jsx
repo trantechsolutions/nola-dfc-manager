@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, act, fireEvent, within } from '@testing-library/react';
+// The view opens its panels through the URL now (usePanelRoute), so it needs a
+// router around it the same way the app supplies one.
+import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../i18n/I18nContext';
 import SponsorsView from '../views/team/SponsorsView';
 
@@ -38,9 +41,11 @@ const makeProps = (overrides = {}) => ({
 // Open the distribution modal for the single pending credit and flip on manual mode.
 function openManualModal(props) {
   render(
-    <I18nProvider>
-      <SponsorsView {...props} />
-    </I18nProvider>,
+    <MemoryRouter>
+      <I18nProvider>
+        <SponsorsView {...props} />
+      </I18nProvider>
+    </MemoryRouter>,
   );
   fireEvent.click(screen.getByText('Distribute Funds'));
   fireEvent.click(screen.getByRole('switch', { name: 'Split manually' }));
@@ -75,9 +80,11 @@ describe('SponsorsView manual split', () => {
   it('sends null allocations when manual mode is off', () => {
     const props = makeProps();
     render(
-      <I18nProvider>
-        <SponsorsView {...props} />
-      </I18nProvider>,
+      <MemoryRouter>
+        <I18nProvider>
+          <SponsorsView {...props} />
+        </I18nProvider>
+      </MemoryRouter>,
     );
     fireEvent.click(screen.getByText('Distribute Funds'));
     fireEvent.click(screen.getByRole('button', { name: 'Apply Waterfall' }));
