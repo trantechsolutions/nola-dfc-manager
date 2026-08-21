@@ -16,6 +16,8 @@
  *   Use detectColumns(csv) to get the auto-detected mapping for pre-populating a UI.
  */
 
+import { txActivityDate } from './txDates';
+
 const AMOUNT_HEADERS = ['amount', 'transaction amount', 'net amount'];
 const DEBIT_HEADERS = ['debit', 'withdrawal', 'withdrawals', 'dr'];
 const CREDIT_HEADERS = ['credit', 'deposit', 'deposits', 'cr'];
@@ -312,11 +314,9 @@ export function compareStatement(statementRows, appTransactions, _monthKey) {
   // so we don't show entries from completely different periods as "app only".
   const appRows = appTransactions
     .map((tx) => {
-      let date = null;
-      if (tx.rawDate) date = tx.rawDate.split('T')[0];
-      else if (tx.date?.seconds) date = new Date(tx.date.seconds * 1000).toISOString().split('T')[0];
-      else if (tx.date instanceof Date) date = tx.date.toISOString().split('T')[0];
-      else if (typeof tx.date === 'string') date = tx.date.split('T')[0];
+      // Match on the activity date — that is the only date the bank printed.
+      // Rows still dated by their event would never line up.
+      const date = txActivityDate(tx);
       return { id: tx.id, date, description: tx.title || '', amount: Number(tx.amount), tx };
     })
     .filter((row) => {
