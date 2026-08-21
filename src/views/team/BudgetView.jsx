@@ -26,6 +26,9 @@ import {
 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import PlayerFormModal from '../../components/PlayerFormModal';
+import ResponsiveModal from '../../components/layout/ResponsiveModal';
+import PanelHost from '../../components/layout/PanelHost';
+import { usePanelRoute } from '../../hooks/usePanelRoute';
 import PlannedCostsBudgetBar from '../../components/PlannedCostsBudgetBar';
 import { useBudgetForecast } from '../../hooks/useBudgetForecast';
 import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
@@ -33,6 +36,7 @@ import { exportBudgetActualsPDF, exportBudgetActualsCSV } from '../../utils/expo
 import { buildCategoryAdvice, varianceTone, TONE_STYLES } from '../../utils/budgetInsights';
 import { plannedCategoryTargets, PLANNED_LINE_LABEL, DEFAULT_ATTACH_MODE } from '../../utils/plannedCostBudget';
 import { computeSeasonFee } from '../../utils/feeCalculator';
+import { PANELS } from '../../utils/panelRoute';
 
 // Only a saved row has a database id a contribution can point at; everything
 // else on screen is still a client-side placeholder.
@@ -121,11 +125,12 @@ export default function BudgetView({
   } = useBudgetForecast(selectedTeamId, teamSeasons);
 
   // Modals
-  const [showNewSeasonModal, setShowNewSeasonModal] = useState(false);
+  const { panel, openPanel, closePanel } = usePanelRoute();
+  const showNewSeasonModal = panel === PANELS.NEW_SEASON;
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef(null);
   const [newSeasonName, setNewSeasonName] = useState('');
-  const [showPlayerForm, setShowPlayerForm] = useState(false);
+  const showPlayerForm = panel === PANELS.ADD_PLAYER;
   const [isSubmittingPlayer, setIsSubmittingPlayer] = useState(false);
 
   // Historical (projections)
@@ -771,7 +776,7 @@ export default function BudgetView({
       }
       await refreshSeasons();
       setSelectedSeason(newSeasonName);
-      setShowNewSeasonModal(false);
+      closePanel();
       setNewSeasonName('');
       onDataChange?.();
       if (showToast) showToast(`Season "${newSeasonName}" created.`);
@@ -799,7 +804,7 @@ export default function BudgetView({
           },
         },
       });
-      setShowPlayerForm(false);
+      closePanel();
       await fetchData();
       onDataChange?.();
       if (showToast)
@@ -1063,7 +1068,7 @@ export default function BudgetView({
                   )}
                 </div>
                 <button
-                  onClick={() => setShowNewSeasonModal(true)}
+                  onClick={() => openPanel(PANELS.NEW_SEASON)}
                   className="p-2 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                   title="New Season"
                 >
@@ -1680,7 +1685,7 @@ export default function BudgetView({
                 </h3>
                 {!isFinalized && (
                   <button
-                    onClick={() => setShowPlayerForm(true)}
+                    onClick={() => openPanel(PANELS.ADD_PLAYER)}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all shadow-sm"
                   >
                     <Plus size={12} /> New Player
@@ -2345,11 +2350,14 @@ export default function BudgetView({
       )}
 
       {/* ── NEW SEASON MODAL ── */}
-      {showNewSeasonModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-card rounded-lg p-6 w-full max-w-sm shadow-md">
-            <h3 className="font-bold text-foreground text-lg mb-4">New Season</h3>
-            <form onSubmit={handleCreateSeason} className="space-y-4">
+      <PanelHost>
+        {showNewSeasonModal && (
+          <ResponsiveModal as="form" onSubmit={handleCreateSeason} onClose={closePanel} size="sm">
+            <ResponsiveModal.Header className="border-b border-border">
+              <h3 className="font-bold text-foreground text-lg">New Season</h3>
+            </ResponsiveModal.Header>
+
+            <ResponsiveModal.Body>
               <input
                 type="text"
                 placeholder="e.g. 2026-2027"
@@ -2357,37 +2365,38 @@ export default function BudgetView({
                 onChange={(e) => setNewSeasonName(e.target.value)}
                 className="w-full border border-border bg-card rounded-lg p-3 font-semibold outline-none focus:ring-2 focus:ring-ring"
               />
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNewSeasonModal(false)}
-                  className="flex-1 py-2.5 font-semibold text-muted-foreground hover:bg-background rounded-lg"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="flex-1 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-lg"
-                >
-                  Create
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </ResponsiveModal.Body>
 
-      {/* ── ADD PLAYER MODAL ── */}
-      <PlayerFormModal
-        show={showPlayerForm}
-        onClose={() => setShowPlayerForm(false)}
-        onSubmit={handleAddNewPlayer}
-        onArchive={() => {}}
-        initialData={null}
-        isSubmitting={isSubmittingPlayer}
-        selectedSeason={selectedSeason}
-      />
+            <ResponsiveModal.Footer className="flex-nowrap">
+              <button
+                type="button"
+                onClick={closePanel}
+                className="flex-1 py-2.5 font-semibold text-muted-foreground hover:bg-background rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="flex-1 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-lg"
+              >
+                Create
+              </button>
+            </ResponsiveModal.Footer>
+          </ResponsiveModal>
+        )}
+
+        {/* ── ADD PLAYER MODAL ── */}
+        <PlayerFormModal
+          show={showPlayerForm}
+          onClose={closePanel}
+          onSubmit={handleAddNewPlayer}
+          onArchive={() => {}}
+          initialData={null}
+          isSubmitting={isSubmittingPlayer}
+          selectedSeason={selectedSeason}
+        />
+      </PanelHost>
     </div>
   );
 }

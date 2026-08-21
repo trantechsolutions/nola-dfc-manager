@@ -64,12 +64,14 @@ import { useModalState } from './hooks/useModalState';
 import { PERMISSIONS, PARENT_ROLE } from './utils/roles';
 import { useCategoryManager } from './hooks/useCategoryManager';
 import { useAccounts } from './hooks/useAccounts';
+import { useSponsors } from './hooks/useSponsors';
 import { useBookBalance } from './hooks/useBookBalance';
 import { useAppSettings } from './hooks/useAppSettings';
 import { useDocumentTitle } from './hooks/useDocumentTitle';
 import { useViewScope } from './hooks/useViewScope';
 import { resolveSingleTeamMode, setAdminOverride } from './utils/singleTeamMode';
 import { isClubUiHidden } from './utils/viewScope';
+import { todayStr } from './utils/txDates';
 import { swCacheService } from './services/swCacheService';
 
 function App() {
@@ -157,27 +159,8 @@ function App() {
   // only — it hides club chrome, it does not change what they're allowed to do.
   const { viewScope, setViewScope } = useViewScope(user?.id);
 
-  const {
-    showPlayerForm,
-    setShowPlayerForm,
-    playerToEdit,
-    setPlayerToEdit,
-    showPlayerModal,
-    setShowPlayerModal,
-    playerToView,
-    setPlayerToView,
-    showTxForm,
-    setShowTxForm,
-    txToEdit,
-    setTxToEdit,
-    confirmDialog,
-    impersonatingAs,
-    setImpersonatingAs,
-    toast,
-    setToast,
-    showToast,
-    showConfirm,
-  } = useModalState();
+  const { confirmDialog, impersonatingAs, setImpersonatingAs, toast, setToast, showToast, showConfirm } =
+    useModalState();
 
   // When impersonating, act as parent regardless of actual role
   const viewingAsParent = !!impersonatingAs;
@@ -400,6 +383,10 @@ function App() {
 
   const bookBalance = useBookBalance(selectedTeamId, transactions, accounts);
 
+  // Sponsor directory — contact details, pledges, and logos. Team-scoped, so it
+  // survives the season selector.
+  const sponsorDirectory = useSponsors(effectiveTeamId);
+
   // ── AUTH LISTENER ──
   const lastUserIdRef = useRef(null);
   useEffect(() => {
@@ -520,8 +507,13 @@ function App() {
   // instead of silently closing.
   const handleSaveExpense = async (txData) => await handleSaveTransaction(txData);
 
-  const handleToggleCleared = async (txId, cleared) => {
-    await supabaseService.updateTransaction(txId, { cleared });
+  // The cleared date defaults to today rather than the row's event date: money
+  // marked cleared moved now, and reconciliation counts it in this month.
+  const handleToggleCleared = async (txId, cleared, clearedDate = null) => {
+    await supabaseService.updateTransaction(txId, {
+      cleared,
+      clearedDate: cleared ? clearedDate || todayStr() : null,
+    });
     fetchData();
   };
 
@@ -722,8 +714,6 @@ function App() {
     effectiveIsStaff,
     isClubAdmin,
     canEditLedger,
-    setTxToEdit,
-    setShowTxForm,
     singleTeam,
   };
 
@@ -852,6 +842,7 @@ function App() {
                   saveCategory={saveCategory}
                   deleteCategory={deleteCategory}
                   isCategorySaving={isCategorySaving}
+                  sponsorDirectory={sponsorDirectory}
                   accounts={accounts}
                   activeAccounts={activeAccounts}
                   accountsByHolding={accountsByHolding}
@@ -872,18 +863,6 @@ function App() {
                   handleSavePlayer={handleSavePlayer}
                   handleArchivePlayer={handleArchivePlayer}
                   handleToggleWaiveFee={handleToggleWaiveFee}
-                  showPlayerForm={showPlayerForm}
-                  setShowPlayerForm={setShowPlayerForm}
-                  playerToEdit={playerToEdit}
-                  setPlayerToEdit={setPlayerToEdit}
-                  showPlayerModal={showPlayerModal}
-                  setShowPlayerModal={setShowPlayerModal}
-                  playerToView={playerToView}
-                  setPlayerToView={setPlayerToView}
-                  showTxForm={showTxForm}
-                  setShowTxForm={setShowTxForm}
-                  txToEdit={txToEdit}
-                  setTxToEdit={setTxToEdit}
                   confirmDialog={confirmDialog}
                   impersonatingAs={impersonatingAs}
                   setImpersonatingAs={setImpersonatingAs}

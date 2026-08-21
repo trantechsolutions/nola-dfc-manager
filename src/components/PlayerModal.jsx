@@ -35,6 +35,10 @@ export default function PlayerModal({
   user,
 }) {
   const { t } = useT();
+  // Deliberately not routed. This modal is itself a panel addressed by the URL
+  // (?panel=player&panel.id=…); the medical form is a step inside it, not a
+  // place of its own. Giving it its own panel would close the player behind it
+  // — right on a phone, wrong on a desktop where the card is the context.
   const [showMedicalForm, setShowMedicalForm] = useState(false);
   const [playerDocs, setPlayerDocs] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);

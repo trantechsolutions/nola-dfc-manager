@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import {
-  X,
   Upload,
   FileText,
   AlertCircle,
@@ -13,6 +12,7 @@ import {
   Trash2,
   AlertTriangle,
 } from 'lucide-react';
+import ResponsiveModal from './layout/ResponsiveModal';
 
 // ── CSV Parser (same as roster BulkUploadModal — handles quoted fields) ──
 function parseCSV(text) {
@@ -336,418 +336,409 @@ export default function BulkUploadLedgerModal({
   const warningCount = parsedTxns.filter((t) => t._playerWarning && !t._hasError).length;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 overflow-y-auto">
-      <div className="bg-card rounded-lg shadow-md w-full max-w-2xl my-auto animate-in fade-in zoom-in-95 duration-200">
-        {/* ── Header ── */}
-        <div className="flex justify-between items-center p-5 border-b border-border">
-          <div>
-            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-              <Upload size={20} className="text-emerald-700 dark:text-emerald-400" /> Import Transactions
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {step === 'upload' && 'Upload a CSV file with transaction data.'}
-              {step === 'mapping' && 'Map your CSV columns to the correct fields.'}
-              {step === 'preview' && `Review ${parsedTxns.length} transactions before importing.`}
-              {step === 'importing' && 'Importing transactions...'}
-              {step === 'done' && 'Import complete!'}
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              reset();
-              onClose();
-            }}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X size={22} />
-          </button>
-        </div>
+    <ResponsiveModal
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      size="2xl"
+      className="animate-in fade-in zoom-in-95 duration-200"
+    >
+      <ResponsiveModal.Header className="border-b border-border">
+        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <Upload size={20} className="text-emerald-700 dark:text-emerald-400" /> Import Transactions
+        </h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {step === 'upload' && 'Upload a CSV file with transaction data.'}
+          {step === 'mapping' && 'Map your CSV columns to the correct fields.'}
+          {step === 'preview' && `Review ${parsedTxns.length} transactions before importing.`}
+          {step === 'importing' && 'Importing transactions...'}
+          {step === 'done' && 'Import complete!'}
+        </p>
+      </ResponsiveModal.Header>
 
-        <div className="p-5 max-h-[60vh] overflow-y-auto">
-          {/* ═══ STEP 1: UPLOAD ═══ */}
-          {step === 'upload' && (
-            <div className="space-y-4">
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-border rounded-lg p-10 text-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/20 transition-all"
-              >
-                <FileText size={40} className="mx-auto text-muted-foreground mb-3" />
-                <p className="text-sm font-semibold text-foreground">Click to select a CSV file</p>
-                <p className="text-xs text-muted-foreground mt-1">or drag and drop</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv,.tsv,.txt"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-              </div>
-
-              <div className="bg-background rounded-lg p-4 space-y-3">
-                <p className="text-xs font-bold text-muted-foreground">Expected Format</p>
-                <p className="text-xs text-muted-foreground">
-                  Your CSV should include columns for <span className="font-semibold">Date, Title, Amount,</span> and{' '}
-                  <span className="font-semibold">Category</span>. Optionally include Player Name, Payment Method,
-                  Cleared status, and Notes. The importer will attempt to auto-detect your columns.
-                </p>
-                {allCategoryCodes.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    <span className="text-xs font-semibold text-muted-foreground mr-1">Valid categories:</span>
-                    {allCategoryCodes.map((code) => (
-                      <span
-                        key={code}
-                        className={`text-xs font-semibold px-1.5 py-0.5 rounded ${(categoryColors || {})[code] || 'bg-muted text-foreground'}`}
-                      >
-                        {code}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleDownloadTemplate}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
-                  >
-                    <Download size={12} /> Download Template
-                  </button>
-                </div>
-              </div>
+      <ResponsiveModal.Body>
+        {/* ═══ STEP 1: UPLOAD ═══ */}
+        {step === 'upload' && (
+          <div className="space-y-4">
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-border rounded-lg p-10 text-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/20 transition-all"
+            >
+              <FileText size={40} className="mx-auto text-muted-foreground mb-3" />
+              <p className="text-sm font-semibold text-foreground">Click to select a CSV file</p>
+              <p className="text-xs text-muted-foreground mt-1">or drag and drop</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.tsv,.txt"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
             </div>
-          )}
 
-          {/* ═══ STEP 2: COLUMN MAPPING ═══ */}
-          {step === 'mapping' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-2">
-                <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={hasHeaderRow}
-                    onChange={(e) => setHasHeaderRow(e.target.checked)}
-                    className="rounded border-border text-emerald-700 dark:text-emerald-400 focus:ring-emerald-500"
-                  />
-                  First row is a header
-                </label>
-              </div>
-
-              <div className="bg-background rounded-lg p-3 mb-3">
-                <p className="text-xs font-bold text-muted-foreground mb-2">Sample Data (row 1)</p>
-                <div className="flex flex-wrap gap-1">
-                  {headers.map((h, i) => (
+            <div className="bg-background rounded-lg p-4 space-y-3">
+              <p className="text-xs font-bold text-muted-foreground">Expected Format</p>
+              <p className="text-xs text-muted-foreground">
+                Your CSV should include columns for <span className="font-semibold">Date, Title, Amount,</span> and{' '}
+                <span className="font-semibold">Category</span>. Optionally include Player Name, Payment Method, Cleared
+                status, and Notes. The importer will attempt to auto-detect your columns.
+              </p>
+              {allCategoryCodes.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  <span className="text-xs font-semibold text-muted-foreground mr-1">Valid categories:</span>
+                  {allCategoryCodes.map((code) => (
                     <span
-                      key={i}
-                      className="text-xs font-mono bg-card border border-border rounded px-2 py-0.5 text-foreground"
+                      key={code}
+                      className={`text-xs font-semibold px-1.5 py-0.5 rounded ${(categoryColors || {})[code] || 'bg-muted text-foreground'}`}
                     >
-                      {i}: {h}
+                      {code}
                     </span>
                   ))}
                 </div>
+              )}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleDownloadTemplate}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
+                >
+                  <Download size={12} /> Download Template
+                </button>
               </div>
+            </div>
+          </div>
+        )}
 
-              <div className="space-y-2">
-                {COLUMN_KEYS.map((col) => (
-                  <div key={col.key} className="flex items-center gap-3">
-                    <span
-                      className={`text-xs font-semibold w-36 ${col.required ? 'text-foreground' : 'text-muted-foreground'}`}
-                    >
-                      {col.label} {col.required && <span className="text-red-700 dark:text-red-400">*</span>}
-                    </span>
-                    <select
-                      value={columnMap[col.key] ?? ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setColumnMap((prev) => {
-                          const next = { ...prev };
-                          if (val === '') delete next[col.key];
-                          else next[col.key] = parseInt(val);
-                          return next;
-                        });
-                      }}
-                      className="flex-grow text-xs font-semibold border border-border rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500"
-                    >
-                      <option value="">— skip —</option>
-                      {headers.map((h, i) => (
-                        <option key={i} value={i}>
-                          Column {i}: {h}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+        {/* ═══ STEP 2: COLUMN MAPPING ═══ */}
+        {step === 'mapping' && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 mb-2">
+              <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hasHeaderRow}
+                  onChange={(e) => setHasHeaderRow(e.target.checked)}
+                  className="rounded border-border text-emerald-700 dark:text-emerald-400 focus:ring-emerald-500"
+                />
+                First row is a header
+              </label>
+            </div>
+
+            <div className="bg-background rounded-lg p-3 mb-3">
+              <p className="text-xs font-bold text-muted-foreground mb-2">Sample Data (row 1)</p>
+              <div className="flex flex-wrap gap-1">
+                {headers.map((h, i) => (
+                  <span
+                    key={i}
+                    className="text-xs font-mono bg-card border border-border rounded px-2 py-0.5 text-foreground"
+                  >
+                    {i}: {h}
+                  </span>
                 ))}
               </div>
             </div>
-          )}
 
-          {/* ═══ STEP 3: PREVIEW ═══ */}
-          {step === 'preview' && (
-            <div className="space-y-3">
-              {errorCount > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-                  <AlertCircle size={16} className="text-red-700 dark:text-red-400 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-semibold text-red-800">
-                      {errorCount} row{errorCount > 1 ? 's' : ''} with errors
-                    </p>
-                    <p className="text-xs text-red-700 dark:text-red-400">
-                      These rows have validation issues and will be skipped unless corrected in your CSV.
-                    </p>
-                  </div>
+            <div className="space-y-2">
+              {COLUMN_KEYS.map((col) => (
+                <div key={col.key} className="flex items-center gap-3">
+                  <span
+                    className={`text-xs font-semibold w-36 ${col.required ? 'text-foreground' : 'text-muted-foreground'}`}
+                  >
+                    {col.label} {col.required && <span className="text-red-700 dark:text-red-400">*</span>}
+                  </span>
+                  <select
+                    value={columnMap[col.key] ?? ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setColumnMap((prev) => {
+                        const next = { ...prev };
+                        if (val === '') delete next[col.key];
+                        else next[col.key] = parseInt(val);
+                        return next;
+                      });
+                    }}
+                    className="flex-grow text-xs font-semibold border border-border rounded-lg p-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="">— skip —</option>
+                    {headers.map((h, i) => (
+                      <option key={i} value={i}>
+                        Column {i}: {h}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              )}
+              ))}
+            </div>
+          </div>
+        )}
 
-              {warningCount > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
-                  <AlertTriangle size={16} className="text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-semibold text-amber-800">
-                      {warningCount} player name{warningCount > 1 ? 's' : ''} not matched
-                    </p>
-                    <p className="text-xs text-amber-700 dark:text-amber-400">
-                      These transactions will import without a player link. You can assign players later.
-                    </p>
-                  </div>
+        {/* ═══ STEP 3: PREVIEW ═══ */}
+        {step === 'preview' && (
+          <div className="space-y-3">
+            {errorCount > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                <AlertCircle size={16} className="text-red-700 dark:text-red-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-red-800">
+                    {errorCount} row{errorCount > 1 ? 's' : ''} with errors
+                  </p>
+                  <p className="text-xs text-red-700 dark:text-red-400">
+                    These rows have validation issues and will be skipped unless corrected in your CSV.
+                  </p>
                 </div>
-              )}
-
-              <div className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
-                <span>
-                  {includedCount} of {parsedTxns.length} transactions will be imported
-                </span>
-                <span className="text-xs text-muted-foreground">→ {selectedSeason}</span>
               </div>
+            )}
 
-              <div className="border border-border rounded-lg overflow-hidden">
-                <div className="max-h-[35vh] overflow-y-auto">
-                  <table className="w-full text-xs">
-                    <thead className="bg-background sticky top-0">
-                      <tr className="text-xs font-semibold text-muted-foreground">
-                        <th className="p-2 text-left w-8"></th>
-                        <th className="p-2 text-left">Date</th>
-                        <th className="p-2 text-left">Title</th>
-                        <th className="p-2 text-right">Amount</th>
-                        <th className="p-2 text-left">Category</th>
-                        <th className="p-2 text-left">Player</th>
-                        <th className="p-2 text-left">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {parsedTxns.map((t) => (
-                        <tr
-                          key={t._rowIndex}
-                          className={`${!t._include || t._hasError ? 'opacity-40' : ''} hover:bg-background/50`}
+            {warningCount > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+                <AlertTriangle size={16} className="text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-amber-800">
+                    {warningCount} player name{warningCount > 1 ? 's' : ''} not matched
+                  </p>
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    These transactions will import without a player link. You can assign players later.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
+              <span>
+                {includedCount} of {parsedTxns.length} transactions will be imported
+              </span>
+              <span className="text-xs text-muted-foreground">→ {selectedSeason}</span>
+            </div>
+
+            <div className="border border-border rounded-lg overflow-hidden">
+              <div className="max-h-[35vh] overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-background sticky top-0">
+                    <tr className="text-xs font-semibold text-muted-foreground">
+                      <th className="p-2 text-left w-8"></th>
+                      <th className="p-2 text-left">Date</th>
+                      <th className="p-2 text-left">Title</th>
+                      <th className="p-2 text-right">Amount</th>
+                      <th className="p-2 text-left">Category</th>
+                      <th className="p-2 text-left">Player</th>
+                      <th className="p-2 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {parsedTxns.map((t) => (
+                      <tr
+                        key={t._rowIndex}
+                        className={`${!t._include || t._hasError ? 'opacity-40' : ''} hover:bg-background/50`}
+                      >
+                        <td className="p-2">
+                          <input
+                            type="checkbox"
+                            checked={t._include && !t._hasError}
+                            disabled={t._hasError}
+                            onChange={() => toggleTxn(t._rowIndex)}
+                            className="rounded border-border text-emerald-700 dark:text-emerald-400 focus:ring-emerald-500"
+                          />
+                        </td>
+                        <td className="p-2 text-foreground whitespace-nowrap">{t.date || '—'}</td>
+                        <td className="p-2 font-semibold text-foreground max-w-[180px] truncate">{t.title || '—'}</td>
+                        <td
+                          className={`p-2 text-right font-bold whitespace-nowrap ${t.amount < 0 ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}
                         >
-                          <td className="p-2">
-                            <input
-                              type="checkbox"
-                              checked={t._include && !t._hasError}
-                              disabled={t._hasError}
-                              onChange={() => toggleTxn(t._rowIndex)}
-                              className="rounded border-border text-emerald-700 dark:text-emerald-400 focus:ring-emerald-500"
-                            />
-                          </td>
-                          <td className="p-2 text-foreground whitespace-nowrap">{t.date || '—'}</td>
-                          <td className="p-2 font-semibold text-foreground max-w-[180px] truncate">{t.title || '—'}</td>
-                          <td
-                            className={`p-2 text-right font-bold whitespace-nowrap ${t.amount < 0 ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}
-                          >
-                            {t.amount < 0 ? '-' : ''}${Math.abs(t.amount || 0).toFixed(2)}
-                          </td>
-                          <td className="p-2">
-                            {t.category ? (
-                              <span
-                                className={`text-xs font-semibold px-1.5 py-0.5 rounded ${(categoryColors || {})[t.category] || 'bg-muted text-foreground'}`}
-                              >
-                                {t.category}
-                              </span>
-                            ) : (
-                              '—'
-                            )}
-                          </td>
-                          <td className="p-2 text-muted-foreground">
-                            {t.matchedPlayer ? (
-                              <span className="text-emerald-700 dark:text-emerald-400 font-semibold text-xs">
-                                {t.matchedPlayer.firstName} {t.matchedPlayer.lastName}
-                              </span>
-                            ) : t.player ? (
-                              <span
-                                className="text-amber-700 dark:text-amber-400 font-semibold text-xs"
-                                title={t._playerWarning}
-                              >
-                                {t.player} ⚠
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </td>
-                          <td className="p-2">
-                            {t._hasError ? (
-                              <span
-                                className="text-xs font-bold bg-red-100 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded uppercase"
-                                title={t._errors.join(', ')}
-                              >
-                                Error
-                              </span>
-                            ) : (
-                              <span className="text-xs font-bold bg-emerald-100 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded uppercase">
-                                Valid
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                          {t.amount < 0 ? '-' : ''}${Math.abs(t.amount || 0).toFixed(2)}
+                        </td>
+                        <td className="p-2">
+                          {t.category ? (
+                            <span
+                              className={`text-xs font-semibold px-1.5 py-0.5 rounded ${(categoryColors || {})[t.category] || 'bg-muted text-foreground'}`}
+                            >
+                              {t.category}
+                            </span>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td className="p-2 text-muted-foreground">
+                          {t.matchedPlayer ? (
+                            <span className="text-emerald-700 dark:text-emerald-400 font-semibold text-xs">
+                              {t.matchedPlayer.firstName} {t.matchedPlayer.lastName}
+                            </span>
+                          ) : t.player ? (
+                            <span
+                              className="text-amber-700 dark:text-amber-400 font-semibold text-xs"
+                              title={t._playerWarning}
+                            >
+                              {t.player} ⚠
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="p-2">
+                          {t._hasError ? (
+                            <span
+                              className="text-xs font-bold bg-red-100 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded uppercase"
+                              title={t._errors.join(', ')}
+                            >
+                              Error
+                            </span>
+                          ) : (
+                            <span className="text-xs font-bold bg-emerald-100 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded uppercase">
+                              Valid
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-
-              {/* Show error details */}
-              {errorCount > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-xs font-bold text-red-700 dark:text-red-400 mb-2">Row Errors</p>
-                  <div className="space-y-1 max-h-24 overflow-y-auto">
-                    {parsedTxns
-                      .filter((t) => t._hasError)
-                      .map((t) => (
-                        <p key={t._rowIndex} className="text-xs text-red-700 dark:text-red-300">
-                          <span className="font-semibold">Row {t._rowIndex + (hasHeaderRow ? 2 : 1)}:</span>{' '}
-                          {t._errors.join('; ')}
-                        </p>
-                      ))}
-                  </div>
-                </div>
-              )}
             </div>
-          )}
 
-          {/* ═══ STEP 4: IMPORTING ═══ */}
-          {step === 'importing' && (
-            <div className="py-8 text-center space-y-4">
-              <RefreshCw size={32} className="mx-auto text-emerald-700 dark:text-emerald-400 animate-spin" />
-              <p className="text-sm font-semibold text-foreground">Importing transactions...</p>
-              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-emerald-500 h-full rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">{progress}% complete</p>
-            </div>
-          )}
-
-          {/* ═══ STEP 5: DONE ═══ */}
-          {step === 'done' && (
-            <div className="py-6 space-y-4">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Check size={32} className="text-emerald-700 dark:text-emerald-400" />
-                </div>
-                <p className="text-lg font-bold text-foreground">Import Complete</p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-lg text-center">
-                  <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">{importResults.success}</p>
-                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Imported</p>
-                </div>
-                <div className="bg-background p-3 rounded-lg text-center">
-                  <p className="text-xl font-bold text-muted-foreground">{importResults.skipped}</p>
-                  <p className="text-xs font-semibold text-muted-foreground">Skipped</p>
-                </div>
-                <div className="bg-red-50 dark:bg-red-900/30 p-3 rounded-lg text-center">
-                  <p className="text-xl font-bold text-red-700 dark:text-red-400">{importResults.errors.length}</p>
-                  <p className="text-xs font-semibold text-red-700 dark:text-red-400">Errors</p>
-                </div>
-              </div>
-
-              {importResults.errors.length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-xs font-bold text-red-700 dark:text-red-400 mb-2">Errors</p>
-                  <div className="space-y-1 max-h-24 overflow-y-auto">
-                    {importResults.errors.map((e, i) => (
-                      <p key={i} className="text-xs text-red-700 dark:text-red-300">
-                        <span className="font-semibold">{e.transaction}:</span> {e.error}
+            {/* Show error details */}
+            {errorCount > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-xs font-bold text-red-700 dark:text-red-400 mb-2">Row Errors</p>
+                <div className="space-y-1 max-h-24 overflow-y-auto">
+                  {parsedTxns
+                    .filter((t) => t._hasError)
+                    .map((t) => (
+                      <p key={t._rowIndex} className="text-xs text-red-700 dark:text-red-300">
+                        <span className="font-semibold">Row {t._rowIndex + (hasHeaderRow ? 2 : 1)}:</span>{' '}
+                        {t._errors.join('; ')}
                       </p>
                     ))}
-                  </div>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* ── Footer ── */}
-        <div className="flex justify-between items-center p-5 border-t border-border">
-          {step === 'upload' && (
-            <>
-              <div />
-              <button
-                onClick={() => {
-                  reset();
-                  onClose();
-                }}
-                className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-            </>
-          )}
-          {step === 'mapping' && (
-            <>
-              <button
-                onClick={() => setStep('upload')}
-                className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
-              >
-                ← Back
-              </button>
-              <button
-                onClick={handleApplyMapping}
-                className="px-5 py-2 text-sm font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-lg transition-all"
-              >
-                Preview Import →
-              </button>
-            </>
-          )}
-          {step === 'preview' && (
-            <>
-              <button
-                onClick={() => setStep('mapping')}
-                className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
-              >
-                ← Back
-              </button>
-              <button
-                onClick={handleImport}
-                disabled={includedCount === 0}
-                className="px-5 py-2 text-sm font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-lg disabled:opacity-50 transition-all flex items-center gap-2"
-              >
-                <ReceiptText size={14} /> Import {includedCount} Transaction{includedCount !== 1 ? 's' : ''}
-              </button>
-            </>
-          )}
-          {step === 'importing' && (
-            <div className="w-full text-center text-xs text-muted-foreground">Please wait...</div>
-          )}
-          {step === 'done' && (
-            <>
-              <button
-                onClick={reset}
-                className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
-              >
-                Import More
-              </button>
-              <button
-                onClick={() => {
-                  reset();
-                  onComplete();
-                }}
-                className="px-5 py-2 text-sm font-bold text-accent-foreground bg-accent rounded-lg hover:bg-accent/90 shadow-lg transition-all"
-              >
-                Done
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+        {/* ═══ STEP 4: IMPORTING ═══ */}
+        {step === 'importing' && (
+          <div className="py-8 text-center space-y-4">
+            <RefreshCw size={32} className="mx-auto text-emerald-700 dark:text-emerald-400 animate-spin" />
+            <p className="text-sm font-semibold text-foreground">Importing transactions...</p>
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+              <div
+                className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">{progress}% complete</p>
+          </div>
+        )}
+
+        {/* ═══ STEP 5: DONE ═══ */}
+        {step === 'done' && (
+          <div className="py-6 space-y-4">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Check size={32} className="text-emerald-700 dark:text-emerald-400" />
+              </div>
+              <p className="text-lg font-bold text-foreground">Import Complete</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-lg text-center">
+                <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">{importResults.success}</p>
+                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Imported</p>
+              </div>
+              <div className="bg-background p-3 rounded-lg text-center">
+                <p className="text-xl font-bold text-muted-foreground">{importResults.skipped}</p>
+                <p className="text-xs font-semibold text-muted-foreground">Skipped</p>
+              </div>
+              <div className="bg-red-50 dark:bg-red-900/30 p-3 rounded-lg text-center">
+                <p className="text-xl font-bold text-red-700 dark:text-red-400">{importResults.errors.length}</p>
+                <p className="text-xs font-semibold text-red-700 dark:text-red-400">Errors</p>
+              </div>
+            </div>
+
+            {importResults.errors.length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-xs font-bold text-red-700 dark:text-red-400 mb-2">Errors</p>
+                <div className="space-y-1 max-h-24 overflow-y-auto">
+                  {importResults.errors.map((e, i) => (
+                    <p key={i} className="text-xs text-red-700 dark:text-red-300">
+                      <span className="font-semibold">{e.transaction}:</span> {e.error}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </ResponsiveModal.Body>
+
+      {/* One pinned action row, its contents swapped per step. */}
+      <ResponsiveModal.Footer className="justify-between">
+        {step === 'upload' && (
+          <>
+            <div />
+            <button
+              onClick={() => {
+                reset();
+                onClose();
+              }}
+              className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+          </>
+        )}
+        {step === 'mapping' && (
+          <>
+            <button
+              onClick={() => setStep('upload')}
+              className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
+            >
+              ← Back
+            </button>
+            <button
+              onClick={handleApplyMapping}
+              className="px-5 py-2 text-sm font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-lg transition-all"
+            >
+              Preview Import →
+            </button>
+          </>
+        )}
+        {step === 'preview' && (
+          <>
+            <button
+              onClick={() => setStep('mapping')}
+              className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
+            >
+              ← Back
+            </button>
+            <button
+              onClick={handleImport}
+              disabled={includedCount === 0}
+              className="px-5 py-2 text-sm font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-lg disabled:opacity-50 transition-all flex items-center gap-2"
+            >
+              <ReceiptText size={14} /> Import {includedCount} Transaction{includedCount !== 1 ? 's' : ''}
+            </button>
+          </>
+        )}
+        {step === 'importing' && <div className="w-full text-center text-xs text-muted-foreground">Please wait...</div>}
+        {step === 'done' && (
+          <>
+            <button
+              onClick={reset}
+              className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
+            >
+              Import More
+            </button>
+            <button
+              onClick={() => {
+                reset();
+                onComplete();
+              }}
+              className="px-5 py-2 text-sm font-bold text-accent-foreground bg-accent rounded-lg hover:bg-accent/90 shadow-lg transition-all"
+            >
+              Done
+            </button>
+          </>
+        )}
+      </ResponsiveModal.Footer>
+    </ResponsiveModal>
   );
 }

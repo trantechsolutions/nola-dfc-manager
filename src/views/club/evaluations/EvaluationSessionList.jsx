@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Calendar, Users, ChevronRight, X } from 'lucide-react';
+import { Plus, Trash2, Calendar, Users, ChevronRight } from 'lucide-react';
 import { useT } from '../../../i18n/I18nContext';
+import ResponsiveModal from '../../../components/layout/ResponsiveModal';
+import PanelHost from '../../../components/layout/PanelHost';
+import { usePanelRoute } from '../../../hooks/usePanelRoute';
 import { useEvaluationManager } from '../../../hooks/useEvaluationManager';
+import { PANELS } from '../../../utils/panelRoute';
 
 const STATUS_STYLES = {
   draft: {
@@ -32,17 +36,18 @@ export default function EvaluationSessionList({
   const { t, tp } = useT();
   const { sessions, loading, createSession, deleteSession } = useEvaluationManager(club?.id);
 
-  const [showModal, setShowModal] = useState(false);
+  const { panel, openPanel, closePanel } = usePanelRoute();
+  const showModal = panel === PANELS.NEW_SESSION;
   const [form, setForm] = useState({ ...EMPTY_FORM, seasonId: selectedSeason || '' });
   const [saving, setSaving] = useState(false);
 
   const openModal = () => {
     setForm({ ...EMPTY_FORM, seasonId: selectedSeason || '' });
-    setShowModal(true);
+    openPanel(PANELS.NEW_SESSION);
   };
 
   const closeModal = () => {
-    setShowModal(false);
+    closePanel();
     setForm(EMPTY_FORM);
   };
 
@@ -184,25 +189,13 @@ export default function EvaluationSessionList({
 
       {/* Create Session Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/50" onClick={closeModal} />
-
-          {/* Modal */}
-          <div className="relative w-full max-w-md bg-card rounded-lg shadow-md border border-border">
-            {/* Modal header */}
-            <div className="flex items-center justify-between p-5 border-b border-border">
+        <PanelHost>
+          <ResponsiveModal as="form" onSubmit={handleCreate} onClose={closeModal} size="md" dismissOnBackdrop>
+            <ResponsiveModal.Header className="border-b border-border">
               <h3 className="text-lg font-semibold text-foreground">{t('evaluations.newSession', 'New Session')}</h3>
-              <button
-                onClick={closeModal}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
+            </ResponsiveModal.Header>
 
-            {/* Modal body */}
-            <form onSubmit={handleCreate} className="p-5 space-y-4">
+            <ResponsiveModal.Body className="space-y-4">
               {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">
@@ -282,27 +275,26 @@ export default function EvaluationSessionList({
                   </label>
                 </div>
               </div>
+            </ResponsiveModal.Body>
 
-              {/* Actions */}
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors"
-                >
-                  {t('common.cancel', 'Cancel')}
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving || !form.name.trim()}
-                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
-                >
-                  {saving ? t('common.saving', 'Saving...') : t('evaluations.createSession', 'Create Session')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <ResponsiveModal.Footer>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                {t('common.cancel', 'Cancel')}
+              </button>
+              <button
+                type="submit"
+                disabled={saving || !form.name.trim()}
+                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
+              >
+                {saving ? t('common.saving', 'Saving...') : t('evaluations.createSession', 'Create Session')}
+              </button>
+            </ResponsiveModal.Footer>
+          </ResponsiveModal>
+        </PanelHost>
       )}
     </div>
   );

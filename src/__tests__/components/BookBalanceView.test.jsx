@@ -4,6 +4,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+// The view opens its panels through the URL now (usePanelRoute), so it needs a
+// router around it the same way the app supplies one.
+import { MemoryRouter } from 'react-router-dom';
 
 import { I18nProvider } from '../../i18n/I18nContext';
 import BookBalanceView from '../../views/team/BookBalanceView';
@@ -17,26 +20,28 @@ const ACCOUNTS = [{ id: 'a1', name: 'Cash Box', holding: 'cash', isActive: true 
 
 function renderView({ showConfirm, isMonthLocked = false }) {
   return render(
-    <I18nProvider>
-      <BookBalanceView
-        monthOptions={[{ key: '2025-09', label: 'September 2025' }]}
-        selectedMonth="2025-09"
-        setSelectedMonth={vi.fn()}
-        ledgerBalances={{ a1: 0 }}
-        storedByAccount={{}}
-        isMonthLocked={isMonthLocked}
-        loading={false}
-        isSaving={false}
-        saveBalance={vi.fn()}
-        lockMonth={lockMonth}
-        unlockMonth={unlockMonth}
-        accounts={ACCOUNTS}
-        transactions={[]}
-        isSuperAdmin
-        formatMoney={(n) => `$${Number(n || 0).toFixed(2)}`}
-        showConfirm={showConfirm}
-      />
-    </I18nProvider>,
+    <MemoryRouter>
+      <I18nProvider>
+        <BookBalanceView
+          monthOptions={[{ key: '2025-09', label: 'September 2025' }]}
+          selectedMonth="2025-09"
+          setSelectedMonth={vi.fn()}
+          ledgerBalances={{ a1: 0 }}
+          storedByAccount={{}}
+          isMonthLocked={isMonthLocked}
+          loading={false}
+          isSaving={false}
+          saveBalance={vi.fn()}
+          lockMonth={lockMonth}
+          unlockMonth={unlockMonth}
+          accounts={ACCOUNTS}
+          transactions={[]}
+          isSuperAdmin
+          formatMoney={(n) => `$${Number(n || 0).toFixed(2)}`}
+          showConfirm={showConfirm}
+        />
+      </I18nProvider>
+    </MemoryRouter>,
   );
 }
 

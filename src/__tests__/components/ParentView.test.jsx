@@ -6,6 +6,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+// The view opens its panels through the URL now (usePanelRoute), so it needs a
+// router around it the same way the app supplies one.
+import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('../../services/supabaseService', () => ({
   supabaseService: {
@@ -71,25 +74,27 @@ function renderParent({
   team = TEAM,
 } = {}) {
   return render(
-    <I18nProvider>
-      <ParentView
-        players={players}
-        transactions={[]}
-        calculatePlayerFinancials={() => fin}
-        formatMoney={(v) => `$${Number(v).toFixed(2)}`}
-        teams={[team]}
-        seasons={[{ id: SEASON }]}
-        selectedSeason={SEASON}
-        setSelectedSeason={vi.fn()}
-        currentSeasonData={seasonData}
-        clubId="c1"
-        onRefresh={vi.fn()}
-        showToast={vi.fn()}
-        showConfirm={vi.fn()}
-        user={{ email: 'byron@example.com' }}
-        accounts={accounts}
-      />
-    </I18nProvider>,
+    <MemoryRouter>
+      <I18nProvider>
+        <ParentView
+          players={players}
+          transactions={[]}
+          calculatePlayerFinancials={() => fin}
+          formatMoney={(v) => `$${Number(v).toFixed(2)}`}
+          teams={[team]}
+          seasons={[{ id: SEASON }]}
+          selectedSeason={SEASON}
+          setSelectedSeason={vi.fn()}
+          currentSeasonData={seasonData}
+          clubId="c1"
+          onRefresh={vi.fn()}
+          showToast={vi.fn()}
+          showConfirm={vi.fn()}
+          user={{ email: 'byron@example.com' }}
+          accounts={accounts}
+        />
+      </I18nProvider>
+    </MemoryRouter>,
   );
 }
 

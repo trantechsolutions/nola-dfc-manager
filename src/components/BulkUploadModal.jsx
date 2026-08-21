@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
 import {
-  X,
   Upload,
   FileText,
   AlertCircle,
@@ -15,6 +14,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService';
+import ResponsiveModal from './layout/ResponsiveModal';
 
 // ── CSV Template ──
 const CSV_TEMPLATE = `First Name,Last Name,Jersey #,Guardian 1 Name,Guardian 1 Email,Guardian 1 Phone,Guardian 2 Name,Guardian 2 Email,Guardian 2 Phone
@@ -311,372 +311,364 @@ export default function BulkUploadModal({
   const duplicateCount = parsedPlayers.filter((p) => p._isDuplicate).length;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4 overflow-y-auto">
-      <div className="bg-card rounded-lg shadow-md w-full max-w-2xl my-auto animate-in fade-in zoom-in-95 duration-200">
-        {/* ── Header ── */}
-        <div className="flex justify-between items-center p-5 border-b border-border">
-          <div>
-            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-              <Upload size={20} className="text-blue-700 dark:text-blue-400" /> Import Roster
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {step === 'upload' && 'Upload a CSV file with player and guardian information.'}
-              {step === 'mapping' && 'Map your CSV columns to the correct fields.'}
-              {step === 'preview' && `Review ${parsedPlayers.length} players before importing.`}
-              {step === 'importing' && 'Importing players...'}
-              {step === 'done' && 'Import complete!'}
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              reset();
-              onClose();
-            }}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X size={22} />
-          </button>
-        </div>
+    <ResponsiveModal
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      size="2xl"
+      className="animate-in fade-in zoom-in-95 duration-200"
+    >
+      <ResponsiveModal.Header className="border-b border-border">
+        <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+          <Upload size={20} className="text-blue-700 dark:text-blue-400" /> Import Roster
+        </h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {step === 'upload' && 'Upload a CSV file with player and guardian information.'}
+          {step === 'mapping' && 'Map your CSV columns to the correct fields.'}
+          {step === 'preview' && `Review ${parsedPlayers.length} players before importing.`}
+          {step === 'importing' && 'Importing players...'}
+          {step === 'done' && 'Import complete!'}
+        </p>
+      </ResponsiveModal.Header>
 
-        <div className="p-5 max-h-[60vh] overflow-y-auto">
-          {/* ═══ STEP 1: UPLOAD ═══ */}
-          {step === 'upload' && (
-            <div className="space-y-4">
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-border rounded-lg p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 dark:hover:bg-blue-900/20 transition-all"
-              >
-                <FileText size={40} className="mx-auto text-muted-foreground mb-3" />
-                <p className="text-sm font-semibold text-foreground">Click to select a CSV file</p>
-                <p className="text-xs text-muted-foreground mt-1">or drag and drop</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv,.tsv,.txt"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-              </div>
+      <ResponsiveModal.Body>
+        {/* ═══ STEP 1: UPLOAD ═══ */}
+        {step === 'upload' && (
+          <div className="space-y-4">
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-border rounded-lg p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 dark:hover:bg-blue-900/20 transition-all"
+            >
+              <FileText size={40} className="mx-auto text-muted-foreground mb-3" />
+              <p className="text-sm font-semibold text-foreground">Click to select a CSV file</p>
+              <p className="text-xs text-muted-foreground mt-1">or drag and drop</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.tsv,.txt"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </div>
 
-              <div className="bg-background rounded-lg p-4 space-y-3">
-                <p className="text-xs font-bold text-muted-foreground">Expected Format</p>
-                <p className="text-xs text-muted-foreground">
-                  Your CSV should include columns for player first/last name and optionally jersey number and guardian
-                  contact info. The importer will attempt to auto-detect your columns.
-                </p>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleDownloadTemplate}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                  >
-                    <Download size={12} /> Download Template
-                  </button>
-                </div>
+            <div className="bg-background rounded-lg p-4 space-y-3">
+              <p className="text-xs font-bold text-muted-foreground">Expected Format</p>
+              <p className="text-xs text-muted-foreground">
+                Your CSV should include columns for player first/last name and optionally jersey number and guardian
+                contact info. The importer will attempt to auto-detect your columns.
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleDownloadTemplate}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                  <Download size={12} /> Download Template
+                </button>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* ═══ STEP 2: COLUMN MAPPING ═══ */}
-          {step === 'mapping' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-2">
-                <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={hasHeaderRow}
-                    onChange={(e) => setHasHeaderRow(e.target.checked)}
-                    className="rounded border-border text-blue-700 dark:text-blue-400 focus:ring-ring"
-                  />
-                  First row is a header
-                </label>
+        {/* ═══ STEP 2: COLUMN MAPPING ═══ */}
+        {step === 'mapping' && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 mb-2">
+              <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hasHeaderRow}
+                  onChange={(e) => setHasHeaderRow(e.target.checked)}
+                  className="rounded border-border text-blue-700 dark:text-blue-400 focus:ring-ring"
+                />
+                First row is a header
+              </label>
+            </div>
+
+            <div className="bg-background rounded-lg p-3 mb-3">
+              <p className="text-xs font-bold text-muted-foreground mb-2">Sample Data (row 1)</p>
+              <div className="flex flex-wrap gap-1">
+                {headers.map((h, i) => (
+                  <span
+                    key={i}
+                    className="text-xs font-mono bg-card border border-border rounded px-2 py-0.5 text-foreground"
+                  >
+                    {i}: {h}
+                  </span>
+                ))}
               </div>
+            </div>
 
-              <div className="bg-background rounded-lg p-3 mb-3">
-                <p className="text-xs font-bold text-muted-foreground mb-2">Sample Data (row 1)</p>
-                <div className="flex flex-wrap gap-1">
-                  {headers.map((h, i) => (
-                    <span
-                      key={i}
-                      className="text-xs font-mono bg-card border border-border rounded px-2 py-0.5 text-foreground"
-                    >
-                      {i}: {h}
-                    </span>
+            <div className="space-y-2">
+              {COLUMN_KEYS.map((col) => (
+                <div key={col.key} className="flex items-center gap-3">
+                  <span
+                    className={`text-xs font-semibold w-36 ${col.required ? 'text-foreground' : 'text-muted-foreground'}`}
+                  >
+                    {col.label} {col.required && <span className="text-red-700 dark:text-red-400">*</span>}
+                  </span>
+                  <select
+                    value={columnMap[col.key] ?? ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setColumnMap((prev) => {
+                        const next = { ...prev };
+                        if (val === '') delete next[col.key];
+                        else next[col.key] = parseInt(val);
+                        return next;
+                      });
+                    }}
+                    className="flex-grow text-xs font-semibold border border-border rounded-lg p-2 outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">— skip —</option>
+                    {headers.map((h, i) => (
+                      <option key={i} value={i}>
+                        Column {i}: {h}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enrollInSeason}
+                  onChange={(e) => setEnrollInSeason(e.target.checked)}
+                  className="rounded border-border text-blue-700 dark:text-blue-400 focus:ring-ring"
+                />
+                Enroll all imported players in {selectedSeason}
+              </label>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={skipDuplicates}
+                  onChange={(e) => setSkipDuplicates(e.target.checked)}
+                  className="rounded border-border text-blue-700 dark:text-blue-400 focus:ring-ring"
+                />
+                Skip players that already exist on this roster (matched by name)
+              </label>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ STEP 3: PREVIEW ═══ */}
+        {step === 'preview' && (
+          <div className="space-y-3">
+            {duplicateCount > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+                <AlertTriangle size={16} className="text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-amber-800">
+                    {duplicateCount} duplicate{duplicateCount > 1 ? 's' : ''} detected
+                  </p>
+                  <p className="text-xs text-amber-700 dark:text-amber-400">
+                    {skipDuplicates
+                      ? 'These players already exist and will be skipped. You can toggle them back on individually.'
+                      : 'Duplicate detection is off — all players will be imported.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
+              <span>
+                {includedCount} of {parsedPlayers.length} players will be imported
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {enrollInSeason ? `→ enrolled in ${selectedSeason}` : 'No season enrollment'}
+              </span>
+            </div>
+
+            <div className="border border-border rounded-lg overflow-hidden">
+              <div className="max-h-[35vh] overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-background sticky top-0">
+                    <tr className="text-xs font-semibold text-muted-foreground">
+                      <th className="p-2 text-left w-8"></th>
+                      <th className="p-2 text-left">Player</th>
+                      <th className="p-2 text-left">Jersey</th>
+                      <th className="p-2 text-left">Guardians</th>
+                      <th className="p-2 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {parsedPlayers.map((p) => (
+                      <tr key={p._rowIndex} className={`${!p._include ? 'opacity-40' : ''} hover:bg-background/50`}>
+                        <td className="p-2">
+                          <input
+                            type="checkbox"
+                            checked={p._include}
+                            onChange={() => togglePlayer(p._rowIndex)}
+                            className="rounded border-border text-blue-700 dark:text-blue-400 focus:ring-ring"
+                          />
+                        </td>
+                        <td className="p-2 font-semibold text-foreground">
+                          {p.firstName} {p.lastName}
+                        </td>
+                        <td className="p-2 text-muted-foreground">{p.jerseyNumber || '—'}</td>
+                        <td className="p-2 text-muted-foreground">
+                          {p.guardians.length > 0 ? (
+                            p.guardians.map((g) => g.name).join(', ')
+                          ) : (
+                            <span className="text-muted-foreground italic">None</span>
+                          )}
+                        </td>
+                        <td className="p-2">
+                          {p._isDuplicate ? (
+                            <span className="text-xs font-bold bg-amber-100 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded uppercase">
+                              Duplicate
+                            </span>
+                          ) : (
+                            <span className="text-xs font-bold bg-emerald-100 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded uppercase">
+                              New
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ STEP 4: IMPORTING ═══ */}
+        {step === 'importing' && (
+          <div className="py-8 text-center space-y-4">
+            <RefreshCw size={32} className="mx-auto text-blue-700 dark:text-blue-400 animate-spin" />
+            <p className="text-sm font-semibold text-foreground">Importing players...</p>
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+              <div
+                className="bg-blue-500 h-full rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">{progress}% complete</p>
+          </div>
+        )}
+
+        {/* ═══ STEP 5: DONE ═══ */}
+        {step === 'done' && (
+          <div className="py-6 space-y-4">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Check size={32} className="text-emerald-700 dark:text-emerald-400" />
+              </div>
+              <p className="text-lg font-bold text-foreground">Import Complete</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-lg text-center">
+                <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">{importResults.success}</p>
+                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Imported</p>
+              </div>
+              <div className="bg-background p-3 rounded-lg text-center">
+                <p className="text-xl font-bold text-muted-foreground">{importResults.skipped}</p>
+                <p className="text-xs font-semibold text-muted-foreground">Skipped</p>
+              </div>
+              <div className="bg-red-50 dark:bg-red-900/30 p-3 rounded-lg text-center">
+                <p className="text-xl font-bold text-red-700 dark:text-red-400">{importResults.errors.length}</p>
+                <p className="text-xs font-semibold text-red-700 dark:text-red-400">Errors</p>
+              </div>
+            </div>
+
+            {importResults.errors.length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-xs font-bold text-red-700 dark:text-red-400 mb-2">Errors</p>
+                <div className="space-y-1 max-h-24 overflow-y-auto">
+                  {importResults.errors.map((e, i) => (
+                    <p key={i} className="text-xs text-red-700 dark:text-red-300">
+                      <span className="font-semibold">{e.player}:</span> {e.error}
+                    </p>
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+        )}
+      </ResponsiveModal.Body>
 
-              <div className="space-y-2">
-                {COLUMN_KEYS.map((col) => (
-                  <div key={col.key} className="flex items-center gap-3">
-                    <span
-                      className={`text-xs font-semibold w-36 ${col.required ? 'text-foreground' : 'text-muted-foreground'}`}
-                    >
-                      {col.label} {col.required && <span className="text-red-700 dark:text-red-400">*</span>}
-                    </span>
-                    <select
-                      value={columnMap[col.key] ?? ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setColumnMap((prev) => {
-                          const next = { ...prev };
-                          if (val === '') delete next[col.key];
-                          else next[col.key] = parseInt(val);
-                          return next;
-                        });
-                      }}
-                      className="flex-grow text-xs font-semibold border border-border rounded-lg p-2 outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      <option value="">— skip —</option>
-                      {headers.map((h, i) => (
-                        <option key={i} value={i}>
-                          Column {i}: {h}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={enrollInSeason}
-                    onChange={(e) => setEnrollInSeason(e.target.checked)}
-                    className="rounded border-border text-blue-700 dark:text-blue-400 focus:ring-ring"
-                  />
-                  Enroll all imported players in {selectedSeason}
-                </label>
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={skipDuplicates}
-                    onChange={(e) => setSkipDuplicates(e.target.checked)}
-                    className="rounded border-border text-blue-700 dark:text-blue-400 focus:ring-ring"
-                  />
-                  Skip players that already exist on this roster (matched by name)
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* ═══ STEP 3: PREVIEW ═══ */}
-          {step === 'preview' && (
-            <div className="space-y-3">
-              {duplicateCount > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
-                  <AlertTriangle size={16} className="text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-semibold text-amber-800">
-                      {duplicateCount} duplicate{duplicateCount > 1 ? 's' : ''} detected
-                    </p>
-                    <p className="text-xs text-amber-700 dark:text-amber-400">
-                      {skipDuplicates
-                        ? 'These players already exist and will be skipped. You can toggle them back on individually.'
-                        : 'Duplicate detection is off — all players will be imported.'}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="text-xs font-semibold text-muted-foreground flex items-center justify-between">
-                <span>
-                  {includedCount} of {parsedPlayers.length} players will be imported
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {enrollInSeason ? `→ enrolled in ${selectedSeason}` : 'No season enrollment'}
-                </span>
-              </div>
-
-              <div className="border border-border rounded-lg overflow-hidden">
-                <div className="max-h-[35vh] overflow-y-auto">
-                  <table className="w-full text-xs">
-                    <thead className="bg-background sticky top-0">
-                      <tr className="text-xs font-semibold text-muted-foreground">
-                        <th className="p-2 text-left w-8"></th>
-                        <th className="p-2 text-left">Player</th>
-                        <th className="p-2 text-left">Jersey</th>
-                        <th className="p-2 text-left">Guardians</th>
-                        <th className="p-2 text-left">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {parsedPlayers.map((p) => (
-                        <tr key={p._rowIndex} className={`${!p._include ? 'opacity-40' : ''} hover:bg-background/50`}>
-                          <td className="p-2">
-                            <input
-                              type="checkbox"
-                              checked={p._include}
-                              onChange={() => togglePlayer(p._rowIndex)}
-                              className="rounded border-border text-blue-700 dark:text-blue-400 focus:ring-ring"
-                            />
-                          </td>
-                          <td className="p-2 font-semibold text-foreground">
-                            {p.firstName} {p.lastName}
-                          </td>
-                          <td className="p-2 text-muted-foreground">{p.jerseyNumber || '—'}</td>
-                          <td className="p-2 text-muted-foreground">
-                            {p.guardians.length > 0 ? (
-                              p.guardians.map((g) => g.name).join(', ')
-                            ) : (
-                              <span className="text-muted-foreground italic">None</span>
-                            )}
-                          </td>
-                          <td className="p-2">
-                            {p._isDuplicate ? (
-                              <span className="text-xs font-bold bg-amber-100 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded uppercase">
-                                Duplicate
-                              </span>
-                            ) : (
-                              <span className="text-xs font-bold bg-emerald-100 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded uppercase">
-                                New
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ═══ STEP 4: IMPORTING ═══ */}
-          {step === 'importing' && (
-            <div className="py-8 text-center space-y-4">
-              <RefreshCw size={32} className="mx-auto text-blue-700 dark:text-blue-400 animate-spin" />
-              <p className="text-sm font-semibold text-foreground">Importing players...</p>
-              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                <div
-                  className="bg-blue-500 h-full rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">{progress}% complete</p>
-            </div>
-          )}
-
-          {/* ═══ STEP 5: DONE ═══ */}
-          {step === 'done' && (
-            <div className="py-6 space-y-4">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Check size={32} className="text-emerald-700 dark:text-emerald-400" />
-                </div>
-                <p className="text-lg font-bold text-foreground">Import Complete</p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-lg text-center">
-                  <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">{importResults.success}</p>
-                  <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Imported</p>
-                </div>
-                <div className="bg-background p-3 rounded-lg text-center">
-                  <p className="text-xl font-bold text-muted-foreground">{importResults.skipped}</p>
-                  <p className="text-xs font-semibold text-muted-foreground">Skipped</p>
-                </div>
-                <div className="bg-red-50 dark:bg-red-900/30 p-3 rounded-lg text-center">
-                  <p className="text-xl font-bold text-red-700 dark:text-red-400">{importResults.errors.length}</p>
-                  <p className="text-xs font-semibold text-red-700 dark:text-red-400">Errors</p>
-                </div>
-              </div>
-
-              {importResults.errors.length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-xs font-bold text-red-700 dark:text-red-400 mb-2">Errors</p>
-                  <div className="space-y-1 max-h-24 overflow-y-auto">
-                    {importResults.errors.map((e, i) => (
-                      <p key={i} className="text-xs text-red-700 dark:text-red-300">
-                        <span className="font-semibold">{e.player}:</span> {e.error}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* ── Footer ── */}
-        <div className="flex justify-between items-center p-5 border-t border-border">
-          {step === 'upload' && (
-            <>
-              <div />
-              <button
-                onClick={() => {
-                  reset();
-                  onClose();
-                }}
-                className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-            </>
-          )}
-          {step === 'mapping' && (
-            <>
-              <button
-                onClick={() => {
-                  setStep('upload');
-                }}
-                className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
-              >
-                ← Back
-              </button>
-              <button
-                onClick={handleApplyMapping}
-                className="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-lg transition-all"
-              >
-                Preview Import →
-              </button>
-            </>
-          )}
-          {step === 'preview' && (
-            <>
-              <button
-                onClick={() => setStep('mapping')}
-                className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
-              >
-                ← Back
-              </button>
-              <button
-                onClick={handleImport}
-                disabled={includedCount === 0}
-                className="px-5 py-2 text-sm font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-lg disabled:opacity-50 transition-all flex items-center gap-2"
-              >
-                <Users size={14} /> Import {includedCount} Player{includedCount !== 1 ? 's' : ''}
-              </button>
-            </>
-          )}
-          {step === 'importing' && (
-            <div className="w-full text-center text-xs text-muted-foreground">Please wait...</div>
-          )}
-          {step === 'done' && (
-            <>
-              <button
-                onClick={() => {
-                  reset();
-                }}
-                className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
-              >
-                Import More
-              </button>
-              <button
-                onClick={() => {
-                  reset();
-                  onComplete();
-                }}
-                className="px-5 py-2 text-sm font-bold text-accent-foreground bg-accent rounded-lg hover:bg-accent/90 shadow-lg transition-all"
-              >
-                Done
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+      {/* One pinned action row, its contents swapped per step — the wizard's
+          Back/Next must stay reachable without scrolling the sheet on a phone. */}
+      <ResponsiveModal.Footer className="justify-between">
+        {step === 'upload' && (
+          <>
+            <div />
+            <button
+              onClick={() => {
+                reset();
+                onClose();
+              }}
+              className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+          </>
+        )}
+        {step === 'mapping' && (
+          <>
+            <button
+              onClick={() => {
+                setStep('upload');
+              }}
+              className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
+            >
+              ← Back
+            </button>
+            <button
+              onClick={handleApplyMapping}
+              className="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-lg transition-all"
+            >
+              Preview Import →
+            </button>
+          </>
+        )}
+        {step === 'preview' && (
+          <>
+            <button
+              onClick={() => setStep('mapping')}
+              className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
+            >
+              ← Back
+            </button>
+            <button
+              onClick={handleImport}
+              disabled={includedCount === 0}
+              className="px-5 py-2 text-sm font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-lg disabled:opacity-50 transition-all flex items-center gap-2"
+            >
+              <Users size={14} /> Import {includedCount} Player{includedCount !== 1 ? 's' : ''}
+            </button>
+          </>
+        )}
+        {step === 'importing' && <div className="w-full text-center text-xs text-muted-foreground">Please wait...</div>}
+        {step === 'done' && (
+          <>
+            <button
+              onClick={() => {
+                reset();
+              }}
+              className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
+            >
+              Import More
+            </button>
+            <button
+              onClick={() => {
+                reset();
+                onComplete();
+              }}
+              className="px-5 py-2 text-sm font-bold text-accent-foreground bg-accent rounded-lg hover:bg-accent/90 shadow-lg transition-all"
+            >
+              Done
+            </button>
+          </>
+        )}
+      </ResponsiveModal.Footer>
+    </ResponsiveModal>
   );
 }

@@ -4,9 +4,13 @@ import { supabaseService } from '../../services/supabaseService';
 import { ALL_ROLES, TEAM_ROLES, CLUB_ASSIGNABLE_ROLES } from '../../utils/roles';
 import { useT } from '../../i18n/I18nContext';
 import Badge from '../../components/layout/Badge';
+import ResponsiveModal from '../../components/layout/ResponsiveModal';
+import PanelHost from '../../components/layout/PanelHost';
+import { usePanelRoute } from '../../hooks/usePanelRoute';
 import DirectoryCard, { DetailRow, EmptyRow } from '../../components/layout/DirectoryCard';
 import { DirectoryToolbar, SearchInput, ToolbarButton, RowAction } from '../../components/layout/DirectoryControls';
 import { paginate } from '../../utils/pagination';
+import { PANELS } from '../../utils/panelRoute';
 
 const PER_PAGE = 25;
 
@@ -20,7 +24,10 @@ const COLUMNS = [
 
 export default function TeamList({ club, teams, onSelectTeam, formatMoney, showToast, showConfirm, refreshContext }) {
   const { t } = useT();
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  // The create panel is addressed by the URL. The per-row invite below is an
+  // inline disclosure rather than a panel, so it stays in local state.
+  const { panel, openPanel, closePanel } = usePanelRoute();
+  const showCreateForm = panel === PANELS.NEW_TEAM;
   const [expandedTeam, setExpandedTeam] = useState(null);
   const [teamRoles, setTeamRoles] = useState({});
   const [isSaving, setIsSaving] = useState(false);
@@ -65,7 +72,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
     setIsSaving(true);
     try {
       await supabaseService.createTeam({ ...newTeam, clubId: club.id });
-      setShowCreateForm(false);
+      closePanel();
       setNewTeam({ name: '', ageGroup: '', gender: 'M', tier: 'competitive', icalUrl: '', colorPrimary: '#1e293b' });
       await refreshContext();
       if (showToast) showToast(t('clubTeams.teamCreated', { name: newTeam.name }));
@@ -175,7 +182,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
               placeholder="Search teams..."
               label="Search teams"
             />
-            <ToolbarButton icon={Plus} tone="primary" onClick={() => setShowCreateForm(true)}>
+            <ToolbarButton icon={Plus} tone="primary" onClick={() => openPanel(PANELS.NEW_TEAM)}>
               {t('clubTeams.addTeam')}
             </ToolbarButton>
           </DirectoryToolbar>
@@ -420,10 +427,13 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
 
       {/* Create Team Modal */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
-          <div className="bg-card rounded-lg p-6 w-full max-w-md shadow-md">
-            <h3 className="text-lg font-bold text-foreground mb-4">Create Team</h3>
-            <form onSubmit={handleCreateTeam} className="space-y-4">
+        <PanelHost>
+          <ResponsiveModal as="form" onSubmit={handleCreateTeam} onClose={closePanel} size="md">
+            <ResponsiveModal.Header className="border-b border-border">
+              <h3 className="text-lg font-bold text-foreground">Create Team</h3>
+            </ResponsiveModal.Header>
+
+            <ResponsiveModal.Body className="space-y-4">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground">Team Name</label>
                 <input
@@ -495,25 +505,26 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                   className="w-full border border-border rounded-lg p-2.5 text-sm outline-none mt-1 bg-card"
                 />
               </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateForm(false)}
-                  className="text-sm font-semibold text-muted-foreground px-4 py-2"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving || !newTeam.name.trim()}
-                  className="text-sm font-bold text-accent-foreground bg-accent px-6 py-2 rounded-lg hover:bg-accent/90 disabled:opacity-50 shadow-lg"
-                >
-                  {isSaving ? 'Creating...' : 'Create Team'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </ResponsiveModal.Body>
+
+            <ResponsiveModal.Footer>
+              <button
+                type="button"
+                onClick={closePanel}
+                className="text-sm font-semibold text-muted-foreground px-4 py-2"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving || !newTeam.name.trim()}
+                className="text-sm font-bold text-accent-foreground bg-accent px-6 py-2 rounded-lg hover:bg-accent/90 disabled:opacity-50 shadow-lg"
+              >
+                {isSaving ? 'Creating...' : 'Create Team'}
+              </button>
+            </ResponsiveModal.Footer>
+          </ResponsiveModal>
+        </PanelHost>
       )}
     </div>
   );

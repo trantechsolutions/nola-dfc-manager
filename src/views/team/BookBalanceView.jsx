@@ -16,11 +16,14 @@ import {
 import AccountBalanceCard from '../../components/AccountBalanceCard';
 import BankAggregateCard from '../../components/BankAggregateCard';
 import StatementImportModal from '../../components/StatementImportModal';
+import PanelHost from '../../components/layout/PanelHost';
+import { usePanelRoute } from '../../hooks/usePanelRoute';
 import AdminCard from '../../components/layout/AdminCard';
 import InfoBox from '../../components/layout/InfoBox';
 import { useT } from '../../i18n/I18nContext';
 import { TRACKED_HOLDINGS } from '../../utils/holdings';
 import { monthKeyToLabel, SEASON_KEY } from '../../utils/computeBookBalance';
+import { PANELS } from '../../utils/panelRoute';
 
 export default function BookBalanceView({
   monthOptions,
@@ -49,7 +52,22 @@ export default function BookBalanceView({
   const { t } = useT();
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
-  const [statementAccount, setStatementAccount] = useState(null);
+  const { panel, panelParams, openPanel, closePanel } = usePanelRoute();
+  // Either one real account, or the synthetic roll-up of every bank account.
+  // Both are expressible in the URL, so the comparison survives a reload.
+  const statementAccount = (() => {
+    if (panel !== PANELS.STATEMENT) return null;
+    if (panelParams.aggregate === 'bank') {
+      return {
+        id: bankAccounts[0]?.id,
+        name: 'Bank Accounts',
+        holding: 'bank',
+        _bankAggregate: true,
+        _allBankIds: bankAccounts.map((a) => a.id),
+      };
+    }
+    return accounts.find((a) => String(a.id) === panelParams.id) || null;
+  })();
 
   // Non-bank tracked accounts (digital, cash) — each gets its own card
   const nonBankAccounts = useMemo(
@@ -343,15 +361,7 @@ export default function BookBalanceView({
                       )}
                       {!isMonthLocked && !isSeasonView && (
                         <button
-                          onClick={() =>
-                            setStatementAccount({
-                              id: bankAccounts[0]?.id,
-                              name: 'Bank Accounts',
-                              holding: 'bank',
-                              _bankAggregate: true,
-                              _allBankIds: bankAccounts.map((a) => a.id),
-                            })
-                          }
+                          onClick={() => openPanel(PANELS.STATEMENT, { aggregate: 'bank' })}
                           className="flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-primary"
                           aria-label="Compare bank statement"
                         >
@@ -405,7 +415,7 @@ export default function BookBalanceView({
                     )}
                     {!isMonthLocked && !isSeasonView && (
                       <button
-                        onClick={() => setStatementAccount(acct)}
+                        onClick={() => openPanel(PANELS.STATEMENT, { id: acct.id })}
                         className="flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-primary"
                         aria-label={`Compare statement for ${acct.name}`}
                       >
@@ -464,15 +474,17 @@ export default function BookBalanceView({
         </div>
       )}
 
-      {/* ══ STATEMENT IMPORT MODAL ══ */}
-      <StatementImportModal
-        show={!!statementAccount}
-        onClose={() => setStatementAccount(null)}
-        account={statementAccount}
-        transactions={transactions}
-        monthKey={selectedMonth}
-        formatMoney={formatMoney}
-      />
+      {/* ═══ PANEL ═══ opened and closed by the URL (usePanelRoute) */}
+      <PanelHost>
+        <StatementImportModal
+          show={!!statementAccount}
+          onClose={closePanel}
+          account={statementAccount}
+          transactions={transactions}
+          monthKey={selectedMonth}
+          formatMoney={formatMoney}
+        />
+      </PanelHost>
     </div>
   );
 }

@@ -17,9 +17,13 @@ import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup } from '../../utils/ageGroup';
 import JerseyBadge from '../../components/JerseyBadge';
+import ResponsiveModal from '../../components/layout/ResponsiveModal';
+import PanelHost from '../../components/layout/PanelHost';
+import { usePanelRoute } from '../../hooks/usePanelRoute';
 import { DEFAULT_EVAL_SECTIONS, RATING_LABELS, countSkills } from '../../utils/defaultEvaluationRubric';
 import { hasPermission, PERMISSIONS } from '../../utils/roles';
 import RubricEditor from './RubricEditor';
+import { PANELS } from '../../utils/panelRoute';
 
 // Only these roles may submit evaluations (matches CLUB_EVALUATE_PLAYERS in roles.js).
 const COACH_ROLES = new Set(['head_coach', 'assistant_coach', 'club_admin', 'super_admin']);
@@ -45,9 +49,10 @@ export default function SeasonEvaluationView({
   const [selectedEvaluatorId, setSelectedEvaluatorId] = useState(user?.id || null);
   const [rubricSections, setRubricSections] = useState(DEFAULT_EVAL_SECTIONS);
   const [customRubric, setCustomRubric] = useState(null); // null = using default
-  const [showRubricEditor, setShowRubricEditor] = useState(false);
+  const { panel, openPanel, closePanel } = usePanelRoute();
+  const showRubricEditor = panel === PANELS.RUBRIC;
   const [guestPlayers, setGuestPlayers] = useState([]);
-  const [showGuestPicker, setShowGuestPicker] = useState(false);
+  const showGuestPicker = panel === PANELS.GUEST_PICKER;
   const [clubPlayers, setClubPlayers] = useState([]);
   const [guestPickerSearch, setGuestPickerSearch] = useState('');
   const [loadingClubPlayers, setLoadingClubPlayers] = useState(false);
@@ -219,7 +224,7 @@ export default function SeasonEvaluationView({
       showToast?.('Club context unavailable', true);
       return;
     }
-    setShowGuestPicker(true);
+    openPanel(PANELS.GUEST_PICKER);
     setGuestPickerSearch('');
     setLoadingClubPlayers(true);
     try {
@@ -234,7 +239,7 @@ export default function SeasonEvaluationView({
 
   const handleAddGuest = (player) => {
     setGuestPlayers((prev) => (prev.some((g) => g.id === player.id) ? prev : [...prev, player]));
-    setShowGuestPicker(false);
+    closePanel();
     setExpandedPlayer(player.id);
   };
 
@@ -414,7 +419,7 @@ export default function SeasonEvaluationView({
         <div className="flex items-center gap-2">
           {canManageRubric && (
             <button
-              onClick={() => setShowRubricEditor(true)}
+              onClick={() => openPanel(PANELS.RUBRIC)}
               className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border text-foreground text-xs font-semibold rounded-lg hover:bg-background transition-colors"
               title="Add, remove, or rename sections/questions"
             >
@@ -676,106 +681,103 @@ export default function SeasonEvaluationView({
         </div>
       )}
 
-      {showGuestPicker && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-card rounded-lg max-w-lg w-full max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <div>
-                <h3 className="text-base font-bold text-foreground">
-                  {t('seasonEval.pickGuestTitle', 'Add Guest Player')}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {t('seasonEval.pickGuestHint', 'Players from other teams in the club')}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowGuestPicker(false)}
-                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="p-4 border-b border-border">
-              <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
-                <Search size={14} className="text-muted-foreground" />
-                <input
-                  type="text"
-                  value={guestPickerSearch}
-                  onChange={(e) => setGuestPickerSearch(e.target.value)}
-                  placeholder={t('common.search', 'Search...')}
-                  className="flex-1 bg-transparent border-none text-sm text-foreground focus:ring-0 focus:outline-none"
-                  autoFocus
-                />
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto p-2">
-              {loadingClubPlayers ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="w-6 h-6 border-4 border-blue-200 dark:border-blue-800 border-t-blue-500 rounded-full animate-spin" />
-                </div>
-              ) : (
-                (() => {
-                  const rosterIds = new Set(players.map((p) => p.id));
-                  const guestIds = new Set(guestPlayers.map((g) => g.id));
-                  const q = guestPickerSearch.trim().toLowerCase();
-                  const list = clubPlayers
-                    .filter((p) => !rosterIds.has(p.id) && !guestIds.has(p.id))
-                    .filter((p) => {
-                      if (!q) return true;
-                      const name = `${p.firstName} ${p.lastName}`.toLowerCase();
-                      const team = (p.teamName || '').toLowerCase();
-                      return name.includes(q) || team.includes(q);
-                    });
-                  if (list.length === 0) {
-                    return (
-                      <div className="text-center py-8 text-sm text-muted-foreground">
-                        {t('seasonEval.noGuestMatches', 'No matching club players.')}
-                      </div>
-                    );
-                  }
-                  return list.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => handleAddGuest(p)}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted text-left transition-colors"
-                    >
-                      <JerseyBadge number={p.jerseyNumber} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-foreground truncate">
-                          {p.firstName} {p.lastName}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {p.teamName || t('seasonEval.noTeam', 'No team')}
-                          {p.teamAgeGroup ? ` · ${p.teamAgeGroup}` : ''}
-                        </p>
-                      </div>
-                      <UserPlus size={14} className="text-blue-700 dark:text-blue-400 shrink-0" />
-                    </button>
-                  ));
-                })()
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <PanelHost>
+        {showGuestPicker && (
+          <ResponsiveModal onClose={closePanel} size="lg">
+            <ResponsiveModal.Header className="border-b border-border">
+              <h3 className="text-base font-bold text-foreground">
+                {t('seasonEval.pickGuestTitle', 'Add Guest Player')}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {t('seasonEval.pickGuestHint', 'Players from other teams in the club')}
+              </p>
+            </ResponsiveModal.Header>
 
-      <RubricEditor
-        open={showRubricEditor}
-        onClose={() => setShowRubricEditor(false)}
-        teamId={selectedTeamId}
-        user={user}
-        initialSections={customRubric ? customRubric.sections : null}
-        onSaved={(nextSections) => {
-          if (nextSections) {
-            setCustomRubric({ sections: nextSections });
-            setRubricSections(nextSections);
-          } else {
-            setCustomRubric(null);
-            setRubricSections(DEFAULT_EVAL_SECTIONS);
-          }
-        }}
-        showToast={showToast}
-      />
+            <ResponsiveModal.Body className="p-2">
+              {/* Sticky rather than a third pinned band: the Body is the scroll
+                container, so the search rides the top of the list either way. */}
+              <div className="sticky top-0 z-10 -mx-2 -mt-2 mb-2 bg-card p-2 pb-3">
+                <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2">
+                  <Search size={14} className="text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={guestPickerSearch}
+                    onChange={(e) => setGuestPickerSearch(e.target.value)}
+                    placeholder={t('common.search', 'Search...')}
+                    className="flex-1 bg-transparent border-none text-sm text-foreground focus:ring-0 focus:outline-none"
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div>
+                {loadingClubPlayers ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-6 h-6 border-4 border-blue-200 dark:border-blue-800 border-t-blue-500 rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  (() => {
+                    const rosterIds = new Set(players.map((p) => p.id));
+                    const guestIds = new Set(guestPlayers.map((g) => g.id));
+                    const q = guestPickerSearch.trim().toLowerCase();
+                    const list = clubPlayers
+                      .filter((p) => !rosterIds.has(p.id) && !guestIds.has(p.id))
+                      .filter((p) => {
+                        if (!q) return true;
+                        const name = `${p.firstName} ${p.lastName}`.toLowerCase();
+                        const team = (p.teamName || '').toLowerCase();
+                        return name.includes(q) || team.includes(q);
+                      });
+                    if (list.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-sm text-muted-foreground">
+                          {t('seasonEval.noGuestMatches', 'No matching club players.')}
+                        </div>
+                      );
+                    }
+                    return list.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleAddGuest(p)}
+                        className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-muted text-left transition-colors"
+                      >
+                        <JerseyBadge number={p.jerseyNumber} size="sm" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm text-foreground truncate">
+                            {p.firstName} {p.lastName}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {p.teamName || t('seasonEval.noTeam', 'No team')}
+                            {p.teamAgeGroup ? ` · ${p.teamAgeGroup}` : ''}
+                          </p>
+                        </div>
+                        <UserPlus size={14} className="text-blue-700 dark:text-blue-400 shrink-0" />
+                      </button>
+                    ));
+                  })()
+                )}
+              </div>
+            </ResponsiveModal.Body>
+          </ResponsiveModal>
+        )}
+
+        <RubricEditor
+          open={showRubricEditor}
+          onClose={closePanel}
+          teamId={selectedTeamId}
+          user={user}
+          initialSections={customRubric ? customRubric.sections : null}
+          onSaved={(nextSections) => {
+            if (nextSections) {
+              setCustomRubric({ sections: nextSections });
+              setRubricSections(nextSections);
+            } else {
+              setCustomRubric(null);
+              setRubricSections(DEFAULT_EVAL_SECTIONS);
+            }
+          }}
+          showToast={showToast}
+        />
+      </PanelHost>
     </div>
   );
 }

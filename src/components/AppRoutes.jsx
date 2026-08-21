@@ -8,12 +8,16 @@ import { useData } from '../context/DataContext';
 import { useFinanceContext } from '../context/FinanceContext';
 import { useScheduleContext } from '../context/ScheduleContext';
 import { useImpersonationGuard } from '../hooks/useImpersonationGuard';
+import { usePanelRoute } from '../hooks/usePanelRoute';
+import { useFinanceViewProps } from '../hooks/useFinanceViewProps';
+import { usePeopleViewProps } from '../hooks/usePeopleViewProps';
 import { useEventBudgetPush } from '../hooks/useEventBudgetPush';
 import { usePlannedCosts } from '../hooks/usePlannedCosts';
 import { isCostBudgeted } from '../utils/plannedCostBudget';
 import { buildRefundIndex } from '../utils/refunds';
 
 import ErrorBoundary from './ErrorBoundary';
+import PanelHost from './layout/PanelHost';
 import TransactionModal from './TransactionModal';
 import RefundModal from './RefundModal';
 import PlayerFormModal from './PlayerFormModal';
@@ -24,6 +28,7 @@ import RouteNotFound from './RouteNotFound';
 // Eagerly loaded: always needed on first render
 import TeamOverviewView from '../views/team/TeamOverviewView';
 import ParentView from '../views/team/ParentView';
+import { PANELS, panelKey } from '../utils/panelRoute';
 
 // Lazy-loaded: heavy views deferred until navigated to
 const InsightsView = lazy(() => import('../views/team/InsightsView'));
@@ -113,6 +118,7 @@ export default function AppRoutes({
   isCategorySaving,
   accounts,
   activeAccounts,
+  sponsorDirectory,
   accountsByHolding,
   accountMap,
   saveAccount,
@@ -141,19 +147,8 @@ export default function AppRoutes({
   handleArchivePlayer,
   handleToggleWaiveFee,
 
-  // Modal state
-  showPlayerForm,
-  setShowPlayerForm,
-  playerToEdit,
-  setPlayerToEdit,
-  showPlayerModal,
-  setShowPlayerModal,
-  playerToView,
-  setPlayerToView,
-  showTxForm,
-  setShowTxForm,
-  txToEdit,
-  setTxToEdit,
+  // Modal state. Only the confirm dialog and the toast are still held in
+  // state — every panel below is addressed by the URL instead (usePanelRoute).
   confirmDialog,
   impersonatingAs,
   setImpersonatingAs,
@@ -186,9 +181,36 @@ export default function AppRoutes({
 
   const { isReadOnly, guardedAction } = useImpersonationGuard(user);
 
+  // Which panel is open, and on what, comes from the URL — so a panel survives
+  // a reload, can be linked to, and closes on Back.
+  const { panel, panelParams, openPanel, closePanel } = usePanelRoute();
+
+  // Panels are addressed by id, so each resolves its own record out of the
+  // lists already in context rather than being handed the object.
+  const playersById = useMemo(() => {
+    const index = {};
+    [...players, ...archivedPlayers].forEach((p) => {
+      index[String(p.id)] = p;
+    });
+    return index;
+  }, [players, archivedPlayers]);
+
+  const panelPlayer = panelParams.id ? playersById[panelParams.id] || null : null;
+  const panelTx = panelParams.id ? transactions.find((tx) => String(tx.id) === panelParams.id) || null : null;
+
+  // A transaction panel is either editing a row (?panel.id=…) or opening a new
+  // one prefilled from somewhere else — an event, a planner estimate. Those
+  // prefills ride in the URL rather than in memory, so a reload does not hand
+  // the user an empty form.
+  const txInitialData = useMemo(() => {
+    if (panel !== PANELS.TX) return null;
+    if (panelParams.id) return panelTx;
+    const { id: _ignored, ...prefill } = panelParams;
+    return Object.keys(prefill).length > 0 ? prefill : null;
+  }, [panel, panelParams, panelTx]);
+
   // Refunds get their own dialog rather than reusing the transaction form —
   // the entry it creates is derived from the original, not typed from scratch.
-  const [txToRefund, setTxToRefund] = useState(null);
   const [isRefunding, setIsRefunding] = useState(false);
   const refundIndex = useMemo(() => buildRefundIndex(seasonalTransactions), [seasonalTransactions]);
 
@@ -203,14 +225,9 @@ export default function AppRoutes({
     t,
   });
 
-  const {
-    teamBalance,
-    totalExpenses,
-    calculatePlayerFinancials,
-    handleWaterfallCredit,
-    revertWaterfall,
-    handleSetDistributionMethod,
-  } = useFinanceContext();
+  // The sponsor write handlers moved into useFinanceViewProps, which reads them
+  // from this same context rather than being handed them.
+  const { teamBalance, totalExpenses, calculatePlayerFinancials } = useFinanceContext();
 
   const {
     events,
@@ -278,6 +295,67 @@ export default function AppRoutes({
     () => Object.fromEntries(seasonalTransactions.map((tx) => [tx.id, tx])),
     [seasonalTransactions],
   );
+
+  // The finance and people hubs each feed several tabs, and building those bags
+  // inline left ~250 lines of object literals in the middle of the route table.
+  // They read what they can from context themselves — see the hooks.
+  const financeViewProps = useFinanceViewProps({
+    can,
+    canEditLedger,
+    canPushPlannedCosts,
+    isReadOnly,
+    isSuperAdmin,
+    guardedAction,
+    selectedSeason,
+    setSelectedSeason,
+    seasons,
+    refreshSeasons,
+    teamSeasons,
+    teamSeasonId,
+    selectedTeam,
+    selectedTeamId,
+    currentTeamSeason,
+    currentSeasonData,
+    club,
+    categoryLabels,
+    categoryColors,
+    categoryOptions,
+    accounts,
+    activeAccounts,
+    accountsByHolding,
+    accountMap,
+    plannedSummary,
+    plannedEntries,
+    planContributions,
+    pushPlannedCosts,
+    bookBalance,
+    sponsorDirectory,
+    handleDeleteTransaction,
+    handleSaveTransaction,
+    handleBulkUpload,
+    isBulkUploading,
+    setIsBulkUploading,
+    openPanel,
+    showToast,
+    showConfirm,
+  });
+
+  const peopleViewProps = usePeopleViewProps({
+    can,
+    selectedSeason,
+    selectedTeam,
+    club,
+    currentTeamSeason,
+    seasons,
+    user,
+    openPanel,
+    onViewAsParent: (player) => {
+      setImpersonatingAs(player);
+      navigate('/dashboard');
+    },
+    showToast,
+    showConfirm,
+  });
 
   return (
     <>
@@ -467,17 +545,10 @@ export default function AppRoutes({
                     canViewFinancials={can(PERMISSIONS.TEAM_VIEW_BUDGET) || can(PERMISSIONS.TEAM_VIEW_LEDGER)}
                     compliance={compliance}
                     onAddPlayer={() => {
-                      setPlayerToEdit(null);
-                      setShowPlayerForm(true);
+                      openPanel(PANELS.PLAYER_FORM);
                     }}
-                    onEditPlayer={(p) => {
-                      setPlayerToEdit(p);
-                      setShowPlayerForm(true);
-                    }}
-                    onViewPlayer={(p) => {
-                      setPlayerToView(p);
-                      setShowPlayerModal(true);
-                    }}
+                    onEditPlayer={(p) => openPanel(PANELS.PLAYER_FORM, { id: p.id })}
+                    onViewPlayer={(p) => openPanel(PANELS.PLAYER, { id: p.id })}
                     onToggleWaive={guardedAction((pId, state) => handleToggleWaiveFee(pId, selectedSeason, state), {
                       action: 'toggle_waive_fee',
                       tableName: 'players',
@@ -703,249 +774,12 @@ export default function AppRoutes({
                 {(can(PERMISSIONS.TEAM_VIEW_LEDGER) ||
                   can(PERMISSIONS.TEAM_VIEW_BUDGET) ||
                   can(PERMISSIONS.TEAM_VIEW_SPONSORS)) && (
-                  <Route
-                    path="/finance/*"
-                    element={
-                      <FinanceView
-                        visibleTabs={[
-                          ...(can(PERMISSIONS.TEAM_VIEW_LEDGER) ? ['ledger'] : []),
-                          ...(can(PERMISSIONS.TEAM_VIEW_BUDGET) ? ['budget'] : []),
-                          ...(can(PERMISSIONS.TEAM_VIEW_SPONSORS) ? ['fundraising'] : []),
-                          ...(can(PERMISSIONS.TEAM_VIEW_LEDGER) ? ['book-balance'] : []),
-                        ]}
-                        ledgerProps={
-                          can(PERMISSIONS.TEAM_VIEW_LEDGER)
-                            ? {
-                                transactions: seasonalTransactions,
-                                formatMoney,
-                                onAddTx: canEditLedger
-                                  ? () => {
-                                      setTxToEdit(null);
-                                      setShowTxForm(true);
-                                    }
-                                  : null,
-                                onEditTx: canEditLedger
-                                  ? (tx) => {
-                                      setTxToEdit(tx);
-                                      setShowTxForm(true);
-                                    }
-                                  : null,
-                                onDeleteTx:
-                                  canEditLedger && !isReadOnly
-                                    ? guardedAction(
-                                        async (id) => {
-                                          const ok = await showConfirm(t('toast.deleteTxConfirm'));
-                                          if (ok) {
-                                            await handleDeleteTransaction(id);
-                                            showToast(t('toast.txDeleted'));
-                                          }
-                                        },
-                                        { action: 'delete_transaction', tableName: 'transactions' },
-                                      )
-                                    : null,
-                                onRefundTx: canEditLedger && !isReadOnly ? (tx) => setTxToRefund(tx) : null,
-                                categoryLabels,
-                                categoryColors,
-                                categoryOptions,
-                                players: seasonalPlayers,
-                                onBulkUpload: canEditLedger
-                                  ? async (txns) => {
-                                      setIsBulkUploading(true);
-                                      try {
-                                        const result = await handleBulkUpload(txns);
-                                        if (result.success) showToast(t('toast.importSuccess', { n: txns.length }));
-                                        else showToast(result.error || t('toast.importFailed'), true);
-                                        return result;
-                                      } finally {
-                                        setIsBulkUploading(false);
-                                      }
-                                    }
-                                  : null,
-                                isBulkUploading,
-                                selectedSeason,
-                                teamSeasonId,
-                                calculatePlayerFinancials,
-                                accounts,
-                                activeAccounts,
-                                accountsByHolding,
-                                accountMap,
-                              }
-                            : null
-                        }
-                        budgetProps={
-                          can(PERMISSIONS.TEAM_VIEW_BUDGET)
-                            ? {
-                                selectedSeason,
-                                formatMoney,
-                                seasons,
-                                setSelectedSeason,
-                                refreshSeasons,
-                                showToast,
-                                showConfirm,
-                                onDataChange: fetchData,
-                                selectedTeamId,
-                                currentTeamSeason,
-                                selectedTeam,
-                                club,
-                                teamSeasons,
-                                categoryOptions,
-                                plannedSummary,
-                                plannedEntries,
-                                planContributions,
-                                onPushPlannedCosts: canPushPlannedCosts
-                                  ? guardedAction(pushPlannedCosts, {
-                                      action: 'push_planned_costs',
-                                      tableName: 'budget_items',
-                                    })
-                                  : null,
-                              }
-                            : null
-                        }
-                        fundraisingProps={
-                          can(PERMISSIONS.TEAM_VIEW_SPONSORS)
-                            ? {
-                                transactions: seasonalTransactions,
-                                selectedSeason,
-                                formatMoney,
-                                currentSeasonData,
-                                onDistribute:
-                                  can(PERMISSIONS.TEAM_EDIT_SPONSORS) && currentSeasonData?.isFinalized
-                                    ? async (amt, title, pId, originalId, category, allocations) => {
-                                        try {
-                                          await handleWaterfallCredit(
-                                            amt,
-                                            title,
-                                            pId,
-                                            originalId,
-                                            category,
-                                            allocations,
-                                          );
-                                          await fetchData();
-                                          showToast(t('toast.fundsDistributed'));
-                                        } catch (error) {
-                                          showToast(error.message, true);
-                                        }
-                                      }
-                                    : null,
-                                onReset:
-                                  can(PERMISSIONS.TEAM_EDIT_SPONSORS) && currentSeasonData?.isFinalized
-                                    ? async (batchId, originalTxId) => {
-                                        await revertWaterfall(batchId, originalTxId);
-                                        await fetchData();
-                                        showToast(t('toast.distributionReverted'));
-                                      }
-                                    : null,
-                                distributionMethod: currentSeasonData?.distributionMethod || 'waterfall',
-                                onSetDistributionMethod: can(PERMISSIONS.TEAM_EDIT_SPONSORS)
-                                  ? async (method) => {
-                                      try {
-                                        await handleSetDistributionMethod(method);
-                                        showToast(t('toast.distributionMethodSaved'));
-                                      } catch (error) {
-                                        showToast(error.message, true);
-                                      }
-                                    }
-                                  : null,
-                                seasonalPlayers,
-                                seasons,
-                                calculatePlayerFinancials,
-                                activeAccounts,
-                                // Intake writes a real ledger entry, so it follows
-                                // ledger-edit rights rather than sponsor rights —
-                                // a sponsor manager can distribute but not book money.
-                                onAddFunds:
-                                  canEditLedger && !isReadOnly
-                                    ? async (data) => {
-                                        const result = await handleSaveTransaction(data);
-                                        if (!result || result.success !== false) {
-                                          showToast(t('toast.fundsRecorded'));
-                                        }
-                                        return result;
-                                      }
-                                    : null,
-                              }
-                            : null
-                        }
-                        bookBalanceProps={
-                          can(PERMISSIONS.TEAM_VIEW_LEDGER) && bookBalance
-                            ? {
-                                ...bookBalance,
-                                accounts,
-                                transactions: seasonalTransactions,
-                                formatMoney,
-                                showConfirm,
-                                isSuperAdmin,
-                              }
-                            : null
-                        }
-                      />
-                    }
-                  />
+                  <Route path="/finance/*" element={<FinanceView {...financeViewProps} />} />
                 )}
 
                 {/* People hub: Roster + Documents */}
                 {can(PERMISSIONS.TEAM_VIEW_ROSTER) && (
-                  <Route
-                    path="/people"
-                    element={
-                      <PeopleView
-                        visibleTabs={['roster', 'documents']}
-                        rosterProps={
-                          can(PERMISSIONS.TEAM_VIEW_ROSTER)
-                            ? {
-                                players,
-                                seasons,
-                                selectedSeason,
-                                selectedTeam,
-                                club,
-                                currentTeamSeason,
-                                showToast,
-                                showConfirm,
-                                can,
-                                PERMISSIONS,
-                                onEditPlayer: (player) => {
-                                  setPlayerToEdit(player);
-                                  setShowPlayerForm(true);
-                                },
-                                onAddPlayer: () => {
-                                  setPlayerToEdit(null);
-                                  setShowPlayerForm(true);
-                                },
-                                onViewPlayer: (player) => {
-                                  setPlayerToView(player);
-                                  setShowPlayerModal(true);
-                                },
-                                onViewAsParent: (player) => {
-                                  setImpersonatingAs(player);
-                                  navigate('/dashboard');
-                                },
-                                refreshData: fetchData,
-                                compliance,
-                                checklist,
-                                onComplianceChanged: refreshChecklist,
-                                user,
-                              }
-                            : null
-                        }
-                        documentsProps={
-                          can(PERMISSIONS.TEAM_VIEW_ROSTER)
-                            ? {
-                                players: seasonalPlayers,
-                                selectedSeason,
-                                club,
-                                selectedTeam,
-                                showToast,
-                                showConfirm,
-                                can,
-                                PERMISSIONS,
-                                onPlayerUpdate: fetchData,
-                                compliance,
-                              }
-                            : null
-                        }
-                      />
-                    }
-                  />
+                  <Route path="/people" element={<PeopleView {...peopleViewProps} />} />
                 )}
 
                 {/* Team Users: manage roles for team parents/guardians */}
@@ -991,113 +825,118 @@ export default function AppRoutes({
         </Suspense>
       </ErrorBoundary>
 
-      {/* ═══ MODALS ═══ */}
-      {showPlayerModal && playerToView && (
-        <PlayerModal
-          player={playerToView}
+      {/* ═══ PANELS ═══ Opened and closed by the URL — see usePanelRoute.
+          PanelHost tells ResponsiveModal the route already owns the back
+          stack, so a single Back press closes one panel. */}
+      <PanelHost>
+        {panel === PANELS.PLAYER && panelPlayer && (
+          <PlayerModal
+            player={panelPlayer}
+            selectedSeason={selectedSeason}
+            stats={calculatePlayerFinancials(panelPlayer, seasonalTransactions)}
+            onClose={closePanel}
+            formatMoney={formatMoney}
+            clubId={club?.id}
+            onRefresh={fetchData}
+            compliance={compliance}
+            checklist={checklist}
+            canManageChecklist={can(PERMISSIONS.TEAM_MANAGE_CHECKLIST) && !isReadOnly}
+            onComplianceChanged={refreshChecklist}
+            user={user}
+            onViewAsParent={(p) => {
+              setImpersonatingAs(p);
+              // Replace rather than push: this leaves from inside the player
+              // panel, so it should consume the panel's history entry instead of
+              // stacking on top of it and costing the user two Back presses.
+              navigate('/dashboard', { replace: true });
+            }}
+            showToast={showToast}
+            showConfirm={showConfirm}
+            canUploadMedical={can(PERMISSIONS.TEAM_VIEW_MEDICAL_DOCS)}
+          />
+        )}
+
+        <PlayerFormModal
+          key={panelKey(PANELS.PLAYER_FORM, panelParams.id)}
+          show={panel === PANELS.PLAYER_FORM}
+          initialData={panel === PANELS.PLAYER_FORM ? panelPlayer : null}
           selectedSeason={selectedSeason}
-          stats={calculatePlayerFinancials(playerToView, seasonalTransactions)}
-          onClose={() => {
-            setShowPlayerModal(false);
-            setPlayerToView(null);
-          }}
-          formatMoney={formatMoney}
-          clubId={club?.id}
-          onRefresh={fetchData}
-          compliance={compliance}
-          checklist={checklist}
-          canManageChecklist={can(PERMISSIONS.TEAM_MANAGE_CHECKLIST) && !isReadOnly}
-          onComplianceChanged={refreshChecklist}
-          user={user}
-          onViewAsParent={(p) => {
-            setImpersonatingAs(p);
-            // Replace rather than push: this leaves from inside the player
-            // panel, so it should consume the panel's history entry instead of
-            // stacking on top of it and costing the user two Back presses.
-            navigate('/dashboard', { replace: true });
-          }}
-          showToast={showToast}
-          showConfirm={showConfirm}
-          canUploadMedical={can(PERMISSIONS.TEAM_VIEW_MEDICAL_DOCS)}
+          isReadOnly={isReadOnly}
+          onSubmit={guardedAction(
+            async (data) => {
+              const isEdit = Boolean(panelParams.id);
+              await handleSavePlayer(data);
+              closePanel();
+              showToast(isEdit ? t('toast.playerUpdated') : t('toast.playerAdded'));
+            },
+            { action: 'save_player', tableName: 'players' },
+          )}
+          onArchive={guardedAction(
+            async (id) => {
+              const ok = await showConfirm(t('toast.archivePlayerConfirm'));
+              if (ok) {
+                await handleArchivePlayer(id);
+                closePanel();
+                showToast(t('toast.playerArchived'));
+              }
+            },
+            { action: 'archive_player', tableName: 'players' },
+          )}
+          onClose={closePanel}
         />
-      )}
 
-      <PlayerFormModal
-        show={showPlayerForm}
-        initialData={playerToEdit}
-        selectedSeason={selectedSeason}
-        isReadOnly={isReadOnly}
-        onSubmit={guardedAction(
-          async (data) => {
-            await handleSavePlayer(data);
-            setShowPlayerForm(false);
-            showToast(playerToEdit ? t('toast.playerUpdated') : t('toast.playerAdded'));
-          },
-          { action: 'save_player', tableName: 'players' },
-        )}
-        onArchive={guardedAction(
-          async (id) => {
-            const ok = await showConfirm(t('toast.archivePlayerConfirm'));
-            if (ok) {
-              await handleArchivePlayer(id);
-              setShowPlayerForm(false);
-              showToast(t('toast.playerArchived'));
-            }
-          },
-          { action: 'archive_player', tableName: 'players' },
-        )}
-        onClose={() => setShowPlayerForm(false)}
-      />
-
-      <TransactionModal
-        show={showTxForm}
-        initialData={txToEdit}
-        isReadOnly={isReadOnly}
-        onSubmit={guardedAction(
-          async (data) => {
-            const r = await handleSaveTransaction(data);
-            if (r && r.success === false) {
-              showToast(r.error, true);
-            } else {
-              setShowTxForm(false);
-              showToast(txToEdit ? t('toast.txUpdated') : t('toast.txAdded'));
-            }
-          },
-          { action: 'save_transaction', tableName: 'transactions' },
-        )}
-        onClose={() => setShowTxForm(false)}
-        players={seasonalPlayers}
-        categoryOptions={categoryOptions}
-        teamEvents={collapsedTeamEvents}
-        activeAccounts={activeAccounts}
-      />
-
-      <RefundModal
-        key={txToRefund?.id || 'refund-none'}
-        show={Boolean(txToRefund)}
-        transaction={txToRefund}
-        refundIndex={refundIndex}
-        formatMoney={formatMoney}
-        isSubmitting={isRefunding}
-        onClose={() => setTxToRefund(null)}
-        onSubmit={guardedAction(
-          async (details) => {
-            setIsRefunding(true);
-            try {
-              const r = await handleRefundTransaction(txToRefund, details, refundIndex);
+        <TransactionModal
+          key={panelKey(PANELS.TX, panelParams.id)}
+          show={panel === PANELS.TX}
+          initialData={txInitialData}
+          isReadOnly={isReadOnly}
+          onSubmit={guardedAction(
+            async (data) => {
+              const isEdit = Boolean(panelParams.id);
+              const r = await handleSaveTransaction(data);
               if (r && r.success === false) {
                 showToast(r.error, true);
               } else {
-                setTxToRefund(null);
-                showToast(t('toast.txRefunded'));
+                closePanel();
+                showToast(isEdit ? t('toast.txUpdated') : t('toast.txAdded'));
               }
-            } finally {
-              setIsRefunding(false);
-            }
-          },
-          { action: 'refund_transaction', tableName: 'transactions' },
-        )}
-      />
+            },
+            { action: 'save_transaction', tableName: 'transactions' },
+          )}
+          onClose={closePanel}
+          players={seasonalPlayers}
+          categoryOptions={categoryOptions}
+          teamEvents={collapsedTeamEvents}
+          activeAccounts={activeAccounts}
+        />
+
+        <RefundModal
+          key={panelKey(PANELS.REFUND, panelParams.id)}
+          show={panel === PANELS.REFUND && Boolean(panelTx)}
+          transaction={panelTx}
+          refundIndex={refundIndex}
+          formatMoney={formatMoney}
+          isSubmitting={isRefunding}
+          onClose={closePanel}
+          onSubmit={guardedAction(
+            async (details) => {
+              setIsRefunding(true);
+              try {
+                const r = await handleRefundTransaction(panelTx, details, refundIndex);
+                if (r && r.success === false) {
+                  showToast(r.error, true);
+                } else {
+                  closePanel();
+                  showToast(t('toast.txRefunded'));
+                }
+              } finally {
+                setIsRefunding(false);
+              }
+            },
+            { action: 'refund_transaction', tableName: 'transactions' },
+          )}
+        />
+      </PanelHost>
 
       {confirmDialog && (
         <ConfirmModal

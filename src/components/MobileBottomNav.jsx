@@ -1,6 +1,8 @@
 import { LayoutDashboard, Users, Calendar, Plus, ReceiptText, ListChecks } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { useNavigation } from '../context/NavigationContext';
+import { usePanelRoute } from '../hooks/usePanelRoute';
+import { PANELS } from '../utils/panelRoute';
 
 export default function MobileBottomNav() {
   const {
@@ -10,13 +12,14 @@ export default function MobileBottomNav() {
     currentView,
     navigate,
     canEditLedger,
-    setTxToEdit,
-    setShowTxForm,
     isClubAdmin,
     clubNavItems,
     singleTeam,
   } = useNavigation();
   const { t } = useT();
+  // The panel renders app-wide, so the FAB can open it from any route without
+  // navigating away first — it just adds the panel to the URL it is already on.
+  const { openPanel } = usePanelRoute();
 
   return (
     <>
@@ -80,10 +83,7 @@ export default function MobileBottomNav() {
         })}
         {canEditLedger && effectiveIsStaff && (
           <button
-            onClick={() => {
-              setTxToEdit(null);
-              setShowTxForm(true);
-            }}
+            onClick={() => openPanel(PANELS.TX)}
             className="mb-10 bg-primary text-primary-foreground p-4 rounded-full shadow-md border-4 border-card active:scale-90 transition-transform"
             aria-label="Add transaction"
           >

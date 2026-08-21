@@ -6,6 +6,9 @@ import { formatPhoneInput } from '../../utils/phone';
 import { useT } from '../../i18n/I18nContext';
 import PlayerFormModal from '../../components/PlayerFormModal';
 import Badge from '../../components/layout/Badge';
+import ResponsiveModal from '../../components/layout/ResponsiveModal';
+import PanelHost from '../../components/layout/PanelHost';
+import { usePanelRoute } from '../../hooks/usePanelRoute';
 import DirectoryCard, { DetailRow, EmptyRow } from '../../components/layout/DirectoryCard';
 import {
   DirectoryToolbar,
@@ -15,6 +18,7 @@ import {
   RowAction,
 } from '../../components/layout/DirectoryControls';
 import { paginate } from '../../utils/pagination';
+import { PANELS } from '../../utils/panelRoute';
 
 const PER_PAGE = 25;
 
@@ -49,11 +53,13 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
   const [filterStatus, setFilterStatus] = useState('active');
   const [transferringId, setTransferringId] = useState(null);
   const [transferTeamId, setTransferTeamId] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ ...EMPTY_PLAYER });
   const [saving, setSaving] = useState(false);
-  const [editingPlayer, setEditingPlayer] = useState(null);
-  const [showEditModal, setShowEditModal] = useState(false);
+  // Both panels come from the URL, so an edit link can be shared and a
+  // reload lands back on the same player. See usePanelRoute.
+  const { panel, panelParams, openPanel, closePanel } = usePanelRoute();
+  const showAddModal = panel === PANELS.ADD_PLAYER;
+  const showEditModal = panel === PANELS.EDIT_PLAYER;
   const [page, setPage] = useState(1);
 
   const fetchPlayers = async () => {
@@ -155,7 +161,7 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
         });
       }
 
-      setShowAddModal(false);
+      closePanel();
       setAddForm({ ...EMPTY_PLAYER });
       await fetchPlayers();
       showToast?.(`${playerData.firstName} ${playerData.lastName} added`);
@@ -166,10 +172,12 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
     }
   };
 
-  const handleEditPlayer = (player) => {
-    setEditingPlayer(player);
-    setShowEditModal(true);
-  };
+  const handleEditPlayer = (player) => openPanel(PANELS.EDIT_PLAYER, { id: player.id });
+
+  // Resolved from the list rather than held alongside it, so the panel still
+  // finds its player after a reload put the id in the URL and nothing else.
+  const editingPlayer =
+    showEditModal && panelParams.id ? players.find((p) => String(p.id) === panelParams.id) || null : null;
 
   const handleSavePlayer = async (playerData) => {
     try {
@@ -178,8 +186,7 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
       } else {
         await supabaseService.addPlayer({ ...playerData, clubId: club.id });
       }
-      setShowEditModal(false);
-      setEditingPlayer(null);
+      closePanel();
       await fetchPlayers();
       showToast?.('Player saved');
     } catch (e) {
@@ -252,7 +259,7 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
               tone="primary"
               onClick={() => {
                 setAddForm({ ...EMPTY_PLAYER });
-                setShowAddModal(true);
+                openPanel(PANELS.ADD_PLAYER);
               }}
             >
               Add player
@@ -378,36 +385,28 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
         )}
       </DirectoryCard>
 
-      {/* Edit Player Modal */}
-      <PlayerFormModal
-        show={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setEditingPlayer(null);
-        }}
-        onSubmit={handleSavePlayer}
-        initialData={editingPlayer}
-        selectedSeason={selectedSeason}
-      />
+      {/* ═══ PANELS ═══ opened and closed by the URL (usePanelRoute) */}
+      <PanelHost>
+        {/* Edit Player Modal */}
+        <PlayerFormModal
+          key={panelParams.id || 'player-none'}
+          show={showEditModal && Boolean(editingPlayer)}
+          onClose={closePanel}
+          onSubmit={handleSavePlayer}
+          initialData={editingPlayer}
+          selectedSeason={selectedSeason}
+        />
 
-      {/* Add Player Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowAddModal(false)} />
-          <div className="relative w-full max-w-lg bg-card rounded-lg shadow-md border border-border max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b border-border">
+        {/* Add Player Modal */}
+        {showAddModal && (
+          <ResponsiveModal as="form" onSubmit={handleAddPlayer} onClose={closePanel} size="lg" dismissOnBackdrop>
+            <ResponsiveModal.Header className="border-b border-border">
               <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                 <UserPlus size={20} className="text-blue-700 dark:text-blue-400" /> Add Player
               </h3>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
-              >
-                <X size={18} />
-              </button>
-            </div>
+            </ResponsiveModal.Header>
 
-            <form onSubmit={handleAddPlayer} className="p-5 space-y-4">
+            <ResponsiveModal.Body className="space-y-4">
               {/* Player Type */}
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground mb-1">Player Type</label>
@@ -544,28 +543,27 @@ export default function ClubPlayersView({ club, teams, seasons, selectedSeason, 
                   </div>
                 </div>
               </div>
+            </ResponsiveModal.Body>
 
-              {/* Actions */}
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving || !addForm.firstName.trim() || !addForm.lastName.trim()}
-                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors"
-                >
-                  {saving ? 'Adding...' : addForm.playerType === 'prospect' ? 'Add Prospect' : 'Add Player'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <ResponsiveModal.Footer>
+              <button
+                type="button"
+                onClick={closePanel}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving || !addForm.firstName.trim() || !addForm.lastName.trim()}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold transition-colors"
+              >
+                {saving ? 'Adding...' : addForm.playerType === 'prospect' ? 'Add Prospect' : 'Add Player'}
+              </button>
+            </ResponsiveModal.Footer>
+          </ResponsiveModal>
+        )}
+      </PanelHost>
     </div>
   );
 }

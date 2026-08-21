@@ -4,7 +4,7 @@
 // unit-testing in isolation — what matters is that the four grid regions and
 // the toggle wiring survive refactors.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { LayoutDashboard, ReceiptText, Calendar } from 'lucide-react';
@@ -20,6 +20,7 @@ vi.mock('../../hooks/useInstallPrompt', () => ({
 import { I18nProvider } from '../../i18n/I18nContext';
 import { NavigationContext } from '../../context/NavigationContext';
 import AppShell from '../../components/layout/AppShell';
+import { registerScreenPanel, resetScreenPanels } from '../../hooks/useScreenPanel';
 
 const navigate = vi.fn();
 const signOut = vi.fn();
@@ -91,6 +92,7 @@ describe('AppShell', () => {
     vi.clearAllMocks();
     window.localStorage.clear();
     setViewport(true);
+    resetScreenPanels();
   });
 
   it('renders all four AdminLTE grid regions', () => {
@@ -162,5 +164,73 @@ describe('AppShell', () => {
   it('stamps the build into the footer', () => {
     renderShell();
     expect(screen.getByText(/build 123 · abc1234/)).toBeInTheDocument();
+  });
+
+  // A panel presenting as a full screen replaces the app rather than covering
+  // it, so the shell gets out of the way — without losing what the page held.
+  describe('while a full-screen panel is presenting', () => {
+    it('hides itself, taking the chrome out of the accessibility tree', () => {
+      const { container } = renderShell();
+      const wrapper = container.querySelector('.app-wrapper');
+      expect(wrapper).not.toHaveAttribute('hidden');
+
+      act(() => {
+        registerScreenPanel();
+      });
+
+      expect(wrapper).toHaveAttribute('hidden');
+    });
+
+    it('comes back when the last panel closes', () => {
+      const { container } = renderShell();
+      const wrapper = container.querySelector('.app-wrapper');
+
+      let releaseOuter;
+      let releaseInner;
+      act(() => {
+        releaseOuter = registerScreenPanel();
+      });
+      act(() => {
+        releaseInner = registerScreenPanel();
+      });
+
+      // A form opened over a detail screen: one closing is not all of them.
+      act(() => releaseInner());
+      expect(wrapper).toHaveAttribute('hidden');
+
+      act(() => releaseOuter());
+      expect(wrapper).not.toHaveAttribute('hidden');
+    });
+
+    it('stays mounted, so the page keeps what it was holding', () => {
+      renderShell();
+      act(() => {
+        registerScreenPanel();
+      });
+
+      // Still in the document — hidden, not unmounted. An unmounted list would
+      // come back with its filters, search and expanded rows all reset.
+      expect(screen.getByText('page body')).toBeInTheDocument();
+    });
+
+    // Hiding a subtree collapses the document's scroll height, and the browser
+    // does not put the offset back. Without this the list returns at the top.
+    it('puts the page back where it was scrolled to', async () => {
+      renderShell();
+      // jsdom's scrollTo is a no-op that never moves scrollY, so the offset the
+      // shell reads has to be planted directly.
+      Object.defineProperty(window, 'scrollY', { value: 640, configurable: true, writable: true });
+      const scrollTo = vi.spyOn(window, 'scrollTo');
+
+      let release;
+      act(() => {
+        release = registerScreenPanel();
+      });
+      act(() => release());
+
+      await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 640));
+      scrollTo.mockRestore();
+      Object.defineProperty(window, 'scrollY', { value: 0, configurable: true, writable: true });
+    });
   });
 });

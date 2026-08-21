@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, Edit, X, Save, Wallet, Loader2, Eye, AlertTriangle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Plus, Trash2, Edit, Save, Wallet, Loader2, Eye, AlertTriangle } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import AdminCard from './layout/AdminCard';
+import ResponsiveModal from './layout/ResponsiveModal';
+import PanelHost from './layout/PanelHost';
+import { usePanelRoute } from '../hooks/usePanelRoute';
 import { HOLDINGS, HOLDING_LABELS, HOLDING_ICONS, HOLDING_COLORS } from '../utils/holdings';
+import { PANELS } from '../utils/panelRoute';
 
 const EMPTY_FORM = {
   id: null,
@@ -27,35 +31,48 @@ const EMPTY_FORM = {
  */
 export default function AccountManager({ accounts = [], onSave, onDelete, isSaving }) {
   const { t } = useT();
-  const [showForm, setShowForm] = useState(false);
+  // Which account is being edited lives in the URL; the field values stay in
+  // state, seeded from it. See usePanelRoute.
+  const { panel, panelParams, openPanel, closePanel } = usePanelRoute();
+  const showForm = panel === PANELS.ACCOUNT;
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
 
+  const seedForm = (acc) => ({
+    id: acc.id,
+    name: acc.name,
+    handle: acc.handle || '',
+    holding: acc.holding,
+    isActive: acc.isActive,
+    isPublic: acc.isPublic ?? false,
+    sortOrder: acc.sortOrder || 0,
+  });
+
   const handleEdit = (acc) => {
-    setFormData({
-      id: acc.id,
-      name: acc.name,
-      handle: acc.handle || '',
-      holding: acc.holding,
-      isActive: acc.isActive,
-      isPublic: acc.isPublic ?? false,
-      sortOrder: acc.sortOrder || 0,
-    });
-    setShowForm(true);
+    setFormData(seedForm(acc));
     setError('');
+    openPanel(PANELS.ACCOUNT, { id: acc.id });
   };
 
   const handleNew = () => {
     setFormData(EMPTY_FORM);
-    setShowForm(true);
     setError('');
+    openPanel(PANELS.ACCOUNT);
   };
 
   const handleCancel = () => {
-    setShowForm(false);
+    closePanel();
     setFormData(EMPTY_FORM);
     setError('');
   };
+
+  // Arriving on ?panel=account&panel.id=… — a reload, a shared link — there was
+  // no click to seed the fields, so seed them from the id instead.
+  const routedAccount = showForm && panelParams.id ? accounts.find((a) => String(a.id) === panelParams.id) : null;
+  useEffect(() => {
+    if (routedAccount && formData.id !== routedAccount.id) setFormData(seedForm(routedAccount));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routedAccount?.id]);
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -204,20 +221,17 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
 
       {/* ═══ ACCOUNT MODAL ═══ rendered outside the card so the card's
           `overflow-hidden` can never interact with the fixed overlay. */}
-      {showForm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-md">
-            <div className="mb-4 flex items-center justify-between">
+      <PanelHost>
+        {showForm && (
+          <ResponsiveModal as="form" onSubmit={handleSubmit} onClose={handleCancel} size="md">
+            <ResponsiveModal.Header className="border-b border-border">
               <h3 className="flex items-center gap-2 text-lg font-bold text-foreground">
                 <Wallet size={20} className="text-muted-foreground" />
                 {formData.id ? t('accountMgr.editAccount') : t('accountMgr.newAccount')}
               </h3>
-              <button onClick={handleCancel} className="text-muted-foreground hover:text-foreground">
-                <X size={20} />
-              </button>
-            </div>
+            </ResponsiveModal.Header>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <ResponsiveModal.Body className="space-y-4">
               <div>
                 <label htmlFor="account-name" className="text-xs font-semibold text-muted-foreground">
                   {t('accountMgr.name')} *
@@ -322,28 +336,28 @@ export default function AccountManager({ accounts = [], onSave, onDelete, isSavi
               )}
 
               {error && <p className="text-xs font-semibold text-destructive">{error}</p>}
+            </ResponsiveModal.Body>
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="px-4 py-2 text-sm font-semibold text-muted-foreground"
-                >
-                  {t('common.cancel')}
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving || !formData.name.trim()}
-                  className="flex items-center gap-1.5 rounded-lg bg-primary px-6 py-2 text-sm font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                  {t('common.save')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <ResponsiveModal.Footer>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="px-4 py-2 text-sm font-semibold text-muted-foreground"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving || !formData.name.trim()}
+                className="flex items-center gap-1.5 rounded-lg bg-primary px-6 py-2 text-sm font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
+              >
+                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                {t('common.save')}
+              </button>
+            </ResponsiveModal.Footer>
+          </ResponsiveModal>
+        )}
+      </PanelHost>
     </>
   );
 }
