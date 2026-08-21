@@ -1,4 +1,5 @@
 import { TRACKED_HOLDINGS } from './holdings';
+import { txActivityDate } from './txDates';
 
 /** Sentinel value used when the user selects "Entire season" in the book-balance picker. */
 export const SEASON_KEY = 'season';
@@ -33,24 +34,15 @@ export function monthKeyToLabel(monthKey) {
 }
 
 /**
- * Parses a transaction date to a comparable 'YYYY-MM-DD' string.
- */
-function txDateStr(tx) {
-  if (tx.rawDate && typeof tx.rawDate === 'string') return tx.rawDate.split('T')[0];
-  if (!tx.date) return null;
-  if (tx.date.seconds) return new Date(tx.date.seconds * 1000).toISOString().split('T')[0];
-  if (tx.date instanceof Date) return tx.date.toISOString().split('T')[0];
-  if (typeof tx.date === 'string') return tx.date.split('T')[0];
-  return null;
-}
-
-/**
  * Compute the running ledger balance for a single account up to (and including)
  * the last day of `monthKey`.
  *
  * Rules:
  *  - Only tx.cleared === true counts — book balance is money on hand
  *    (funds cleared or in possession), not projected/pending items.
+ *  - The month cutoff runs off the ACTIVITY date, not the event date. A
+ *    tournament paid for in August is August money even though the tournament
+ *    itself is dated November; the bank statement only ever saw August.
  *  - Normal tx with account_id === accountId  → add amount
  *  - TRF with transfer_to_account_id === accountId  → add amount (inflow)
  *  - TRF with transfer_from_account_id === accountId → subtract amount (outflow)
@@ -75,7 +67,7 @@ export function computeLedgerBalance(accountId, monthKey, transactions) {
   let total = 0;
   for (const tx of transactions) {
     if (!tx.cleared) continue;
-    const d = txDateStr(tx);
+    const d = txActivityDate(tx);
     if (!d || (cutoff && d > cutoff)) continue;
 
     const isTransfer = tx.category === 'TRF';

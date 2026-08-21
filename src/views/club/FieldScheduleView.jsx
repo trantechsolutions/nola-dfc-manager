@@ -11,12 +11,14 @@
 // Closures are the other half: a field taken off the board reads closed
 // with its reason, and there is nothing to book.
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, Lock, Plus, Users, Check, X, Trash2, Pencil } from 'lucide-react';
 import { useT } from '../../i18n/I18nContext';
 import { SmallBox } from '../../components/layout';
 import FieldBookingModal from '../../components/FieldBookingModal';
 import FieldClosureModal from '../../components/FieldClosureModal';
+import PanelHost from '../../components/layout/PanelHost';
+import { usePanelRoute } from '../../hooks/usePanelRoute';
 import { useFieldSchedule } from '../../hooks/useFieldSchedule';
 import {
   formatSlot,
@@ -28,6 +30,7 @@ import {
   weekendStart,
   BOOKING_STATUS,
 } from '../../utils/fieldSlots';
+import { PANELS } from '../../utils/panelRoute';
 
 const STATE_STYLES = {
   // The sheet's own yellow band: an opening you can claim.
@@ -71,11 +74,30 @@ export default function FieldScheduleView({
     deleteBooking,
     createClosure,
     deleteClosure,
+    bookings,
   } = useFieldSchedule({ clubId: club?.id, seasonId: selectedSeason, userId: user?.id });
 
-  // { field, date, slotTime, booking } — the block being booked or edited.
-  const [bookingTarget, setBookingTarget] = useState(null);
-  const [closureTarget, setClosureTarget] = useState(null);
+  // Which block is being booked or closed lives in the URL. A slot has no id of
+  // its own — it is a field, a date and a time — so all three ride along, plus
+  // the booking id when an existing one is being edited.
+  const { panel, panelParams, openPanel, closePanel } = usePanelRoute();
+
+  const bookingTarget =
+    panel === PANELS.BOOKING
+      ? {
+          field: fields.find((f) => String(f.id) === panelParams.fieldId) || null,
+          date: panelParams.date,
+          slotTime: panelParams.slotTime,
+          booking: panelParams.bookingId
+            ? bookings.find((b) => String(b.id) === panelParams.bookingId) || null
+            : undefined,
+        }
+      : null;
+
+  const closureTarget =
+    panel === PANELS.CLOSURE
+      ? { date: panelParams.date, fieldId: panelParams.fieldId || null, slotTime: panelParams.slotTime || null }
+      : null;
 
   const teamName = useMemo(() => {
     const byId = new Map(teams.map((team) => [team.id, team.name]));
@@ -185,7 +207,7 @@ export default function FieldScheduleView({
 
         {isClubAdmin && (
           <button
-            onClick={() => setClosureTarget({ date: dates[0] })}
+            onClick={() => openPanel(PANELS.CLOSURE, { date: dates[0] })}
             className="ml-auto flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
           >
             <Lock size={14} />
@@ -282,9 +304,16 @@ export default function FieldScheduleView({
                           canBookDirectly={canBookDirectly}
                           isClubAdmin={isClubAdmin}
                           ownsBooking={ownsBooking}
-                          onBook={() => setBookingTarget({ field, date: day.date, slotTime: slot.slotTime })}
+                          onBook={() =>
+                            openPanel(PANELS.BOOKING, { fieldId: field.id, date: day.date, slotTime: slot.slotTime })
+                          }
                           onEdit={(booking) =>
-                            setBookingTarget({ field, date: day.date, slotTime: slot.slotTime, booking })
+                            openPanel(PANELS.BOOKING, {
+                              fieldId: field.id,
+                              date: day.date,
+                              slotTime: slot.slotTime,
+                              bookingId: booking.id,
+                            })
                           }
                           onApprove={handleApprove}
                           onDecline={handleDecline}
@@ -303,39 +332,42 @@ export default function FieldScheduleView({
 
       <p className="text-xs text-muted-foreground">{t('fieldSchedule.refereeFootnote')}</p>
 
-      {bookingTarget && (
-        <FieldBookingModal
-          field={bookingTarget.field}
-          date={bookingTarget.date}
-          slotTime={bookingTarget.slotTime}
-          booking={bookingTarget.booking}
-          teams={teams}
-          defaultTeamId={selectedTeamId}
-          canPickTeam={isClubAdmin}
-          canBookDirectly={canBookDirectly}
-          onSave={handleSaveBooking}
-          onClose={() => setBookingTarget(null)}
-        />
-      )}
+      {/* ═══ PANELS ═══ opened and closed by the URL (usePanelRoute) */}
+      <PanelHost>
+        {bookingTarget?.field && (
+          <FieldBookingModal
+            field={bookingTarget.field}
+            date={bookingTarget.date}
+            slotTime={bookingTarget.slotTime}
+            booking={bookingTarget.booking}
+            teams={teams}
+            defaultTeamId={selectedTeamId}
+            canPickTeam={isClubAdmin}
+            canBookDirectly={canBookDirectly}
+            onSave={handleSaveBooking}
+            onClose={closePanel}
+          />
+        )}
 
-      {closureTarget && (
-        <FieldClosureModal
-          fields={fields}
-          closures={closures}
-          defaultDate={closureTarget.date}
-          defaultFieldId={closureTarget.fieldId}
-          defaultSlotTime={closureTarget.slotTime}
-          onCreate={async (closure) => {
-            await createClosure(closure);
-            showToast(t('fieldSchedule.toastClosed'));
-          }}
-          onDelete={async (id) => {
-            await deleteClosure(id);
-            showToast(t('fieldSchedule.toastReopened'));
-          }}
-          onClose={() => setClosureTarget(null)}
-        />
-      )}
+        {closureTarget && (
+          <FieldClosureModal
+            fields={fields}
+            closures={closures}
+            defaultDate={closureTarget.date}
+            defaultFieldId={closureTarget.fieldId}
+            defaultSlotTime={closureTarget.slotTime}
+            onCreate={async (closure) => {
+              await createClosure(closure);
+              showToast(t('fieldSchedule.toastClosed'));
+            }}
+            onDelete={async (id) => {
+              await deleteClosure(id);
+              showToast(t('fieldSchedule.toastReopened'));
+            }}
+            onClose={closePanel}
+          />
+        )}
+      </PanelHost>
     </div>
   );
 }

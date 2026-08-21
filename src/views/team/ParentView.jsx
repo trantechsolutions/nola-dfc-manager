@@ -35,7 +35,10 @@ import { isPayableAccount } from '../../utils/accounts';
 import AdminCard from '../../components/layout/AdminCard';
 import TabCard from '../../components/layout/TabCard';
 import Badge from '../../components/layout/Badge';
+import PanelHost from '../../components/layout/PanelHost';
+import { usePanelRoute } from '../../hooks/usePanelRoute';
 import { compressImageFile } from '../../utils/imageCompression';
+import { PANELS } from '../../utils/panelRoute';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -84,7 +87,10 @@ export default function ParentView({
   const { t } = useT();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [tab, setTab] = useState('account');
-  const [showMedicalForm, setShowMedicalForm] = useState(false);
+  // The medical form is a panel of its own here, so it gets a URL. The upload
+  // form below stays in state — it is an inline disclosure, not an overlay.
+  const { panel, openPanel, closePanel } = usePanelRoute();
+  const showMedicalForm = panel === PANELS.MEDICAL;
   const [playerDocs, setPlayerDocs] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
@@ -888,7 +894,7 @@ export default function ParentView({
                     </div>
                   </div>
                   <button
-                    onClick={() => setShowMedicalForm(true)}
+                    onClick={() => openPanel(PANELS.MEDICAL)}
                     className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
                       parentComp.medicalRelease
                         ? 'bg-card text-foreground hover:bg-background border border-border'
@@ -900,17 +906,19 @@ export default function ParentView({
                   </button>
                 </div>
 
-                <MedicalReleaseForm
-                  show={showMedicalForm}
-                  onClose={() => setShowMedicalForm(false)}
-                  player={activePlayer}
-                  clubId={clubId}
-                  seasonId={selectedSeason}
-                  onCompleted={() => {
-                    onRefresh?.();
-                    fetchPlayerDocs();
-                  }}
-                />
+                <PanelHost>
+                  <MedicalReleaseForm
+                    show={showMedicalForm}
+                    onClose={closePanel}
+                    player={activePlayer}
+                    clubId={clubId}
+                    seasonId={selectedSeason}
+                    onCompleted={() => {
+                      onRefresh?.();
+                      fetchPlayerDocs();
+                    }}
+                  />
+                </PanelHost>
                 {/* ReePlayer — sign-up link stays until staff confirms the account
                     via the ReePlayer Waiver toggle; fan link is always shown */}
                 {(playerTeam?.reeplayerFanLink || (playerTeam?.reeplayerPlayerLink && !parentComp.reePlayerWaiver)) && (

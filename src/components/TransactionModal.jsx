@@ -3,6 +3,7 @@ import { ArrowRightLeft, Link2 } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { HOLDINGS, HOLDING_LABELS } from '../utils/holdings';
 import ResponsiveModal from './layout/ResponsiveModal';
+import { todayStr } from '../utils/txDates';
 
 export default function TransactionModal({
   show,
@@ -20,19 +21,20 @@ export default function TransactionModal({
   const [formData, setFormData] = useState({
     title: '',
     amount: '',
-    date: new Date().toISOString().split('T')[0],
+    date: todayStr(),
     category: 'TMF',
     accountId: defaultAccountId,
     transferFromAccountId: '',
     transferToAccountId: '',
     playerId: '',
     cleared: false,
+    clearedDate: '',
     eventId: '',
   });
 
   useEffect(() => {
     if (initialData) {
-      let formattedDate = new Date().toISOString().split('T')[0];
+      let formattedDate = todayStr();
       if (initialData.date && initialData.date.seconds) {
         formattedDate = new Date(initialData.date.seconds * 1000).toISOString().split('T')[0];
       }
@@ -51,18 +53,20 @@ export default function TransactionModal({
         playerId: initialData.playerId || '',
         playerName: initialData.playerName || '',
         cleared: !!initialData.cleared,
+        clearedDate: initialData.clearedDate || '',
       });
     } else {
       setFormData({
         title: '',
         amount: '',
-        date: new Date().toISOString().split('T')[0],
+        date: todayStr(),
         category: 'TMF',
         accountId: defaultAccountId,
         transferFromAccountId: '',
         transferToAccountId: '',
         playerId: '',
         cleared: false,
+        clearedDate: '',
         eventId: '',
       });
     }
@@ -97,6 +101,7 @@ export default function TransactionModal({
       updates.playerId = '';
       updates.playerName = '';
       updates.cleared = true;
+      updates.clearedDate = formData.clearedDate || formData.date || todayStr();
     } else {
       updates.transferFromAccountId = '';
       updates.transferToAccountId = '';
@@ -111,8 +116,13 @@ export default function TransactionModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     const amount = parseFloat(formData.amount) || 0;
+    const cleared = isTransfer ? true : formData.cleared;
     onSubmit({
       ...formData,
+      cleared,
+      // Only a cleared row has an activity date the bank would recognise; an
+      // uncleared one must not carry a stale stamp into the next reconciliation.
+      clearedDate: cleared ? formData.clearedDate || formData.date || todayStr() : null,
       amount: isTransfer ? Math.abs(amount) : amount,
     });
   };
@@ -161,7 +171,7 @@ export default function TransactionModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-1">{t('common.date')}</label>
+            <label className="block text-sm font-semibold text-foreground mb-1">{t('txModal.eventDate')}</label>
             <input
               required
               type="date"
@@ -169,6 +179,7 @@ export default function TransactionModal({
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               className="w-full border border-border rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none"
             />
+            <p className="mt-1 text-xs text-muted-foreground">{t('txModal.eventDateHint')}</p>
           </div>
         </div>
 
@@ -332,17 +343,42 @@ export default function TransactionModal({
 
         {/* Cleared checkbox (hidden for transfers — they auto-clear) */}
         {!isTransfer && (
-          <div className="flex items-center gap-2 pt-2">
-            <input
-              type="checkbox"
-              id="cleared"
-              checked={formData.cleared}
-              onChange={(e) => setFormData({ ...formData, cleared: e.target.checked })}
-              className="w-4 h-4 text-emerald-700 dark:text-emerald-400 rounded focus:ring-emerald-500"
-            />
-            <label htmlFor="cleared" className="text-sm font-semibold text-foreground">
-              {t('txModal.fundsCleared')}
-            </label>
+          <div className="pt-2 space-y-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="cleared"
+                checked={formData.cleared}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    cleared: e.target.checked,
+                    // Ticking the box means the money has already moved, so offer
+                    // today rather than making the user hunt for the field.
+                    clearedDate: e.target.checked ? formData.clearedDate || todayStr() : '',
+                  })
+                }
+                className="w-4 h-4 text-emerald-700 dark:text-emerald-400 rounded focus:ring-emerald-500"
+              />
+              <label htmlFor="cleared" className="text-sm font-semibold text-foreground">
+                {t('txModal.fundsCleared')}
+              </label>
+            </div>
+            {formData.cleared && (
+              <div>
+                <label htmlFor="tx-activity-date" className="block text-sm font-semibold text-foreground mb-1">
+                  {t('txModal.activityDate')}
+                </label>
+                <input
+                  id="tx-activity-date"
+                  type="date"
+                  value={formData.clearedDate}
+                  onChange={(e) => setFormData({ ...formData, clearedDate: e.target.value })}
+                  className="w-full border border-border rounded-lg p-2 focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">{t('txModal.activityDateHint')}</p>
+              </div>
+            )}
           </div>
         )}
       </ResponsiveModal.Body>

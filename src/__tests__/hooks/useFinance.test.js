@@ -266,6 +266,36 @@ describe('handleWaterfallCredit — per-team methods', () => {
     expect(calls.find((c) => c.playerId === null)?.amount).toBeCloseTo(200, 1);
   });
 
+  it('direct: credits a named player who has no fundraiser buy-in', async () => {
+    const p1 = makePlayer('p1', { buyIn: false });
+
+    supabaseService.getPlayerFinancials.mockResolvedValue({ p1: makeFinancials(400) });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1], method: 'direct' });
+    await handleWaterfallCredit(300, 'Sponsor', 'p1', 'orig-tx');
+
+    const calls = supabaseService.addTransaction.mock.calls.map((c) => c[0]);
+    expect(calls.find((c) => c.playerId === 'p1')?.amount).toBe(300);
+    expect(calls.find((c) => c.playerId === null)).toBeUndefined();
+  });
+
+  it('waterfall: credits a named player without buy-in before the pool', async () => {
+    const p1 = makePlayer('p1', { buyIn: false }); // named source — balance 100
+    const p2 = makePlayer('p2'); // pool — balance 500
+
+    supabaseService.getPlayerFinancials.mockResolvedValue({
+      p1: makeFinancials(100),
+      p2: makeFinancials(500),
+    });
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1, p2] });
+    await handleWaterfallCredit(300, 'Sponsor', 'p1', 'orig-tx');
+
+    const calls = supabaseService.addTransaction.mock.calls.map((c) => c[0]);
+    expect(calls.find((c) => c.playerId === 'p1')?.amount).toBe(100);
+    expect(calls.find((c) => c.playerId === 'p2')?.amount).toBeCloseTo(200, 1);
+  });
+
   // EVEN_SPLIT: ignore the linked player's cap; split equally across the pool.
   it('even_split: splits equally and ignores the primary-player cap', async () => {
     const p1 = makePlayer('p1'); // passed as source but treated as a normal member

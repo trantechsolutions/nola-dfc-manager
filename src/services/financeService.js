@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import { logAuditEvent } from './auditService';
+import { todayStr } from '../utils/txDates';
 
 export const financeService = {
   getAllTransactions: async () => {
@@ -17,6 +18,7 @@ export const financeService = {
       playerName: tx.players ? `${tx.players.first_name} ${tx.players.last_name}` : '',
       date: tx.date ? { seconds: Math.floor(new Date(tx.date + 'T12:00:00').getTime() / 1000) } : null,
       rawDate: tx.date,
+      clearedDate: tx.cleared_date || null,
       split: tx.split,
       category: tx.category,
       title: tx.title,
@@ -32,6 +34,7 @@ export const financeService = {
       transferToAccountId: tx.transfer_to_account_id || null,
       eventId: tx.event_id || null,
       eventTitle: tx.team_events?.title || null,
+      sponsorId: tx.sponsor_id || null,
     }));
   },
 
@@ -46,6 +49,9 @@ export const financeService = {
       amount: txData.amount,
       notes: txData.notes || null,
       cleared: txData.cleared ?? false,
+      // Callers that predate the split (record-funds, distributions) date a row by
+      // the day the money moved, so that date doubles as the cleared date.
+      cleared_date: txData.clearedDate || (txData.cleared ? txData.date || todayStr() : null),
       distributed: txData.distributed ?? false,
       waterfall_batch_id: txData.waterfallBatchId || null,
       original_tx_id: txData.originalTxId || null,
@@ -55,6 +61,7 @@ export const financeService = {
       transfer_from_account_id: txData.transferFromAccountId || null,
       transfer_to_account_id: txData.transferToAccountId || null,
       event_id: txData.eventId || null,
+      sponsor_id: txData.sponsorId || null,
     };
     const { data, error } = await supabase.from('transactions').insert(row).select().single();
     if (error) throw error;
@@ -84,12 +91,17 @@ export const financeService = {
     if ('category' in txData) updates.category = txData.category;
     if ('playerId' in txData) updates.player_id = txData.playerId || null;
     if ('cleared' in txData) updates.cleared = txData.cleared;
+    if ('clearedDate' in txData) updates.cleared_date = txData.clearedDate || null;
+    // Toggling cleared without naming a date: stamp today on the way in, drop it
+    // on the way out, so the reconciliation date never has to be guessed later.
+    else if ('cleared' in txData) updates.cleared_date = txData.cleared ? todayStr() : null;
     if ('distributed' in txData) updates.distributed = txData.distributed;
     if ('notes' in txData) updates.notes = txData.notes;
     if ('accountId' in txData) updates.account_id = txData.accountId || null;
     if ('transferFromAccountId' in txData) updates.transfer_from_account_id = txData.transferFromAccountId || null;
     if ('transferToAccountId' in txData) updates.transfer_to_account_id = txData.transferToAccountId || null;
     if ('eventId' in txData) updates.event_id = txData.eventId || null;
+    if ('sponsorId' in txData) updates.sponsor_id = txData.sponsorId || null;
     const { error } = await supabase.from('transactions').update(updates).eq('id', txId);
     if (error) throw error;
 
@@ -149,6 +161,8 @@ export const financeService = {
       amount: tx.amount,
       notes: tx.notes || null,
       cleared: tx.cleared ?? false,
+      // A CSV import is historical: its date column is the day the money moved.
+      cleared_date: tx.clearedDate || (tx.cleared ? tx.date || todayStr() : null),
       distributed: false,
       account_id: tx.accountId || null,
       transfer_from_account_id: tx.transferFromAccountId || null,
@@ -156,6 +170,7 @@ export const financeService = {
       // Carried so bulk-adding expenses from the schedule keeps each row tied to
       // its event; CSV imports simply have none.
       event_id: tx.eventId || null,
+      sponsor_id: tx.sponsorId || null,
       ...(teamSeasonId ? { team_season_id: teamSeasonId } : {}),
     }));
 
@@ -179,6 +194,7 @@ export const financeService = {
       playerName: tx.players ? `${tx.players.first_name} ${tx.players.last_name}` : null,
       date: tx.date ? { seconds: Math.floor(new Date(tx.date + 'T12:00:00').getTime() / 1000) } : null,
       rawDate: tx.date,
+      clearedDate: tx.cleared_date || null,
       split: tx.split,
       category: tx.category,
       title: tx.title,
@@ -194,6 +210,7 @@ export const financeService = {
       transferToAccountId: tx.transfer_to_account_id || null,
       eventId: tx.event_id || null,
       eventTitle: tx.team_events?.title || null,
+      sponsorId: tx.sponsor_id || null,
     }));
   },
 

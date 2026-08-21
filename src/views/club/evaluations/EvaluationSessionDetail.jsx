@@ -16,9 +16,13 @@ import {
   Download,
 } from 'lucide-react';
 import { useT } from '../../../i18n/I18nContext';
+import ResponsiveModal from '../../../components/layout/ResponsiveModal';
+import PanelHost from '../../../components/layout/PanelHost';
+import { usePanelRoute } from '../../../hooks/usePanelRoute';
 import { useEvaluationManager } from '../../../hooks/useEvaluationManager';
 import { supabaseService } from '../../../services/supabaseService';
 import { getUSAgeGroup } from '../../../utils/ageGroup';
+import { PANELS } from '../../../utils/panelRoute';
 
 const TABS = [
   { key: 'setup', icon: Settings, labelKey: 'evaluations.tabs.setup', fallback: 'Setup' },
@@ -90,7 +94,8 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
   // ---- Roster state ----
   const [csvPreview, setCsvPreview] = useState(null);
   const fileInputRef = useRef(null);
-  const [showClubPicker, setShowClubPicker] = useState(false);
+  const { panel, openPanel, closePanel } = usePanelRoute();
+  const showClubPicker = panel === PANELS.CLUB_PICKER;
   const [clubPlayers, setClubPlayers] = useState([]);
   const [clubPickerSearch, setClubPickerSearch] = useState('');
   const [selectedClubPlayerIds, setSelectedClubPlayerIds] = useState(new Set());
@@ -260,7 +265,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
       setClubPlayers(players.filter((p) => !existingPlayerIds.has(p.id)));
       setSelectedClubPlayerIds(new Set());
       setClubPickerSearch('');
-      setShowClubPicker(true);
+      openPanel(PANELS.CLUB_PICKER);
     } catch (e) {
       showToast?.('Failed to load club players', true);
     }
@@ -288,7 +293,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
       });
     try {
       await importCandidates(toAdd);
-      setShowClubPicker(false);
+      closePanel();
       showToast?.(`${toAdd.length} player(s) added from club roster`);
     } catch {
       showToast?.('Failed to add players', true);
@@ -858,10 +863,9 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
 
         {/* Club Player Picker Modal */}
         {showClubPicker && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/50" onClick={() => setShowClubPicker(false)} />
-            <div className="relative w-full max-w-lg bg-card rounded-lg shadow-md border border-border max-h-[80vh] flex flex-col">
-              <div className="flex items-center justify-between p-4 border-b border-border">
+          <PanelHost>
+            <ResponsiveModal onClose={closePanel} size="lg" dismissOnBackdrop>
+              <ResponsiveModal.Header className="border-b border-border">
                 <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <Users size={16} className="text-blue-700 dark:text-blue-400" />
                   {t('evaluations.addFromClub', 'Add from Club Roster')}
@@ -871,66 +875,63 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                     </span>
                   )}
                 </h3>
+              </ResponsiveModal.Header>
+
+              <ResponsiveModal.Body className="p-2">
+                {/* Sticky rather than its own band — the Body is the scroller. */}
+                <div className="sticky top-0 z-10 -mx-2 -mt-2 mb-2 bg-card p-2 pb-3">
+                  <input
+                    type="text"
+                    placeholder="Search players..."
+                    value={clubPickerSearch}
+                    onChange={(e) => setClubPickerSearch(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+
+                <div>
+                  {clubPlayers
+                    .filter((p) => {
+                      if (!clubPickerSearch) return true;
+                      const q = clubPickerSearch.toLowerCase();
+                      return `${p.firstName} ${p.lastName}`.toLowerCase().includes(q);
+                    })
+                    .map((p) => (
+                      <label
+                        key={p.id}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                          selectedClubPlayerIds.has(p.id) ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-background'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedClubPlayerIds.has(p.id)}
+                          onChange={() => toggleClubPlayer(p.id)}
+                          className="rounded border-border text-blue-700 dark:text-blue-400 focus:ring-ring"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground">
+                            {p.firstName} {p.lastName}
+                            {p.jerseyNumber && (
+                              <span className="ml-1.5 text-xs text-muted-foreground">#{p.jerseyNumber}</span>
+                            )}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {p.teamName || 'Unassigned'}
+                            {p.status === 'prospect' && ' · Prospect'}
+                          </p>
+                        </div>
+                      </label>
+                    ))}
+                  {clubPlayers.length === 0 && (
+                    <p className="text-center py-8 text-sm text-muted-foreground">No club players available to add.</p>
+                  )}
+                </div>
+              </ResponsiveModal.Body>
+
+              <ResponsiveModal.Footer>
                 <button
-                  onClick={() => setShowClubPicker(false)}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="p-3 border-b border-border">
-                <input
-                  type="text"
-                  placeholder="Search players..."
-                  value={clubPickerSearch}
-                  onChange={(e) => setClubPickerSearch(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-                />
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-2">
-                {clubPlayers
-                  .filter((p) => {
-                    if (!clubPickerSearch) return true;
-                    const q = clubPickerSearch.toLowerCase();
-                    return `${p.firstName} ${p.lastName}`.toLowerCase().includes(q);
-                  })
-                  .map((p) => (
-                    <label
-                      key={p.id}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                        selectedClubPlayerIds.has(p.id) ? 'bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-background'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedClubPlayerIds.has(p.id)}
-                        onChange={() => toggleClubPlayer(p.id)}
-                        className="rounded border-border text-blue-700 dark:text-blue-400 focus:ring-ring"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">
-                          {p.firstName} {p.lastName}
-                          {p.jerseyNumber && (
-                            <span className="ml-1.5 text-xs text-muted-foreground">#{p.jerseyNumber}</span>
-                          )}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {p.teamName || 'Unassigned'}
-                          {p.status === 'prospect' && ' · Prospect'}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-                {clubPlayers.length === 0 && (
-                  <p className="text-center py-8 text-sm text-muted-foreground">No club players available to add.</p>
-                )}
-              </div>
-
-              <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
-                <button
-                  onClick={() => setShowClubPicker(false)}
+                  onClick={closePanel}
                   className="px-4 py-2 rounded-lg text-sm font-semibold text-muted-foreground hover:bg-muted"
                 >
                   Cancel
@@ -942,9 +943,9 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
                 >
                   Add {selectedClubPlayerIds.size || ''} Player{selectedClubPlayerIds.size !== 1 ? 's' : ''}
                 </button>
-              </div>
-            </div>
-          </div>
+              </ResponsiveModal.Footer>
+            </ResponsiveModal>
+          </PanelHost>
         )}
       </div>
     );

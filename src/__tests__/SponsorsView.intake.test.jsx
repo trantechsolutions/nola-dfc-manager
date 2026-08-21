@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, act, fireEvent, waitFor, within } from '@testing-library/react';
+// The view opens its panels through the URL now (usePanelRoute), so it needs a
+// router around it the same way the app supplies one.
+import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../i18n/I18nContext';
 import SponsorsView from '../views/team/SponsorsView';
 
@@ -23,9 +26,11 @@ const makeProps = (overrides = {}) => ({
 
 const renderView = (props) =>
   render(
-    <I18nProvider>
-      <SponsorsView {...props} />
-    </I18nProvider>,
+    <MemoryRouter>
+      <I18nProvider>
+        <SponsorsView {...props} />
+      </I18nProvider>
+    </MemoryRouter>,
   );
 
 describe('SponsorsView fundraising intake', () => {

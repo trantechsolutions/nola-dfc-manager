@@ -39,7 +39,10 @@ import DirectoryCard, { DetailRow, EmptyRow } from '../../components/layout/Dire
 import { DirectoryToolbar, SearchInput, FilterSelect, ToolbarButton } from '../../components/layout/DirectoryControls';
 import { paginate } from '../../utils/pagination';
 import BulkUploadModal from '../../components/BulkUploadModal';
+import PanelHost from '../../components/layout/PanelHost';
+import { usePanelRoute } from '../../hooks/usePanelRoute';
 import MedicalReleaseForm from '../../components/MedicalReleaseForm';
+import { PANELS } from '../../utils/panelRoute';
 
 const STATUS_COLORS = DOC_STATUS_COLORS;
 
@@ -73,13 +76,17 @@ export default function RosterManagement({
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('active');
   const [expandedPlayerId, setExpandedPlayerId] = useState(null);
-  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const { panel, panelParams, openPanel, closePanel } = usePanelRoute();
+  const showBulkUpload = panel === PANELS.IMPORT_ROSTER;
   const [isSaving, setIsSaving] = useState(false);
   const [sortField, setSortField] = useState('lastName');
   const [sortDir, setSortDir] = useState('asc');
   const [complianceFilter, setComplianceFilter] = useState('all'); // all | compliant | non-compliant
   const [playerDocs, setPlayerDocs] = useState({}); // { playerId: docs[] }
-  const [medicalPlayer, setMedicalPlayer] = useState(null); // player to show medical form for
+  // The medical form is its own panel here (unlike inside PlayerModal, where
+  // it is a step within an already-addressable one), so it gets a URL too.
+  const medicalPlayer =
+    panel === PANELS.MEDICAL && panelParams.id ? players.find((p) => String(p.id) === panelParams.id) || null : null;
   const [docsLoading, setDocsLoading] = useState(null); // playerId currently loading
 
   const canEdit = can(PERMISSIONS.TEAM_EDIT_ROSTER);
@@ -259,7 +266,7 @@ export default function RosterManagement({
 
   // ── Bulk upload complete ──
   const handleBulkUploadComplete = async () => {
-    setShowBulkUpload(false);
+    closePanel();
     await refreshData();
     showToast('Roster import complete!');
   };
@@ -405,7 +412,7 @@ export default function RosterManagement({
                 <ToolbarButton icon={Download} onClick={handleExportCSV}>
                   Export
                 </ToolbarButton>
-                <ToolbarButton icon={Upload} onClick={() => setShowBulkUpload(true)}>
+                <ToolbarButton icon={Upload} onClick={() => openPanel(PANELS.IMPORT_ROSTER)}>
                   {t('rosterMgmt.bulkUpload')}
                 </ToolbarButton>
                 <ToolbarButton icon={Plus} tone="primary" onClick={onAddPlayer}>
@@ -600,7 +607,7 @@ export default function RosterManagement({
                             user={user}
                             showToast={showToast}
                             onChanged={onComplianceChanged}
-                            onOpenMedicalForm={() => setMedicalPlayer(player)}
+                            onOpenMedicalForm={() => openPanel(PANELS.MEDICAL, { id: player.id })}
                           />
                         </div>
 
@@ -797,32 +804,35 @@ export default function RosterManagement({
         )}
       </DirectoryCard>
 
-      {/* ── BULK UPLOAD MODAL ── */}
-      <BulkUploadModal
-        show={showBulkUpload}
-        onClose={() => setShowBulkUpload(false)}
-        onComplete={handleBulkUploadComplete}
-        selectedTeam={selectedTeam}
-        club={club}
-        selectedSeason={selectedSeason}
-        currentTeamSeason={currentTeamSeason}
-        existingPlayers={players}
-        showToast={showToast}
-      />
+      {/* ═══ PANEL ═══ opened and closed by the URL (usePanelRoute) */}
+      <PanelHost>
+        <BulkUploadModal
+          show={showBulkUpload}
+          onClose={closePanel}
+          onComplete={handleBulkUploadComplete}
+          selectedTeam={selectedTeam}
+          club={club}
+          selectedSeason={selectedSeason}
+          currentTeamSeason={currentTeamSeason}
+          existingPlayers={players}
+          showToast={showToast}
+        />
 
-      {/* ── MEDICAL RELEASE FORM MODAL ── */}
-      <MedicalReleaseForm
-        show={!!medicalPlayer}
-        onClose={() => setMedicalPlayer(null)}
-        player={medicalPlayer}
-        clubId={club?.id}
-        seasonId={selectedSeason}
-        onCompleted={() => {
-          setMedicalPlayer(null);
-          refreshData();
-          if (medicalPlayer) loadPlayerDocs(medicalPlayer.id);
-        }}
-      />
+        {/* ── MEDICAL RELEASE FORM MODAL ── */}
+        <MedicalReleaseForm
+          show={!!medicalPlayer}
+          onClose={closePanel}
+          player={medicalPlayer}
+          clubId={club?.id}
+          seasonId={selectedSeason}
+          onCompleted={() => {
+            const playerId = medicalPlayer?.id;
+            closePanel();
+            refreshData();
+            if (playerId) loadPlayerDocs(playerId);
+          }}
+        />
+      </PanelHost>
     </div>
   );
 }

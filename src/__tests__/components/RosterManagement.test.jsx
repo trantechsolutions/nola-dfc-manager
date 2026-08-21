@@ -5,6 +5,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+// The view opens its panels through the URL now (usePanelRoute), so it needs a
+// router around it the same way the app supplies one.
+import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('../../services/supabaseService', () => ({
   supabaseService: {
@@ -37,24 +40,26 @@ const player = (i, overrides = {}) => ({
 
 function renderRoster(players) {
   return render(
-    <I18nProvider>
-      <RosterManagement
-        players={players}
-        seasons={[{ id: SEASON }]}
-        selectedSeason={SEASON}
-        selectedTeam={{ id: 't1', name: 'U12 Boys' }}
-        club={{ id: 'c1', name: 'NOLA DFC' }}
-        currentTeamSeason={{ id: 'ts1' }}
-        showToast={vi.fn()}
-        showConfirm={vi.fn()}
-        can={() => true}
-        PERMISSIONS={{}}
-        onEditPlayer={vi.fn()}
-        onAddPlayer={vi.fn()}
-        onViewPlayer={vi.fn()}
-        refreshData={vi.fn()}
-      />
-    </I18nProvider>,
+    <MemoryRouter>
+      <I18nProvider>
+        <RosterManagement
+          players={players}
+          seasons={[{ id: SEASON }]}
+          selectedSeason={SEASON}
+          selectedTeam={{ id: 't1', name: 'U12 Boys' }}
+          club={{ id: 'c1', name: 'NOLA DFC' }}
+          currentTeamSeason={{ id: 'ts1' }}
+          showToast={vi.fn()}
+          showConfirm={vi.fn()}
+          can={() => true}
+          PERMISSIONS={{}}
+          onEditPlayer={vi.fn()}
+          onAddPlayer={vi.fn()}
+          onViewPlayer={vi.fn()}
+          refreshData={vi.fn()}
+        />
+      </I18nProvider>
+    </MemoryRouter>,
   );
 }
 

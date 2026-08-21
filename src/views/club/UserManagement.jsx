@@ -17,7 +17,11 @@ import {
   Edit,
 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
+import ResponsiveModal from '../../components/layout/ResponsiveModal';
+import PanelHost from '../../components/layout/PanelHost';
+import { usePanelRoute } from '../../hooks/usePanelRoute';
 import { ALL_ROLES, CLUB_ROLES, TEAM_ROLES, CLUB_ASSIGNABLE_ROLES } from '../../utils/roles';
+import { PANELS } from '../../utils/panelRoute';
 
 const ROLE_COLORS = {
   club_admin: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
@@ -45,7 +49,8 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
   const [searchTerm, setSearchTerm] = useState('');
 
   // Invite form — default to team_manager (a club-assignable role)
-  const [showInviteForm, setShowInviteForm] = useState(false);
+  const { panel, openPanel, closePanel } = usePanelRoute();
+  const showInviteForm = panel === PANELS.INVITE;
   const [invForm, setInvForm] = useState({ email: '', name: '', role: 'team_manager', teamId: '' });
   const [isSending, setIsSending] = useState(false);
 
@@ -80,7 +85,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
       const assignOpts = isClubRole(invForm.role) ? { clubId: club.id } : { teamId: invForm.teamId || null };
       await supabaseService.assignRoleByEmail(invForm.email.trim(), invForm.role, assignOpts);
       showToast(`${ALL_ROLES[invForm.role]?.label} role assigned to ${invForm.email}`);
-      setShowInviteForm(false);
+      closePanel();
       setInvForm({ email: '', name: '', role: 'team_manager', teamId: '' });
       fetchData();
       refreshContext();
@@ -95,7 +100,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
           name: invForm.name.trim(),
         });
         showToast(`Invitation created for ${invForm.email}`);
-        setShowInviteForm(false);
+        closePanel();
         setInvForm({ email: '', name: '', role: 'team_manager', teamId: '' });
         fetchData();
       } catch (err) {
@@ -154,7 +159,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
           </p>
         </div>
         <button
-          onClick={() => setShowInviteForm(true)}
+          onClick={() => openPanel(PANELS.INVITE)}
           className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 shadow-lg"
         >
           <UserPlus size={14} /> Invite User
@@ -322,18 +327,15 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
 
       {/* ── INVITE MODAL ── */}
       {showInviteForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
-          <div className="bg-card rounded-lg p-6 w-full max-w-md shadow-md border border-border">
-            <div className="flex justify-between items-center mb-4">
+        <PanelHost>
+          <ResponsiveModal as="form" onSubmit={handleSendInvite} onClose={closePanel} size="md">
+            <ResponsiveModal.Header className="border-b border-border">
               <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                 <Mail size={20} className="text-blue-700 dark:text-blue-400" /> Invite User
               </h3>
-              <button onClick={() => setShowInviteForm(false)} className="text-muted-foreground hover:text-foreground">
-                <X size={20} />
-              </button>
-            </div>
+            </ResponsiveModal.Header>
 
-            <form onSubmit={handleSendInvite} className="space-y-4">
+            <ResponsiveModal.Body className="space-y-4">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground">Email Address *</label>
                 <input
@@ -422,26 +424,26 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
                 If the user already has an account, the role will be assigned immediately. Otherwise, an invitation will
                 be created.
               </p>
+            </ResponsiveModal.Body>
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowInviteForm(false)}
-                  className="text-sm font-semibold text-muted-foreground px-4 py-2"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSending || !invForm.email.trim() || !invForm.teamId}
-                  className="flex items-center gap-1.5 text-sm font-bold text-white bg-blue-600 px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 shadow-lg"
-                >
-                  <Send size={14} /> {isSending ? 'Sending...' : 'Send Invite'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <ResponsiveModal.Footer>
+              <button
+                type="button"
+                onClick={closePanel}
+                className="text-sm font-semibold text-muted-foreground px-4 py-2"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSending || !invForm.email.trim() || !invForm.teamId}
+                className="flex items-center gap-1.5 text-sm font-bold text-white bg-blue-600 px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 shadow-lg"
+              >
+                <Send size={14} /> {isSending ? 'Sending...' : 'Send Invite'}
+              </button>
+            </ResponsiveModal.Footer>
+          </ResponsiveModal>
+        </PanelHost>
       )}
     </div>
   );

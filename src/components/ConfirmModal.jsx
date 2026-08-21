@@ -1,38 +1,48 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
+import ResponsiveModal from './layout/ResponsiveModal';
 
 export default function ConfirmModal({ message, onConfirm, onCancel }) {
   const { t } = useT();
 
   return (
-    // Above every other overlay: it is reachable from inside them.
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[1070] p-4">
-      <div className="bg-card rounded-lg p-8 w-full max-w-sm shadow-md animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded-full">
+    // Stays a card on a phone: an alert is not a screen you navigated to, and
+    // it is reachable from inside panels that are — hence z-1070, above them.
+    <ResponsiveModal
+      fullScreen={false}
+      size="sm"
+      onClose={onCancel}
+      overlayClassName="z-[1070]"
+      className="animate-in fade-in zoom-in-95 duration-200"
+    >
+      <ResponsiveModal.Header dismissible={false}>
+        <div className="flex items-center gap-4">
+          <div className="rounded-full bg-amber-100 p-3 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
             <AlertTriangle size={24} />
           </div>
           <h3 className="text-xl font-bold text-foreground">{t('common.confirmAction')}</h3>
         </div>
+      </ResponsiveModal.Header>
 
-        <p className="text-foreground font-medium mb-8 leading-relaxed">{message}</p>
+      <ResponsiveModal.Body className="pt-0">
+        <p className="font-medium leading-relaxed text-foreground">{message}</p>
+      </ResponsiveModal.Body>
 
-        <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-3 px-4 rounded-lg font-semibold text-foreground bg-muted hover:bg-muted transition-colors"
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 py-3 px-4 rounded-lg font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200 transition-colors"
-          >
-            {t('common.proceed')}
-          </button>
-        </div>
-      </div>
-    </div>
+      <ResponsiveModal.Footer className="flex-nowrap">
+        <button
+          onClick={onCancel}
+          className="flex-1 rounded-lg bg-muted px-4 py-3 font-semibold text-foreground transition-colors hover:bg-muted"
+        >
+          {t('common.cancel')}
+        </button>
+        <button
+          onClick={onConfirm}
+          className="flex-1 rounded-lg bg-red-600 px-4 py-3 font-bold text-white shadow-lg shadow-red-200 transition-colors hover:bg-red-700"
+        >
+          {t('common.proceed')}
+        </button>
+      </ResponsiveModal.Footer>
+    </ResponsiveModal>
   );
 }

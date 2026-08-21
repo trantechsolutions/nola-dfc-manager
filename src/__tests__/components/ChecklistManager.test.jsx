@@ -5,6 +5,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+// The view opens its panels through the URL now (usePanelRoute), so it needs a
+// router around it the same way the app supplies one.
+import { MemoryRouter } from 'react-router-dom';
 
 const deleteChecklist = vi.fn().mockResolvedValue(undefined);
 const saveChecklist = vi.fn();
@@ -60,19 +63,21 @@ import ChecklistManager from '../../views/team/ChecklistManager';
 
 function renderManager({ showConfirm, showToast = vi.fn() }) {
   return render(
-    <I18nProvider>
-      <ChecklistManager
-        players={[{ id: 'p1', firstName: 'Ada', lastName: 'Lovelace' }]}
-        teamId="t1"
-        teamName="U12 Boys"
-        seasonId="2025-26"
-        seasonLabel="2025-26"
-        user={{ id: 'u1' }}
-        showToast={showToast}
-        showConfirm={showConfirm}
-        canManage
-      />
-    </I18nProvider>,
+    <MemoryRouter>
+      <I18nProvider>
+        <ChecklistManager
+          players={[{ id: 'p1', firstName: 'Ada', lastName: 'Lovelace' }]}
+          teamId="t1"
+          teamName="U12 Boys"
+          seasonId="2025-26"
+          seasonLabel="2025-26"
+          user={{ id: 'u1' }}
+          showToast={showToast}
+          showConfirm={showConfirm}
+          canManage
+        />
+      </I18nProvider>
+    </MemoryRouter>,
   );
 }
 

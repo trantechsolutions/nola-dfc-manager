@@ -4,7 +4,6 @@ import {
   Plus,
   Trash2,
   Users,
-  X,
   Shield,
   UserPlus,
   Layers,
@@ -13,8 +12,12 @@ import {
   Ban,
   MapPin,
 } from 'lucide-react';
+import ResponsiveModal from '../../components/layout/ResponsiveModal';
+import PanelHost from '../../components/layout/PanelHost';
+import { usePanelRoute } from '../../hooks/usePanelRoute';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
+import { PANELS } from '../../utils/panelRoute';
 
 export default function SuperAdminView({
   onSelectClub,
@@ -33,7 +36,10 @@ export default function SuperAdminView({
   const { t } = useT();
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  // The create-club panel is addressed by the URL, so it survives a reload
+  // and can be linked to. See usePanelRoute.
+  const { panel, openPanel, closePanel } = usePanelRoute();
+  const showCreateForm = panel === PANELS.NEW_CLUB;
   const [newClubName, setNewClubName] = useState('');
   const [newClubSlug, setNewClubSlug] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -225,7 +231,7 @@ export default function SuperAdminView({
       await supabaseService.createClub({ name: newClubName.trim(), slug });
       setNewClubName('');
       setNewClubSlug('');
-      setShowCreateForm(false);
+      closePanel();
       await fetchClubs();
       if (showToast) showToast('Club created successfully');
     } catch (e) {
@@ -264,7 +270,7 @@ export default function SuperAdminView({
           </p>
         </div>
         <button
-          onClick={() => setShowCreateForm(true)}
+          onClick={() => openPanel(PANELS.NEW_CLUB)}
           className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-lg hover:bg-violet-700 transition-colors"
         >
           <Plus size={14} /> New Club
@@ -542,18 +548,15 @@ export default function SuperAdminView({
 
       {/* Create Club Modal */}
       {showCreateForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4">
-          <div className="bg-card rounded-lg p-6 w-full max-w-md border border-border">
-            <div className="flex justify-between items-center mb-4">
+        <PanelHost>
+          <ResponsiveModal as="form" onSubmit={handleCreate} onClose={closePanel} size="md">
+            <ResponsiveModal.Header className="border-b border-border">
               <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                 <Building2 size={20} className="text-violet-700 dark:text-violet-400" /> New Club
               </h3>
-              <button onClick={() => setShowCreateForm(false)} className="text-muted-foreground hover:text-foreground">
-                <X size={20} />
-              </button>
-            </div>
+            </ResponsiveModal.Header>
 
-            <form onSubmit={handleCreate} className="space-y-4">
+            <ResponsiveModal.Body className="space-y-4">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground">Club Name *</label>
                 <input
@@ -585,26 +588,26 @@ export default function SuperAdminView({
                 />
                 <p className="text-xs text-muted-foreground mt-1">URL-friendly identifier. Auto-generated from name.</p>
               </div>
+            </ResponsiveModal.Body>
 
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateForm(false)}
-                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm text-muted-foreground hover:bg-background transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving || !newClubName.trim()}
-                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 transition-all"
-                >
-                  {isSaving ? 'Creating...' : 'Create Club'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <ResponsiveModal.Footer className="flex-nowrap">
+              <button
+                type="button"
+                onClick={closePanel}
+                className="flex-1 py-2.5 rounded-lg font-semibold text-sm text-muted-foreground hover:bg-background transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving || !newClubName.trim()}
+                className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 transition-all"
+              >
+                {isSaving ? 'Creating...' : 'Create Club'}
+              </button>
+            </ResponsiveModal.Footer>
+          </ResponsiveModal>
+        </PanelHost>
       )}
     </div>
   );

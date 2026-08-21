@@ -19,6 +19,8 @@ import { useT } from '../../i18n/I18nContext';
 import AdminCard from '../../components/layout/AdminCard';
 import Badge from '../../components/layout/Badge';
 import ResponsiveModal from '../../components/layout/ResponsiveModal';
+import PanelHost from '../../components/layout/PanelHost';
+import { usePanelRoute } from '../../hooks/usePanelRoute';
 import { formControl } from '../../components/layout/formControl';
 import ChecklistEditor from './ChecklistEditor';
 import { useChecklist } from '../../hooks/useChecklist';
@@ -35,6 +37,7 @@ import {
   formStatusByPlayer,
   CHECKLIST_AUDIENCE,
 } from '../../utils/checklist';
+import { PANELS } from '../../utils/panelRoute';
 
 const cellId = (playerId, itemKey) => `${playerId}:${itemKey}`;
 
@@ -89,8 +92,9 @@ export default function ChecklistManager({
     setVerification,
   } = useChecklist({ teamId, seasonId });
 
-  const [showEditor, setShowEditor] = useState(false);
-  const [showClone, setShowClone] = useState(false);
+  const { panel, openPanel, closePanel } = usePanelRoute();
+  const showEditor = panel === PANELS.CHECKLIST_EDITOR;
+  const showClone = panel === PANELS.CHECKLIST_CLONE;
   const [incompleteOnly, setIncompleteOnly] = useState(false);
   const [busyCell, setBusyCell] = useState(null);
 
@@ -334,37 +338,39 @@ export default function ChecklistManager({
           </p>
           {canManage && (
             <div className="flex flex-wrap gap-2">
-              <PrimaryButton icon={Plus} onClick={() => setShowEditor(true)}>
+              <PrimaryButton icon={Plus} onClick={() => openPanel(PANELS.CHECKLIST_EDITOR)}>
                 {t('checklist.create')}
               </PrimaryButton>
-              <SecondaryButton icon={Copy} onClick={() => setShowClone(true)}>
+              <SecondaryButton icon={Copy} onClick={() => openPanel(PANELS.CHECKLIST_CLONE)}>
                 {t('checklist.clone')}
               </SecondaryButton>
             </div>
           )}
         </AdminCard>
 
-        <ChecklistEditor
-          open={showEditor}
-          onClose={() => setShowEditor(false)}
-          teamId={teamId}
-          seasonId={seasonId}
-          seasonLabel={seasonLabel}
-          checklist={null}
-          user={user}
-          showToast={showToast}
-          onSaved={(saved) => setChecklist(saved)}
-        />
-        <CloneModal
-          open={showClone}
-          onClose={() => setShowClone(false)}
-          teamId={teamId}
-          seasonId={seasonId}
-          seasonLabel={seasonLabel}
-          user={user}
-          showToast={showToast}
-          onCloned={(saved) => setChecklist(saved)}
-        />
+        <PanelHost>
+          <ChecklistEditor
+            open={showEditor}
+            onClose={closePanel}
+            teamId={teamId}
+            seasonId={seasonId}
+            seasonLabel={seasonLabel}
+            checklist={null}
+            user={user}
+            showToast={showToast}
+            onSaved={(saved) => setChecklist(saved)}
+          />
+          <CloneModal
+            open={showClone}
+            onClose={closePanel}
+            teamId={teamId}
+            seasonId={seasonId}
+            seasonLabel={seasonLabel}
+            user={user}
+            showToast={showToast}
+            onCloned={(saved) => setChecklist(saved)}
+          />
+        </PanelHost>
       </>
     );
   }
@@ -379,10 +385,10 @@ export default function ChecklistManager({
         tools={
           canManage && (
             <div className="flex flex-wrap items-center gap-1.5">
-              <SecondaryButton icon={Pencil} onClick={() => setShowEditor(true)}>
+              <SecondaryButton icon={Pencil} onClick={() => openPanel(PANELS.CHECKLIST_EDITOR)}>
                 {t('checklist.edit')}
               </SecondaryButton>
-              <SecondaryButton icon={Copy} onClick={() => setShowClone(true)}>
+              <SecondaryButton icon={Copy} onClick={() => openPanel(PANELS.CHECKLIST_CLONE)}>
                 {t('checklist.clone')}
               </SecondaryButton>
               <SecondaryButton icon={checklist.isPublished ? EyeOff : Eye} onClick={handleTogglePublished}>
@@ -572,27 +578,29 @@ export default function ChecklistManager({
         )}
       </AdminCard>
 
-      <ChecklistEditor
-        open={showEditor}
-        onClose={() => setShowEditor(false)}
-        teamId={teamId}
-        seasonId={seasonId}
-        seasonLabel={seasonLabel}
-        checklist={checklist}
-        user={user}
-        showToast={showToast}
-        onSaved={(saved) => setChecklist(saved)}
-      />
-      <CloneModal
-        open={showClone}
-        onClose={() => setShowClone(false)}
-        teamId={teamId}
-        seasonId={seasonId}
-        seasonLabel={seasonLabel}
-        user={user}
-        showToast={showToast}
-        onCloned={(saved) => setChecklist(saved)}
-      />
+      <PanelHost>
+        <ChecklistEditor
+          open={showEditor}
+          onClose={closePanel}
+          teamId={teamId}
+          seasonId={seasonId}
+          seasonLabel={seasonLabel}
+          checklist={checklist}
+          user={user}
+          showToast={showToast}
+          onSaved={(saved) => setChecklist(saved)}
+        />
+        <CloneModal
+          open={showClone}
+          onClose={closePanel}
+          teamId={teamId}
+          seasonId={seasonId}
+          seasonLabel={seasonLabel}
+          user={user}
+          showToast={showToast}
+          onCloned={(saved) => setChecklist(saved)}
+        />
+      </PanelHost>
     </>
   );
 }

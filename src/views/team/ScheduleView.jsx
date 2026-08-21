@@ -18,9 +18,12 @@ import {
 import CalendarView from '../../components/CalendarView';
 import EventExpenseModal from '../../components/EventExpenseModal';
 import BulkExpenseModal from '../../components/BulkExpenseModal';
+import PanelHost from '../../components/layout/PanelHost';
+import { usePanelRoute } from '../../hooks/usePanelRoute';
 import { EVENT_TYPES } from '../../utils/eventClassifier';
 import { useT } from '../../i18n/I18nContext';
 import { filterEventsBySeason, getSeasonForDate } from '../../utils/seasonUtils';
+import { PANELS } from '../../utils/panelRoute';
 
 // ── Event card ────────────────────────────────────────────────
 const EventCard = ({
@@ -186,8 +189,14 @@ export default function ScheduleView({
   const { t } = useT();
   const [tab, setTab] = useState('upcoming');
   const [isSyncing, setIsSyncing] = useState(false);
-  const [expenseModalEvent, setExpenseModalEvent] = useState(null);
-  const [showBulkExpenses, setShowBulkExpenses] = useState(false);
+  const { panel, panelParams, openPanel, closePanel } = usePanelRoute();
+  const showBulkExpenses = panel === PANELS.BULK_EXPENSES;
+  // The event whose expenses are open is named by the URL, so the panel comes
+  // back on a reload instead of dropping the user on the bare schedule.
+  const expenseModalEvent =
+    panel === PANELS.EVENT_EXPENSE && panelParams.id
+      ? teamEvents.find((e) => String(e.id) === panelParams.id) || null
+      : null;
 
   // Map iCal event UID → DB event so EventCards can show/edit the locked type
   const dbEventsByUid = useMemo(() => {
@@ -362,7 +371,7 @@ export default function ScheduleView({
         <div className="flex items-center gap-2">
           {onBulkAddExpenses && bulkCandidates.length > 0 && (
             <button
-              onClick={() => setShowBulkExpenses(true)}
+              onClick={() => openPanel(PANELS.BULK_EXPENSES)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted text-foreground text-xs font-semibold rounded-lg transition-colors"
             >
               <Layers size={12} />
@@ -446,7 +455,9 @@ export default function ScheduleView({
                     dbEvent={db}
                     onTypeChange={onTypeChange}
                     expenseSummary={getExpenseSummary(db)}
-                    onManageExpenses={canEditSchedule ? setExpenseModalEvent : null}
+                    onManageExpenses={
+                      canEditSchedule ? (event) => openPanel(PANELS.EVENT_EXPENSE, { id: event.id }) : null
+                    }
                   />
                 );
               })}
@@ -475,7 +486,9 @@ export default function ScheduleView({
                     dbEvent={db}
                     onTypeChange={onTypeChange}
                     expenseSummary={getExpenseSummary(db)}
-                    onManageExpenses={canEditSchedule ? setExpenseModalEvent : null}
+                    onManageExpenses={
+                      canEditSchedule ? (event) => openPanel(PANELS.EVENT_EXPENSE, { id: event.id }) : null
+                    }
                   />
                 );
               })}
@@ -491,45 +504,48 @@ export default function ScheduleView({
         <CalendarView events={events} blackoutDates={blackoutDates} onToggleBlackout={onToggleBlackout} />
       )}
 
-      {/* ── Event Expense Modal ── */}
-      <EventExpenseModal
-        show={!!expenseModalEvent}
-        onClose={() => setExpenseModalEvent(null)}
-        dbEvent={expenseModalEvent}
-        linkedTransactions={expenseModalEvent ? txByEventId[expenseModalEvent.id] || [] : []}
-        onSaveExpense={onSaveExpense}
-        onToggleCleared={onToggleCleared}
-        onDeleteExpense={onDeleteExpense}
-        seasonIds={seasonIds}
-        activeAccounts={activeAccounts}
-        accountMap={accountMap}
-        onPushToBudget={
-          onPushEventToBudget && expenseModalEvent
-            ? () => onPushEventToBudget(expenseModalEvent, txByEventId[expenseModalEvent.id] || [])
-            : null
-        }
-        budgetContributions={
-          expenseModalEvent ? budgetContributions.filter((c) => c.eventId === expenseModalEvent.id) : []
-        }
-        budgetLocked={budgetLocked}
-        budgetRecalculatesFee={budgetRecalculatesFee}
-        // An event outside the selected season has no budget of its own to move,
-        // and pushing it would silently spend another season's money.
-        budgetAvailable={
-          !!expenseModalEvent && getSeasonForDate(expenseModalEvent.eventDate?.split('T')[0], [selectedSeason]) !== null
-        }
-      />
+      {/* ═══ PANELS ═══ opened and closed by the URL (usePanelRoute) */}
+      <PanelHost>
+        <EventExpenseModal
+          show={!!expenseModalEvent}
+          onClose={closePanel}
+          dbEvent={expenseModalEvent}
+          linkedTransactions={expenseModalEvent ? txByEventId[expenseModalEvent.id] || [] : []}
+          onSaveExpense={onSaveExpense}
+          onToggleCleared={onToggleCleared}
+          onDeleteExpense={onDeleteExpense}
+          seasonIds={seasonIds}
+          activeAccounts={activeAccounts}
+          accountMap={accountMap}
+          onPushToBudget={
+            onPushEventToBudget && expenseModalEvent
+              ? () => onPushEventToBudget(expenseModalEvent, txByEventId[expenseModalEvent.id] || [])
+              : null
+          }
+          budgetContributions={
+            expenseModalEvent ? budgetContributions.filter((c) => c.eventId === expenseModalEvent.id) : []
+          }
+          budgetLocked={budgetLocked}
+          budgetRecalculatesFee={budgetRecalculatesFee}
+          // An event outside the selected season has no budget of its own to move,
+          // and pushing it would silently spend another season's money.
+          budgetAvailable={
+            !!expenseModalEvent &&
+            getSeasonForDate(expenseModalEvent.eventDate?.split('T')[0], [selectedSeason]) !== null
+          }
+        />
 
-      {/* ── Bulk Expense Modal ── */}
-      <BulkExpenseModal
-        show={showBulkExpenses}
-        onClose={() => setShowBulkExpenses(false)}
-        candidates={bulkCandidates}
-        existingByEventId={txByEventId}
-        onBulkAddExpenses={onBulkAddExpenses}
-        seasonIds={seasonIds}
-        activeAccounts={activeAccounts}
-      />
+        {/* ── Bulk Expense Modal ── */}
+        <BulkExpenseModal
+          show={showBulkExpenses}
+          onClose={closePanel}
+          candidates={bulkCandidates}
+          existingByEventId={txByEventId}
+          onBulkAddExpenses={onBulkAddExpenses}
+          seasonIds={seasonIds}
+          activeAccounts={activeAccounts}
+        />
+      </PanelHost>
     </div>
   );
 }

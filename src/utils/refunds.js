@@ -45,6 +45,9 @@ export const buildRefundTransaction = (tx, { amount, date, notes = '', cleared =
     seasonId: tx.seasonId,
     teamSeasonId: tx.teamSeasonId,
     cleared,
+    // A refund's date IS the day the money moved, so it doubles as the activity
+    // date — otherwise the reversal would sit outside the month it reconciles in.
+    clearedDate: cleared ? date : null,
     notes: notes || '',
     refundOfTxId: tx.id,
   };

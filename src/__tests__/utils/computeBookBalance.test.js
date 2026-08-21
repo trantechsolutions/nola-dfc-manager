@@ -303,3 +303,48 @@ describe('buildMonthOptions', () => {
     }
   });
 });
+
+// ── activity date vs event date ────────────────────────────────────────────────
+// The reported reconciliation gap: two tournament registrations paid in August
+// but dated to the tournaments themselves (Sep 26 and Nov 14) sat outside the
+// August cutoff, so the app's bank total read $1,582.00 above the statement.
+describe('computeLedgerBalance — activity date drives the month cutoff', () => {
+  const registrations = [
+    { accountId: 'bank1', amount: -832, cleared: true, rawDate: '2026-11-14', clearedDate: '2026-08-04' },
+    { accountId: 'bank1', amount: -750, cleared: true, rawDate: '2026-09-26', clearedDate: '2026-08-12' },
+  ];
+
+  it('counts money that already left the bank for a future event', () => {
+    expect(computeLedgerBalance('bank1', '2026-08-01', registrations)).toBe(-1582);
+  });
+
+  it('still excludes activity that has not happened yet', () => {
+    const later = [
+      { accountId: 'bank1', amount: -400, cleared: true, rawDate: '2026-09-05', clearedDate: '2026-09-05' },
+    ];
+    expect(computeLedgerBalance('bank1', '2026-08-01', later)).toBe(0);
+    expect(computeLedgerBalance('bank1', '2026-09-01', later)).toBe(-400);
+  });
+
+  it('falls back to the event date for rows recorded before activity dates existed', () => {
+    const legacy = [{ accountId: 'bank1', amount: 500, cleared: true, rawDate: '2026-08-10' }];
+    expect(computeLedgerBalance('bank1', '2026-08-01', legacy)).toBe(500);
+    expect(computeLedgerBalance('bank1', '2026-07-01', legacy)).toBe(0);
+  });
+
+  it('applies the same rule to transfers', () => {
+    const transfer = [
+      {
+        category: 'TRF',
+        transferFromAccountId: 'bank1',
+        transferToAccountId: 'cash1',
+        amount: 200,
+        cleared: true,
+        rawDate: '2026-12-01',
+        clearedDate: '2026-08-15',
+      },
+    ];
+    expect(computeLedgerBalance('bank1', '2026-08-01', transfer)).toBe(-200);
+    expect(computeLedgerBalance('cash1', '2026-08-01', transfer)).toBe(200);
+  });
+});

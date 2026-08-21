@@ -9,7 +9,6 @@ import {
   Check,
   Link2,
   LogIn,
-  X,
   List,
   CalendarDays,
   Loader2,
@@ -17,6 +16,7 @@ import {
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import ICAL from 'ical.js';
+import ResponsiveModal from '../../components/layout/ResponsiveModal';
 
 const PUBLIC_HEADERS = {
   apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -122,35 +122,30 @@ function UnavailableModal({ detail, onClose }) {
   const timeRange = displayEndTime ? `${displayTime} – ${displayEndTime}` : displayTime;
 
   return (
-    <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[300] p-4"
-      onClick={onClose}
+    // A read-only slot summary, so it stays a card on a phone rather than
+    // taking over the display the way a form or a detail screen would.
+    <ResponsiveModal
+      fullScreen={false}
+      dismissOnBackdrop
+      size="sm"
+      onClose={onClose}
+      className="animate-in fade-in zoom-in-95 duration-200"
     >
-      <div
-        className="bg-card rounded-lg p-6 w-full max-w-sm shadow-md animate-in fade-in zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full">
-              <CalendarOff size={22} />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-foreground leading-tight">Unavailable</h3>
-              <p className="text-xs font-medium text-muted-foreground">
-                {isBlackout ? 'Rest day — no bookings' : 'This slot is already booked'}
-              </p>
-            </div>
+      <ResponsiveModal.Header>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full">
+            <CalendarOff size={22} />
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors"
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
+          <div>
+            <h3 className="text-lg font-bold text-foreground leading-tight">Unavailable</h3>
+            <p className="text-xs font-medium text-muted-foreground">
+              {isBlackout ? 'Rest day — no bookings' : 'This slot is already booked'}
+            </p>
+          </div>
         </div>
+      </ResponsiveModal.Header>
 
+      <ResponsiveModal.Body className="pt-0">
         <div className="space-y-3">
           {!isBlackout && teamName && (
             <div className="flex items-center gap-2.5">
@@ -169,15 +164,17 @@ function UnavailableModal({ detail, onClose }) {
             </div>
           )}
         </div>
+      </ResponsiveModal.Body>
 
+      <ResponsiveModal.Footer>
         <button
           onClick={onClose}
-          className="mt-6 w-full py-2.5 px-4 rounded-lg font-semibold text-foreground bg-muted hover:bg-muted/80 transition-colors"
+          className="w-full py-2.5 px-4 rounded-lg font-semibold text-foreground bg-muted hover:bg-muted/80 transition-colors"
         >
           Close
         </button>
-      </div>
-    </div>
+      </ResponsiveModal.Footer>
+    </ResponsiveModal>
   );
 }
 

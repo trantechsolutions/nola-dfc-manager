@@ -16,8 +16,10 @@ import {
   Undo2,
 } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
+import AccountFilterMenu from './AccountFilterMenu';
 import { HOLDINGS, HOLDING_LABELS } from '../utils/holdings';
 import { buildRefundIndex, canRefund, refundableRemaining } from '../utils/refunds';
+import { hasSplitDates } from '../utils/txDates';
 
 const DEFAULT_CATEGORY_COLORS = {
   TMF: 'bg-blue-50 text-blue-700 dark:text-blue-300',
@@ -30,6 +32,14 @@ const DEFAULT_CATEGORY_COLORS = {
   FRI: 'bg-rose-50 text-rose-700',
   TRF: 'bg-indigo-50 text-indigo-700 dark:text-indigo-300',
 };
+
+// 'YYYY-MM-DD' rendered without a timezone round-trip — `new Date('2026-08-19')`
+// parses as UTC midnight and shows the day before west of Greenwich.
+function formatShortDate(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('T')[0].split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
 export default function Ledger({
   transactions,
@@ -68,7 +78,9 @@ export default function Ledger({
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [accountFilter, setAccountFilter] = useState('all');
+  // Empty set = every account. Multi-select so a bank statement spanning two
+  // accounts can be read as one list.
+  const [accountFilter, setAccountFilter] = useState(() => new Set());
   const [holdingFilter, setHoldingFilter] = useState('all');
   const [flowFilter, setFlowFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -118,12 +130,9 @@ export default function Ledger({
       result = result.filter((tx) => tx.category === categoryFilter);
     }
 
-    if (accountFilter !== 'all') {
-      result = result.filter(
-        (tx) =>
-          tx.accountId === accountFilter ||
-          tx.transferFromAccountId === accountFilter ||
-          tx.transferToAccountId === accountFilter,
+    if (accountFilter.size > 0) {
+      result = result.filter((tx) =>
+        [tx.accountId, tx.transferFromAccountId, tx.transferToAccountId].some((id) => id && accountFilter.has(id)),
       );
     }
 
@@ -194,14 +203,14 @@ export default function Ledger({
   const hasActiveFilters =
     searchTerm ||
     categoryFilter !== 'all' ||
-    accountFilter !== 'all' ||
+    accountFilter.size > 0 ||
     holdingFilter !== 'all' ||
     flowFilter !== 'all' ||
     statusFilter !== 'all';
   const clearAllFilters = () => {
     setSearchTerm('');
     setCategoryFilter('all');
-    setAccountFilter('all');
+    setAccountFilter(new Set());
     setHoldingFilter('all');
     setFlowFilter('all');
     setStatusFilter('all');
@@ -306,24 +315,11 @@ export default function Ledger({
 
           {accountOptions.length > 0 && (
             <>
-              <div className="flex items-center gap-1">
-                <select
-                  value={accountFilter}
-                  onChange={(e) => setFilterAndReset(setAccountFilter)(e.target.value)}
-                  className="bg-background border border-border text-xs font-semibold rounded-lg px-2 py-1.5 focus:ring-0 cursor-pointer"
-                >
-                  <option value="all">{t('ledger.allAccounts')}</option>
-                  {HOLDINGS.filter((h) => accountsByHolding[h]?.length > 0).map((h) => (
-                    <optgroup key={h} label={HOLDING_LABELS[h]}>
-                      {accountsByHolding[h].map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
+              <AccountFilterMenu
+                accountsByHolding={accountsByHolding}
+                selectedIds={accountFilter}
+                onChange={setFilterAndReset(setAccountFilter)}
+              />
               <div className="flex items-center gap-1">
                 <select
                   value={holdingFilter}
@@ -442,6 +438,13 @@ export default function Ledger({
                             year: '2-digit',
                           })
                         : '—'}
+                      {/* Money that moved on a different day than the event it paid for —
+                          shown so the row's reconciliation month is never a mystery. */}
+                      {hasSplitDates(tx) && (
+                        <span className="block text-[10px] font-normal text-muted-foreground/70">
+                          {t('ledger.clearedOn', { date: formatShortDate(tx.clearedDate) })}
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
@@ -663,6 +666,11 @@ export default function Ledger({
                   {tx.date?.seconds
                     ? new Date(tx.date.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                     : '—'}
+                  {hasSplitDates(tx) && (
+                    <span className="ml-1 text-muted-foreground/70">
+                      {t('ledger.clearedOn', { date: formatShortDate(tx.clearedDate) })}
+                    </span>
+                  )}
                 </span>
                 {tx.playerName && (
                   <>

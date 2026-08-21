@@ -18,6 +18,11 @@ import {
 } from 'lucide-react';
 import { useT } from '../../i18n/I18nContext';
 import RecordFundsModal from '../../components/RecordFundsModal';
+import ResponsiveModal from '../../components/layout/ResponsiveModal';
+import PanelHost from '../../components/layout/PanelHost';
+import { usePanelRoute } from '../../hooks/usePanelRoute';
+import SponsorDirectory from '../../components/SponsorDirectory';
+import { PANELS } from '../../utils/panelRoute';
 
 // Per-team distribution strategies. `usesSource` = whether a linked/primary
 // player is meaningful for this method (drives the modal's source dropdown).
@@ -82,6 +87,11 @@ export default function SponsorsView({
   calculatePlayerFinancials,
   onAddFunds,
   activeAccounts = [],
+  // Sponsor directory — the book of who sponsors us and how to reach them.
+  // Team-scoped, so it is independent of the season selector above.
+  sponsorDirectory = null,
+  showConfirm,
+  canEditSponsorDirectory = false,
 }) {
   const { t, tp } = useT();
 
@@ -89,7 +99,8 @@ export default function SponsorsView({
   const methodLabel = (value) => t(`sponsors.methods.${value}.label`);
   const methodBlurb = (value) => t(`sponsors.methods.${value}.blurb`);
 
-  const [showDistribute, setShowDistribute] = useState(false);
+  const { panel, openPanel, closePanel } = usePanelRoute();
+  const showDistribute = panel === PANELS.DISTRIBUTE;
   const [distAmount, setDistAmount] = useState('');
   const [distTitle, setDistTitle] = useState('');
   const [sourcePlayerId, setSourcePlayerId] = useState('');
@@ -100,7 +111,7 @@ export default function SponsorsView({
   // strings so a half-typed "12." doesn't get clobbered mid-edit.
   const [manualMode, setManualMode] = useState(false);
   const [manualAmounts, setManualAmounts] = useState({});
-  const [showRecordFunds, setShowRecordFunds] = useState(false);
+  const showRecordFunds = panel === PANELS.RECORD_FUNDS;
   const [activeTab, setActiveTab] = useState('undistributed');
   const [expandedPlayerId, setExpandedPlayerId] = useState(null);
   const [isDistributingAll, setIsDistributingAll] = useState(false);
@@ -137,6 +148,13 @@ export default function SponsorsView({
     return Number(stats?.remainingBalance || 0);
   };
 
+  // The named player only takes a credit up to what they still owe. At zero the
+  // money silently moves on — to teammates under waterfall, to the pot under
+  // direct — so say so before the treasurer taps Apply.
+  const primaryPlayer = sourcePlayerId ? seasonalPlayers.find((p) => p.id === sourcePlayerId) : null;
+  const primaryPlayerName = primaryPlayer ? `${primaryPlayer.firstName} ${primaryPlayer.lastName}` : '';
+  const primaryHasNoBalance = !!primaryPlayer && (playerBalance(primaryPlayer) ?? 1) <= 0;
+
   const openDistributeModal = (tx) => {
     setDistAmount(tx.amount);
     setDistTitle(tx.title);
@@ -145,11 +163,13 @@ export default function SponsorsView({
     setSourcePlayerId(tx.playerId || '');
     setManualMode(false);
     setManualAmounts({});
-    setShowDistribute(true);
+    // The ledger row it splits identifies the panel, so a reload comes back
+    // to the same deposit rather than an empty form.
+    openPanel(PANELS.DISTRIBUTE, { id: tx.id });
   };
 
   const closeDistributeModal = () => {
-    setShowDistribute(false);
+    closePanel();
     setOriginalTxId(null);
     setManualMode(false);
     setManualAmounts({});
@@ -227,22 +247,51 @@ export default function SponsorsView({
       ['SPO', 'FUN'].includes(tx.category) && Number(tx.amount || 0) > 0 && !tx.distributed && !tx.waterfallBatchId,
   );
 
-  // FUNDRAISING ROLLUP — only raw ledger deposits to avoid double-counting
-  const rawFundraisingTxs = transactions.filter((tx) => tx.category === 'FUN' && isCleared(tx) && !tx.waterfallBatchId);
-
-  const fundraisingByPlayer = seasonalPlayers
+  // PLAYER CREDIT ROLLUP — what each player was actually CREDITED by the
+  // distribution engine, not what they deposited. A ledger deposit's playerId
+  // only says who brought the money in; the waterfall decides whose fees it
+  // pays down, so these totals run off the batch credits (`allCredits`).
+  // Anything still sitting undistributed is deliberately absent.
+  const creditsByPlayer = seasonalPlayers
     .map((player) => {
       const fullName = `${player.firstName} ${player.lastName}`.trim().toLowerCase();
-      const playerTxs = rawFundraisingTxs.filter((tx) => {
-        if (tx.playerId === player.id) return true;
-        const txName = (tx.playerName || tx.Name || '').trim().toLowerCase();
-        return txName === fullName;
-      });
-      const total = playerTxs.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
-      return { ...player, fundraisingTxs: playerTxs, fundraisingTotal: total };
+      const playerTxs = allCredits
+        .filter((tx) => {
+          if (tx.playerId === player.id) return true;
+          // A credit with no playerId is team-pool overflow, never a player's.
+          if (tx.playerId || !tx.playerName) return false;
+          return tx.playerName.trim().toLowerCase() === fullName;
+        })
+        .sort((a, b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
+
+      const sum = (code) =>
+        playerTxs.filter((tx) => tx.category === code).reduce((acc, tx) => acc + Number(tx.amount || 0), 0);
+      const sponsorTotal = sum('SPO');
+      const fundraisingTotal = sum('FUN');
+
+      return {
+        ...player,
+        creditTxs: playerTxs,
+        sponsorTotal,
+        fundraisingTotal,
+        raisedTotal: sponsorTotal + fundraisingTotal,
+      };
     })
-    .filter((p) => p.fundraisingTotal > 0 || p.fundraisingTxs.length > 0)
-    .sort((a, b) => b.fundraisingTotal - a.fundraisingTotal);
+    .filter((p) => p.creditTxs.length > 0)
+    .sort((a, b) => b.raisedTotal - a.raisedTotal);
+
+  const rollupTotals = creditsByPlayer.reduce(
+    (acc, p) => ({
+      sponsor: acc.sponsor + p.sponsorTotal,
+      fundraising: acc.fundraising + p.fundraisingTotal,
+      raised: acc.raised + p.raisedTotal,
+    }),
+    { sponsor: 0, fundraising: 0, raised: 0 },
+  );
+
+  // Overflow rows carry no player — surfaced so the rollup reconciles against
+  // the distribution history totals.
+  const teamPoolCredited = allCredits.filter((tx) => !tx.playerId).reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
 
   // Sort undistributed: SPO first, then FUN
   const sortedUndistributed = [...undistributedSponsors].sort((a, b) => {
@@ -324,6 +373,18 @@ export default function SponsorsView({
         >
           {t('sponsors.tabs.fundraising')}
         </button>
+        {sponsorDirectory && (
+          <button
+            onClick={() => setActiveTab('directory')}
+            className={`px-4 md:px-6 py-2 rounded-lg font-semibold text-sm transition-all ${
+              activeTab === 'directory'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t('sponsors.tabs.directory')}
+          </button>
+        )}
       </div>
 
       {/* --- UNDISTRIBUTED VIEW --- */}
@@ -462,7 +523,7 @@ export default function SponsorsView({
               )}
               {onAddFunds && (
                 <button
-                  onClick={() => setShowRecordFunds(true)}
+                  onClick={() => openPanel(PANELS.RECORD_FUNDS)}
                   disabled={isDistributingAll}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20 transition-all disabled:opacity-60"
                 >
@@ -502,7 +563,7 @@ export default function SponsorsView({
                 <p className="text-muted-foreground font-semibold italic">{t('sponsors.pending.allDistributed')}</p>
                 {onAddFunds && (
                   <button
-                    onClick={() => setShowRecordFunds(true)}
+                    onClick={() => openPanel(PANELS.RECORD_FUNDS)}
                     className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20 transition-all"
                   >
                     <Plus size={16} /> {t('sponsors.record.button')}
@@ -634,37 +695,80 @@ export default function SponsorsView({
         </div>
       )}
 
-      {/* --- FUNDRAISING ROLLUP VIEW --- */}
+      {/* --- PLAYER CREDIT ROLLUP VIEW (sponsorships + fundraising) --- */}
       {activeTab === 'fundraising' && (
         <div className="animate-in fade-in duration-300">
-          <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
-            <TrendingUp size={18} className="text-blue-700 dark:text-blue-400" /> {t('sponsors.rollup.heading')}
-          </h3>
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
+            <h3 className="font-bold text-foreground flex items-center gap-2">
+              <TrendingUp size={18} className="text-blue-700 dark:text-blue-400" /> {t('sponsors.rollup.heading')}
+            </h3>
+            {creditsByPlayer.length > 0 && (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold">
+                <span className="text-violet-700 dark:text-violet-300">
+                  {t('sponsors.rollup.sponsorships')} {formatMoney(rollupTotals.sponsor)}
+                </span>
+                <span className="text-emerald-700 dark:text-emerald-400">
+                  {t('sponsors.rollup.fundraising')} {formatMoney(rollupTotals.fundraising)}
+                </span>
+                {teamPoolCredited > 0.009 && (
+                  <span className="text-muted-foreground">
+                    {t('sponsors.rollup.teamPool')} {formatMoney(teamPoolCredited)}
+                  </span>
+                )}
+                <span className="text-foreground">
+                  {t('sponsors.rollup.teamTotal')} {formatMoney(rollupTotals.raised + teamPoolCredited)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* These totals are credits, so money that hasn't been run through
+              distribution yet simply isn't here — say so rather than let the
+              number read as the season's whole take. */}
+          <p className="text-xs text-muted-foreground font-medium mb-4">
+            {t('sponsors.rollup.creditNote')}
+            {undistributedSponsors.length > 0 && (
+              <span className="text-amber-700 dark:text-amber-400">
+                {' '}
+                {t('sponsors.rollup.undistributedNote', { n: undistributedSponsors.length })}
+              </span>
+            )}
+          </p>
           <div className="space-y-3">
-            {fundraisingByPlayer.length === 0 ? (
+            {creditsByPlayer.length === 0 ? (
               <div className="bg-background p-12 rounded-lg border border-border text-center text-muted-foreground font-semibold italic">
                 {t('sponsors.rollup.empty')}
               </div>
             ) : (
-              fundraisingByPlayer.map((player) => (
+              creditsByPlayer.map((player) => (
                 <div key={player.id} className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
                   <button
                     onClick={() => setExpandedPlayerId(expandedPlayerId === player.id ? null : player.id)}
-                    className="w-full flex justify-between items-center p-5 hover:bg-background transition-colors"
+                    className="w-full flex justify-between items-center gap-3 p-5 hover:bg-background transition-colors"
                   >
-                    <span className="font-bold text-foreground text-lg flex items-center gap-3">
-                      <span className="flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold h-8 w-8 rounded-full text-sm">
+                    <span className="font-bold text-foreground text-lg flex items-center gap-3 text-left">
+                      <span className="flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold h-8 w-8 rounded-full text-sm shrink-0">
                         {player.jerseyNumber || '-'}
                       </span>
                       {player.firstName} {player.lastName}
                     </span>
                     <div className="flex items-center gap-4">
-                      <span className="font-bold text-emerald-700 dark:text-emerald-400 text-lg">
-                        {formatMoney(player.fundraisingTotal)}
-                      </span>
+                      <div className="text-right">
+                        <div className="font-bold text-emerald-700 dark:text-emerald-400 text-lg leading-tight">
+                          {formatMoney(player.raisedTotal)}
+                        </div>
+                        {/* The split behind the headline number — a player who
+                            brought a sponsor and worked a car wash should see both. */}
+                        <div className="text-[11px] font-semibold text-muted-foreground">
+                          {t('sponsors.rollup.splitLine', {
+                            sponsors: formatMoney(player.sponsorTotal),
+                            fundraising: formatMoney(player.fundraisingTotal),
+                          })}
+                        </div>
+                      </div>
                       <ChevronDown
                         size={20}
-                        className={`text-muted-foreground transition-transform duration-200 ${expandedPlayerId === player.id ? 'rotate-180' : ''}`}
+                        className={`text-muted-foreground transition-transform duration-200 shrink-0 ${expandedPlayerId === player.id ? 'rotate-180' : ''}`}
                       />
                     </div>
                   </button>
@@ -673,8 +777,21 @@ export default function SponsorsView({
                     <div className="bg-background border-t border-border p-4">
                       <table className="w-full text-left text-sm">
                         <tbody>
-                          {player.fundraisingTxs.map((tx) => (
-                            <tr key={tx.id} className="border-b border-border/50 last:border-0">
+                          {player.creditTxs.map((tx) => (
+                            <tr key={tx.id} className="border-b border-border/50">
+                              <td className="py-3 px-2">
+                                <span
+                                  className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${
+                                    tx.category === 'SPO'
+                                      ? 'bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
+                                      : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                                  }`}
+                                >
+                                  {tx.category === 'SPO'
+                                    ? t('sponsors.rollup.sponsorshipTag')
+                                    : t('sponsors.rollup.fundraisingTag')}
+                                </span>
+                              </td>
                               <td className="py-3 px-2 font-semibold text-foreground">{tx.title}</td>
                               <td className="py-3 px-2 text-muted-foreground text-xs font-medium">
                                 {tx.date?.seconds
@@ -686,6 +803,14 @@ export default function SponsorsView({
                               </td>
                             </tr>
                           ))}
+                          <tr>
+                            <td colSpan={3} className="py-3 px-2 font-bold text-foreground">
+                              {t('sponsors.rollup.playerTotal')}
+                            </td>
+                            <td className="py-3 px-2 text-right font-bold text-foreground">
+                              {formatMoney(player.raisedTotal)}
+                            </td>
+                          </tr>
                         </tbody>
                       </table>
                     </div>
@@ -697,24 +822,46 @@ export default function SponsorsView({
         </div>
       )}
 
-      {/* --- INTAKE MODAL (writes the SPO/FUN ledger entry) --- */}
-      <RecordFundsModal
-        show={showRecordFunds}
-        onClose={() => setShowRecordFunds(false)}
-        onSubmit={onAddFunds}
-        players={seasonalPlayers}
-        activeAccounts={activeAccounts}
-      />
+      {/* --- SPONSOR DIRECTORY --- */}
+      {activeTab === 'directory' && sponsorDirectory && (
+        <SponsorDirectory
+          sponsors={sponsorDirectory.sponsors}
+          transactions={transactions}
+          loading={sponsorDirectory.loading}
+          isSaving={sponsorDirectory.isSaving}
+          committedTotal={sponsorDirectory.committedTotal}
+          onSave={sponsorDirectory.saveSponsor}
+          onDelete={sponsorDirectory.deleteSponsor}
+          onLink={sponsorDirectory.linkTransactions}
+          onImportFromLedger={sponsorDirectory.importFromLedger}
+          formatMoney={formatMoney}
+          showConfirm={showConfirm}
+          canEdit={canEditSponsorDirectory}
+        />
+      )}
 
-      {/* --- WATERFALL MODAL --- */}
-      {showDistribute && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[1050] p-4">
-          <div className="bg-card rounded-lg p-8 w-full max-w-md shadow-md animate-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-bold text-foreground mb-6 flex items-center gap-2">
-              <ArrowDownNarrowWide className="text-emerald-700 dark:text-emerald-400" />{' '}
-              {t('sponsors.modal.heading', { method: methodLabel(activeMethod.value) })}
-            </h3>
-            <div className="space-y-4">
+      {/* ═══ PANELS ═══ opened and closed by the URL (usePanelRoute) */}
+      <PanelHost>
+        {/* --- INTAKE MODAL (writes the SPO/FUN ledger entry) --- */}
+        <RecordFundsModal
+          show={showRecordFunds}
+          onClose={closePanel}
+          onSubmit={onAddFunds}
+          players={seasonalPlayers}
+          activeAccounts={activeAccounts}
+        />
+
+        {/* --- WATERFALL MODAL --- */}
+        {showDistribute && (
+          <ResponsiveModal onClose={closeDistributeModal} size="md">
+            <ResponsiveModal.Header className="border-b border-border">
+              <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <ArrowDownNarrowWide className="text-emerald-700 dark:text-emerald-400" />{' '}
+                {t('sponsors.modal.heading', { method: methodLabel(activeMethod.value) })}
+              </h3>
+            </ResponsiveModal.Header>
+
+            <ResponsiveModal.Body className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground mb-1">
                   {t('sponsors.modal.source')}
@@ -854,6 +1001,11 @@ export default function SponsorsView({
                       </option>
                     ))}
                   </select>
+                  {primaryHasNoBalance && (
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mt-2">
+                      {t('sponsors.modal.primaryZeroBalance', { name: primaryPlayerName })}
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground mt-2">
                     {activeMethod.value === 'waterfall'
                       ? t('sponsors.modal.waterfallHelp')
@@ -868,42 +1020,42 @@ export default function SponsorsView({
                   </p>
                 </div>
               )}
+            </ResponsiveModal.Body>
 
-              <div className="flex gap-3 pt-4 border-t border-border">
-                <button
-                  onClick={closeDistributeModal}
-                  className="flex-1 py-3 font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
-                >
-                  {t('sponsors.modal.cancel')}
-                </button>
-                <button
-                  disabled={!canApply}
-                  onClick={() => {
-                    onDistribute(
-                      distAmount,
-                      distTitle,
-                      manualMode ? '' : sourcePlayerId,
-                      originalTxId,
-                      distCategory,
-                      manualMode ? manualRows : null,
-                    );
-                    closeDistributeModal();
-                  }}
-                  className={`flex-1 py-3 font-bold rounded-lg transition-all ${
-                    canApply
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20'
-                      : 'bg-muted text-muted-foreground cursor-not-allowed'
-                  }`}
-                >
-                  {manualMode
-                    ? t('sponsors.modal.applyManual')
-                    : t('sponsors.modal.apply', { method: methodLabel(activeMethod.value) })}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+            <ResponsiveModal.Footer className="flex-nowrap">
+              <button
+                onClick={closeDistributeModal}
+                className="flex-1 py-3 font-semibold text-muted-foreground hover:bg-background rounded-lg transition-colors"
+              >
+                {t('sponsors.modal.cancel')}
+              </button>
+              <button
+                disabled={!canApply}
+                onClick={() => {
+                  onDistribute(
+                    distAmount,
+                    distTitle,
+                    manualMode ? '' : sourcePlayerId,
+                    originalTxId,
+                    distCategory,
+                    manualMode ? manualRows : null,
+                  );
+                  closeDistributeModal();
+                }}
+                className={`flex-1 py-3 font-bold rounded-lg transition-all ${
+                  canApply
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20'
+                    : 'bg-muted text-muted-foreground cursor-not-allowed'
+                }`}
+              >
+                {manualMode
+                  ? t('sponsors.modal.applyManual')
+                  : t('sponsors.modal.apply', { method: methodLabel(activeMethod.value) })}
+              </button>
+            </ResponsiveModal.Footer>
+          </ResponsiveModal>
+        )}
+      </PanelHost>
     </div>
   );
 }

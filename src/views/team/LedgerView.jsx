@@ -2,8 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { Plus, CalendarDays, X, Upload, Tag } from 'lucide-react';
 import Ledger from '../../components/Ledger';
 import BulkUploadLedgerModal from '../../components/BulkUploadLedgerModal';
+import PanelHost from '../../components/layout/PanelHost';
+import { usePanelRoute } from '../../hooks/usePanelRoute';
 import ExportMenu from '../../components/ExportMenu';
 import { useT } from '../../i18n/I18nContext';
+import { PANELS } from '../../utils/panelRoute';
 
 export default function LedgerView({
   transactions,
@@ -36,7 +39,8 @@ export default function LedgerView({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showDateRange, setShowDateRange] = useState(false);
-  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const { panel, openPanel, closePanel } = usePanelRoute();
+  const showBulkUpload = panel === PANELS.IMPORT_LEDGER;
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
@@ -100,7 +104,7 @@ export default function LedgerView({
           {/* Bulk Upload button */}
           {onBulkUpload && (
             <button
-              onClick={() => setShowBulkUpload(true)}
+              onClick={() => openPanel(PANELS.IMPORT_LEDGER)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-border bg-card text-foreground hover:bg-background transition-all"
             >
               <Upload size={14} />
@@ -189,20 +193,22 @@ export default function LedgerView({
         accountMap={accountMap}
       />
 
-      {/* ── BULK UPLOAD MODAL ── */}
-      <BulkUploadLedgerModal
-        show={showBulkUpload}
-        onClose={() => setShowBulkUpload(false)}
-        onComplete={() => setShowBulkUpload(false)}
-        players={players || []}
-        categoryLabels={categoryLabels || {}}
-        categoryColors={categoryColors || {}}
-        selectedSeason={selectedSeason}
-        teamSeasonId={teamSeasonId}
-        onBulkSave={onBulkUpload}
-        showToast={showToast}
-        activeAccounts={activeAccounts}
-      />
+      {/* ═══ PANEL ═══ opened and closed by the URL (usePanelRoute) */}
+      <PanelHost>
+        <BulkUploadLedgerModal
+          show={showBulkUpload}
+          onClose={closePanel}
+          onComplete={closePanel}
+          players={players || []}
+          categoryLabels={categoryLabels || {}}
+          categoryColors={categoryColors || {}}
+          selectedSeason={selectedSeason}
+          teamSeasonId={teamSeasonId}
+          onBulkSave={onBulkUpload}
+          showToast={showToast}
+          activeAccounts={activeAccounts}
+        />
+      </PanelHost>
     </div>
   );
 }

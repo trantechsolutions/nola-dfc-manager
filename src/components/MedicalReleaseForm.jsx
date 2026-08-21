@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import {
-  X,
   FileText,
   Heart,
   Shield,
@@ -16,6 +15,7 @@ import { generateMedicalPdf } from '../utils/generateMedicalPdf';
 import { formatPhoneInput } from '../utils/phone';
 import supabaseService from '../services/supabaseService';
 import { useT } from '../i18n/I18nContext';
+import ResponsiveModal from './layout/ResponsiveModal';
 
 const EMPTY_FORM = {
   playerName: '',
@@ -165,40 +165,35 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
 
   return (
     // Opens from inside PlayerModal, so it stacks a tier above it.
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-start p-4 z-[1060] overflow-y-auto">
-      <div className="bg-card rounded-lg shadow-md w-full max-w-2xl my-4 overflow-hidden">
-        {/* Header */}
-        <div className="bg-red-600 text-white px-6 py-4 flex justify-between items-center shrink-0">
-          <div>
-            <p className="text-xs font-bold opacity-70">US Youth Soccer</p>
-            <h3 className="font-semibold text-lg leading-tight">{labels.title}</h3>
-            <p className="text-xs opacity-80 mt-0.5">
-              {player.firstName} {player.lastName}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Language toggle */}
-            <button
-              type="button"
-              onClick={() => setLang((l) => (l === 'en' ? 'es' : 'en'))}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs font-semibold transition-colors"
-              title="Toggle language"
-            >
-              <Globe size={12} />
-              {lang === 'en' ? 'ES' : 'EN'}
-            </button>
-            <button onClick={onClose} className="text-white/60 hover:text-white font-semibold text-xl ml-2">
-              &times;
-            </button>
-          </div>
-        </div>
+    <ResponsiveModal as="form" onSubmit={handleSubmit} onClose={onClose} size="2xl" overlayClassName="z-[1060]">
+      <ResponsiveModal.Header
+        className="bg-red-600 text-white"
+        actions={
+          <button
+            type="button"
+            onClick={() => setLang((l) => (l === 'en' ? 'es' : 'en'))}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs font-semibold transition-colors"
+            title="Toggle language"
+          >
+            <Globe size={12} />
+            {lang === 'en' ? 'ES' : 'EN'}
+          </button>
+        }
+      >
+        <p className="text-xs font-bold opacity-70">US Youth Soccer</p>
+        <h3 className="font-semibold text-lg leading-tight">{labels.title}</h3>
+        <p className="text-xs opacity-80 mt-0.5">
+          {player.firstName} {player.lastName}
+        </p>
+      </ResponsiveModal.Header>
 
-        {loading ? (
-          <div className="p-12 flex items-center justify-center text-muted-foreground">
-            <Loader2 size={24} className="animate-spin" />
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+      {loading ? (
+        <ResponsiveModal.Body className="flex items-center justify-center py-12 text-muted-foreground">
+          <Loader2 size={24} className="animate-spin" />
+        </ResponsiveModal.Body>
+      ) : (
+        <>
+          <ResponsiveModal.Body className="space-y-6">
             {existingForm && (
               <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300 font-medium">
                 <CheckCircle2 size={16} />
@@ -422,29 +417,28 @@ export default function MedicalReleaseForm({ show, onClose, player, clubId, seas
                 {error}
               </div>
             )}
+          </ResponsiveModal.Body>
 
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-2 border-t border-border">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 font-semibold text-muted-foreground hover:bg-muted rounded-lg transition-colors"
-              >
-                {labels.cancel}
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-6 py-2 font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-              >
-                {saving ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
-                {saving ? labels.saving : existingForm ? labels.updateBtn : labels.submitBtn}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
+          <ResponsiveModal.Footer>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 font-semibold text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+            >
+              {labels.cancel}
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-6 py-2 font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+              {saving ? labels.saving : existingForm ? labels.updateBtn : labels.submitBtn}
+            </button>
+          </ResponsiveModal.Footer>
+        </>
+      )}
+    </ResponsiveModal>
   );
 }
 

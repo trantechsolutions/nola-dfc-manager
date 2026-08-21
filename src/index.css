@@ -149,6 +149,14 @@
     min-height: 100dvh;
   }
 
+  /* A panel presenting as a full screen replaces the app rather than covering
+     it, so AppShell marks the shell hidden while one is up. Spelled out here
+     because the `display: grid` above outranks the browser's own [hidden]
+     rule, which would otherwise leave the shell on screen behind the panel. */
+  .app-wrapper[hidden] {
+    display: none;
+  }
+
   /* Minified ("sidebar-mini") state. The grid TRACK shrinks but the <aside>
      is free to overflow it on hover — that is what lets the flyout expansion
      overlay the content instead of shoving it sideways. */

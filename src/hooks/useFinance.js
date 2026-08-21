@@ -106,11 +106,18 @@ export const useFinance = (
     // Helper: check if a player has bought in to fundraising for this season
     const hasBuyIn = (player) => player.seasonProfiles?.[selectedSeason]?.fundraiserBuyIn === true;
 
-    // Cap the linked player at their remaining balance (only if they have buy-in).
+    // Cap the linked player at their remaining balance.
+    //
+    // Buy-in is deliberately NOT checked here. It gates the automatic pool split,
+    // where the app decides who shares in a credit nobody was named for. Naming a
+    // player on the deposit is the treasurer saying who earned this money, and it
+    // outranks the opt-in flag the same way a manual split does. Gating on it here
+    // meant a direct credit to a player without buy-in silently landed in the team
+    // pot instead.
     const applyPrimaryCap = () => {
       if (!sourcePlayerId) return;
       const primaryPlayer = seasonalPlayers.find((p) => p.id === sourcePlayerId);
-      if (primaryPlayer && hasBuyIn(primaryPlayer)) {
+      if (primaryPlayer) {
         const primaryStats = freshFinancials[sourcePlayerId];
         if (primaryStats && primaryStats.remainingBalance > 0) {
           const applyAmt = Math.min(primaryStats.remainingBalance, remainingAmount);

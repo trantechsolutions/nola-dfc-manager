@@ -173,6 +173,42 @@ CREATE TRIGGER opponent_contacts_updated_at
   BEFORE UPDATE ON opponent_contacts
   FOR EACH ROW EXECUTE FUNCTION set_opponent_contacts_updated_at();
 
+-- ── 8d. SPONSORS ──
+-- The sponsor directory: contact details, pledge, and logo. Team-scoped and
+-- season-independent — the pledge lives here, the money lives in transactions.
+-- See sql/sponsors_migration.sql for RLS and the sponsor-logos bucket.
+CREATE TABLE IF NOT EXISTS sponsors (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id uuid NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  tier text,
+  status text NOT NULL DEFAULT 'prospect',
+  contact_name text,
+  email text,
+  phone text,
+  website text,
+  address text,
+  committed_amount numeric(12, 2) DEFAULT 0,
+  renewal_date date,
+  notes text,
+  logo_path text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE OR REPLACE FUNCTION set_sponsors_updated_at()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS sponsors_updated_at ON sponsors;
+CREATE TRIGGER sponsors_updated_at
+  BEFORE UPDATE ON sponsors
+  FOR EACH ROW EXECUTE FUNCTION set_sponsors_updated_at();
+
 -- ── 9. TRANSACTIONS ──
 CREATE TABLE IF NOT EXISTS transactions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -180,6 +216,10 @@ CREATE TABLE IF NOT EXISTS transactions (
   team_season_id uuid REFERENCES team_seasons(id),
   player_id uuid REFERENCES players(id),
   event_id uuid REFERENCES team_events(id) ON DELETE SET NULL,
+  -- Which directory sponsor this entry belongs to. The ledger title stays as
+  -- booked; the sponsor row carries the tidied-up name and contact details.
+  sponsor_id uuid REFERENCES sponsors(id) ON DELETE SET NULL,
+  -- Event date: what the money is for (drives ledger order + season reporting).
   date date NOT NULL,
   amount numeric(10,2) NOT NULL,
   split numeric(10,2),
@@ -188,6 +228,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   title text NOT NULL,
   notes text,
   cleared boolean DEFAULT false,
+  -- Entered date: when the funds actually moved (drives reconciliation).
   cleared_date date,
   reconciled boolean DEFAULT false,
   distributed boolean DEFAULT false,
@@ -597,6 +638,8 @@ CREATE INDEX IF NOT EXISTS idx_team_events_team ON team_events(team_id);
 CREATE INDEX IF NOT EXISTS idx_matchups_team_season ON matchups(team_id, season_id);
 CREATE INDEX IF NOT EXISTS idx_matchups_reschedule_of ON matchups(reschedule_of_id);
 CREATE INDEX IF NOT EXISTS idx_opponent_contacts_team ON opponent_contacts(team_id);
+CREATE INDEX IF NOT EXISTS idx_sponsors_team ON sponsors(team_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_sponsor ON transactions(sponsor_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_table ON audit_log(table_name);
 CREATE INDEX IF NOT EXISTS idx_audit_log_record ON audit_log(record_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(changed_by);
@@ -660,6 +703,12 @@ ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
 --   File size limit: 10MB
 --   Allowed MIME types: application/pdf, image/jpeg, image/png, image/gif,
 --     application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document
+
+-- Create via Supabase Dashboard → Storage → New Bucket:
+--   Name: sponsor-logos
+--   Public: true   (logos are marketing assets, served straight into <img>)
+--   File size limit: 2MB
+--   Allowed MIME types: image/png, image/jpeg, image/webp, image/svg+xml
 
 
 -- ============================================================

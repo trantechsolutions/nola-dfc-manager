@@ -1,16 +1,15 @@
 import { useState } from 'react';
 
 /**
- * Owns all transient UI state: modals, toasts, confirm dialogs, impersonation.
- * Extracted from App.jsx to keep the root component focused on layout and auth.
+ * Owns the transient UI state that has no business being in the URL: toasts,
+ * the confirm dialog, impersonation.
+ *
+ * Panels used to live here too. They are addressed by the URL now
+ * (usePanelRoute), so they survive a reload and can be linked to. A confirm
+ * dialog deliberately stays behind: it is a promise the caller is awaiting, not
+ * a place in the app, and there is nothing to restore it to after a reload.
  */
 export function useModalState() {
-  const [showPlayerForm, setShowPlayerForm] = useState(false);
-  const [playerToEdit, setPlayerToEdit] = useState(null);
-  const [showPlayerModal, setShowPlayerModal] = useState(false);
-  const [playerToView, setPlayerToView] = useState(null);
-  const [showTxForm, setShowTxForm] = useState(false);
-  const [txToEdit, setTxToEdit] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [impersonatingAs, setImpersonatingAs] = useState(null);
   const [toast, setToast] = useState(null);
@@ -37,18 +36,6 @@ export function useModalState() {
   };
 
   return {
-    showPlayerForm,
-    setShowPlayerForm,
-    playerToEdit,
-    setPlayerToEdit,
-    showPlayerModal,
-    setShowPlayerModal,
-    playerToView,
-    setPlayerToView,
-    showTxForm,
-    setShowTxForm,
-    txToEdit,
-    setTxToEdit,
     confirmDialog,
     setConfirmDialog,
     impersonatingAs,

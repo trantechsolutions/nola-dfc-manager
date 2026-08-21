@@ -4,6 +4,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+// The view opens its panels through the URL now (usePanelRoute), so it needs a
+// router around it the same way the app supplies one.
+import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('../../services/supabaseService', () => ({
   supabaseService: {
@@ -32,17 +35,19 @@ const team = (i, overrides = {}) => ({
 
 function renderList(teams) {
   return render(
-    <I18nProvider>
-      <TeamList
-        club={{ id: 'c1', name: 'NOLA DFC' }}
-        teams={teams}
-        onSelectTeam={vi.fn()}
-        formatMoney={(v) => `$${v}`}
-        showToast={vi.fn()}
-        showConfirm={vi.fn()}
-        refreshContext={vi.fn()}
-      />
-    </I18nProvider>,
+    <MemoryRouter>
+      <I18nProvider>
+        <TeamList
+          club={{ id: 'c1', name: 'NOLA DFC' }}
+          teams={teams}
+          onSelectTeam={vi.fn()}
+          formatMoney={(v) => `$${v}`}
+          showToast={vi.fn()}
+          showConfirm={vi.fn()}
+          refreshContext={vi.fn()}
+        />
+      </I18nProvider>
+    </MemoryRouter>,
   );
 }
 
