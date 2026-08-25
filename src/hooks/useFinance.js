@@ -225,13 +225,46 @@ export const useFinance = (
       );
     }
 
-    await Promise.all(promises);
-    if (originalTxId) await supabaseService.updateTransaction(originalTxId, { distributed: true });
+    // A failed insert (or a failed flag flip) part-way through leaves real credit
+    // rows on player balances while the deposit still reads as undistributed, so
+    // the treasurer distributes it again and every parent sees the money twice.
+    // Roll the half-written batch back before the error surfaces.
+    try {
+      await Promise.all(promises);
+      if (originalTxId) await supabaseService.updateTransaction(originalTxId, { distributed: true });
+    } catch (err) {
+      try {
+        await supabaseService.deleteBatch('waterfallBatchId', batchId);
+      } catch {
+        // Keep the original failure — the cleanup error would only mask it.
+      }
+      throw err;
+    }
     return batchId;
   };
 
+  // Undo pulls the credit rows the batch wrote, then hands the deposit back to
+  // the undistributed pile. The delete is verified rather than assumed: PostgREST
+  // reports success for a delete that matched nothing (rows outside the caller's
+  // RLS scope, or a batch someone else already undid), and the old code took that
+  // for a clean undo — the credits stayed on the players' statements while the
+  // sponsors history dropped the row that could have removed them.
   const revertWaterfall = async (batchId, originalTxId) => {
     await supabaseService.deleteBatch('waterfallBatchId', batchId);
+    // Credits from a distribution that died before its batch finished carry the
+    // deposit id but no batch id, so the history tab can never offer an undo for
+    // them. Clear them out on the way past.
+    if (originalTxId) await supabaseService.deleteOrphanedDistributionCredits(originalTxId);
+
+    const survivors = await supabaseService.getBatchTransactionIds(batchId);
+    if (survivors.length > 0) {
+      // The deposit deliberately stays flagged as distributed: reopening it while
+      // its credits are still on the books is what doubles the money.
+      throw new Error(
+        `${survivors.length} credit transaction(s) from this distribution could not be removed. They may belong to another team's books — refresh and try again, or remove them from the ledger.`,
+      );
+    }
+
     if (originalTxId) await supabaseService.updateTransaction(originalTxId, { distributed: false });
   };
 

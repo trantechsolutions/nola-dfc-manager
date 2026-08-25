@@ -182,9 +182,17 @@ export function useFinanceViewProps({
         onReset:
           canEditSponsors && currentSeasonData?.isFinalized
             ? async (batchId, originalTxId) => {
-                await revertWaterfall(batchId, originalTxId);
-                await fetchData();
-                showToast(t('toast.distributionReverted'));
+                try {
+                  await revertWaterfall(batchId, originalTxId);
+                  showToast(t('toast.distributionReverted'));
+                } catch (error) {
+                  // A failed undo used to reject silently, so the credits stayed on
+                  // the books with nothing on screen to say so.
+                  showToast(error.message, true);
+                } finally {
+                  // Refresh either way: a partial undo still changed the ledger.
+                  await fetchData();
+                }
               }
             : null,
         distributionMethod: currentSeasonData?.distributionMethod || 'waterfall',

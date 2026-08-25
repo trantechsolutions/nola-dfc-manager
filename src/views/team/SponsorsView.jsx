@@ -115,6 +115,11 @@ export default function SponsorsView({
   const [activeTab, setActiveTab] = useState('undistributed');
   const [expandedPlayerId, setExpandedPlayerId] = useState(null);
   const [isDistributingAll, setIsDistributingAll] = useState(false);
+  // Apply and Undo both write several ledger rows. Without an in-flight guard a
+  // double click fires the whole thing twice: two batches of credits for one
+  // deposit, and only one of them reachable from the history tab afterwards.
+  const [isApplying, setIsApplying] = useState(false);
+  const [undoingBatchId, setUndoingBatchId] = useState(null);
   const [distributeAllProgress, setDistributeAllProgress] = useState({ current: 0, total: 0, currentTitle: '' });
   const [isSavingMethod, setIsSavingMethod] = useState(false);
   // Draft selection — the guide lets you switch methods without persisting.
@@ -298,6 +303,16 @@ export default function SponsorsView({
     const order = { SPO: 0, FUN: 1 };
     return (order[a.category] ?? 2) - (order[b.category] ?? 2);
   });
+
+  const handleUndo = async (batchId, batchOriginalTxId) => {
+    if (!onReset || undoingBatchId) return;
+    setUndoingBatchId(batchId);
+    try {
+      await onReset(batchId, batchOriginalTxId);
+    } finally {
+      setUndoingBatchId(null);
+    }
+  };
 
   const handleDistributeAll = async () => {
     if (!isBudgetLocked) {
@@ -677,13 +692,16 @@ export default function SponsorsView({
                           {formatMoney(group.totalAmount)}
                         </td>
                         <td className="px-6 py-4 text-center align-top">
-                          <button
-                            onClick={() => onReset(group.batchId, group.originalTxId)}
-                            className="text-muted-foreground hover:text-red-700 dark:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30"
-                            title={t('sponsors.history.undo')}
-                          >
-                            <Undo2 size={16} />
-                          </button>
+                          {onReset && (
+                            <button
+                              onClick={() => handleUndo(group.batchId, group.originalTxId)}
+                              disabled={undoingBatchId !== null}
+                              className="text-muted-foreground hover:text-red-700 dark:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={t('sponsors.history.undo')}
+                            >
+                              <Undo2 size={16} />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -1030,20 +1048,26 @@ export default function SponsorsView({
                 {t('sponsors.modal.cancel')}
               </button>
               <button
-                disabled={!canApply}
-                onClick={() => {
-                  onDistribute(
-                    distAmount,
-                    distTitle,
-                    manualMode ? '' : sourcePlayerId,
-                    originalTxId,
-                    distCategory,
-                    manualMode ? manualRows : null,
-                  );
-                  closeDistributeModal();
+                disabled={!canApply || isApplying}
+                onClick={async () => {
+                  if (isApplying) return;
+                  setIsApplying(true);
+                  try {
+                    await onDistribute(
+                      distAmount,
+                      distTitle,
+                      manualMode ? '' : sourcePlayerId,
+                      originalTxId,
+                      distCategory,
+                      manualMode ? manualRows : null,
+                    );
+                  } finally {
+                    setIsApplying(false);
+                    closeDistributeModal();
+                  }
                 }}
                 className={`flex-1 py-3 font-bold rounded-lg transition-all ${
-                  canApply
+                  canApply && !isApplying
                     ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20'
                     : 'bg-muted text-muted-foreground cursor-not-allowed'
                 }`}

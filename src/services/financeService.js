@@ -142,11 +142,37 @@ export const financeService = {
     });
   },
 
+  // Returns the rows that were actually removed. A delete that matches nothing —
+  // a stale batch id, or rows the caller's RLS scope hides — comes back from
+  // PostgREST without an error, so an undo that silently removed zero credits
+  // looks identical to one that worked. Callers check the count.
   deleteBatch: async (field, value) => {
     const dbField =
       field === 'waterfallBatchId' ? 'waterfall_batch_id' : field === 'originalTxId' ? 'original_tx_id' : field;
-    const { error } = await supabase.from('transactions').delete().eq(dbField, value);
+    const { data, error } = await supabase.from('transactions').delete().eq(dbField, value).select('id');
     if (error) throw error;
+    return data || [];
+  },
+
+  getBatchTransactionIds: async (batchId) => {
+    const { data, error } = await supabase.from('transactions').select('id').eq('waterfall_batch_id', batchId);
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Credits written by a distribution that died halfway carry the deposit they
+  // came from but never got grouped under a finished batch. They are invisible to
+  // the sponsors history (which lists batches), so undo has to sweep them by
+  // source or they sit on a player's statement forever.
+  deleteOrphanedDistributionCredits: async (originalTxId) => {
+    const { data, error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('original_tx_id', originalTxId)
+      .is('waterfall_batch_id', null)
+      .select('id');
+    if (error) throw error;
+    return data || [];
   },
 
   bulkAddTransactions: async (txArray, seasonId, teamSeasonId = null) => {

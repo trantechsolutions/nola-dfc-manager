@@ -88,6 +88,10 @@ export default {
     feesPaid: 'Cuotas Pagadas',
     transactions: 'Transacciones',
     noTransactions: 'No hay transacciones registradas.',
+    txApplied: 'Aplicado al saldo',
+    txRaised: 'Recaudado para el equipo',
+    txRaisedNote:
+      'El dinero que su jugador consiguió aparece aquí junto con la parte aplicada a su cuota, por lo que un mismo patrocinador o recaudación puede aparecer más de una vez. Solo las filas marcadas "{{applied}}" cuentan para el saldo de arriba.',
     documents: 'Documentos',
     noDocuments: 'No hay documentos en archivo.',
     docOpenFail: 'No se pudo abrir el documento',
