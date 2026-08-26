@@ -1,6 +1,7 @@
 import { supabase } from '../supabase';
 import { logAuditEvent } from './auditService';
 import { todayStr } from '../utils/txDates';
+import { derivedInstallmentTitle } from '../utils/installments';
 
 export const financeService = {
   getAllTransactions: async () => {
@@ -29,6 +30,7 @@ export const financeService = {
       waterfallBatchId: tx.waterfall_batch_id,
       originalTxId: tx.original_tx_id,
       refundOfTxId: tx.refund_of_tx_id || null,
+      installmentOfTxId: tx.installment_of_tx_id || null,
       accountId: tx.account_id || null,
       transferFromAccountId: tx.transfer_from_account_id || null,
       transferToAccountId: tx.transfer_to_account_id || null,
@@ -56,6 +58,7 @@ export const financeService = {
       waterfall_batch_id: txData.waterfallBatchId || null,
       original_tx_id: txData.originalTxId || null,
       refund_of_tx_id: txData.refundOfTxId || null,
+      installment_of_tx_id: txData.installmentOfTxId || null,
       ...(txData.teamSeasonId ? { team_season_id: txData.teamSeasonId } : {}),
       account_id: txData.accountId || null,
       transfer_from_account_id: txData.transferFromAccountId || null,
@@ -102,8 +105,28 @@ export const financeService = {
     if ('transferToAccountId' in txData) updates.transfer_to_account_id = txData.transferToAccountId || null;
     if ('eventId' in txData) updates.event_id = txData.eventId || null;
     if ('sponsorId' in txData) updates.sponsor_id = txData.sponsorId || null;
+
+    // A payment's title is a snapshot of what it pays off, taken when it was
+    // recorded. Renaming the obligation would otherwise leave its payments
+    // naming something that no longer exists, so read the old name first and
+    // carry the rename through afterwards.
+    const previousTitle =
+      'title' in updates
+        ? (await supabase.from('transactions').select('title').eq('id', txId).maybeSingle()).data?.title
+        : null;
+
     const { error } = await supabase.from('transactions').update(updates).eq('id', txId);
     if (error) throw error;
+
+    if (previousTitle && previousTitle !== updates.title) {
+      // Matched on the old derived name so a payment the treasurer renamed by
+      // hand is left alone — that title is theirs, not ours to overwrite.
+      await supabase
+        .from('transactions')
+        .update({ title: derivedInstallmentTitle(updates.title) })
+        .eq('installment_of_tx_id', txId)
+        .eq('title', derivedInstallmentTitle(previousTitle));
+    }
 
     // Fire-and-forget audit log
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -231,6 +254,7 @@ export const financeService = {
       waterfallBatchId: tx.waterfall_batch_id,
       originalTxId: tx.original_tx_id,
       refundOfTxId: tx.refund_of_tx_id || null,
+      installmentOfTxId: tx.installment_of_tx_id || null,
       accountId: tx.account_id || null,
       transferFromAccountId: tx.transfer_from_account_id || null,
       transferToAccountId: tx.transfer_to_account_id || null,

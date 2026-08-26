@@ -234,6 +234,12 @@ CREATE TABLE IF NOT EXISTS transactions (
   distributed boolean DEFAULT false,
   waterfall_batch_id text,
   original_tx_id uuid REFERENCES transactions(id),
+  -- This row reverses the one it points at (see sql/add_transaction_refunds.sql).
+  refund_of_tx_id uuid REFERENCES transactions(id) ON DELETE CASCADE,
+  -- This row is a partial payment towards the one it points at, which carries
+  -- the full amount owed and is never cleared. See
+  -- sql/add_transaction_installments.sql for why this nulls rather than cascades.
+  installment_of_tx_id uuid REFERENCES transactions(id) ON DELETE SET NULL,
   transfer_from text,
   transfer_to text,
   created_at timestamptz DEFAULT now(),
@@ -626,6 +632,8 @@ CREATE INDEX IF NOT EXISTS idx_guardians_email ON guardians(email);
 CREATE INDEX IF NOT EXISTS idx_transactions_season ON transactions(season_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_team_season ON transactions(team_season_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_player ON transactions(player_id);
+CREATE INDEX IF NOT EXISTS transactions_refund_of_tx_id_idx ON transactions(refund_of_tx_id);
+CREATE INDEX IF NOT EXISTS transactions_installment_of_tx_id_idx ON transactions(installment_of_tx_id);
 CREATE INDEX IF NOT EXISTS idx_player_seasons_player ON player_seasons(player_id);
 CREATE INDEX IF NOT EXISTS idx_player_seasons_season ON player_seasons(season_id);
 CREATE INDEX IF NOT EXISTS idx_team_seasons_team ON team_seasons(team_id);

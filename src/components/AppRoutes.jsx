@@ -15,11 +15,13 @@ import { useEventBudgetPush } from '../hooks/useEventBudgetPush';
 import { usePlannedCosts } from '../hooks/usePlannedCosts';
 import { isCostBudgeted } from '../utils/plannedCostBudget';
 import { buildRefundIndex } from '../utils/refunds';
+import { buildInstallmentIndex } from '../utils/installments';
 
 import ErrorBoundary from './ErrorBoundary';
 import PanelHost from './layout/PanelHost';
 import TransactionModal from './TransactionModal';
 import RefundModal from './RefundModal';
+import PaymentModal from './PaymentModal';
 import PlayerFormModal from './PlayerFormModal';
 import PlayerModal from './PlayerModal';
 import ConfirmModal from './ConfirmModal';
@@ -137,6 +139,7 @@ export default function AppRoutes({
   canEditLedger,
   handleSaveTransaction,
   handleRefundTransaction,
+  handleRecordPayment,
   handleDeleteTransaction,
   handleBulkUpload,
   isBulkUploading,
@@ -213,6 +216,11 @@ export default function AppRoutes({
   // the entry it creates is derived from the original, not typed from scratch.
   const [isRefunding, setIsRefunding] = useState(false);
   const refundIndex = useMemo(() => buildRefundIndex(seasonalTransactions), [seasonalTransactions]);
+
+  // Same shape for partial payments: the dialog derives its entry from what is
+  // owed, and the index is what tells it how much of that is left.
+  const [isPaying, setIsPaying] = useState(false);
+  const installmentIndex = useMemo(() => buildInstallmentIndex(seasonalTransactions), [seasonalTransactions]);
 
   // "Add to Budget" on an event. Held here rather than in ScheduleView so the
   // contribution list survives the modal opening and closing.
@@ -908,6 +916,7 @@ export default function AppRoutes({
           categoryOptions={categoryOptions}
           teamEvents={collapsedTeamEvents}
           activeAccounts={activeAccounts}
+          hasPayments={Boolean(panelParams.id && installmentIndex[panelParams.id] > 0)}
         />
 
         <RefundModal
@@ -934,6 +943,34 @@ export default function AppRoutes({
               }
             },
             { action: 'refund_transaction', tableName: 'transactions' },
+          )}
+        />
+
+        <PaymentModal
+          key={panelKey(PANELS.PAYMENT, panelParams.id)}
+          show={panel === PANELS.PAYMENT && Boolean(panelTx)}
+          transaction={panelTx}
+          installmentIndex={installmentIndex}
+          activeAccounts={activeAccounts}
+          formatMoney={formatMoney}
+          isSubmitting={isPaying}
+          onClose={closePanel}
+          onSubmit={guardedAction(
+            async (details) => {
+              setIsPaying(true);
+              try {
+                const r = await handleRecordPayment(panelTx, details, installmentIndex);
+                if (r && r.success === false) {
+                  showToast(r.error, true);
+                } else {
+                  closePanel();
+                  showToast(t('toast.paymentRecorded'));
+                }
+              } finally {
+                setIsPaying(false);
+              }
+            },
+            { action: 'record_partial_payment', tableName: 'transactions' },
           )}
         />
       </PanelHost>

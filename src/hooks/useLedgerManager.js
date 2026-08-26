@@ -5,6 +5,7 @@
 import { supabaseService } from '../services/supabaseService';
 import { validateTransaction } from '../utils/validation';
 import { buildRefundTransaction, refundableRemaining } from '../utils/refunds';
+import { buildInstallmentTransaction, canRecordPayment, outstandingOn } from '../utils/installments';
 
 // Postgres RLS rejections surface verbatim ("new row violates row-level
 // security policy for table ..."), which tells a coach nothing. Every path
@@ -115,6 +116,33 @@ export const useLedgerManager = (
     );
   };
 
+  // A partial payment is its own row carrying the same sign as the obligation it
+  // pays off, so the money lands in the account and against the player the
+  // moment it arrives while the unpaid balance stays visibly outstanding.
+  const handleRecordPayment = async (parentTx, { amount, date, notes, cleared = true, accountId } = {}, index = {}) => {
+    if (!parentTx?.id) return { success: false, error: 'Nothing to pay towards.' };
+    if (!canRecordPayment(parentTx, index)) {
+      return { success: false, error: 'This entry cannot be paid in instalments.' };
+    }
+
+    const remaining = outstandingOn(parentTx, index);
+    const magnitude = Math.round((Math.abs(Number(amount)) || 0) * 100) / 100;
+    if (!magnitude) return { success: false, error: 'Enter a payment amount.' };
+    if (magnitude > remaining) {
+      return { success: false, error: `Payment cannot exceed the ${remaining.toFixed(2)} still owed.` };
+    }
+
+    return handleSaveTransaction(
+      buildInstallmentTransaction(parentTx, {
+        amount: magnitude,
+        date: date || new Date().toISOString().split('T')[0],
+        notes,
+        cleared,
+        accountId,
+      }),
+    );
+  };
+
   const handleDeleteTransaction = async (txId) => {
     let snapshot = null;
     try {
@@ -168,5 +196,11 @@ export const useLedgerManager = (
     }
   };
 
-  return { handleSaveTransaction, handleRefundTransaction, handleDeleteTransaction, handleBulkUpload };
+  return {
+    handleSaveTransaction,
+    handleRefundTransaction,
+    handleRecordPayment,
+    handleDeleteTransaction,
+    handleBulkUpload,
+  };
 };

@@ -14,11 +14,20 @@ import {
   ArrowRightLeft,
   Link2,
   Undo2,
+  HandCoins,
 } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import AccountFilterMenu from './AccountFilterMenu';
 import { HOLDINGS, HOLDING_LABELS } from '../utils/holdings';
 import { buildRefundIndex, canRefund, refundableRemaining } from '../utils/refunds';
+import {
+  buildInstallmentIndex,
+  blocksRefund,
+  canRecordPayment,
+  hasPaymentPlan,
+  isInstallment,
+  planProgress,
+} from '../utils/installments';
 import { hasSplitDates } from '../utils/txDates';
 
 const DEFAULT_CATEGORY_COLORS = {
@@ -46,6 +55,7 @@ export default function Ledger({
   onEditTx,
   onDeleteTx,
   onRefundTx,
+  onRecordPayment,
   formatMoney,
   categoryLabels: propLabels, // NEW: dynamic labels from useCategoryManager
   categoryColors: propColors, // NEW: dynamic colors from useCategoryManager
@@ -75,6 +85,11 @@ export default function Ledger({
   // originalTxId -> amount already refunded. Built from the full list so the
   // badge on an original is right even when its refund row is filtered out.
   const refundIndex = useMemo(() => buildRefundIndex(transactions), [transactions]);
+
+  // parentTxId -> amount already paid towards it. Same reasoning as above: built
+  // from the full list so a plan's progress is right even when a payment is
+  // filtered out from under it.
+  const installmentIndex = useMemo(() => buildInstallmentIndex(transactions), [transactions]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -147,6 +162,7 @@ export default function Ledger({
     if (flowFilter === 'expense') result = result.filter((tx) => tx.amount < 0 && tx.category !== 'TRF');
     if (flowFilter === 'transfer') result = result.filter((tx) => tx.category === 'TRF');
     if (flowFilter === 'refund') result = result.filter((tx) => tx.refundOfTxId || refundIndex[tx.id] > 0);
+    if (flowFilter === 'plan') result = result.filter((tx) => isInstallment(tx) || installmentIndex[tx.id] > 0);
 
     if (statusFilter === 'cleared') result = result.filter((tx) => tx.cleared);
     if (statusFilter === 'pending') result = result.filter((tx) => !tx.cleared);
@@ -169,32 +185,59 @@ export default function Ledger({
     statusFilter,
     sortOrder,
     refundIndex,
+    installmentIndex,
   ]);
+
+  // One visible row per transaction, with its payments and reversals folded in
+  // behind an expand toggle.
+  //
+  // Order matters: payments fold first, and a refund only folds into what it
+  // reverses if that row is itself still visible at the top level. A refund of a
+  // folded payment therefore keeps its own row rather than disappearing two
+  // levels down — nothing may silently vanish from the ledger.
+  const { rows, foldedPaymentIds } = useMemo(() => {
+    const visible = new Set(filteredTransactions.map((tx) => tx.id));
+
+    const payments = {};
+    const foldedAsPayment = new Set();
+    filteredTransactions.forEach((tx) => {
+      if (tx.installmentOfTxId && visible.has(tx.installmentOfTxId)) {
+        (payments[tx.installmentOfTxId] ||= []).push(tx);
+        foldedAsPayment.add(tx.id);
+      }
+    });
+
+    const refunds = {};
+    const foldedAsRefund = new Set();
+    filteredTransactions.forEach((tx) => {
+      if (tx.refundOfTxId && visible.has(tx.refundOfTxId) && !foldedAsPayment.has(tx.refundOfTxId)) {
+        (refunds[tx.refundOfTxId] ||= []).push(tx);
+        foldedAsRefund.add(tx.id);
+      }
+    });
+
+    return {
+      rows: filteredTransactions
+        .filter((tx) => !foldedAsPayment.has(tx.id) && !foldedAsRefund.has(tx.id))
+        .map((tx) => ({ tx, refunds: refunds[tx.id] || [], payments: payments[tx.id] || [] })),
+      foldedPaymentIds: foldedAsPayment,
+    };
+  }, [filteredTransactions]);
 
   // Totals stay over the flat list: a nested refund is still real money moving,
   // it just doesn't get a line of its own.
+  //
+  // A payment folded under its obligation is the exception. The obligation
+  // already carries the full amount here — counting the instalments on top would
+  // report the same money twice. A payment whose obligation is filtered out of
+  // view still counts, or the money would vanish from the totals entirely.
+  const countsInTotals = (tx) => !foldedPaymentIds.has(tx.id);
   const totalIncome = filteredTransactions
-    .filter((tx) => tx.amount > 0 && tx.category !== 'TRF')
+    .filter((tx) => tx.amount > 0 && tx.category !== 'TRF' && countsInTotals(tx))
     .reduce((s, tx) => s + tx.amount, 0);
   const totalExpense = filteredTransactions
-    .filter((tx) => tx.amount < 0 && tx.category !== 'TRF')
+    .filter((tx) => tx.amount < 0 && tx.category !== 'TRF' && countsInTotals(tx))
     .reduce((s, tx) => s + tx.amount, 0);
-
-  // One visible row per transaction, with its reversals folded in behind an
-  // expand toggle. A refund whose original fell outside the current filters
-  // still gets its own row — nothing may silently vanish from the ledger.
-  const rows = useMemo(() => {
-    const visible = new Set(filteredTransactions.map((tx) => tx.id));
-    const children = {};
-    filteredTransactions.forEach((tx) => {
-      if (tx.refundOfTxId && visible.has(tx.refundOfTxId)) {
-        (children[tx.refundOfTxId] ||= []).push(tx);
-      }
-    });
-    return filteredTransactions
-      .filter((tx) => !(tx.refundOfTxId && visible.has(tx.refundOfTxId)))
-      .map((tx) => ({ tx, refunds: children[tx.id] || [] }));
-  }, [filteredTransactions]);
 
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
@@ -248,6 +291,32 @@ export default function Ledger({
       <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded whitespace-nowrap">
         <Undo2 size={10} />{' '}
         {isFull ? t('ledger.refunded') : t('ledger.refundedAmount', { amount: formatMoney(refunded) })}
+      </span>
+    );
+  };
+
+  // Two faces of a payment plan: the payment row is marked PAYMENT, the
+  // obligation it pays off carries how far along the plan is.
+  const PlanBadge = ({ tx }) => {
+    if (isInstallment(tx)) {
+      return (
+        <span className="inline-flex items-center gap-1 whitespace-nowrap rounded bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+          <HandCoins size={10} /> {t('ledger.payment')}
+        </span>
+      );
+    }
+    if (!hasPaymentPlan(tx, installmentIndex)) return null;
+    const { paid, total, complete } = planProgress(tx, installmentIndex);
+    return (
+      <span
+        className={`inline-flex items-center gap-1 whitespace-nowrap rounded px-2 py-0.5 text-xs font-bold ${
+          complete
+            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+            : 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+        }`}
+      >
+        <HandCoins size={10} />{' '}
+        {complete ? t('ledger.paidInFull') : t('ledger.paidOf', { paid: formatMoney(paid), total: formatMoney(total) })}
       </span>
     );
   };
@@ -344,6 +413,7 @@ export default function Ledger({
               { val: 'expense', label: t('ledger.expense') },
               { val: 'transfer', label: t('ledger.transfers') },
               { val: 'refund', label: t('ledger.refunds') },
+              { val: 'plan', label: t('ledger.payments') },
             ].map((opt) => (
               <button
                 key={opt.val}
@@ -420,10 +490,13 @@ export default function Ledger({
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {pagedRows.map(({ tx, refunds }) => {
+            {pagedRows.map(({ tx, refunds, payments }) => {
               const isDraft = !tx.cleared && tx.eventId;
               const isExpanded = expandedIds.has(tx.id);
               const net = netOf(tx, refunds);
+              const onPlan = hasPaymentPlan(tx, installmentIndex);
+              const plan = planProgress(tx, installmentIndex);
+              const childCount = refunds.length + payments.length;
               return (
                 <React.Fragment key={tx.id}>
                   <tr
@@ -448,14 +521,18 @@ export default function Ledger({
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2">
-                        {refunds.length > 0 && (
+                        {childCount > 0 && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               toggleExpanded(tx.id);
                             }}
                             aria-expanded={isExpanded}
-                            aria-label={t('ledger.showRefunds', { n: refunds.length })}
+                            aria-label={
+                              payments.length > 0
+                                ? t('ledger.showPayments', { n: payments.length })
+                                : t('ledger.showRefunds', { n: refunds.length })
+                            }
                             className="text-muted-foreground hover:text-foreground shrink-0 -ml-1"
                           >
                             <ChevronRight
@@ -473,6 +550,7 @@ export default function Ledger({
                         </span>
                         <span className="text-sm font-semibold text-foreground truncate max-w-[250px]">{tx.title}</span>
                         <RefundBadge tx={tx} />
+                        <PlanBadge tx={tx} />
                       </div>
                       {tx.category === 'TRF' && <TransferBadge tx={tx} />}
                       {tx.eventTitle && (
@@ -501,6 +579,22 @@ export default function Ledger({
                         <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
                           <CheckCircle2 size={12} /> {t('ledger.cleared')}
                         </span>
+                      ) : onPlan ? (
+                        // An obligation on a plan is never cleared — the money is
+                        // in its payments — so "Pending" would read as though
+                        // nothing had been collected. Show the balance instead.
+                        <span
+                          className={`inline-flex items-center gap-1 text-xs font-semibold ${
+                            plan.complete
+                              ? 'text-emerald-700 dark:text-emerald-400'
+                              : 'text-blue-700 dark:text-blue-400'
+                          }`}
+                        >
+                          <HandCoins size={12} />{' '}
+                          {plan.complete
+                            ? t('ledger.paidInFull')
+                            : t('ledger.amountLeft', { amount: formatMoney(plan.remaining) })}
+                        </span>
                       ) : isDraft ? (
                         <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400 text-xs font-bold">
                           <Clock size={12} /> {t('ledger.draft')}
@@ -522,9 +616,24 @@ export default function Ledger({
                       {refunds.length > 0 && (
                         <span className="block text-sm font-bold text-foreground">{formatSigned(net)}</span>
                       )}
+                      {onPlan && !plan.complete && (
+                        <span className="block text-xs font-semibold text-muted-foreground">
+                          {t('ledger.amountLeft', { amount: formatMoney(plan.remaining) })}
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      {onRefundTx && canRefund(tx, refundIndex) && (
+                      {onRecordPayment && canRecordPayment(tx, installmentIndex) && (
+                        <button
+                          onClick={() => onRecordPayment(tx)}
+                          title={t('ledger.recordPayment')}
+                          aria-label={t('ledger.recordPayment')}
+                          className="p-1 text-muted-foreground transition-colors hover:text-emerald-700 dark:hover:text-emerald-400"
+                        >
+                          <HandCoins size={14} />
+                        </button>
+                      )}
+                      {onRefundTx && canRefund(tx, refundIndex) && !blocksRefund(tx, installmentIndex) && (
                         <button
                           onClick={() => onRefundTx(tx)}
                           title={t('ledger.refund')}
@@ -546,6 +655,56 @@ export default function Ledger({
                       )}
                     </td>
                   </tr>
+                  {isExpanded &&
+                    payments.map((p) => (
+                      <tr key={p.id} className="bg-emerald-50/40 text-xs dark:bg-emerald-900/10">
+                        <td className="whitespace-nowrap px-5 py-2 font-medium text-muted-foreground">
+                          {p.date?.seconds
+                            ? new Date(p.date.seconds * 1000).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: '2-digit',
+                              })
+                            : '—'}
+                        </td>
+                        <td className="px-5 py-2" colSpan={2}>
+                          <span className="inline-flex items-center gap-2 pl-5">
+                            <HandCoins size={12} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                            <span className="font-semibold text-foreground">{p.title}</span>
+                            {p.notes && <span className="max-w-[240px] truncate text-muted-foreground">{p.notes}</span>}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-2 text-foreground">
+                          {accountMap[p.accountId]?.name || '—'}
+                        </td>
+                        <td className="px-5 py-2">
+                          {p.cleared ? (
+                            <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-400">
+                              <CheckCircle2 size={11} /> {t('ledger.cleared')}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-400">
+                              <Clock size={11} /> {t('ledger.pending')}
+                            </span>
+                          )}
+                        </td>
+                        <td className={`whitespace-nowrap px-5 py-2 text-right font-bold ${amountColor(p)}`}>
+                          {formatSigned(p.amount)}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-center">
+                          {onDeleteTx && (
+                            <button
+                              onClick={() => onDeleteTx(p.id)}
+                              title={t('ledger.deletePayment')}
+                              aria-label={t('ledger.deletePayment')}
+                              className="p-1 text-muted-foreground transition-colors hover:text-red-700 dark:hover:text-red-400"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                   {isExpanded &&
                     refunds.map((r) => (
                       <tr key={r.id} className="bg-amber-50/40 dark:bg-amber-900/10 text-xs">
@@ -609,10 +768,13 @@ export default function Ledger({
 
       {/* ── MOBILE CARDS ── */}
       <div className="md:hidden space-y-2">
-        {pagedRows.map(({ tx, refunds }) => {
+        {pagedRows.map(({ tx, refunds, payments }) => {
           const isDraft = !tx.cleared && tx.eventId;
           const isExpanded = expandedIds.has(tx.id);
           const net = netOf(tx, refunds);
+          const onPlan = hasPaymentPlan(tx, installmentIndex);
+          const plan = planProgress(tx, installmentIndex);
+          const childCount = refunds.length + payments.length;
           return (
             <div
               key={tx.id}
@@ -635,10 +797,11 @@ export default function Ledger({
                       <span className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">
                         DRAFT
                       </span>
-                    ) : (
+                    ) : onPlan ? null : (
                       <Clock size={12} className="text-amber-400 shrink-0" />
                     )}
                     <RefundBadge tx={tx} />
+                    <PlanBadge tx={tx} />
                   </div>
                   <p className="text-sm font-semibold text-foreground truncate">{tx.title}</p>
                   {tx.category === 'TRF' && <TransferBadge tx={tx} />}
@@ -658,6 +821,17 @@ export default function Ledger({
                   </span>
                   {refunds.length > 0 && (
                     <span className="block text-sm font-bold text-foreground">{formatSigned(net)}</span>
+                  )}
+                  {onPlan && (
+                    <span
+                      className={`block text-xs font-semibold ${
+                        plan.complete ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'
+                      }`}
+                    >
+                      {plan.complete
+                        ? t('ledger.paidInFull')
+                        : t('ledger.amountLeft', { amount: formatMoney(plan.remaining) })}
+                    </span>
                   )}
                 </div>
               </div>
@@ -684,7 +858,18 @@ export default function Ledger({
                     <span>{accountMap[tx.accountId].name}</span>
                   </>
                 )}
-                {onRefundTx && canRefund(tx, refundIndex) && (
+                {onRecordPayment && canRecordPayment(tx, installmentIndex) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRecordPayment(tx);
+                    }}
+                    className="ml-auto inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-400"
+                  >
+                    <HandCoins size={12} /> {t('ledger.payment')}
+                  </button>
+                )}
+                {onRefundTx && canRefund(tx, refundIndex) && !blocksRefund(tx, installmentIndex) && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -695,20 +880,65 @@ export default function Ledger({
                     <Undo2 size={12} /> {t('ledger.refund')}
                   </button>
                 )}
-                {refunds.length > 0 && (
+                {childCount > 0 && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleExpanded(tx.id);
                     }}
                     aria-expanded={isExpanded}
-                    className="ml-auto inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-400"
+                    className={`ml-auto inline-flex items-center gap-1 font-bold ${
+                      payments.length > 0
+                        ? 'text-emerald-700 dark:text-emerald-400'
+                        : 'text-amber-700 dark:text-amber-400'
+                    }`}
                   >
                     <ChevronRight size={12} className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                    {t('ledger.refundCount', { n: refunds.length })}
+                    {payments.length > 0
+                      ? t('ledger.paymentCount', { n: payments.length })
+                      : t('ledger.refundCount', { n: refunds.length })}
                   </button>
                 )}
               </div>
+
+              {isExpanded && payments.length > 0 && (
+                <div className="mt-2 space-y-2 border-t border-dashed border-emerald-300 pt-2 dark:border-emerald-700">
+                  {payments.map((p) => (
+                    <div key={p.id} className="flex items-start justify-between gap-2 text-xs">
+                      <span className="inline-flex min-w-0 items-start gap-1.5">
+                        <HandCoins size={11} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                        <span className="min-w-0">
+                          <span className="block truncate font-semibold text-foreground">{p.title}</span>
+                          <span className="block text-muted-foreground">
+                            {p.date?.seconds
+                              ? new Date(p.date.seconds * 1000).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                })
+                              : '—'}
+                            {p.cleared ? ` · ${t('ledger.cleared')}` : ` · ${t('ledger.pending')}`}
+                          </span>
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <span className={`font-bold ${amountColor(p)}`}>{formatSigned(p.amount)}</span>
+                        {onDeleteTx && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteTx(p.id);
+                            }}
+                            aria-label={t('ledger.deletePayment')}
+                            className="p-0.5 text-muted-foreground"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {isExpanded && refunds.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-dashed border-amber-300 dark:border-amber-700 space-y-2">

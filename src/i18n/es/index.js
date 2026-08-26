@@ -24,6 +24,7 @@ export default {
   ledger: finance.ledger,
   txModal: finance.txModal,
   refundModal: finance.refundModal,
+  paymentModal: finance.paymentModal,
   categories: finance.categories,
   insights: finance.insights,
   catMgr: finance.catMgr,

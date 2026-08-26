@@ -24,6 +24,7 @@ import { EVENT_TYPES } from '../../utils/eventClassifier';
 import { useT } from '../../i18n/I18nContext';
 import { filterEventsBySeason, getSeasonForDate } from '../../utils/seasonUtils';
 import { PANELS } from '../../utils/panelRoute';
+import { buildInstallmentIndex, isInstallment, planProgress } from '../../utils/installments';
 
 // ── Event card ────────────────────────────────────────────────
 const EventCard = ({
@@ -225,10 +226,18 @@ export default function ScheduleView({
     const linked = txByEventId[dbEvent.id] || [];
     if (linked.length === 0) return { count: 0, total: 0, paid: 0, remaining: 0 };
     const expenses = linked.filter((tx) => tx.category !== 'TRF');
-    const total = expenses.reduce((s, tx) => s + Math.abs(tx.amount), 0);
-    const paidItems = expenses.filter((tx) => tx.cleared);
-    const paidTotal = paidItems.reduce((s, tx) => s + Math.abs(tx.amount), 0);
-    return { count: expenses.length, total, paid: paidItems.length, remaining: total - paidTotal };
+    const installmentIndex = buildInstallmentIndex(expenses);
+    // A partial payment is folded into the cost it pays off — that cost already
+    // carries the full figure, so counting the payments as line items of their
+    // own would bill the event twice.
+    const items = expenses.filter((tx) => !isInstallment(tx));
+    const total = items.reduce((s, tx) => s + Math.abs(tx.amount), 0);
+    // What has actually been settled, from either direction: an expense that
+    // cleared outright, or the payments made against one being paid off. A cost
+    // on a plan is never cleared itself, so the two can't overlap.
+    const paidTotal = expenses.filter((tx) => tx.cleared).reduce((s, tx) => s + Math.abs(tx.amount), 0);
+    const paidItems = items.filter((tx) => tx.cleared || planProgress(tx, installmentIndex).complete);
+    return { count: items.length, total, paid: paidItems.length, remaining: total - paidTotal };
   };
 
   // Filter events to selected season

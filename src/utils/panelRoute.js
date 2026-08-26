@@ -37,6 +37,7 @@ export const PANELS = {
   PLAYER_FORM: 'playerForm',
   TX: 'tx',
   REFUND: 'refund',
+  PAYMENT: 'payment',
 
   // Finance
   DISTRIBUTE: 'distribute',

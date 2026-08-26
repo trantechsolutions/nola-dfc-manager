@@ -346,18 +346,23 @@ function App() {
     setPlayers,
   );
 
-  const { handleSaveTransaction, handleRefundTransaction, handleDeleteTransaction, handleBulkUpload } =
-    useLedgerManager(
-      fetchData,
-      selectedSeason,
-      teamSeasonId,
-      setTransactions,
-      // teamId lets the ledger create the team_seasons row on demand when the
-      // team has no budget yet for this season; refreshSeasons then picks it up.
-      // selectedTeamId, not effectiveTeamId — the ledger is staff-only, and a
-      // parent's derived team must never provision a team season.
-      { teamId: selectedTeamId, onTeamSeasonCreated: refreshSeasons },
-    );
+  const {
+    handleSaveTransaction,
+    handleRefundTransaction,
+    handleRecordPayment,
+    handleDeleteTransaction,
+    handleBulkUpload,
+  } = useLedgerManager(
+    fetchData,
+    selectedSeason,
+    teamSeasonId,
+    setTransactions,
+    // teamId lets the ledger create the team_seasons row on demand when the
+    // team has no budget yet for this season; refreshSeasons then picks it up.
+    // selectedTeamId, not effectiveTeamId — the ledger is staff-only, and a
+    // parent's derived team must never provision a team season.
+    { teamId: selectedTeamId, onTeamSeasonCreated: refreshSeasons },
+  );
 
   const {
     customCategories,
@@ -856,6 +861,7 @@ function App() {
                   canEditLedger={canEditLedger}
                   handleSaveTransaction={handleSaveTransaction}
                   handleRefundTransaction={handleRefundTransaction}
+                  handleRecordPayment={handleRecordPayment}
                   handleDeleteTransaction={handleDeleteTransaction}
                   handleBulkUpload={handleBulkUpload}
                   isBulkUploading={isBulkUploading}

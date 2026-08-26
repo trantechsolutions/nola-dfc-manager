@@ -23,6 +23,7 @@ import PanelHost from '../../components/layout/PanelHost';
 import { usePanelRoute } from '../../hooks/usePanelRoute';
 import SponsorDirectory from '../../components/SponsorDirectory';
 import { PANELS } from '../../utils/panelRoute';
+import { buildInstallmentIndex, hasPaymentPlan } from '../../utils/installments';
 
 // Per-team distribution strategies. `usesSource` = whether a linked/primary
 // player is meaningful for this method (drives the modal's source dropdown).
@@ -247,9 +248,17 @@ export default function SponsorsView({
   const historyList = Object.values(groupedHistoryMap).sort((a, b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
 
   // UNDISTRIBUTED FUNDS (Combines SPO and FUN)
+  const installmentIndex = buildInstallmentIndex(transactions);
   const undistributedSponsors = transactions.filter(
     (tx) =>
-      ['SPO', 'FUN'].includes(tx.category) && Number(tx.amount || 0) > 0 && !tx.distributed && !tx.waterfallBatchId,
+      ['SPO', 'FUN'].includes(tx.category) &&
+      Number(tx.amount || 0) > 0 &&
+      !tx.distributed &&
+      !tx.waterfallBatchId &&
+      // A pledge being paid off in instalments is not funds to distribute — its
+      // payments are, and they are in this list on their own account. Offering
+      // both would hand the waterfall money that was never received.
+      !hasPaymentPlan(tx, installmentIndex),
   );
 
   // PLAYER CREDIT ROLLUP — what each player was actually CREDITED by the

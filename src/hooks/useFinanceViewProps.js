@@ -106,6 +106,7 @@ export function useFinanceViewProps({
               )
             : null,
         onRefundTx: canEditLedger && !isReadOnly ? (tx) => openPanel(PANELS.REFUND, { id: tx.id }) : null,
+        onRecordPayment: canEditLedger && !isReadOnly ? (tx) => openPanel(PANELS.PAYMENT, { id: tx.id }) : null,
         categoryLabels,
         categoryColors,
         categoryOptions,
