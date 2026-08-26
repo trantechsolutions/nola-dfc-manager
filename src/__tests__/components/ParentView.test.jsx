@@ -72,13 +72,14 @@ function renderParent({
   seasonData = { isFinalized: true },
   accounts = [],
   team = TEAM,
+  transactions = [],
 } = {}) {
   return render(
     <MemoryRouter>
       <I18nProvider>
         <ParentView
           players={players}
-          transactions={[]}
+          transactions={transactions}
           calculatePlayerFinancials={() => fin}
           formatMoney={(v) => `$${Number(v).toFixed(2)}`}
           teams={[team]}
@@ -257,5 +258,55 @@ describe('ParentView — how to pay', () => {
   it('falls back to the team payment instructions with no published accounts', () => {
     renderParent({ team: { ...TEAM, paymentInfo: 'Checks payable to U12 Boys' } });
     expect(screen.getByText(/checks payable to u12 boys/i)).toBeInTheDocument();
+  });
+});
+
+// A sponsorship or fundraiser deposit is recorded against the player who brought
+// the money in; distributing it writes a second row with the SAME title for the
+// share applied to that player's fee. Both show on the statement, which read as
+// the same transaction logged twice — and made an undone distribution look like
+// it had left rows behind.
+describe('ParentView — sponsorship and fundraising rows', () => {
+  const tx = (overrides = {}) => ({
+    id: 't-1',
+    playerId: 'p1',
+    seasonId: SEASON,
+    category: 'FUN',
+    title: 'Friends Of',
+    amount: 310,
+    cleared: true,
+    date: { seconds: 1755500000 },
+    waterfallBatchId: null,
+    ...overrides,
+  });
+
+  const deposit = tx({ id: 'dep-1' });
+  const credit = tx({ id: 'cr-1', amount: 120, waterfallBatchId: 'waterfall_1', originalTxId: 'dep-1' });
+
+  it('tells the deposit apart from the credit applied to the balance', () => {
+    renderParent({ transactions: [deposit, credit] });
+
+    expect(screen.getByText('Raised for the team')).toBeInTheDocument();
+    expect(screen.getByText('Applied to balance')).toBeInTheDocument();
+  });
+
+  it('explains why the same name appears twice', () => {
+    renderParent({ transactions: [deposit, credit] });
+
+    expect(screen.getByText(/count toward the balance above/i)).toBeInTheDocument();
+  });
+
+  it('leaves the note off when there is nothing to disambiguate', () => {
+    renderParent({ transactions: [credit] });
+
+    expect(screen.queryByText(/count toward the balance above/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Raised for the team')).not.toBeInTheDocument();
+  });
+
+  it('does not label ordinary fee payments', () => {
+    renderParent({ transactions: [tx({ id: 'fee-1', category: 'TMF', title: 'Team Fee', amount: 200 })] });
+
+    expect(screen.queryByText('Applied to balance')).not.toBeInTheDocument();
+    expect(screen.queryByText('Raised for the team')).not.toBeInTheDocument();
   });
 });

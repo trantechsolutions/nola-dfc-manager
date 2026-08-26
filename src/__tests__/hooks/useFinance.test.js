@@ -8,6 +8,8 @@ vi.mock('../../services/supabaseService', () => ({
     addTransaction: vi.fn(),
     updateTransaction: vi.fn(),
     deleteBatch: vi.fn(),
+    getBatchTransactionIds: vi.fn(),
+    deleteOrphanedDistributionCredits: vi.fn(),
   },
 }));
 
@@ -549,7 +551,9 @@ describe('handleWaterfallCredit — manual allocations', () => {
 describe('revertWaterfall', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    supabaseService.deleteBatch.mockResolvedValue({});
+    supabaseService.deleteBatch.mockResolvedValue([{ id: 'c1' }]);
+    supabaseService.deleteOrphanedDistributionCredits.mockResolvedValue([]);
+    supabaseService.getBatchTransactionIds.mockResolvedValue([]);
     supabaseService.updateTransaction.mockResolvedValue({});
   });
 
@@ -567,5 +571,67 @@ describe('revertWaterfall', () => {
 
     expect(supabaseService.deleteBatch).toHaveBeenCalled();
     expect(supabaseService.updateTransaction).not.toHaveBeenCalled();
+  });
+
+  it('sweeps credits left behind by a half-written batch', async () => {
+    const { revertWaterfall } = buildHook();
+    await revertWaterfall('waterfall_123', 'orig-tx-id');
+
+    expect(supabaseService.deleteOrphanedDistributionCredits).toHaveBeenCalledWith('orig-tx-id');
+  });
+
+  // The ghost-transaction bug: a delete that removes nothing is not an error, so
+  // the credits stayed on the parents' statements while the deposit was reopened
+  // and the history row that could have undone them disappeared.
+  it('throws and leaves the deposit distributed when credits survive the delete', async () => {
+    supabaseService.deleteBatch.mockResolvedValue([]);
+    supabaseService.getBatchTransactionIds.mockResolvedValue([{ id: 'ghost-1' }, { id: 'ghost-2' }]);
+
+    const { revertWaterfall } = buildHook();
+    await expect(revertWaterfall('waterfall_123', 'orig-tx-id')).rejects.toThrow(/2 credit transaction/);
+
+    expect(supabaseService.updateTransaction).not.toHaveBeenCalled();
+  });
+
+  it('completes quietly when the batch was already gone', async () => {
+    supabaseService.deleteBatch.mockResolvedValue([]);
+    supabaseService.getBatchTransactionIds.mockResolvedValue([]);
+
+    const { revertWaterfall } = buildHook();
+    await revertWaterfall('waterfall_123', 'orig-tx-id');
+
+    expect(supabaseService.updateTransaction).toHaveBeenCalledWith('orig-tx-id', { distributed: false });
+  });
+});
+
+// ── partial-distribution rollback ─────────────────────────────────────────────
+describe('handleWaterfallCredit failure handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    supabaseService.deleteBatch.mockResolvedValue([]);
+  });
+
+  it('removes the half-written batch when an insert fails', async () => {
+    const p1 = makePlayer('p1');
+    supabaseService.getPlayerFinancials.mockResolvedValue({ p1: makeFinancials(100) });
+    supabaseService.addTransaction.mockRejectedValue(new Error('row-level security'));
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1], financials: { p1: makeFinancials(100) } });
+    await expect(handleWaterfallCredit(100, 'Sponsor', 'p1', 'orig-tx', 'SPO')).rejects.toThrow('row-level security');
+
+    expect(supabaseService.deleteBatch).toHaveBeenCalledWith('waterfallBatchId', expect.stringMatching(/^waterfall_/));
+    expect(supabaseService.updateTransaction).not.toHaveBeenCalled();
+  });
+
+  it('does not mark the deposit distributed when the flag update fails', async () => {
+    const p1 = makePlayer('p1');
+    supabaseService.getPlayerFinancials.mockResolvedValue({ p1: makeFinancials(100) });
+    supabaseService.addTransaction.mockResolvedValue({ id: 'c1' });
+    supabaseService.updateTransaction.mockRejectedValue(new Error('update blocked'));
+
+    const { handleWaterfallCredit } = buildHook({ players: [p1], financials: { p1: makeFinancials(100) } });
+    await expect(handleWaterfallCredit(100, 'Sponsor', 'p1', 'orig-tx', 'SPO')).rejects.toThrow('update blocked');
+
+    expect(supabaseService.deleteBatch).toHaveBeenCalledWith('waterfallBatchId', expect.stringMatching(/^waterfall_/));
   });
 });

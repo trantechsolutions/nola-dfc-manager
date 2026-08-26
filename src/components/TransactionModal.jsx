@@ -16,6 +16,10 @@ export default function TransactionModal({
   activeAccounts = [],
   categoryOptions = [],
   isReadOnly = false,
+  // Set when this entry has partial payments recorded against it. Its money
+  // lives in those payments, so clearing it too would count the whole amount a
+  // second time — the box is locked rather than hidden so the reason is visible.
+  hasPayments = false,
 }) {
   const defaultAccountId = activeAccounts[0]?.id || '';
   const [formData, setFormData] = useState({
@@ -348,7 +352,8 @@ export default function TransactionModal({
               <input
                 type="checkbox"
                 id="cleared"
-                checked={formData.cleared}
+                checked={formData.cleared && !hasPayments}
+                disabled={hasPayments}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -358,12 +363,16 @@ export default function TransactionModal({
                     clearedDate: e.target.checked ? formData.clearedDate || todayStr() : '',
                   })
                 }
-                className="w-4 h-4 text-emerald-700 dark:text-emerald-400 rounded focus:ring-emerald-500"
+                className="w-4 h-4 text-emerald-700 dark:text-emerald-400 rounded focus:ring-emerald-500 disabled:opacity-50"
               />
-              <label htmlFor="cleared" className="text-sm font-semibold text-foreground">
+              <label
+                htmlFor="cleared"
+                className={`text-sm font-semibold ${hasPayments ? 'text-muted-foreground' : 'text-foreground'}`}
+              >
                 {t('txModal.fundsCleared')}
               </label>
             </div>
+            {hasPayments && <p className="text-xs text-muted-foreground">{t('txModal.clearedLockedByPayments')}</p>}
             {formData.cleared && (
               <div>
                 <label htmlFor="tx-activity-date" className="block text-sm font-semibold text-foreground mb-1">

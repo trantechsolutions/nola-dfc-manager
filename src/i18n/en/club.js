@@ -36,6 +36,7 @@ export default {
     txAdded: 'Transaction Added',
     txDeleted: 'Transaction deleted',
     txRefunded: 'Refund recorded',
+    paymentRecorded: 'Payment recorded',
     fundsDistributed: 'Funds Distributed!',
     fundsRecorded: 'Funds recorded to the ledger.',
     distributionReverted: 'Distribution Reverted.',

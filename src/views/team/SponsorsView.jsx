@@ -23,6 +23,7 @@ import PanelHost from '../../components/layout/PanelHost';
 import { usePanelRoute } from '../../hooks/usePanelRoute';
 import SponsorDirectory from '../../components/SponsorDirectory';
 import { PANELS } from '../../utils/panelRoute';
+import { buildInstallmentIndex, hasPaymentPlan } from '../../utils/installments';
 
 // Per-team distribution strategies. `usesSource` = whether a linked/primary
 // player is meaningful for this method (drives the modal's source dropdown).
@@ -115,6 +116,11 @@ export default function SponsorsView({
   const [activeTab, setActiveTab] = useState('undistributed');
   const [expandedPlayerId, setExpandedPlayerId] = useState(null);
   const [isDistributingAll, setIsDistributingAll] = useState(false);
+  // Apply and Undo both write several ledger rows. Without an in-flight guard a
+  // double click fires the whole thing twice: two batches of credits for one
+  // deposit, and only one of them reachable from the history tab afterwards.
+  const [isApplying, setIsApplying] = useState(false);
+  const [undoingBatchId, setUndoingBatchId] = useState(null);
   const [distributeAllProgress, setDistributeAllProgress] = useState({ current: 0, total: 0, currentTitle: '' });
   const [isSavingMethod, setIsSavingMethod] = useState(false);
   // Draft selection — the guide lets you switch methods without persisting.
@@ -242,9 +248,17 @@ export default function SponsorsView({
   const historyList = Object.values(groupedHistoryMap).sort((a, b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
 
   // UNDISTRIBUTED FUNDS (Combines SPO and FUN)
+  const installmentIndex = buildInstallmentIndex(transactions);
   const undistributedSponsors = transactions.filter(
     (tx) =>
-      ['SPO', 'FUN'].includes(tx.category) && Number(tx.amount || 0) > 0 && !tx.distributed && !tx.waterfallBatchId,
+      ['SPO', 'FUN'].includes(tx.category) &&
+      Number(tx.amount || 0) > 0 &&
+      !tx.distributed &&
+      !tx.waterfallBatchId &&
+      // A pledge being paid off in instalments is not funds to distribute — its
+      // payments are, and they are in this list on their own account. Offering
+      // both would hand the waterfall money that was never received.
+      !hasPaymentPlan(tx, installmentIndex),
   );
 
   // PLAYER CREDIT ROLLUP — what each player was actually CREDITED by the
@@ -298,6 +312,16 @@ export default function SponsorsView({
     const order = { SPO: 0, FUN: 1 };
     return (order[a.category] ?? 2) - (order[b.category] ?? 2);
   });
+
+  const handleUndo = async (batchId, batchOriginalTxId) => {
+    if (!onReset || undoingBatchId) return;
+    setUndoingBatchId(batchId);
+    try {
+      await onReset(batchId, batchOriginalTxId);
+    } finally {
+      setUndoingBatchId(null);
+    }
+  };
 
   const handleDistributeAll = async () => {
     if (!isBudgetLocked) {
@@ -677,13 +701,16 @@ export default function SponsorsView({
                           {formatMoney(group.totalAmount)}
                         </td>
                         <td className="px-6 py-4 text-center align-top">
-                          <button
-                            onClick={() => onReset(group.batchId, group.originalTxId)}
-                            className="text-muted-foreground hover:text-red-700 dark:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30"
-                            title={t('sponsors.history.undo')}
-                          >
-                            <Undo2 size={16} />
-                          </button>
+                          {onReset && (
+                            <button
+                              onClick={() => handleUndo(group.batchId, group.originalTxId)}
+                              disabled={undoingBatchId !== null}
+                              className="text-muted-foreground hover:text-red-700 dark:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={t('sponsors.history.undo')}
+                            >
+                              <Undo2 size={16} />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -1030,20 +1057,26 @@ export default function SponsorsView({
                 {t('sponsors.modal.cancel')}
               </button>
               <button
-                disabled={!canApply}
-                onClick={() => {
-                  onDistribute(
-                    distAmount,
-                    distTitle,
-                    manualMode ? '' : sourcePlayerId,
-                    originalTxId,
-                    distCategory,
-                    manualMode ? manualRows : null,
-                  );
-                  closeDistributeModal();
+                disabled={!canApply || isApplying}
+                onClick={async () => {
+                  if (isApplying) return;
+                  setIsApplying(true);
+                  try {
+                    await onDistribute(
+                      distAmount,
+                      distTitle,
+                      manualMode ? '' : sourcePlayerId,
+                      originalTxId,
+                      distCategory,
+                      manualMode ? manualRows : null,
+                    );
+                  } finally {
+                    setIsApplying(false);
+                    closeDistributeModal();
+                  }
                 }}
                 className={`flex-1 py-3 font-bold rounded-lg transition-all ${
-                  canApply
+                  canApply && !isApplying
                     ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20'
                     : 'bg-muted text-muted-foreground cursor-not-allowed'
                 }`}

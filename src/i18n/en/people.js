@@ -88,6 +88,10 @@ export default {
     feesPaid: 'Fees Paid',
     transactions: 'Transactions',
     noTransactions: 'No transactions recorded yet.',
+    txApplied: 'Applied to balance',
+    txRaised: 'Raised for the team',
+    txRaisedNote:
+      'Money your player brought in is listed here alongside the share applied to their fee, so the same sponsor or fundraiser can appear more than once. Only rows marked "{{applied}}" count toward the balance above.',
     documents: 'Documents',
     noDocuments: 'No documents on file.',
     docOpenFail: 'Failed to open document',

@@ -197,6 +197,20 @@ export default function ParentView({
     return teamIds.size > 1;
   }, [players]);
 
+  // ── SPONSORSHIP / FUNDRAISING ROW KINDS ──
+  // A deposit is recorded against the player who brought the money in, and
+  // distributing it writes a second row — same title — for the share applied to
+  // that player's balance. Both land in this list, so "Friends Of" shows up once
+  // per deposit and once per credit and reads like the same transaction logged
+  // twice. Only the credit rows carry a batch id, and only they are counted by
+  // the player_financials view, so that is the line the labels draw.
+  const RAISED = 'raised';
+  const APPLIED = 'applied';
+  const txKind = (tx) => {
+    if (!['SPO', 'FUN'].includes(tx.category)) return null;
+    return tx.waterfallBatchId ? APPLIED : RAISED;
+  };
+
   // ── PLAYER-SPECIFIC TRANSACTIONS ──
   const playerTransactions = useMemo(() => {
     if (!activePlayer) return [];
@@ -796,6 +810,11 @@ export default function ParentView({
                       <Receipt size={14} className="text-muted-foreground" /> {t('parent.transactions')} (
                       {playerTransactions.length})
                     </h3>
+                    {playerTransactions.some((tx) => txKind(tx) === RAISED) && (
+                      <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                        {t('parent.txRaisedNote', { applied: t('parent.txApplied') })}
+                      </p>
+                    )}
                   </div>
 
                   {playerTransactions.length === 0 ? (
@@ -807,7 +826,11 @@ export default function ParentView({
                       {playerTransactions.map((tx) => {
                         const catLabel = CATEGORY_LABELS[tx.category] || tx.category || '';
                         const catColor = CATEGORY_COLORS[tx.category] || 'text-muted-foreground';
-                        const isPositive = tx.amount > 0;
+                        const kind = txKind(tx);
+                        const isRaised = kind === RAISED;
+                        // A deposit is not a credit to this player, so it does not
+                        // get the green treatment that says "this came off your fee".
+                        const isPositive = tx.amount > 0 && !isRaised;
 
                         return (
                           <div
@@ -827,15 +850,32 @@ export default function ParentView({
                             </div>
                             <div className="flex-grow min-w-0">
                               <p className="text-sm font-semibold text-foreground truncate">{tx.title}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                 <span className={`text-xs font-bold uppercase ${catColor}`}>{catLabel}</span>
                                 <span className="text-xs text-muted-foreground">
                                   {tx.date?.seconds ? new Date(tx.date.seconds * 1000).toLocaleDateString() : ''}
                                 </span>
+                                {kind && (
+                                  <span
+                                    className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${
+                                      isRaised
+                                        ? 'bg-muted text-muted-foreground'
+                                        : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                                    }`}
+                                  >
+                                    {t(isRaised ? 'parent.txRaised' : 'parent.txApplied')}
+                                  </span>
+                                )}
                               </div>
                             </div>
                             <span
-                              className={`font-bold text-sm shrink-0 ${isPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground'}`}
+                              className={`font-bold text-sm shrink-0 ${
+                                isPositive
+                                  ? 'text-emerald-700 dark:text-emerald-400'
+                                  : isRaised
+                                    ? 'text-muted-foreground'
+                                    : 'text-foreground'
+                              }`}
                             >
                               {isPositive ? '+' : ''}
                               {formatMoney(tx.amount)}

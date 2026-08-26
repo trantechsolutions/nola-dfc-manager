@@ -1,3 +1,5 @@
+import { buildInstallmentIndex, hasPaymentPlan, isInstallment } from './installments';
+
 // Sponsor pipeline states, in the order a sponsor moves through them.
 // `prospect` is someone worth asking; `committed` has said yes; `paid` has the
 // money in the ledger; `declined` is kept on purpose so next season's manager
@@ -52,7 +54,10 @@ export const ledgerSponsorKey = (title = '') => title.trim().toLowerCase().repla
 export const unlinkedLedgerSponsors = (transactions = []) => {
   const groups = new Map();
   transactions
-    .filter((tx) => isRawSponsorDeposit(tx) && !tx.sponsorId)
+    // A sponsorship being paid in instalments is suggested from the pledge it is
+    // being paid against, not from each payment: the pledge carries the whole
+    // figure and the sponsor's own name rather than "Payment: ...".
+    .filter((tx) => isRawSponsorDeposit(tx) && !tx.sponsorId && !isInstallment(tx))
     .forEach((tx) => {
       const key = ledgerSponsorKey(tx.title);
       if (!key) return;
@@ -77,8 +82,11 @@ export const unlinkedLedgerSponsors = (transactions = []) => {
 /** sponsorId -> what that sponsor has actually paid, per the ledger. */
 export const ledgerTotalsBySponsor = (transactions = []) => {
   const totals = {};
+  const installmentIndex = buildInstallmentIndex(transactions);
   transactions
-    .filter((tx) => tx.sponsorId && !tx.waterfallBatchId)
+    // A pledge being paid off in instalments is an obligation, not receipts —
+    // its payments are the money, and counting both would double the sponsor.
+    .filter((tx) => tx.sponsorId && !tx.waterfallBatchId && !hasPaymentPlan(tx, installmentIndex))
     .forEach((tx) => {
       const entry = (totals[tx.sponsorId] ||= { received: 0, count: 0 });
       entry.received += Number(tx.amount || 0);

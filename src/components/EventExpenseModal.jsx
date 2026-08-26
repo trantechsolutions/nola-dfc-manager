@@ -15,6 +15,7 @@ const CATEGORY_COLORS = {
 
 import { HOLDINGS, HOLDING_LABELS } from '../utils/holdings';
 import { EXPENSE_CATEGORIES, getCategoryLabels, getExpenseTemplates } from '../utils/expenseCategories';
+import { isInstallment } from '../utils/installments';
 
 export default function EventExpenseModal({
   show,
@@ -90,9 +91,12 @@ export default function EventExpenseModal({
     : [...EXPENSE_CATEGORIES, form.category];
 
   // Filter to only expense transactions (negative amounts) linked to this event
-  const expenses = linkedTransactions.filter((tx) => tx.category !== 'TRF');
+  const linkedExpenses = linkedTransactions.filter((tx) => tx.category !== 'TRF');
+  // A cost being paid off in instalments already carries its full figure, so the
+  // payments against it are money in — never additional planned spend.
+  const expenses = linkedExpenses.filter((tx) => !isInstallment(tx));
   const totalPlanned = expenses.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
-  const totalPaid = expenses.filter((tx) => tx.cleared).reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+  const totalPaid = linkedExpenses.filter((tx) => tx.cleared).reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
   const remaining = totalPlanned - totalPaid;
 
   const closeForm = () => {

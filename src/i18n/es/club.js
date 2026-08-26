@@ -36,6 +36,7 @@ export default {
     txAdded: 'Transacción Agregada',
     txDeleted: 'Transacción eliminada',
     txRefunded: 'Reembolso registrado',
+    paymentRecorded: 'Pago registrado',
     fundsDistributed: '¡Fondos Distribuidos!',
     fundsRecorded: 'Fondos registrados en el libro contable.',
     distributionReverted: 'Distribución Revertida.',
