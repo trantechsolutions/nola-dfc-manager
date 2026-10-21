@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyEvent, EVENT_TYPES } from '../../utils/eventClassifier';
+import { classifyEvent, detectFeedSource, EVENT_TYPES } from '../../utils/eventClassifier';
 
 describe('classifyEvent', () => {
   // ── Practice ──────────────────────────────────────────────────────────────
@@ -130,5 +130,48 @@ describe('EVENT_TYPES', () => {
       expect(t).toHaveProperty('border');
       expect(t).toHaveProperty('dot');
     });
+  });
+});
+
+describe('classifyEvent — Google Calendar feeds', () => {
+  const g = (title, description = '') => classifyEvent(title, description, 'google');
+
+  it('detects Google feeds by URL', () => {
+    expect(
+      detectFeedSource('https://calendar.google.com/calendar/ical/abc%40group.calendar.google.com/public/basic.ics'),
+    ).toBe('google');
+    expect(detectFeedSource('https://api.olliesports.com/ical/team-x.ics')).toBe('default');
+    expect(detectFeedSource('')).toBe('default');
+  });
+
+  it('classifies practices', () => {
+    expect(g('U13B Black – Practice')).toBe('practice');
+  });
+
+  it('classifies "HOLD for" and named cups as tournaments', () => {
+    expect(g('U13B Black – Game vs TBD', 'Arrive 60 minutes early\nUniform: White\nHOLD for LA Open Cup')).toBe(
+      'tournament',
+    );
+    expect(g('U13B Black – Game vs TBD', 'Arrive 60 minutes early\nCoastal Academy Cup')).toBe('tournament');
+  });
+
+  it('classifies league-tagged games whatever the title format', () => {
+    const desc = 'Arrive 60 minutes early\nUniform: Blue/Blue/Blue\nLCSL Match # 854';
+    expect(g('U13B Black – Game vs LA Fire U13B Cacho', desc)).toBe('league');
+    expect(g('U13B Black - Game – BRSC 12U B Pre-Elite', desc)).toBe('league');
+    expect(g('Game vs SSC 13/14B Storm Elite – U13B Black', 'Uniform: Blue\nLCSL ')).toBe('league');
+  });
+
+  it('classifies untagged games as friendlies', () => {
+    expect(g('LA Fire 13B Largaespada – U13B Black', 'Arrive 60 minutes early\nUniform: Blue/Blue/Blue')).toBe(
+      'friendly',
+    );
+    expect(g('U13B Black – Game vs Metairie FC')).toBe('friendly');
+    expect(g('Scrimmage')).toBe('friendly');
+  });
+
+  it('leaves non-game entries as events', () => {
+    expect(g('Team Meeting')).toBe('event');
+    expect(g('')).toBe('event');
   });
 });

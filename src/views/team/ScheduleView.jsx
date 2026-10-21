@@ -269,13 +269,18 @@ export default function ScheduleView({
   const film = useFilmGames(selectedTeam?.id);
   const filmFor = (db) => (db && film.byEvent[db.id] ? { access: film.access, games: film.byEvent[db.id] } : null);
 
-  // Map iCal event UID → DB event so EventCards can show/edit the locked type
-  const dbEventsByUid = useMemo(() => {
-    const map = {};
+  // Map iCal event → DB event so EventCards can show/edit the locked type.
+  // Matched by UID, then by start time: after a feed URL change the synced row
+  // keeps the original feed's UID while the live feed carries the new one.
+  const findDbEvent = useMemo(() => {
+    const byUid = {};
+    const byTime = {};
     teamEvents.forEach((e) => {
-      map[e.uid] = e;
+      byUid[e.uid] = e;
+      const t = Math.floor(new Date(e.eventDate).getTime() / 1000);
+      if (!(t in byTime)) byTime[t] = e;
     });
-    return map;
+    return (e) => byUid[e.id] || byTime[e.timestamp] || null;
   }, [teamEvents]);
 
   // Map DB event ID → linked transactions for expense tracking
@@ -321,7 +326,7 @@ export default function ScheduleView({
   const bulkCandidates = useMemo(() => {
     const build = (list, isPast) =>
       list
-        .map((e) => ({ e, db: dbEventsByUid[e.id] }))
+        .map((e) => ({ e, db: findDbEvent(e) }))
         .filter(({ db }) => !!db)
         .map(({ e, db }) => ({
           id: db.id,
@@ -332,7 +337,7 @@ export default function ScheduleView({
           isPast,
         }));
     return [...build(seasonEvents.upcoming, false), ...build(seasonEvents.past, true)];
-  }, [seasonEvents, dbEventsByUid]);
+  }, [seasonEvents, findDbEvent]);
 
   const handleSync = async () => {
     if (!onSyncCalendar) return;
@@ -526,7 +531,7 @@ export default function ScheduleView({
           ) : (
             <div className="space-y-2">
               {filteredUpcoming.map((e) => {
-                const db = dbEventsByUid[e.id];
+                const db = findDbEvent(e);
                 return (
                   <EventCard
                     key={e.id}
@@ -557,7 +562,7 @@ export default function ScheduleView({
           ) : (
             <div className="space-y-2">
               {filteredPast.map((e) => {
-                const db = dbEventsByUid[e.id];
+                const db = findDbEvent(e);
                 return (
                   <EventCard
                     key={e.id}

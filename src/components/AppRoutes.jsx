@@ -752,6 +752,7 @@ export default function AppRoutes({
                     seasons={seasons}
                     teamSeasons={teamSeasons}
                     canSetActiveSeason={can(PERMISSIONS.TEAM_SET_ACTIVE_SEASON)}
+                    onSyncCalendar={canEditSchedule ? handleSyncCalendar : null}
                   />
                 }
               />

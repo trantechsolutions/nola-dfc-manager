@@ -17,6 +17,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import ICAL from 'ical.js';
 import ResponsiveModal from '../../components/layout/ResponsiveModal';
+import { fetchIcs } from '../../utils/fetchIcs';
 
 const PUBLIC_HEADERS = {
   apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -61,8 +62,7 @@ async function fetchPublicTeams() {
 async function fetchTeamEvents(team) {
   if (!team?.icalUrl) return [];
   try {
-    const response = await fetch(team.icalUrl);
-    const icsString = await response.text();
+    const icsString = await fetchIcs(team.icalUrl);
     const jcalData = ICAL.parse(icsString);
     const vcalendar = new ICAL.Component(jcalData);
 

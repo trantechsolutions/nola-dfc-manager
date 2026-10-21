@@ -17,10 +17,47 @@ const TOURNAMENT_KEYWORDS = [
 const LEAGUE_KEYWORDS = ['psl', 'lsap', 'lcsl', 'st charles league'];
 
 /**
+ * Identifies which scheduling platform a feed URL belongs to, so events can be
+ * classified by that platform's conventions.
+ * Returns: 'google' | 'default'
+ */
+export function detectFeedSource(icsUrl = '') {
+  return /(^|\/\/)calendar\.google\.com\//i.test(icsUrl || '') ? 'google' : 'default';
+}
+
+/**
+ * Google Calendar feeds are maintained by hand, so titles don't follow one
+ * pattern ("Team – Game vs Opp", "Team - Game – Opp", "Opp – Team"). The
+ * description carries the reliable markers instead: "HOLD for <tournament>" or
+ * a tournament name, a league tag ("LCSL Match # 854"), and the arrival /
+ * uniform notes every game has. A game with no league or tournament marker is
+ * a friendly/scrimmage.
+ */
+function classifyGoogleEvent(title, description) {
+  const t = title.toLowerCase().replace(/^\(cancelled\)\s*/i, '');
+  const d = description.toLowerCase();
+
+  if (t.includes('practice')) return 'practice';
+  if (/\bhold for\b/.test(d) || TOURNAMENT_KEYWORDS.some((kw) => d.includes(kw) || t.includes(kw))) {
+    return 'tournament';
+  }
+  if (LEAGUE_KEYWORDS.some((kw) => d.includes(kw))) return 'league';
+
+  const looksLikeGame =
+    /\b(game|vs\.?|scrimmage|friendly)\b|@/.test(t) || // explicit game wording
+    /\s[–-]\s/.test(t) || // "Opponent – Team" matchup
+    /\buniform:|\barrive\b/.test(d); // game-day notes
+  return looksLikeGame ? 'friendly' : 'event';
+}
+
+/**
  * Classify an event based on its title (SUMMARY) and description (DESCRIPTION).
+ * `source` (from detectFeedSource) selects platform-specific rules.
  * Returns: 'tournament' | 'league' | 'friendly' | 'practice' | 'event'
  */
-export function classifyEvent(title = '', description = '') {
+export function classifyEvent(title = '', description = '', source = 'default') {
+  if (source === 'google') return classifyGoogleEvent(title || '', description || '');
+
   const t = title.toLowerCase();
   const d = description.toLowerCase();
   const combined = `${t} ${d}`;

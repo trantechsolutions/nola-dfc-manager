@@ -3,7 +3,8 @@ import { Loader2, Filter, X } from 'lucide-react';
 import ICAL from 'ical.js';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
-import { classifyEvent, EVENT_TYPES } from '../../utils/eventClassifier';
+import { classifyEvent, detectFeedSource, EVENT_TYPES } from '../../utils/eventClassifier';
+import { fetchIcs } from '../../utils/fetchIcs';
 
 export default function ClubCalendarView({ club, teams }) {
   const [allEvents, setAllEvents] = useState([]);
@@ -23,8 +24,7 @@ export default function ClubCalendarView({ club, teams }) {
           .filter((t) => t.icalUrl)
           .map(async (team) => {
             try {
-              const response = await fetch(team.icalUrl);
-              const icsString = await response.text();
+              const icsString = await fetchIcs(team.icalUrl);
               const jcalData = ICAL.parse(icsString);
               const vcalendar = new ICAL.Component(jcalData);
 
@@ -43,7 +43,7 @@ export default function ClubCalendarView({ club, teams }) {
                   location: event.location || 'TBD',
                   start: jsDate.toISOString(),
                   timestamp: event.startDate.toUnixTime(),
-                  eventType: classifyEvent(event.summary, description),
+                  eventType: classifyEvent(event.summary, description, detectFeedSource(team.icalUrl)),
                   teamId: team.id,
                   teamName: team.name,
                   teamColor: team.colorPrimary || '#1e293b',

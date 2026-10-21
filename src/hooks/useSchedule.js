@@ -5,7 +5,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import ICAL from 'ical.js';
 import { supabaseService } from '../services/supabaseService';
-import { classifyEvent, extractTournamentName } from '../utils/eventClassifier';
+import { classifyEvent, detectFeedSource, extractTournamentName } from '../utils/eventClassifier';
+import { fetchIcs } from '../utils/fetchIcs';
 
 const LEGACY_ICAL_URL =
   'https://gist.githubusercontent.com/DeMarko/6142417/raw/1cd301a5917141524b712f92c2e955e86a1add19/sample.ics';
@@ -63,6 +64,59 @@ function groupTournaments(events) {
   return [...others, ...grouped];
 }
 
+const toDisplayFields = (jsDate) => ({
+  displayDate: jsDate.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }),
+  displayTime: jsDate.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  }),
+  isoDate: jsDate.toISOString().split('T')[0],
+});
+
+/**
+ * Fills in events the live feed no longer carries from the synced team_events
+ * rows, so history survives a feed URL change, a provider trimming old events,
+ * or a failed fetch. Past events always come from both sources; upcoming ones
+ * only fall back to the DB when the feed couldn't be read, since the feed is
+ * the source of truth going forward.
+ * Feed events win on a UID match, and also on a start-time match: a new feed
+ * URL lists the same games under different UIDs, and a synced tournament row
+ * (UID `tournament-…`) starts at its first game's time. A team can't play two
+ * events at the same moment, so a saved row at a feed event's start time is
+ * the same event.
+ */
+export function mergeSavedEvents(feedEvents, savedEvents, { feedFailed = false, now, team = null } = {}) {
+  const feedUids = new Set(feedEvents.map((e) => e.id));
+  const feedTimestamps = new Set(feedEvents.map((e) => e.timestamp));
+
+  const fromDb = savedEvents
+    .map((row) => {
+      const jsDate = new Date(row.eventDate);
+      return {
+        id: row.uid,
+        title: row.title,
+        description: row.description || '',
+        location: row.location || 'TBD',
+        timestamp: Math.floor(jsDate.getTime() / 1000),
+        eventType: row.eventType,
+        isCancelled: row.isCancelled || false,
+        teamId: team?.id || null,
+        teamName: team?.name || null,
+        ...toDisplayFields(jsDate),
+      };
+    })
+    .filter((e) => !feedUids.has(e.id))
+    .filter((e) => !feedTimestamps.has(e.timestamp))
+    .filter((e) => feedFailed || e.timestamp < now);
+
+  return [...feedEvents, ...fromDb];
+}
+
 export const useSchedule = (user, team = null) => {
   const [events, setEvents] = useState({ upcoming: [], past: [] });
   const [blackoutDates, setBlackoutDates] = useState([]);
@@ -94,15 +148,23 @@ export const useSchedule = (user, team = null) => {
       return;
     }
 
-    // 3. Fetch & parse iCal
+    // 3. Fetch & parse iCal, alongside the synced rows that back-fill history
+    const savedEventsPromise = team?.id
+      ? supabaseService.getTeamEvents(team.id).catch((err) => {
+          console.warn('Skipping saved events:', err.message);
+          return [];
+        })
+      : Promise.resolve([]);
+
+    let feedEvents = [];
+    let feedFailed = false;
     try {
-      const response = await fetch(icsUrl);
-      const icsString = await response.text();
+      const icsString = await fetchIcs(icsUrl);
 
       const jcalData = ICAL.parse(icsString);
       const vcalendar = new ICAL.Component(jcalData);
 
-      const parsedEvents = vcalendar.getAllSubcomponents('vevent').map((vevent) => {
+      feedEvents = vcalendar.getAllSubcomponents('vevent').map((vevent) => {
         const event = new ICAL.Event(vevent);
         const jsDate = event.startDate.toJSDate();
 
@@ -110,7 +172,7 @@ export const useSchedule = (user, team = null) => {
         const description = descProp ? String(descProp) : '';
         const status = vevent.getFirstPropertyValue('status') || 'CONFIRMED';
         const isCancelled = status.toUpperCase() === 'CANCELLED';
-        const eventType = classifyEvent(event.summary, description);
+        const eventType = classifyEvent(event.summary, description, detectFeedSource(icsUrl));
 
         return {
           id: event.uid,
@@ -122,74 +184,67 @@ export const useSchedule = (user, team = null) => {
           isCancelled,
           teamId: team?.id || null,
           teamName: team?.name || null,
-          displayDate: jsDate.toLocaleDateString(undefined, {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-          }),
-          displayTime: jsDate.toLocaleTimeString(undefined, {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-          isoDate: jsDate.toISOString().split('T')[0],
+          ...toDisplayFields(jsDate),
         };
-      });
-
-      const now = Math.floor(Date.now() / 1000);
-      setEvents({
-        upcoming: parsedEvents
-          .filter((e) => e.timestamp >= now && !e.isCancelled)
-          .sort((a, b) => a.timestamp - b.timestamp),
-        past: parsedEvents.filter((e) => e.timestamp < now).sort((a, b) => b.timestamp - a.timestamp),
       });
     } catch (error) {
       console.error('iCal fetch error:', error);
-      setEvents({ upcoming: [], past: [] });
-    } finally {
-      setLoading(false);
-      done();
+      feedFailed = true;
     }
+
+    const savedEvents = await savedEventsPromise;
+    const now = Math.floor(Date.now() / 1000);
+    const allEvents = mergeSavedEvents(feedEvents, savedEvents, { feedFailed, now, team });
+    setEvents({
+      upcoming: allEvents.filter((e) => e.timestamp >= now && !e.isCancelled).sort((a, b) => a.timestamp - b.timestamp),
+      past: allEvents.filter((e) => e.timestamp < now).sort((a, b) => b.timestamp - a.timestamp),
+    });
+    setLoading(false);
+    done();
   }, [team?.id, team?.icalUrl]);
 
   useEffect(() => {
     fetchScheduleData();
   }, [user, fetchScheduleData]);
 
-  const syncCalendar = useCallback(async () => {
-    const icsUrl = team?.icalUrl;
-    if (!icsUrl || !team?.id) throw new Error('No calendar URL configured');
+  // urlOverride lets a caller sync a just-saved feed URL before the team
+  // record in context has refreshed.
+  const syncCalendar = useCallback(
+    async (urlOverride) => {
+      const icsUrl = urlOverride || team?.icalUrl;
+      if (!icsUrl || !team?.id) throw new Error('No calendar URL configured');
 
-    const response = await fetch(icsUrl);
-    const icsString = await response.text();
-    const jcalData = ICAL.parse(icsString);
-    const vcalendar = new ICAL.Component(jcalData);
+      const icsString = await fetchIcs(icsUrl);
+      const jcalData = ICAL.parse(icsString);
+      const vcalendar = new ICAL.Component(jcalData);
 
-    const parsedEvents = vcalendar.getAllSubcomponents('vevent').map((vevent) => {
-      const event = new ICAL.Event(vevent);
-      const descProp = vevent.getFirstPropertyValue('description');
-      const description = descProp ? String(descProp) : '';
-      const status = vevent.getFirstPropertyValue('status') || 'CONFIRMED';
-      const isCancelled = status.toUpperCase() === 'CANCELLED';
-      const eventType = classifyEvent(event.summary, description);
-      const title = eventType === 'tournament' ? extractTournamentName(description) || event.summary : event.summary;
-      return {
-        id: event.uid,
-        title,
-        description,
-        location: event.location || 'TBD',
-        timestamp: event.startDate.toUnixTime(),
-        eventType,
-        isCancelled,
-      };
-    });
+      const parsedEvents = vcalendar.getAllSubcomponents('vevent').map((vevent) => {
+        const event = new ICAL.Event(vevent);
+        const descProp = vevent.getFirstPropertyValue('description');
+        const description = descProp ? String(descProp) : '';
+        const status = vevent.getFirstPropertyValue('status') || 'CONFIRMED';
+        const isCancelled = status.toUpperCase() === 'CANCELLED';
+        const eventType = classifyEvent(event.summary, description, detectFeedSource(icsUrl));
+        const title = eventType === 'tournament' ? extractTournamentName(description) || event.summary : event.summary;
+        return {
+          id: event.uid,
+          title,
+          description,
+          location: event.location || 'TBD',
+          timestamp: event.startDate.toUnixTime(),
+          eventType,
+          isCancelled,
+        };
+      });
 
-    const gameEvents = groupTournaments(
-      parsedEvents.filter((e) => ['tournament', 'league', 'friendly'].includes(e.eventType)),
-    );
+      const gameEvents = groupTournaments(
+        parsedEvents.filter((e) => ['tournament', 'league', 'friendly'].includes(e.eventType)),
+      );
 
-    return await supabaseService.syncTeamEvents(team.id, gameEvents);
-  }, [team?.id, team?.icalUrl]);
+      return await supabaseService.syncTeamEvents(team.id, gameEvents);
+    },
+    [team?.id, team?.icalUrl],
+  );
 
   const toggleBlackout = async (dateStr) => {
     const isCurrentlyBlackout = blackoutDates.includes(dateStr);

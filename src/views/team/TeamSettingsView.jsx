@@ -23,6 +23,7 @@ import FormRow from '../../components/layout/FormRow';
 import { formControl } from '../../components/layout/formControl';
 import SettingsShell from '../../components/layout/SettingsShell';
 import { PAYMENT_TOKENS, buildPreviewTokens } from '../../utils/paymentTemplate';
+import { fetchIcs } from '../../utils/fetchIcs';
 
 export default function TeamSettingsView({
   selectedTeam,
@@ -38,6 +39,7 @@ export default function TeamSettingsView({
   seasons = [],
   teamSeasons = [],
   canSetActiveSeason = false,
+  onSyncCalendar = null,
 }) {
   const { t } = useT();
 
@@ -107,8 +109,7 @@ export default function TeamSettingsView({
     setIsTesting(true);
     setTestResult(null);
     try {
-      const res = await fetch(icsUrl.trim());
-      const text = await res.text();
+      const text = await fetchIcs(icsUrl);
       setTestResult(text.includes('BEGIN:VCALENDAR') ? 'valid' : 'invalid');
     } catch {
       setTestResult('invalid');
@@ -121,10 +122,13 @@ export default function TeamSettingsView({
     if (!selectedTeam?.id) return;
     setIsSavingIcs(true);
     try {
-      await supabaseService.updateTeam(selectedTeam.id, { icalUrl: icsUrl.trim() });
+      const newUrl = icsUrl.trim();
+      await supabaseService.updateTeam(selectedTeam.id, { icalUrl: newUrl });
       setTestResult(null);
       if (refreshContext) await refreshContext();
       if (showToast) showToast('Calendar feed updated.');
+      // Pull upcoming events from the new feed right away; past events stay.
+      if (newUrl && onSyncCalendar) await onSyncCalendar(newUrl);
     } catch (err) {
       if (showToast) showToast(`Failed: ${err.message}`, true);
     } finally {

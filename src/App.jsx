@@ -559,8 +559,8 @@ function App() {
   const formatMoney = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
   // ── SCHEDULE HANDLERS ──
-  const handleSyncCalendar = async () => {
-    const count = await syncCalendar();
+  const handleSyncCalendar = async (urlOverride) => {
+    const count = await syncCalendar(urlOverride);
     await refreshTeamEvents(selectedTeamId || parentTeamId);
     showToast(t('toast.syncedEvents', { n: count }));
   };
