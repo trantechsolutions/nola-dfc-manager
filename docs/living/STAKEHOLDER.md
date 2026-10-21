@@ -10,6 +10,32 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-21 — Game film, active season, and Google Calendar feeds (bae8fba..3161127)
+
+Two changes, both visible the next time you open the app.
+
+- **Game film is linked into the app.** Each team's game film site opens from the
+  team page and the parent page, already unlocked for your account, with no
+  passwords to pass around. Schedule entries link straight to that game's match
+  report and highlights. Player profiles, the parent page and season evaluations
+  show the season's numbers from the film: minutes, starts, positions, goals,
+  assists, shots and cards. Parents see only their own child's numbers. There is
+  a new **Scorekeeper** role for whoever keeps live stats. It opens the film's
+  stat screen and nothing else, so a parent who keeps stats still sees the
+  normal parent page.
+- **Teams choose their active season.** The team manager picks the season the
+  team is in, and everyone opens the app on it. Parents no longer briefly see last
+  season's numbers while the page loads. Staff can still switch seasons in the
+  sidebar to budget ahead.
+- **Google Calendar schedules work.** A team can now use a public Google Calendar
+  link as its schedule. Saving a new link brings in the games right away. Games
+  are sorted into tournaments, league games and friendlies/scrimmages from what
+  the calendar says about them. Past games stay on the schedule when the link
+  changes, and upcoming games the calendar no longer lists drop off. Games that
+  have money attached to them are always kept.
+
+---
+
 ## 2026-08-21 — Sponsors, reconciliation dates, opponent cards, and phone panels (8ab689f..4c466db)
 
 Four changes, all visible the next time you open the app.
