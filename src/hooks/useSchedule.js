@@ -2,7 +2,7 @@
 // Fetches iCal events for a specific team using the team's ical_url.
 // Falls back to the legacy hardcoded URL if no team is provided.
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import ICAL from 'ical.js';
 import { supabaseService } from '../services/supabaseService';
 import { classifyEvent, extractTournamentName } from '../utils/eventClassifier';
@@ -67,9 +67,14 @@ export const useSchedule = (user, team = null) => {
   const [events, setEvents] = useState({ upcoming: [], past: [] });
   const [blackoutDates, setBlackoutDates] = useState([]);
   const [loading, setLoading] = useState(true);
+  // The team the last finished schedule load was for ('' for none).
+  const [loadedFor, setLoadedFor] = useState(null);
+  const scheduleFetchRef = useRef(0);
 
   const fetchScheduleData = useCallback(async () => {
     setLoading(true);
+    const fetchId = ++scheduleFetchRef.current;
+    const done = () => fetchId === scheduleFetchRef.current && setLoadedFor(team?.id || '');
 
     // 1. Blackouts
     let blackoutsList = [];
@@ -85,6 +90,7 @@ export const useSchedule = (user, team = null) => {
     if (!icsUrl) {
       setEvents({ upcoming: [], past: [] });
       setLoading(false);
+      done();
       return;
     }
 
@@ -142,6 +148,7 @@ export const useSchedule = (user, team = null) => {
       setEvents({ upcoming: [], past: [] });
     } finally {
       setLoading(false);
+      done();
     }
   }, [team?.id, team?.icalUrl]);
 
@@ -199,5 +206,13 @@ export const useSchedule = (user, team = null) => {
     }
   };
 
-  return { events, blackoutDates, toggleBlackout, refreshSchedule: fetchScheduleData, syncCalendar, loading };
+  return {
+    events,
+    blackoutDates,
+    toggleBlackout,
+    refreshSchedule: fetchScheduleData,
+    syncCalendar,
+    loading,
+    loadedFor,
+  };
 };

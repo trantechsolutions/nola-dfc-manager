@@ -32,6 +32,7 @@ const ROLE_COLORS = {
   head_coach: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
   assistant_coach: 'bg-muted text-foreground',
   fundraiser: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+  scorekeeper: 'bg-muted text-foreground',
   parent: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
 };
 const INV_STATUS_COLORS = {

@@ -18,6 +18,7 @@ export const teamService = {
       paymentInfo: t.payment_info || '',
       reeplayerPlayerLink: t.reeplayer_player_link || '',
       reeplayerFanLink: t.reeplayer_fan_link || '',
+      activeSeasonId: t.active_season_id || null,
     }));
   },
 
@@ -38,6 +39,7 @@ export const teamService = {
       paymentInfo: data.payment_info || '',
       reeplayerPlayerLink: data.reeplayer_player_link || '',
       reeplayerFanLink: data.reeplayer_fan_link || '',
+      activeSeasonId: data.active_season_id || null,
     };
   },
 
@@ -73,6 +75,7 @@ export const teamService = {
     if ('paymentInfo' in updates) row.payment_info = updates.paymentInfo;
     if ('reeplayerPlayerLink' in updates) row.reeplayer_player_link = updates.reeplayerPlayerLink;
     if ('reeplayerFanLink' in updates) row.reeplayer_fan_link = updates.reeplayerFanLink;
+    if ('activeSeasonId' in updates) row.active_season_id = updates.activeSeasonId || null;
     const { error } = await supabase.from('teams').update(row).eq('id', teamId);
     if (error) throw error;
   },

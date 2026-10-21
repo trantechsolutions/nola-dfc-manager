@@ -78,6 +78,7 @@ export default function AppRoutes({
   isClubAdmin,
   isSuperAdmin,
   effectiveIsStaff,
+  scorekeeperTeamIds = [],
   can,
   refreshContext,
 
@@ -541,6 +542,7 @@ export default function AppRoutes({
               element={
                 effectiveIsStaff ? (
                   <TeamOverviewView
+                    teamId={selectedTeam?.id}
                     players={seasonalPlayers}
                     archivedPlayers={archivedPlayers}
                     teamBalance={teamBalance}
@@ -582,6 +584,7 @@ export default function AppRoutes({
                     accounts={accounts}
                     isReadOnly={isReadOnly}
                     compliance={compliance}
+                    scorekeeperTeamIds={scorekeeperTeamIds}
                   />
                 )
               }
@@ -746,6 +749,9 @@ export default function AppRoutes({
                     viewScope={viewScope}
                     onChangeViewScope={onChangeViewScope}
                     canSetViewScope={canSetViewScope}
+                    seasons={seasons}
+                    teamSeasons={teamSeasons}
+                    canSetActiveSeason={can(PERMISSIONS.TEAM_SET_ACTIVE_SEASON)}
                   />
                 }
               />

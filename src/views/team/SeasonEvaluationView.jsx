@@ -23,6 +23,7 @@ import { usePanelRoute } from '../../hooks/usePanelRoute';
 import { DEFAULT_EVAL_SECTIONS, RATING_LABELS, countSkills } from '../../utils/defaultEvaluationRubric';
 import { hasPermission, PERMISSIONS } from '../../utils/roles';
 import RubricEditor from './RubricEditor';
+import PlayerFilmStats from '../../components/PlayerFilmStats';
 import { PANELS } from '../../utils/panelRoute';
 
 // Only these roles may submit evaluations (matches CLUB_EVALUATE_PLAYERS in roles.js).
@@ -572,6 +573,8 @@ export default function SeasonEvaluationView({
               {/* Expanded Evaluation Form */}
               {isExpanded && (
                 <div className="px-4 pb-4 space-y-5 border-t border-border pt-4">
+                  {/* The season's numbers from the game film, to rate with the evidence in front of you */}
+                  <PlayerFilmStats playerId={player.id} seasonId={selectedSeason} />
                   {rubricSections.map((section) => (
                     <div key={section.key} className="space-y-3">
                       <h4 className="text-sm font-bold text-foreground border-b border-border pb-1">{section.label}</h4>

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import OnboardingChecklist from '../../components/OnboardingChecklist';
+import GameFilmCard from '../../components/GameFilmCard';
 import SmallBox from '../../components/layout/SmallBox';
 import {
   Users,
@@ -63,6 +64,7 @@ function ComplianceBar({ label, count, total, emphasis = false }) {
 }
 
 export default function TeamOverviewView({
+  teamId,
   players,
   archivedPlayers = [],
   teamBalance,
@@ -264,6 +266,9 @@ export default function TeamOverviewView({
       {/* The shell's content header owns the page title and breadcrumb, and the
           sidebar owns the season picker — this view only adds the health lede. */}
       {healthSummary && <p className="-mt-1 text-sm text-muted-foreground">{healthSummary}</p>}
+
+      {/* ── Game film: the team's film site, opened with this account's access ── */}
+      <GameFilmCard teamId={teamId} />
 
       {/* ── Draft budget notice ── */}
       {!isFinalized &&

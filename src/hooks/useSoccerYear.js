@@ -19,17 +19,22 @@ export const useSoccerYear = (user, teamId = null, defaultSeason = null) => {
     return month >= 6 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
   });
   const [loading, setLoading] = useState(true);
+  // The team the last finished team-seasons fetch was for ('' for none), so callers can wait for their team's.
+  const [teamSeasonsFor, setTeamSeasonsFor] = useState(null);
+  const seasonsFetchRef = useRef(0);
 
-  // ── Apply the club's admin-configured default season once, on load ──
-  // The club (and its settings) resolve asynchronously after this hook mounts,
-  // so we seed the date-computed value first and override it once the default
-  // arrives. Applied a single time so it never clobbers a user's manual pick.
-  const defaultAppliedRef = useRef(false);
+  // ── Apply the default season (the team's active season, else the club's default) ──
+  // The team and club resolve asynchronously after this hook mounts, so we seed the date-computed value
+  // first and override it once the default arrives. It applies once per team and default, so a manual pick
+  // (a manager budgeting a future season) sticks until the team changes or its active season is changed.
+  const defaultAppliedRef = useRef(null);
   useEffect(() => {
-    if (defaultAppliedRef.current || !defaultSeason) return;
-    defaultAppliedRef.current = true;
+    if (!defaultSeason) return;
+    const key = `${teamId || ''}|${defaultSeason}`;
+    if (defaultAppliedRef.current === key) return;
+    defaultAppliedRef.current = key;
     setSelectedSeason(defaultSeason);
-  }, [defaultSeason]);
+  }, [defaultSeason, teamId]);
 
   // ── Fetch seasons + team seasons ──
   const fetchSeasons = useCallback(async () => {
@@ -38,6 +43,7 @@ export const useSoccerYear = (user, teamId = null, defaultSeason = null) => {
       return;
     }
     setLoading(true);
+    const fetchId = ++seasonsFetchRef.current;
     try {
       // 1. Global seasons (for the season list/dropdown)
       const data = await supabaseService.getAllSeasons();
@@ -57,6 +63,7 @@ export const useSoccerYear = (user, teamId = null, defaultSeason = null) => {
     } catch (error) {
     } finally {
       setLoading(false);
+      if (fetchId === seasonsFetchRef.current) setTeamSeasonsFor(teamId || '');
     }
   }, [user, teamId]);
 
@@ -121,5 +128,6 @@ export const useSoccerYear = (user, teamId = null, defaultSeason = null) => {
     currentTeamSeason,
     refreshSeasons: fetchSeasons,
     loading,
+    teamSeasonsFor,
   };
 };

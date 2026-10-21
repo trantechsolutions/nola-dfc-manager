@@ -23,6 +23,8 @@ import {
   Camera,
 } from 'lucide-react';
 import MedicalReleaseForm from '../../components/MedicalReleaseForm';
+import GameFilmCard from '../../components/GameFilmCard';
+import PlayerFilmStats from '../../components/PlayerFilmStats';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
 import { getUSAgeGroup, getAge, formatDateOnly } from '../../utils/ageGroup';
@@ -83,6 +85,8 @@ export default function ParentView({
   isReadOnly = false,
   // Season compliance index — see utils/compliance.js.
   compliance = EMPTY_COMPLIANCE,
+  // Teams this user keeps stats for (the scorekeeper role) — they may have no player of their own.
+  scorekeeperTeamIds = [],
 }) {
   const { t } = useT();
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -268,6 +272,13 @@ export default function ParentView({
         </div>
         <h3 className="text-lg font-bold text-foreground mb-2">{t('parent.noPlayers')}</h3>
         <p className="text-muted-foreground font-medium text-sm leading-relaxed">{t('parent.noPlayersMsg')}</p>
+        {scorekeeperTeamIds.length > 0 && (
+          <div className="mt-6 space-y-3 text-left">
+            {scorekeeperTeamIds.map((id) => (
+              <GameFilmCard key={id} teamId={id} />
+            ))}
+          </div>
+        )}
       </div>
     );
 
@@ -575,6 +586,13 @@ export default function ParentView({
               )}
             </div>
           </AdminCard>
+
+          {/* Game film — the team's film site, opened already unlocked for this account (with the
+              scorekeeper screen for a scorekeeper). */}
+          <GameFilmCard teamId={playerTeam?.id} />
+
+          {/* This child's season numbers from the game film */}
+          <PlayerFilmStats playerId={activePlayer.id} seasonId={selectedSeason} className="bg-card shadow-sm" />
         </div>
 
         {/* ═══════════ col-md-9 — tabbed detail ═══════════ */}

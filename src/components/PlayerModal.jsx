@@ -10,6 +10,7 @@ import PlayerCompliancePanel from './PlayerCompliancePanel';
 import { DOC_TYPE_LABELS, DOC_STATUS_COLORS } from '../utils/constants';
 import { compressImageFile } from '../utils/imageCompression';
 import ResponsiveModal from './layout/ResponsiveModal';
+import PlayerFilmStats from './PlayerFilmStats';
 
 const STATUS_COLORS = DOC_STATUS_COLORS;
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -226,6 +227,9 @@ export default function PlayerModal({
               </div>
             </div>
           )}
+
+          {/* Season numbers from the game film */}
+          <PlayerFilmStats playerId={player?.id} seasonId={selectedSeason} />
 
           {/* Financial Summary — straight from player_financials view */}
           <div className="bg-background p-4 rounded-lg border border-border">

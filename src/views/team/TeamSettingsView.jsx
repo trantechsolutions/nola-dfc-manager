@@ -11,6 +11,7 @@ import {
   Layers,
   Wallet,
   Trash2,
+  CalendarCheck,
 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
@@ -34,6 +35,9 @@ export default function TeamSettingsView({
   viewScope,
   onChangeViewScope,
   canSetViewScope = false,
+  seasons = [],
+  teamSeasons = [],
+  canSetActiveSeason = false,
 }) {
   const { t } = useT();
 
@@ -69,6 +73,28 @@ export default function TeamSettingsView({
     setReeplayerPlayerLink(selectedTeam?.reeplayerPlayerLink || '');
     setReeplayerFanLink(selectedTeam?.reeplayerFanLink || '');
   }, [selectedTeam?.id]);
+
+  // ── Active season state ──
+  const [activeSeasonId, setActiveSeasonId] = useState(selectedTeam?.activeSeasonId || '');
+  const [isSavingSeason, setIsSavingSeason] = useState(false);
+
+  useEffect(() => {
+    setActiveSeasonId(selectedTeam?.activeSeasonId || '');
+  }, [selectedTeam?.id, selectedTeam?.activeSeasonId]);
+
+  const handleSaveSeason = async () => {
+    if (!selectedTeam?.id) return;
+    setIsSavingSeason(true);
+    try {
+      await supabaseService.updateTeam(selectedTeam.id, { activeSeasonId: activeSeasonId || null });
+      if (refreshContext) await refreshContext();
+      if (showToast) showToast(t('settings.activeSeasonSaved'));
+    } catch (err) {
+      if (showToast) showToast(`Failed: ${err.message}`, true);
+    } finally {
+      setIsSavingSeason(false);
+    }
+  };
 
   const currentIcsUrl = selectedTeam?.icalUrl || '';
 
@@ -181,6 +207,7 @@ export default function TeamSettingsView({
     ...(canSetViewScope && onChangeViewScope
       ? [{ id: 'view', label: t('settings.viewScope', 'View Scope'), icon: Layers }]
       : []),
+    ...(canSetActiveSeason ? [{ id: 'season', label: t('settings.activeSeason'), icon: CalendarCheck }] : []),
     { id: 'calendar', label: t('settings.calendarFeed'), icon: Rss },
     ...(onSaveAccount ? [{ id: 'accounts', label: t('settings.sectionAccounts', 'Accounts'), icon: Wallet }] : []),
     { id: 'payments', label: t('settings.paymentInstructions'), icon: CreditCard },
@@ -195,6 +222,39 @@ export default function TeamSettingsView({
 
       <SettingsShell sections={sections} active={section} onChange={setSection}>
         {section === 'view' && <ViewScopeCard viewScope={viewScope} onChange={onChangeViewScope} />}
+
+        {section === 'season' && (
+          <AdminCard
+            title={t('settings.activeSeason')}
+            icon={CalendarCheck}
+            footer={
+              <div className="flex justify-end">
+                <SaveButton onClick={handleSaveSeason} busy={isSavingSeason}>
+                  {t('common.save')}
+                </SaveButton>
+              </div>
+            }
+            bodyClassName="space-y-4"
+          >
+            <p className="text-xs text-muted-foreground">{t('settings.activeSeasonHelp')}</p>
+            <FormRow label={t('settings.activeSeason')} htmlFor="active-season">
+              <select
+                id="active-season"
+                value={activeSeasonId}
+                onChange={(e) => setActiveSeasonId(e.target.value)}
+                className={formControl}
+              >
+                <option value="">{t('settings.activeSeasonAuto')}</option>
+                {seasons.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name && s.name !== s.id ? `${s.name} (${s.id})` : s.id}
+                    {teamSeasons.some((ts) => ts.seasonId === s.id) ? '' : ` — ${t('settings.activeSeasonNoBudget')}`}
+                  </option>
+                ))}
+              </select>
+            </FormRow>
+          </AdminCard>
+        )}
 
         {section === 'calendar' && (
           <AdminCard

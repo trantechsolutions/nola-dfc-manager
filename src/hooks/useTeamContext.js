@@ -17,10 +17,12 @@ import {
   CLUB_ROLES,
   APP_ROLES,
   PARENT_ROLE,
+  NON_STAFF_ROLES,
 } from '../utils/roles';
 
 export const useTeamContext = (user) => {
   const [userRoles, setUserRoles] = useState([]);
+  const [scorekeeperTeamIds, setScorekeeperTeamIds] = useState([]);
   const [club, setClub] = useState(null);
   const [teams, setTeams] = useState([]);
   const [selectedTeamId, setSelectedTeamId] = useState(null);
@@ -39,6 +41,7 @@ export const useTeamContext = (user) => {
   const fetchContext = useCallback(async () => {
     if (!user) {
       setUserRoles([]);
+      setScorekeeperTeamIds([]);
       setClub(null);
       setTeams([]);
       setSelectedTeamId(null);
@@ -49,9 +52,12 @@ export const useTeamContext = (user) => {
     }
     setLoading(true);
     try {
-      // 1. Get user's roles
-      const roles = await supabaseService.getUserRoles();
+      // 1. Get user's roles. Roles that don't make someone staff (a scorekeeper) are kept aside, so a parent
+      //    who holds one keeps the parent portal; the teams they're for still open the game film.
+      const allRoles = await supabaseService.getUserRoles();
+      const roles = allRoles.filter((r) => !NON_STAFF_ROLES.includes(r.role));
       setUserRoles(roles);
+      setScorekeeperTeamIds(allRoles.filter((r) => r.role === 'scorekeeper' && r.teamId).map((r) => r.teamId));
 
       if (roles.length === 0) {
         // User has no roles — might be a parent (handled by guardian email match)
@@ -173,6 +179,7 @@ export const useTeamContext = (user) => {
     setSelectedTeamId,
     effectiveRole,
     isStaff,
+    scorekeeperTeamIds,
     isClubAdmin,
     isSuperAdmin,
     navItems,
