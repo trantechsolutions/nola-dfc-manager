@@ -61,6 +61,12 @@ export const TEAM_ROLES = {
     level: 'team',
     description: 'View-only access to roster, schedule, and player compliance.',
   },
+  scorekeeper: {
+    label: 'Scorekeeper',
+    level: 'team',
+    description:
+      "Keeps live game stats on the team's game film site. Grants nothing else here, so a parent who keeps stats keeps the parent portal.",
+  },
   fundraiser: {
     label: 'Fundraiser',
     level: 'team',
@@ -89,6 +95,12 @@ export const PARENT_ROLE = 'parent';
 export const ALL_ROLES = { ...APP_ROLES, ...CLUB_ROLES, ...TEAM_ROLES, ...IMPLICIT_ROLES };
 
 /**
+ * Roles that don't make someone staff. They're kept out of the signed-in user's role list in the app
+ * (useTeamContext), so a parent who holds one still gets the parent portal.
+ */
+export const NON_STAFF_ROLES = ['scorekeeper'];
+
+/**
  * CLUB-ASSIGNABLE ROLES
  * These are the only roles that can be assigned from the Club > Teams and Club > Users tabs.
  * Club admins assign coaches and team managers to teams.
@@ -101,7 +113,7 @@ export const CLUB_ASSIGNABLE_ROLES = ['head_coach', 'assistant_coach', 'team_man
  * Team managers assign treasurers and schedulers within their team; the team_manager
  * role itself is club-assignable only (see CLUB_ASSIGNABLE_ROLES).
  */
-export const TEAM_ASSIGNABLE_ROLES = ['treasurer', 'scheduler', 'fundraiser'];
+export const TEAM_ASSIGNABLE_ROLES = ['treasurer', 'scheduler', 'fundraiser', 'scorekeeper'];
 
 /**
  * PERMISSION KEYS
@@ -133,6 +145,7 @@ export const PERMISSIONS = {
   TEAM_VIEW_INSIGHTS: 'team:view_insights', // See insights/projections, use AI chat
   TEAM_MANAGE_WAIVERS: 'team:manage_waivers', // Toggle fee waivers
   TEAM_MANAGE_USERS: 'team:manage_users', // Assign roles to team parents/guardians
+  TEAM_SET_ACTIVE_SEASON: 'team:set_active_season', // Choose the season the team is in (what parents see); team_manager+ only
   TEAM_MANAGE_RUBRIC: 'team:manage_rubric', // Customize the team's season evaluation rubric
   TEAM_VIEW_CHECKLIST: 'team:view_checklist', // See the season checklist and roster-wide progress
   TEAM_MANAGE_CHECKLIST: 'team:manage_checklist', // Author/clone/publish the checklist, verify items (team_manager+ only — mirrors the RLS in sql/season_checklists_migration.sql)
@@ -174,6 +187,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.TEAM_VIEW_INSIGHTS,
     PERMISSIONS.TEAM_MANAGE_WAIVERS,
     PERMISSIONS.TEAM_MANAGE_USERS,
+    PERMISSIONS.TEAM_SET_ACTIVE_SEASON,
     PERMISSIONS.TEAM_MANAGE_RUBRIC,
     PERMISSIONS.TEAM_VIEW_CHECKLIST,
     PERMISSIONS.TEAM_MANAGE_CHECKLIST,
@@ -207,6 +221,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.TEAM_VIEW_INSIGHTS,
     PERMISSIONS.TEAM_MANAGE_WAIVERS,
     PERMISSIONS.TEAM_MANAGE_USERS,
+    PERMISSIONS.TEAM_SET_ACTIVE_SEASON,
     PERMISSIONS.TEAM_MANAGE_RUBRIC,
     PERMISSIONS.TEAM_VIEW_CHECKLIST,
     PERMISSIONS.TEAM_MANAGE_CHECKLIST,
@@ -247,6 +262,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.TEAM_VIEW_INSIGHTS,
     PERMISSIONS.TEAM_MANAGE_WAIVERS,
     PERMISSIONS.TEAM_MANAGE_USERS,
+    PERMISSIONS.TEAM_SET_ACTIVE_SEASON,
     PERMISSIONS.TEAM_MANAGE_RUBRIC,
     PERMISSIONS.TEAM_VIEW_CHECKLIST,
     PERMISSIONS.TEAM_MANAGE_CHECKLIST,
@@ -291,6 +307,9 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.CLUB_EVALUATE_PLAYERS,
     PERMISSIONS.CLUB_VIEW_EVALUATIONS,
   ],
+
+  // Nothing in this app: the role only opens the game film's scorekeeper screen (sql/game_film_migration.sql).
+  scorekeeper: [],
 
   fundraiser: [
     PERMISSIONS.TEAM_VIEW_ROSTER,

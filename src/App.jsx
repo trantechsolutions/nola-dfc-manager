@@ -61,6 +61,7 @@ import { useLedgerManager } from './hooks/useLedgerManager';
 import { useTeamContext } from './hooks/useTeamContext';
 import { useAppData } from './hooks/useAppData';
 import { useModalState } from './hooks/useModalState';
+import { expectedParentTeamId, isParentSeasonSettled, isParentSeasonPending } from './utils/parentSeason';
 import { PERMISSIONS, PARENT_ROLE } from './utils/roles';
 import { useCategoryManager } from './hooks/useCategoryManager';
 import { useAccounts } from './hooks/useAccounts';
@@ -105,6 +106,7 @@ function App() {
     setSelectedTeamId,
     effectiveRole,
     isStaff,
+    scorekeeperTeamIds,
     isClubAdmin,
     isSuperAdmin,
     can,
@@ -174,6 +176,9 @@ function App() {
   // parentTeamId starts null, is updated after useAppData resolves players.
   const [parentTeamId, setParentTeamId] = useState(null);
   const [parentTeam, setParentTeam] = useState(null);
+  // Which parent team the fetch below has finished for (found or not), and which one's season is settled.
+  const [parentTeamLoadedFor, setParentTeamLoadedFor] = useState(null);
+  const [parentSeasonReadyFor, setParentSeasonReadyFor] = useState(null);
 
   // Use the staff's selected team OR the parent's derived team for season lookup
   const effectiveTeamId = selectedTeamId || parentTeamId;
@@ -187,7 +192,13 @@ function App() {
     currentSeasonData,
     currentTeamSeason,
     refreshSeasons,
-  } = useSoccerYear(user, effectiveTeamId, effectiveIsStaff ? club?.settings?.defaultSeason || null : null);
+    teamSeasonsFor,
+  } = useSoccerYear(
+    user,
+    effectiveTeamId,
+    // The team's active season (set by its team manager) for everyone; else the club default for staff.
+    (selectedTeam || parentTeam)?.activeSeasonId || (effectiveIsStaff ? club?.settings?.defaultSeason || null : null),
+  );
 
   const {
     players,
@@ -203,6 +214,8 @@ function App() {
     checklist,
     compliance,
     refreshChecklist,
+    dataLoadedFor,
+    checklistLoadedFor,
   } = useAppData({
     userEmail: user?.email || null,
     selectedTeamId,
@@ -248,7 +261,8 @@ function App() {
     supabaseService
       .getTeam(parentTeamId)
       .then(setParentTeam)
-      .catch(() => setParentTeam(null));
+      .catch(() => setParentTeam(null))
+      .finally(() => setParentTeamLoadedFor(parentTeamId));
   }, [effectiveIsStaff, parentTeamId]);
 
   const effectiveTeam = selectedTeam || parentTeam;
@@ -266,7 +280,55 @@ function App() {
   // from their player, not a staff team selection.
   useDocumentTitle(effectiveTeam?.name, club?.name);
 
-  const { events, blackoutDates, toggleBlackout, syncCalendar } = useSchedule(user, effectiveTeam);
+  const {
+    events,
+    blackoutDates,
+    toggleBlackout,
+    syncCalendar,
+    loadedFor: scheduleLoadedFor,
+  } = useSchedule(user, effectiveTeam);
+
+  // ── PARENT SEASON ──
+  // Hold the parent page on the loading screen until their team's active season is the one shown and its
+  // data is in (utils/parentSeason.js). Once settled it stays settled, so picking another season isn't held up.
+  const expectedTeamId = expectedParentTeamId({
+    viewingAsParent,
+    impersonatingAs,
+    isStaff,
+    selectedTeamId,
+    players,
+    email: user?.email,
+  });
+  useEffect(() => {
+    if (effectiveIsStaff) return;
+    const loaded = {
+      data: dataLoadedFor,
+      checklist: checklistLoadedFor,
+      teamSeasons: teamSeasonsFor,
+      schedule: scheduleLoadedFor,
+    };
+    if (isParentSeasonSettled({ parentTeamId, loadedFor: parentTeamLoadedFor, parentTeam, selectedSeason, loaded })) {
+      setParentSeasonReadyFor(parentTeamId);
+    }
+  }, [
+    effectiveIsStaff,
+    parentTeamId,
+    parentTeamLoadedFor,
+    parentTeam,
+    selectedSeason,
+    dataLoadedFor,
+    checklistLoadedFor,
+    teamSeasonsFor,
+    scheduleLoadedFor,
+  ]);
+  const parentSeasonPending = isParentSeasonPending({
+    signedIn: !!user,
+    isStaff: effectiveIsStaff,
+    firstLoadDone: dataLoadedFor !== null,
+    parentTeamId,
+    expectedTeamId,
+    readyFor: parentSeasonReadyFor,
+  });
   const {
     matchups,
     loading: matchupsLoading,
@@ -497,8 +559,8 @@ function App() {
   const formatMoney = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
   // ── SCHEDULE HANDLERS ──
-  const handleSyncCalendar = async () => {
-    const count = await syncCalendar();
+  const handleSyncCalendar = async (urlOverride) => {
+    const count = await syncCalendar(urlOverride);
     await refreshTeamEvents(selectedTeamId || parentTeamId);
     showToast(t('toast.syncedEvents', { n: count }));
   };
@@ -541,7 +603,7 @@ function App() {
   }
 
   // ── LOADING STATES ──
-  if (loading || contextLoading || settingsLoading)
+  if (loading || contextLoading || settingsLoading || parentSeasonPending)
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-3">
@@ -829,6 +891,7 @@ function App() {
                   isClubAdmin={isClubAdmin}
                   isSuperAdmin={isSuperAdmin}
                   effectiveIsStaff={effectiveIsStaff}
+                  scorekeeperTeamIds={scorekeeperTeamIds}
                   can={can}
                   refreshContext={refreshContext}
                   seasons={seasons}

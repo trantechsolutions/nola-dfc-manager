@@ -103,7 +103,13 @@ export default function AppSidebar() {
             <SidebarPicker
               label={t('common.season')}
               value={selectedSeason}
-              options={seasons.map((season) => ({ id: season.id, label: season.id }))}
+              options={seasons.map((season) => ({
+                id: season.id,
+                label:
+                  season.id === selectedTeam.activeSeasonId
+                    ? `${season.id} · ${t('settings.activeSeasonShort')}`
+                    : season.id,
+              }))}
               selectedId={selectedSeason}
               onSelect={setSelectedSeason}
             />

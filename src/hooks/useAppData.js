@@ -24,6 +24,10 @@ export function useAppData({
   const [playerFinancials, setPlayerFinancials] = useState({});
   const [teamEvents, setTeamEvents] = useState([]);
   const [loading, setLoading] = useState(false);
+  // `${teamId}|${season}` of the last fetch that finished (found or failed), so the parent page can wait for
+  // its own team and season's data instead of showing another season's first.
+  const [dataLoadedFor, setDataLoadedFor] = useState(null);
+  const [checklistLoadedFor, setChecklistLoadedFor] = useState(null);
   // The season checklist backs compliance for every roster view, so it is
   // fetched once here rather than per-view — RosterManagement, TeamOverviewView,
   // and DocumentManager all read the same index off DataContext.
@@ -41,11 +45,10 @@ export function useAppData({
   const fetchData = useCallback(
     async (seasonOverride) => {
       const fetchId = ++fetchIdRef.current;
+      let fetchTeamId = selectedTeamId || parentTeamId;
+      let resolvedSeason = seasonOverride || selectedSeason;
       try {
-        let fetchTeamId = selectedTeamId || parentTeamId;
-
         let pData = [];
-        let resolvedSeason = seasonOverride || selectedSeason;
 
         if (!fetchTeamId) {
           try {
@@ -116,7 +119,10 @@ export function useAppData({
       } catch (e) {
         console.error('Data fetch error', e);
       } finally {
-        if (fetchId === fetchIdRef.current) setLoading(false);
+        if (fetchId === fetchIdRef.current) {
+          setLoading(false);
+          setDataLoadedFor(`${fetchTeamId || ''}|${resolvedSeason}`);
+        }
       }
     },
     [userEmail, selectedTeamId, parentTeamId, selectedSeason, currentTeamSeason?.id, teamSeasons],
@@ -137,10 +143,14 @@ export function useAppData({
 
   // ── SEASON CHECKLIST (compliance source of truth) ──
   const complianceTeamId = selectedTeamId || parentTeamId;
+  const checklistFetchRef = useRef(0);
   const loadChecklist = useCallback(async () => {
+    const key = `${complianceTeamId || ''}|${selectedSeason}`;
+    const fetchId = ++checklistFetchRef.current;
     if (!complianceTeamId || !selectedSeason) {
       setChecklist(null);
       setChecklistResponses([]);
+      setChecklistLoadedFor(key);
       return;
     }
     try {
@@ -154,6 +164,8 @@ export function useAppData({
       console.warn('Checklist refresh failed:', e.message);
       setChecklist(null);
       setChecklistResponses([]);
+    } finally {
+      if (fetchId === checklistFetchRef.current) setChecklistLoadedFor(key);
     }
   }, [complianceTeamId, selectedSeason]);
 
@@ -260,6 +272,8 @@ export function useAppData({
     collapsedTeamEvents,
     loading,
     setLoading,
+    dataLoadedFor,
+    checklistLoadedFor,
     fetchData,
     updateTeamEvent,
     refreshTeamEvents,

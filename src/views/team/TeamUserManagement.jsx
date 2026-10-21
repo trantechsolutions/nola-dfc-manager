@@ -17,6 +17,7 @@ const ROLE_TONES = {
   treasurer: 'success',
   scheduler: 'info',
   fundraiser: 'warning',
+  scorekeeper: 'secondary',
 };
 
 const PER_PAGE = 10;

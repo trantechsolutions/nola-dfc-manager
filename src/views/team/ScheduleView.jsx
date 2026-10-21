@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Calendar,
   CalendarDays,
@@ -14,7 +14,10 @@ import {
   DollarSign,
   CheckCircle2,
   Layers,
+  FileText,
+  PlayCircle,
 } from 'lucide-react';
+import { filmService, filmGameLink } from '../../services/filmService';
 import CalendarView from '../../components/CalendarView';
 import EventExpenseModal from '../../components/EventExpenseModal';
 import BulkExpenseModal from '../../components/BulkExpenseModal';
@@ -34,6 +37,7 @@ const EventCard = ({
   onTypeChange = null,
   expenseSummary = null,
   onManageExpenses = null,
+  film = null,
 }) => {
   const { t } = useT();
   const [editing, setEditing] = useState(false);
@@ -98,6 +102,27 @@ const EventCard = ({
           </span>
         </div>
 
+        {/* This game's breakdowns on the game film site */}
+        {film?.games?.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            {film.games.map((g) => (
+              <div key={g.slug} className="flex items-center gap-2 flex-wrap">
+                {film.games.length > 1 && (
+                  <span className="text-xs font-semibold text-muted-foreground mr-1">{gameLabel(g.slug)}</span>
+                )}
+                <FilmButton href={filmGameLink(film.access, g.slug, 'report')} icon={<FileText size={12} />}>
+                  {t('schedule.filmReport')}
+                </FilmButton>
+                {g.hasHighlights && (
+                  <FilmButton href={filmGameLink(film.access, g.slug, 'highlights')} icon={<PlayCircle size={12} />}>
+                    {t('schedule.filmHighlights')}
+                  </FilmButton>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Expense badge — only for synced events when admin */}
         {dbEvent && onManageExpenses && (
           <button
@@ -131,6 +156,48 @@ const EventCard = ({
     </div>
   );
 };
+
+// A tournament's games share its schedule entry; tell them apart by the opponent in the film's address.
+const gameLabel = (slug) =>
+  slug
+    .replace(/^\d{4}-\d{2}-\d{2}-/, '')
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+
+const FilmButton = ({ href, icon, children }) =>
+  href ? (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border border-border bg-card text-foreground hover:bg-background transition-colors"
+    >
+      {icon}
+      {children}
+    </a>
+  ) : null;
+
+// The team's breakdowns on the game film site, by schedule entry, with the keys that open them.
+function useFilmGames(teamId) {
+  const [film, setFilm] = useState({ access: null, byEvent: {} });
+  useEffect(() => {
+    let live = true;
+    Promise.all([filmService.getAccess(teamId), filmService.getGames(teamId)]).then(
+      ([access, games]) => {
+        if (!live) return;
+        const byEvent = {};
+        for (const g of access ? games : []) if (g.eventId) (byEvent[g.eventId] ||= []).push(g);
+        setFilm({ access, byEvent });
+      },
+      () => live && setFilm({ access: null, byEvent: {} }),
+    );
+    return () => {
+      live = false;
+    };
+  }, [teamId]);
+  return film;
+}
 
 // ── Next-up highlight banner ──────────────────────────────────
 const NextUpBanner = ({ event }) => {
@@ -199,13 +266,21 @@ export default function ScheduleView({
       ? teamEvents.find((e) => String(e.id) === panelParams.id) || null
       : null;
 
-  // Map iCal event UID → DB event so EventCards can show/edit the locked type
-  const dbEventsByUid = useMemo(() => {
-    const map = {};
+  const film = useFilmGames(selectedTeam?.id);
+  const filmFor = (db) => (db && film.byEvent[db.id] ? { access: film.access, games: film.byEvent[db.id] } : null);
+
+  // Map iCal event → DB event so EventCards can show/edit the locked type.
+  // Matched by UID, then by start time: after a feed URL change the synced row
+  // keeps the original feed's UID while the live feed carries the new one.
+  const findDbEvent = useMemo(() => {
+    const byUid = {};
+    const byTime = {};
     teamEvents.forEach((e) => {
-      map[e.uid] = e;
+      byUid[e.uid] = e;
+      const t = Math.floor(new Date(e.eventDate).getTime() / 1000);
+      if (!(t in byTime)) byTime[t] = e;
     });
-    return map;
+    return (e) => byUid[e.id] || byTime[e.timestamp] || null;
   }, [teamEvents]);
 
   // Map DB event ID → linked transactions for expense tracking
@@ -251,7 +326,7 @@ export default function ScheduleView({
   const bulkCandidates = useMemo(() => {
     const build = (list, isPast) =>
       list
-        .map((e) => ({ e, db: dbEventsByUid[e.id] }))
+        .map((e) => ({ e, db: findDbEvent(e) }))
         .filter(({ db }) => !!db)
         .map(({ e, db }) => ({
           id: db.id,
@@ -262,7 +337,7 @@ export default function ScheduleView({
           isPast,
         }));
     return [...build(seasonEvents.upcoming, false), ...build(seasonEvents.past, true)];
-  }, [seasonEvents, dbEventsByUid]);
+  }, [seasonEvents, findDbEvent]);
 
   const handleSync = async () => {
     if (!onSyncCalendar) return;
@@ -456,7 +531,7 @@ export default function ScheduleView({
           ) : (
             <div className="space-y-2">
               {filteredUpcoming.map((e) => {
-                const db = dbEventsByUid[e.id];
+                const db = findDbEvent(e);
                 return (
                   <EventCard
                     key={e.id}
@@ -464,6 +539,7 @@ export default function ScheduleView({
                     dbEvent={db}
                     onTypeChange={onTypeChange}
                     expenseSummary={getExpenseSummary(db)}
+                    film={filmFor(db)}
                     onManageExpenses={
                       canEditSchedule ? (event) => openPanel(PANELS.EVENT_EXPENSE, { id: event.id }) : null
                     }
@@ -486,7 +562,7 @@ export default function ScheduleView({
           ) : (
             <div className="space-y-2">
               {filteredPast.map((e) => {
-                const db = dbEventsByUid[e.id];
+                const db = findDbEvent(e);
                 return (
                   <EventCard
                     key={e.id}
@@ -495,6 +571,7 @@ export default function ScheduleView({
                     dbEvent={db}
                     onTypeChange={onTypeChange}
                     expenseSummary={getExpenseSummary(db)}
+                    film={filmFor(db)}
                     onManageExpenses={
                       canEditSchedule ? (event) => openPanel(PANELS.EVENT_EXPENSE, { id: event.id }) : null
                     }

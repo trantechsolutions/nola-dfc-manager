@@ -26,6 +26,72 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-10-21 — Game film, active season, and Google Calendar feeds (bae8fba..3161127)
+
+**Commits.**
+
+```
+3161127 feat: support Google Calendar feeds and keep schedule history
+bae8fba feat: add game film, scorekeeper role and team active season
+```
+
+**Touched.**
+
+- Game film: `src/services/filmService.js`, `src/components/GameFilmCard.jsx`,
+  `src/components/PlayerFilmStats.jsx`; wired into `ParentView`,
+  `TeamOverviewView`, `PlayerModal`, `SeasonEvaluationView`, and `ScheduleView`
+  (report/highlight links per synced event).
+- Roles: `src/utils/roles.js` (`scorekeeper`, `NON_STAFF_ROLES`,
+  `TEAM_SET_ACTIVE_SEASON`); `useTeamContext` filters non-staff roles out and
+  exposes `scorekeeperTeamIds`.
+- Active season: `teamService` (`activeSeasonId`), `useSoccerYear` (default
+  applies once per team+season, `teamSeasonsFor`), `TeamSettingsView` season
+  card, `AppSidebar` label. Parent load gating is in `src/utils/parentSeason.js`.
+  It is driven by the `*LoadedFor` markers in `useAppData`, `useSoccerYear` and
+  `useSchedule`.
+- Calendar: `supabase/functions/ical-proxy` (new edge function) and
+  `src/utils/fetchIcs.js` (direct fetch, then proxy fallback). All feed
+  consumers use it (`useSchedule`, `TeamSettingsView`, `TeamOnboarding`,
+  `ClubCalendarView`, `PublicCalendarView`). `eventClassifier`
+  (`detectFeedSource`, Google rules). `scheduleService.syncTeamEvents` matches
+  unknown UIDs to existing rows by start time, and the new
+  `pruneStaleUpcomingEvents` deletes upcoming rows the feed no longer lists.
+  `useSchedule.mergeSavedEvents` back-fills past events from `team_events`.
+  `ScheduleView` matches DB rows by UID, then by start time.
+
+**Schema/API.**
+
+- New tables `film_sites`, `film_games`, `keeper_devices`, `player_season_stats`.
+- New columns: `keeper_log.team_id` and `created_by`, `teams.active_season_id`.
+- New functions: `film_access`, `film_is_coach`, `film_is_scorekeeper`,
+  `film_is_member`, `film_user_can_keep`, `keeper_device_token`, and the
+  `keeper_*_as` family.
+- New edge function `ical-proxy` (GET `?url=`). It accepts http(s) and webcal,
+  caps responses at 5 MB, and returns only bodies containing `BEGIN:VCALENDAR`.
+- One-off `sql/dedupe_team_events_2026_10_21.sql` keeps the oldest row per
+  (team, start time) and re-points transactions, matchups and budget
+  contributions before deleting.
+
+**Rationale.** Browser fetches of Google `.ics` fail CORS. A server-side proxy
+was the only fix that didn't involve a provider change. Rows are matched by start
+time because a team cannot play two events at once, and keeping the original UID
+preserves the `transactions.event_id` and `budget_event_contributions` links.
+Pruning skips money-linked rows, because `budget_event_contributions` cascades
+on delete and would double-bill on the next push.
+
+**Tests.** Added `filmService`, `PlayerFilmStats`, `useSoccerYear.activeSeason`,
+`parentSeason`, `useSchedule.mergeSavedEvents` and Google classifier cases.
+The full Vitest suite passes: 84 files, 1,216 tests. The first commit was also
+verified on its own (1,209 tests). The classifier was checked against the live
+Google feed.
+
+**Rollback.** Revert 3161127 and then bae8fba, and undeploy `ical-proxy`. The
+migrations are additive: the new tables and columns can stay, or be dropped
+manually. The dedupe script is not reversible once committed. Take a
+`team_events` backup before running it.
+
+---
+
 ## 2026-08-21 — Sponsors, reconciliation dates, opponent cards, and phone panels (8ab689f..4c466db)
 
 **Commits.**

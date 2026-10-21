@@ -10,6 +10,42 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-21 — Game film, active season, and Google Calendar feeds (bae8fba..3161127)
+
+**Scope.** Two deliverables: game film integration (film site access, per-player
+film stats, scorekeeper role, team active season) and Google Calendar schedule
+support with history retention. 44 files, ~1,850 insertions.
+
+**Decision: hand out film keys per role, never passwords.** The film site is
+end-to-end encrypted with team, coach and scorekeeper passwords. The database
+stores the derived keys once per team and gives each signed-in user only the keys
+their role allows. Leaving the app's role then also ends film access.
+
+**Decision: scorekeeper is not a staff role.** Many scorekeepers are parents.
+Making the role staff would replace their parent page with the staff app, so it
+grants nothing in this app beyond opening the film.
+
+**Decision: proxy calendar feeds server-side.** Google does not allow browsers to
+read its calendar feeds directly. A small Supabase function fetches them instead,
+and it only ever returns calendar data.
+
+**Decision: the calendar is the source of truth from today forward; the database
+keeps history.** Upcoming games removed from the calendar are deleted, but past
+games and any game with expenses or budget pushes are never removed. Feed-change
+duplicates are matched by start time, so expense links survive a provider switch.
+
+**Risk.** Five migrations must run before deploy (game film, film games, keeper
+accounts, player season stats, team active season). The `ical-proxy` edge function
+must be deployed, or Google feeds keep failing. A one-off script removes the
+duplicate events created by the 2026-10-21 feed switch, keeping the original rows.
+It has not been run yet. Film stats come from the separate dfc-game-film tool;
+until it writes them, the stats panels show nothing.
+
+**Open.** Run the dedupe script after checking its preview. Deploy `ical-proxy`.
+Run the five migrations.
+
+---
+
 ## 2026-08-21 — Sponsors, reconciliation dates, opponent cards, and phone panels (8ab689f..4c466db)
 
 **Scope.** Four deliverables: transaction cleared-date split, sponsor directory,

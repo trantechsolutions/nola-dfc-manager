@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronRight, ChevronLeft, CheckCircle2, Plus, Users, Calendar, DollarSign, Sparkles, X } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
+import { fetchIcs } from '../../utils/fetchIcs';
 
 const STEPS = [
   { id: 'team', label: 'Team Info', icon: Users },
@@ -54,8 +55,7 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
       return;
     }
     try {
-      const response = await fetch(icalUrl);
-      const text = await response.text();
+      const text = await fetchIcs(icalUrl);
       setIcalValid(text.includes('BEGIN:VCALENDAR'));
     } catch {
       setIcalValid(false);
