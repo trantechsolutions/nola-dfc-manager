@@ -10,6 +10,24 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-22 — Phone-ready layout, and "Balance" (d6f11bd..b981b70)
+
+The app now works properly on a phone, which is where most families open it.
+
+- **Tabs stay in reach.** On your child's page, the schedule and the team pages,
+  the row of tabs (for example Payments, Paperwork, Details) stays at the top of
+  the screen as you scroll, so switching never means scrolling back up. On the
+  schedule, the month you are looking at stays in view too.
+- **Easier to read and tap.** Lists use the full width of the screen, buttons
+  are bigger, and typing in a form no longer makes an iPhone zoom in.
+- **Paying from your phone is simpler.** The payment card now has one large
+  "Pay" button with the amount on it, and a "QR Code" button beside it.
+- **Coaches on the sideline** see each player's paperwork status and a "Call"
+  link for a parent, right in the roster.
+- **"Book Balance" is now just "Balance"** in the Money section.
+
+---
+
 ## 2026-10-22 — An app for parents and coaches (3fb8f43..918423d)
 
 The app has been rebuilt around the people who open it most: parents and
