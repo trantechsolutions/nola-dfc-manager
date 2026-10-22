@@ -226,7 +226,7 @@ export default {
   },
 
   bookBalance: {
-    title: 'Balance de Libros',
+    title: 'Balance',
     subtitle: 'Compara lo que dice el libro mayor con lo que realmente tienes.',
     howItWorks: 'Cómo funciona',
     step1: 'Ingresa el saldo real de cada cuenta — lo que ves en tu app bancaria, Venmo o efectivo en mano.',

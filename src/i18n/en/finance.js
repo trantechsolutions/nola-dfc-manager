@@ -226,7 +226,7 @@ export default {
   },
 
   bookBalance: {
-    title: 'Book Balance',
+    title: 'Balance',
     subtitle: 'Compare what your ledger says against what you actually have.',
     howItWorks: 'How it works',
     step1: 'Enter the real balance for each account — what you see in your bank app, Venmo, or cash on hand.',
