@@ -55,6 +55,13 @@ export default function PlayerChecklistCard({
     [parentItems, responses, forms],
   );
 
+  const [todoItems, doneItems] = useMemo(() => {
+    const todo = [];
+    const done = [];
+    parentItems.forEach((item) => (isItemSatisfied(item, responses[item.key], forms) ? done : todo).push(item));
+    return [todo, done];
+  }, [parentItems, responses, forms]);
+
   // A linked form writes to its own tables, not checklist_responses, so the
   // item only re-reads as done once the player record is refetched.
   const onFormCompleted = () => onRefresh?.();
@@ -78,12 +85,14 @@ export default function PlayerChecklistCard({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
         <ListChecks size={18} className="shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-foreground">{checklist.title || t('checklist.parentTitle')}</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="truncate text-base font-semibold text-foreground">
+            {checklist.title || t('checklist.parentTitle')}
+          </p>
+          <p className="text-sm text-muted-foreground">
             {t('checklist.progress', { done: progress.requiredDone, total: progress.requiredTotal })}
           </p>
         </div>
@@ -107,32 +116,49 @@ export default function PlayerChecklistCard({
           outstanding" while optional rows sit unticked below would read as a
           contradiction. Say which kind of done it is. */}
       {progress.complete && (
-        <p className="flex items-center gap-2 border-b border-border bg-success/10 px-4 py-2 text-xs font-semibold text-success">
+        <p className="flex items-center gap-2 border-b border-border bg-success/10 px-4 py-2.5 text-sm font-semibold text-success">
           <Check size={13} />
           {progress.outstanding.length === 0 ? t('checklist.parentAllDone') : t('checklist.parentRequiredDone')}
         </p>
       )}
 
-      <ul className="divide-y divide-border">
-        {parentItems.map((item) => (
-          <ChecklistItemRow
-            key={item.key}
-            t={t}
-            item={item}
-            response={responses[item.key]}
-            forms={forms}
-            player={player}
-            clubId={clubId}
-            teamId={teamId}
-            seasonId={seasonId}
-            user={user}
-            isReadOnly={isReadOnly}
-            showToast={showToast}
-            onSave={saveResponse}
-            onFormCompleted={onFormCompleted}
-          />
+      {/* What is left to do comes first; finished items drop below under
+          their own heading, so a parent scanning the card sees their work
+          before their history. Order within each group is the checklist's. */}
+      {[
+        { id: 'todo', label: t('checklist.groupTodo'), items: todoItems },
+        { id: 'done', label: t('checklist.groupDone'), items: doneItems },
+      ]
+        .filter((group) => group.items.length > 0)
+        .map((group) => (
+          <section key={group.id} aria-label={group.label}>
+            {todoItems.length > 0 && doneItems.length > 0 && (
+              <h3 className="border-b border-border bg-muted px-4 py-2 text-sm font-semibold text-muted-foreground">
+                {group.label} <span className="tabular-nums">({group.items.length})</span>
+              </h3>
+            )}
+            <ul className="divide-y divide-border">
+              {group.items.map((item) => (
+                <ChecklistItemRow
+                  key={item.key}
+                  t={t}
+                  item={item}
+                  response={responses[item.key]}
+                  forms={forms}
+                  player={player}
+                  clubId={clubId}
+                  teamId={teamId}
+                  seasonId={seasonId}
+                  user={user}
+                  isReadOnly={isReadOnly}
+                  showToast={showToast}
+                  onSave={saveResponse}
+                  onFormCompleted={onFormCompleted}
+                />
+              ))}
+            </ul>
+          </section>
         ))}
-      </ul>
     </div>
   );
 }
@@ -232,9 +258,7 @@ function ChecklistItemRow({
 
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <p
-            className={`text-sm font-semibold ${satisfied ? 'text-muted-foreground line-through' : 'text-foreground'}`}
-          >
+          <p className={`text-base font-semibold ${satisfied ? 'text-muted-foreground' : 'text-foreground'}`}>
             {item.label}
           </p>
           {!item.required && <Badge tone="secondary">{t('checklist.optional')}</Badge>}
@@ -246,9 +270,9 @@ function ChecklistItemRow({
           )}
         </div>
 
-        {item.description && <p className="text-xs leading-relaxed text-muted-foreground">{item.description}</p>}
+        {item.description && <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>}
         {item.dueDate && !satisfied && (
-          <p className="text-xs text-muted-foreground">{t('checklist.dueOn', { date: item.dueDate })}</p>
+          <p className="text-sm text-muted-foreground">{t('checklist.dueOn', { date: item.dueDate })}</p>
         )}
 
         {/* A linked-form item is completed by finishing the form itself, so it

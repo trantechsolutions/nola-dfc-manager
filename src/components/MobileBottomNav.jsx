@@ -1,95 +1,72 @@
-import { LayoutDashboard, Users, Calendar, Plus, ReceiptText, ListChecks } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { useNavigation } from '../context/NavigationContext';
+import { useDestinations } from '../hooks/useDestinations';
+import { useAttention } from '../hooks/useAttention';
+import { tabTarget } from '../utils/navMemory';
+import { TabBadge } from './layout/AppHeader';
 import { usePanelRoute } from '../hooks/usePanelRoute';
 import { PANELS } from '../utils/panelRoute';
 
+/**
+ * Phone tab bar — the same destinations as the header tabs, under the thumb.
+ * A parent gets three; a team manager up to five. Club admin pages live in
+ * Manage rather than in a strip of their own, so the bar is one row for
+ * everyone.
+ */
 export default function MobileBottomNav() {
-  const {
-    seasonNavItems,
-    teamNavItems,
-    effectiveIsStaff,
-    currentView,
-    navigate,
-    canEditLedger,
-    isClubAdmin,
-    clubNavItems,
-    singleTeam,
-  } = useNavigation();
+  const { navigate, canEditLedger, effectiveIsStaff } = useNavigation();
+  const { destinations, active } = useDestinations();
+  const { badges } = useAttention();
   const { t } = useT();
-  // The panel renders app-wide, so the FAB can open it from any route without
-  // navigating away first — it just adds the panel to the URL it is already on.
+  // The panel renders app-wide, so the button can open it from any route
+  // without navigating away first — it just adds the panel to the URL.
   const { openPanel } = usePanelRoute();
+
+  // Recording a payment is the one write a team manager does from the
+  // sideline; it floats where money is on screen, and nowhere else.
+  const showAdd = canEditLedger && effectiveIsStaff && (active?.id === 'home' || active?.id === 'money');
 
   return (
     <>
-      {/* Club strip -- only visible to club admins, sits above the team bar */}
-      {isClubAdmin && clubNavItems.length > 0 && (
-        <div className="md:hidden fixed bottom-20 left-0 right-0 bg-sidebar border-t border-sidebar-border h-11 flex items-center z-40">
-          <span className="text-xs font-bold text-sidebar-muted px-3 shrink-0">{t('common.club')}</span>
-          <div className="flex items-center flex-1 justify-around pr-2">
-            {clubNavItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => navigate(`/${item.id}`)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-md transition-colors ${
-                  currentView === item.id
-                    ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent'
-                }`}
-              >
-                <item.icon size={13} strokeWidth={currentView === item.id ? 2.5 : 2} />
-                <span className="text-xs font-semibold">{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+      {showAdd && (
+        <button
+          type="button"
+          onClick={() => openPanel(PANELS.TX)}
+          className="fixed bottom-[calc(var(--app-tabbar-h)+env(safe-area-inset-bottom)+1rem)] right-4 z-[1030] grid h-14 w-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-md transition-transform active:scale-95 md:hidden"
+          aria-label={t('nav.addTransaction')}
+        >
+          <Plus size={24} strokeWidth={2.5} />
+        </button>
       )}
 
-      {/* Team bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border h-20 flex items-center justify-around px-2 z-50">
-        {!singleTeam && isClubAdmin && clubNavItems.length > 0 && (
-          <span className="absolute top-1 left-1/2 -translate-x-1/2 text-xs font-bold text-muted-foreground pointer-events-none">
-            Team
-          </span>
-        )}
-        {(effectiveIsStaff
-          ? [
-              { id: 'dashboard', label: t('nav.seasonOverview'), icon: LayoutDashboard },
-              { id: 'finance/ledger', label: t('nav.ledger'), icon: ReceiptText },
-              // Plus button goes here (rendered separately below)
-              { id: 'people', label: t('nav.players'), icon: Users },
-              { id: 'schedule', label: t('nav.schedule'), icon: Calendar },
-            ]
-          : // Three fits comfortably here; the staff bar is already full at four
-            // plus the add-transaction button, which is why it stays as it is.
-            [
-              { id: 'dashboard', label: t('nav.myPlayer'), icon: Users },
-              { id: 'checklist', label: t('nav.checklist'), icon: ListChecks },
-              { id: 'schedule', label: t('nav.schedule'), icon: Calendar },
-            ]
-        ).map((item) => {
-          const isActive = currentView === item.id;
+      <nav
+        aria-label="Main"
+        className="app-tabbar fixed inset-x-0 bottom-0 z-[1030] flex border-t border-border bg-card md:hidden"
+      >
+        {destinations.map((dest) => {
+          const isActive = active?.id === dest.id;
           return (
             <button
-              key={item.id}
-              onClick={() => navigate(`/${item.id}`)}
-              className={`flex flex-col items-center gap-1 flex-1 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}
+              key={dest.id}
+              type="button"
+              onClick={() => navigate(tabTarget(dest, active?.id))}
+              aria-current={isActive ? 'page' : undefined}
+              className={`relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 text-xs font-semibold ${
+                isActive ? 'text-primary' : 'text-muted-foreground'
+              }`}
             >
-              <item.icon size={20} strokeWidth={isActive ? 3 : 2} />
-              <span className="text-xs font-semibold">{item.label}</span>
+              {isActive && (
+                <span className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-primary" aria-hidden="true" />
+              )}
+              <span className="relative">
+                <dest.icon size={22} strokeWidth={isActive ? 2.4 : 1.8} />
+                <TabBadge value={badges[dest.id]} t={t} floating />
+              </span>
+              <span className="max-w-full truncate px-1">{dest.label}</span>
             </button>
           );
         })}
-        {canEditLedger && effectiveIsStaff && (
-          <button
-            onClick={() => openPanel(PANELS.TX)}
-            className="mb-10 bg-primary text-primary-foreground p-4 rounded-full shadow-md border-4 border-card active:scale-90 transition-transform"
-            aria-label="Add transaction"
-          >
-            <Plus size={24} strokeWidth={3} />
-          </button>
-        )}
       </nav>
     </>
   );

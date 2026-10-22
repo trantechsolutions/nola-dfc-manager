@@ -26,6 +26,72 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-10-22 — An app for parents and coaches (3fb8f43..918423d)
+
+**Commits.**
+
+```
+918423d feat: redesign the app around parents and coaches
+3fb8f43 chore: add agent skill configuration docs
+```
+
+**Touched.**
+
+- Shell: `AppShell`, `AppHeader` (team/season switcher, destination tabs,
+  account menu, `TabBadge`), `ContentHeader` (title + sibling-page pills, no
+  breadcrumbs), `AppFooter`, `MobileBottomNav` (one tab bar, add-transaction
+  button on Home/Money only). Removed `AppSidebar`, `LayoutContext`,
+  `useSidebarState` and its test.
+- Navigation: `utils/navDestinations.js` regroups the role/permission-filtered
+  nav items into home/schedule/team/money/manage; `hooks/useDestinations.js`;
+  `utils/navMemory.js` (per-destination last page, sessionStorage).
+- Theme: `utils/teamColor.js` derives fill, edge and AA accent variants per
+  theme; `index.css` palette (chalk neutrals, `--primary` from team colour,
+  `--team`/`--team-edge`), shell CSS rewritten from the AdminLTE grid;
+  `tailwind.config.js` wraps every token in `color-mix(... <alpha-value> ...)`
+  and adds `font-numeral` (Big Shoulders Display, new dependency
+  `@fontsource-variable/big-shoulders-display`).
+- Pages: `NextMatchCard`, `AttentionStrip` + `hooks/useAttention.js` (parent
+  paperwork/balance, staff fees dot), `ScheduleView` (month groups, sticky
+  headings, `EventRow`, `ScoreChip`, `ScoreEditor`, add-to-calendar,
+  subscribe), `ParentView` (single column, season summary, plain tabs),
+  `TeamOverviewView` (`GlanceRow` summary), `PlayerChecklistCard` (to-do above
+  done), `JerseyBadge` numerals.
+- Data: `App.jsx` exposes `scheduleLoading` and `handleTeamEventScore`;
+  `scheduleService.updateTeamEventScore` and `scoreFor`/`scoreAgainst` mapping;
+  `useSchedule` and calendar views use `hour: 'numeric'`.
+- Utilities: `utils/ics.js` (single-event .ics, webcal subscribe URL),
+  `utils/roleLabel.js`. i18n keys added to `nav`, `people` (`parent`,
+  `overview`, `roles`) and `checklist` in en and es.
+- Dev-only: `preview.html` + `src/preview/` (sample data, no auth; not a
+  Rollup input). `DESIGN.md` decision log updated.
+
+**Schema/API.** New migration `sql/event_scores_migration.sql`: nullable
+`team_events.score_for` / `score_against` (smallint, 0–99 check). Existing
+`team_events` RLS covers reads (team + guardians) and writes (team staff).
+Calendar sync upserts named columns only, so scores survive re-syncs. Not yet
+applied.
+
+**Rationale.** Destinations are a grouping over existing routes rather than new
+routes, so permissions, deep links and the panel URLs are untouched. Team-colour
+handling is computed in JS once per team change and published as CSS variables,
+so components read plain tokens. The opacity fix is made in the Tailwind
+config, not per call site, which repairs all existing uses at once.
+
+**Tests.** 1,243 tests across 89 files pass. Added `navDestinations`,
+`teamColor`, `ics`, `navMemory` and `roleLabel` unit tests; rewrote
+`AppShell.test.jsx`; updated `ParentView` and `TeamOverviewView` tests for the
+new layout. Production build passes. Screens were reviewed with Playwright
+screenshots of the preview at 390px and 1280px, in light and dark, with white
+and gold team colours.
+
+**Rollback.** `git revert 918423d` restores the AdminLTE shell and pages and
+removes the font dependency (run `npm install` afterwards). The scores migration
+is additive; drop the two columns and the `team_events_score_range` constraint
+to reverse it. `3fb8f43` is docs only.
+
+---
+
 ## 2026-10-21 — Game film, active season, and Google Calendar feeds (bae8fba..3161127)
 
 **Commits.**

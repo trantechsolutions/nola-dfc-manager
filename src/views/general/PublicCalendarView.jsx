@@ -88,8 +88,8 @@ async function fetchTeamEvents(team) {
             day: 'numeric',
             year: 'numeric',
           }),
-          displayTime: jsStart.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
-          displayEndTime: jsEnd ? jsEnd.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : null,
+          displayTime: jsStart.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }),
+          displayEndTime: jsEnd ? jsEnd.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : null,
           start: jsStart.toISOString(),
           end: jsEnd ? jsEnd.toISOString() : null,
         };

@@ -287,6 +287,9 @@ function App() {
     syncCalendar,
     loadedFor: scheduleLoadedFor,
   } = useSchedule(user, effectiveTeam);
+  // Until the feed for the team on screen has landed, "no upcoming events" is
+  // unknown rather than true — Home shows a placeholder instead of saying so.
+  const scheduleLoading = scheduleLoadedFor !== (effectiveTeam?.id || '');
 
   // ── PARENT SEASON ──
   // Hold the parent page on the loading screen until their team's active season is the one shown and its
@@ -570,6 +573,12 @@ function App() {
     updateTeamEvent(dbEventId, { eventType: newType, typeLocked: true });
   };
 
+  // A blank field clears the score, so a mistyped result can be taken back.
+  const handleTeamEventScore = async (dbEventId, scoreFor, scoreAgainst) => {
+    await supabaseService.updateTeamEventScore(dbEventId, scoreFor, scoreAgainst);
+    updateTeamEvent(dbEventId, { scoreFor, scoreAgainst });
+  };
+
   // Returns the in-band result so the expense form can surface a save failure
   // instead of silently closing.
   const handleSaveExpense = async (txData) => await handleSaveTransaction(txData);
@@ -817,10 +826,12 @@ function App() {
 
   const scheduleContextValue = {
     events,
+    scheduleLoading,
     blackoutDates,
     toggleBlackout,
     handleSyncCalendar,
     handleTeamEventTypeChange,
+    handleTeamEventScore,
     handleSaveExpense,
     handleToggleCleared,
     handleDeleteExpense,

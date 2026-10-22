@@ -63,6 +63,46 @@ function ComplianceBar({ label, count, total, emphasis = false }) {
   );
 }
 
+/** One line of the season-at-a-glance card: label, figure, optional bar, link. */
+function GlanceRow({ label, value, valueClass, detail, bar, legend, action }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 p-5">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
+          <span className={`text-2xl font-bold tracking-tight tabular-nums ${valueClass || 'text-foreground'}`}>
+            {value}
+          </span>
+          {detail && <span className="text-sm text-muted-foreground">{detail}</span>}
+        </p>
+        {bar && (
+          <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-muted">
+            {bar
+              .filter((seg) => seg.pct > 0)
+              .map((seg, i) => (
+                <div key={i} className={`h-full ${seg.className}`} style={{ width: `${seg.pct}%` }} title={seg.title} />
+              ))}
+          </div>
+        )}
+        {legend && <p className="mt-2 flex flex-wrap items-center gap-y-1 text-sm text-muted-foreground">{legend}</p>}
+      </div>
+      {action && (
+        <button
+          type="button"
+          onClick={action.onClick}
+          className="shrink-0 rounded-md border border-border px-3.5 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+        >
+          {action.label}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function LegendDot({ className = '' }) {
+  return <span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${className}`} aria-hidden="true" />;
+}
+
 export default function TeamOverviewView({
   teamId,
   players,
@@ -246,27 +286,8 @@ export default function TeamOverviewView({
     { id: 'roster', label: t('overview.roster'), icon: UsersRound },
   ];
 
-  // Health summary line — one terse status string for the page header.
-  const healthSummary = useMemo(() => {
-    const bits = [];
-    bits.push(`${players.length} ${tp('common.player', players.length)}`);
-    if (canViewFinancials && baseFee > 0 && players.length > 0) {
-      bits.push(`${paymentStats.collectionRate}% collected`);
-      if (paymentStats.totalOutstanding > 0) {
-        bits.push(`${formatMoney(paymentStats.totalOutstanding)} outstanding`);
-      }
-    }
-    const docsMissing = complianceStats.total - complianceStats.fullyCompliant;
-    if (docsMissing > 0) bits.push(`${docsMissing} docs missing`);
-    return bits.join(' · ');
-  }, [players.length, canViewFinancials, baseFee, paymentStats, complianceStats, formatMoney, tp]);
-
   return (
     <div className="space-y-6">
-      {/* The shell's content header owns the page title and breadcrumb, and the
-          sidebar owns the season picker — this view only adds the health lede. */}
-      {healthSummary && <p className="-mt-1 text-sm text-muted-foreground">{healthSummary}</p>}
-
       {/* ── Game film: the team's film site, opened with this account's access ── */}
       <GameFilmCard teamId={teamId} />
 
@@ -279,7 +300,7 @@ export default function TeamOverviewView({
           const buffer = selectedSeasonData?.bufferPercent ?? 0;
           const gap = projectedSpend - projIncome;
           return (
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 border border-amber-300 dark:border-amber-700 border-dashed rounded-lg p-4 md:p-5">
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-900/30 md:p-5">
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-amber-100 dark:bg-amber-900/50 rounded-lg shrink-0 mt-0.5">
                   <AlertCircle size={18} className="text-amber-600 dark:text-amber-400" />
@@ -289,7 +310,7 @@ export default function TeamOverviewView({
                     <p className="text-sm font-bold text-amber-800 dark:text-amber-200">
                       {t('overview.budgetDraftAlert')}
                     </p>
-                    <span className="text-xs font-bold bg-amber-200 dark:bg-amber-800 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full animate-pulse">
+                    <span className="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-800 dark:text-amber-200">
                       {t('overview.notFinalized')}
                     </span>
                   </div>
@@ -334,21 +355,25 @@ export default function TeamOverviewView({
         })()}
 
       {/* ── Tabs ── */}
-      <div className="flex gap-1 bg-muted rounded-lg p-1 w-fit">
-        {TABS.map((t) => (
+      <div role="tablist" className="flex gap-1 border-b border-border">
+        {TABS.map((tb) => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              tab === t.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            key={tb.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === tb.id}
+            onClick={() => setTab(tb.id)}
+            className={`relative -mb-px px-3 py-2.5 text-sm font-semibold transition-colors ${
+              tab === tb.id ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <t.icon size={14} />
-            {t.label}
+            {tb.label}
+            {tab === tb.id && (
+              <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary" aria-hidden="true" />
+            )}
           </button>
         ))}
       </div>
-
       {/* ════════════════ OVERVIEW TAB ════════════════ */}
       {tab === 'overview' && (
         <div className="space-y-5">
@@ -361,130 +386,97 @@ export default function TeamOverviewView({
             navigate={navigate}
           />
 
-          {/* ── KPI strip: AdminLTE small-boxes, tone carries the status ── */}
+          {/* ── Season at a glance ── three questions a coach asks most —
+              how much is in the bank, how much budget is left, who has paid —
+              each answered by its figure first, with the page that acts on it
+              beside it. Quiet rows rather than four loud tiles, so the
+              number that is actually off stands out by its colour alone. */}
           {canViewFinancials && (
-            <div className="-mb-5 grid grid-cols-1 gap-x-4 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Available Cash — overall holdings; pending shown as the sub-label */}
-              <SmallBox
+            <section
+              aria-label={t('overview.atAGlance', 'Season at a glance')}
+              className="divide-y divide-border rounded-lg border border-border bg-card"
+            >
+              <GlanceRow
+                label={t('overview.availableCash')}
                 value={formatMoney(teamBalance)}
-                label={
+                valueClass={teamBalance < 0 ? 'text-destructive' : undefined}
+                detail={
                   pendingDelta !== 0
-                    ? `${t('overview.availableCash')} · ${pendingDelta < 0 ? '−' : '+'}${formatMoney(Math.abs(pendingDelta))} pending`
-                    : t('overview.availableCash')
+                    ? `${pendingDelta < 0 ? '−' : '+'}${formatMoney(Math.abs(pendingDelta))} ${t('overview.pending', 'pending')}`
+                    : null
                 }
-                icon={Wallet}
-                tone={teamBalance < 0 ? 'destructive' : 'accent'}
-                onClick={() => navigate('/finance/ledger')}
-                linkLabel={t('nav.ledger')}
+                action={{ label: t('nav.ledger'), onClick: () => navigate('/finance/ledger') }}
               />
-
-              {/* Budget Left — burn % rides along as the sub-label */}
-              <SmallBox
+              <GlanceRow
+                label={`${t('overview.remainingBudget')}${!isFinalized ? ` (${t('parent.est')})` : ''}`}
                 value={formatMoney(remainingBudget)}
-                label={`${t('overview.remainingBudget')}${!isFinalized ? ' (est.)' : ''}${
-                  projectedSpend > 0 ? ` · ${Math.round(spendPercentage)}% spent` : ''
-                }`}
-                icon={PiggyBank}
-                tone={
-                  remainingBudget < 0 || spendPercentage > 90
-                    ? 'destructive'
-                    : spendPercentage > 60
-                      ? 'warning'
-                      : 'success'
+                valueClass={remainingBudget < 0 ? 'text-destructive' : undefined}
+                detail={
+                  projectedSpend > 0
+                    ? `${t('overview.of', 'of')} ${formatMoney(projectedSpend)}, ${Math.round(spendPercentage)}% ${t('overview.spentShort', 'spent')}`
+                    : null
                 }
-                onClick={() => navigate('/finance/budget')}
-                linkLabel={t('nav.budget')}
-              />
-
-              {/* Season Fee — locked vs draft drives the tone */}
-              <SmallBox
-                value={formatMoney(baseFee)}
-                label={`${t('overview.seasonFeePlayer')} · ${isFinalized ? 'locked' : 'draft'}`}
-                icon={Receipt}
-                tone={isFinalized ? 'primary' : 'warning'}
-                onClick={() => navigate('/finance/budget')}
-                linkLabel={t('nav.budget')}
-              />
-
-              {/* Collection rate */}
-              <SmallBox
-                value={`${paymentStats.collectionRate}%`}
-                label={`${t('overview.collectionRate')} · ${paymentStats.paid.length}/${paymentStats.nonWaived.length} paid`}
-                icon={Users}
-                tone={
-                  paymentStats.collectionRate >= 90
-                    ? 'success'
-                    : paymentStats.collectionRate >= 60
-                      ? 'warning'
-                      : 'destructive'
+                bar={
+                  projectedSpend > 0
+                    ? [
+                        {
+                          pct: Math.min(100, spendPercentage),
+                          className:
+                            spendPercentage > 90
+                              ? 'bg-destructive'
+                              : spendPercentage > 60
+                                ? 'bg-warning'
+                                : 'bg-success',
+                        },
+                      ]
+                    : null
                 }
-                onClick={() => navigate('/people')}
-                linkLabel={t('nav.players')}
+                action={{ label: t('nav.budget'), onClick: () => navigate('/finance/budget') }}
               />
-            </div>
-          )}
-
-          {/* ── Payment status bar ── */}
-          {canViewFinancials && baseFee > 0 && players.length > 0 && (
-            <div className="bg-card rounded-lg border border-border shadow-sm p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-foreground text-sm">{t('overview.feeCollection')}</h3>
-                <span className="text-xs font-medium text-muted-foreground">
-                  {players.length} {tp('common.player', players.length)} · {formatMoney(paymentStats.totalCollected)}{' '}
-                  {t('overview.collected')}
-                </span>
-              </div>
-
-              {/* Stacked progress bar */}
-              <div className="h-3 bg-muted rounded-full overflow-hidden flex mb-3">
-                {paymentStats.paid.length > 0 && (
-                  <div
-                    className="h-full bg-emerald-500 transition-all duration-700"
-                    style={{ width: `${(paymentStats.paid.length / players.length) * 100}%` }}
-                    title={`${paymentStats.paid.length} paid`}
-                  />
-                )}
-                {paymentStats.outstanding.length > 0 && (
-                  <div
-                    className="h-full bg-amber-400 transition-all duration-700"
-                    style={{ width: `${(paymentStats.outstanding.length / players.length) * 100}%` }}
-                    title={`${paymentStats.outstanding.length} outstanding`}
-                  />
-                )}
-                {paymentStats.waived.length > 0 && (
-                  <div
-                    className="h-full bg-slate-300 transition-all duration-700"
-                    style={{ width: `${(paymentStats.waived.length / players.length) * 100}%` }}
-                    title={`${paymentStats.waived.length} waived`}
-                  />
-                )}
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="bg-muted rounded-lg p-3">
-                  <p className="text-lg font-bold text-success tabular-nums">{paymentStats.paid.length}</p>
-                  <p className="text-xs font-medium text-muted-foreground mt-0.5">{t('overview.paid')}</p>
-                  {paymentStats.totalCollected > 0 && (
-                    <p className="text-xs font-medium text-muted-foreground tabular-nums mt-0.5">
-                      {formatMoney(paymentStats.totalCollected)}
-                    </p>
-                  )}
-                </div>
-                <div className="bg-muted rounded-lg p-3">
-                  <p className="text-lg font-bold text-warning tabular-nums">{paymentStats.outstanding.length}</p>
-                  <p className="text-xs font-medium text-muted-foreground mt-0.5">{t('overview.outstanding')}</p>
-                  {paymentStats.totalOutstanding > 0 && (
-                    <p className="text-xs font-medium text-muted-foreground tabular-nums mt-0.5">
-                      {formatMoney(paymentStats.totalOutstanding)}
-                    </p>
-                  )}
-                </div>
-                <div className="bg-muted rounded-lg p-3">
-                  <p className="text-lg font-bold text-foreground tabular-nums">{paymentStats.waived.length}</p>
-                  <p className="text-xs font-medium text-muted-foreground mt-0.5">{t('overview.waived')}</p>
-                </div>
-              </div>
-            </div>
+              {baseFee > 0 && players.length > 0 && (
+                <GlanceRow
+                  label={t('overview.feeCollection')}
+                  value={formatMoney(paymentStats.totalCollected)}
+                  detail={`${t('overview.of', 'of')} ${formatMoney(paymentStats.totalOwed)}, ${formatMoney(baseFee)} ${t('overview.perPlayer', 'per player')}${isFinalized ? '' : ` (${t('parent.est')})`}`}
+                  bar={[
+                    {
+                      pct: (paymentStats.paid.length / players.length) * 100,
+                      className: 'bg-success',
+                      title: `${paymentStats.paid.length} ${t('overview.paid')}`,
+                    },
+                    {
+                      pct: (paymentStats.outstanding.length / players.length) * 100,
+                      className: 'bg-warning',
+                      title: `${paymentStats.outstanding.length} ${t('overview.outstanding')}`,
+                    },
+                    {
+                      pct: (paymentStats.waived.length / players.length) * 100,
+                      className: 'bg-slate-300 dark:bg-slate-600',
+                      title: `${paymentStats.waived.length} ${t('overview.waived')}`,
+                    },
+                  ]}
+                  legend={
+                    <>
+                      <LegendDot className="bg-success" /> {paymentStats.paid.length} {t('overview.paid').toLowerCase()}
+                      <LegendDot className="ml-3 bg-warning" /> {paymentStats.outstanding.length}{' '}
+                      {t('overview.outstanding').toLowerCase()}
+                      {paymentStats.totalOutstanding > 0 && ` (${formatMoney(paymentStats.totalOutstanding)})`}
+                      {paymentStats.waived.length > 0 && (
+                        <>
+                          <LegendDot className="ml-3 bg-slate-300 dark:bg-slate-600" /> {paymentStats.waived.length}{' '}
+                          {t('overview.waived').toLowerCase()}
+                        </>
+                      )}
+                    </>
+                  }
+                  action={
+                    outstandingPlayers.length > 0
+                      ? { label: t('overview.seeWhoOwes', 'See who owes'), onClick: () => setTab('roster') }
+                      : null
+                  }
+                />
+              )}
+            </section>
           )}
 
           {/* ── Account holdings ── */}
@@ -601,16 +593,16 @@ export default function TeamOverviewView({
         <div className="space-y-5">
           {/* Outstanding fees callout */}
           {canViewFinancials && outstandingPlayers.length > 0 && (
-            <div className="bg-gradient-to-r from-red-50 to-amber-50 dark:from-red-900/30 dark:to-amber-900/30 border border-red-200 dark:border-red-700 rounded-lg p-5 shadow-sm">
+            <div className="rounded-lg border border-border bg-card p-5">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-red-800 dark:text-red-200 text-sm flex items-center gap-2">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                   <AlertCircle size={16} className="text-red-500 dark:text-red-400" /> {t('overview.outstandingFees')}
                 </h3>
                 <span className="text-lg font-bold text-red-600 dark:text-red-400">
                   {formatMoney(paymentStats.totalOutstanding)}
                 </span>
               </div>
-              <p className="text-xs font-semibold text-red-600/70 dark:text-red-400/70 mb-3">
+              <p className="mb-3 text-sm text-muted-foreground">
                 {outstandingPlayers.length} {tp('common.player', outstandingPlayers.length)}{' '}
                 {t('overview.unpaidBalances')}
               </p>
@@ -621,13 +613,10 @@ export default function TeamOverviewView({
                       ? Math.round(((p.fin.baseFee - p.fin.remainingBalance) / p.fin.baseFee) * 100)
                       : 0;
                   return (
-                    <div
-                      key={p.id}
-                      className="flex items-center gap-3 bg-red-100 dark:bg-red-950/70 border border-red-200 dark:border-red-900 rounded-lg p-2.5"
-                    >
+                    <div key={p.id} className="flex items-center gap-3 rounded-lg bg-muted p-2.5">
                       <JerseyBadge number={p.jerseyNumber} size={32} color="red" />
                       <div className="flex-grow min-w-0">
-                        <p className="text-xs font-semibold text-red-900 dark:text-red-100 truncate">
+                        <p className="truncate text-sm font-semibold text-foreground">
                           {p.firstName} {p.lastName}
                         </p>
                         <div className="flex items-center gap-2 mt-1">

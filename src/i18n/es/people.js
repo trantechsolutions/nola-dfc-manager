@@ -50,6 +50,17 @@ export default {
   },
 
   parent: {
+    thisSeason: 'Esta temporada',
+
+    payNow: 'Pagar saldo',
+
+    openChecklist: 'Abrir lista',
+
+    tabPayments: 'Pagos',
+
+    tabPaperwork: 'Documentos',
+
+    tabDetails: 'Detalles',
     noPlayers: 'No se Encontraron Jugadores',
     noPlayersMsg:
       'No encontramos jugadores asociados con tu correo electrónico. Contacta al administrador del equipo para ser vinculado.',
@@ -116,6 +127,12 @@ export default {
   },
 
   overview: {
+    atAGlance: 'Resumen de la temporada',
+    pending: 'pendiente',
+    of: 'de',
+    spentShort: 'gastado',
+    perPlayer: 'por jugador',
+    seeWhoOwes: 'Ver quién debe',
     budgetDraftAlert: 'Presupuesto en Borrador',
     notFinalized: 'No Finalizado',
     estimatedFee: 'Cuota estimada:',
@@ -184,6 +201,9 @@ export default {
   },
 
   roles: {
+    superAdmin: 'Administrador de la app',
+    fundraiser: 'Recaudador',
+    scorekeeper: 'Anotador',
     clubAdmin: 'Admin del Club',
     clubManager: 'Director del Club',
     teamManager: 'Director del Equipo',

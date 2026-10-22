@@ -72,7 +72,7 @@ const toDisplayFields = (jsDate) => ({
     year: 'numeric',
   }),
   displayTime: jsDate.toLocaleTimeString(undefined, {
-    hour: '2-digit',
+    hour: 'numeric',
     minute: '2-digit',
   }),
   isoDate: jsDate.toISOString().split('T')[0],
