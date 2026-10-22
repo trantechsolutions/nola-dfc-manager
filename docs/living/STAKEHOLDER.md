@@ -10,6 +10,37 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-22 — An app for parents and coaches (3fb8f43..918423d)
+
+The app has been rebuilt around the people who open it most: parents and
+volunteer coaches, usually on a phone. Everything you could do before is still
+there; it is just easier to find and easier to read.
+
+- **Simpler navigation.** Instead of a long side menu, there are a few tabs
+  along the bottom of your phone (or the top of a computer): Home, Schedule,
+  Team, Money and Manage. Parents see only the three that matter to them.
+  Club and admin pages are all together under Manage.
+- **Your team's colours.** The app now takes on the selected team's colour, so
+  it feels like your club's app rather than a generic one.
+- **Home answers "when's the next game?" first.** A large card shows the next
+  game's day, time and place, with buttons for directions and for adding it to
+  your phone's calendar. The next few events are listed underneath.
+- **What needs doing comes first.** If a form is overdue or due this week, or a
+  balance is owed, a short list at the top of Home says so, with a button to
+  finish it. When nothing is due, it does not appear. The Checklist tab shows a
+  small number while anything is left to do.
+- **A clearer page for each child.** A parent's page now reads top to bottom:
+  your child, what is owed this season (with a Pay balance button), what
+  paperwork is missing, then payments, paperwork and details.
+- **A cleaner schedule.** Games are grouped by month, and the month stays in
+  view as you scroll. Each game can be added to your calendar, and a Subscribe
+  button keeps the whole team schedule in your phone's calendar. Past games can
+  now show the final score, entered by the team's staff.
+- **Coaches** get a single "season at a glance" summary of money in the bank,
+  budget left and fees collected, each with a link to the page that handles it.
+
+---
+
 ## 2026-10-21 — Game film, active season, and Google Calendar feeds (bae8fba..3161127)
 
 Two changes, both visible the next time you open the app.

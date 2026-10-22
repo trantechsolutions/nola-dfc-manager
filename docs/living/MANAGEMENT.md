@@ -10,6 +10,45 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-22 — An app for parents and coaches (3fb8f43..918423d)
+
+**Scope.** End-user redesign of the app shell and the four most-visited pages
+(Home for parents and coaches, Schedule, parent Checklist), plus a polish pass:
+attention strip, tab badges, calendar export and subscribe, game scores,
+matchday typeface, and a dev-only design preview. 58 files, ~3,700 insertions,
+~2,300 deletions. Agent-skill configuration docs added separately.
+
+**Decision: build for parents and coaches, not administrators.** The previous
+AdminLTE console layout showed every page to everyone in four groups that
+mirrored the data model. It is replaced by up to five task-based destinations;
+admin pages move under Manage. No URLs changed, so links and bookmarks keep
+working.
+
+**Decision: the team's colour is the accent.** It makes the app feel like each
+club's own. Team colours are picked freely by volunteers, so the app derives
+readable variants automatically; white or cream colours fall back to a default
+accent for buttons.
+
+**Decision: a second typeface, for numbers only.** Match dates, jersey numbers
+and scores use a condensed scoreboard face. This is a deliberate, recorded
+exception to the one-font rule in DESIGN.md; money stays in the main font.
+
+**Fixed along the way.** About 82 translucent colour tints across the app had
+never rendered because of how colours were configured; they now do, so some
+existing screens may look slightly different.
+
+**Risk.** Scores need one database migration (`event_scores_migration.sql`)
+before staff can save them; until then saving shows an error and nothing else
+is affected. Screens were reviewed only with sample data in a local preview,
+not against live accounts. The commit hook logged two discarded commit hashes
+to the in-app Update Log; those entries should be removed.
+
+**Open.** Run the scores migration. Remove the two stray Update Log entries.
+Continue the page-by-page pass: Team, Money (Budget, Ledger, Fundraising, Book
+Balance), Planner, then Manage.
+
+---
+
 ## 2026-10-21 — Game film, active season, and Google Calendar feeds (bae8fba..3161127)
 
 **Scope.** Two deliverables: game film integration (film site access, per-player
