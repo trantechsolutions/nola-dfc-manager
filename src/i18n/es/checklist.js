@@ -1,5 +1,7 @@
 export default {
   checklist: {
+    groupTodo: 'Pendiente',
+    groupDone: 'Hecho',
     // ── Compartido ──
     title: 'Lista de la Temporada',
     subtitle: '{{season}} · {{team}}',

@@ -32,12 +32,12 @@ export default function JerseyBadge({ number, size = 'md', className = '', color
         <path d="M15 2C15 2 17 6 20 6C23 6 25 2 25 2" stroke={c.stroke} strokeWidth="1.5" fill="none" />
         <text
           x="20"
-          y="29"
+          y="31"
           textAnchor="middle"
           fill={c.text}
-          fontSize={String(number).length > 2 ? '10' : '13'}
-          fontWeight="900"
-          fontFamily="system-ui, sans-serif"
+          fontSize={String(number).length > 2 ? '13' : '17'}
+          fontWeight="800"
+          fontFamily="'Big Shoulders Display Variable', system-ui, sans-serif"
         >
           {number ?? '?'}
         </text>

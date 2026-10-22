@@ -107,6 +107,15 @@ export const scheduleService = {
     if (error) throw error;
   },
 
+  // Columns from sql/event_scores_migration.sql. Null clears a score.
+  updateTeamEventScore: async (id, scoreFor, scoreAgainst) => {
+    const { error } = await supabase
+      .from('team_events')
+      .update({ score_for: scoreFor, score_against: scoreAgainst, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
   getTeamEvents: async (teamId) => {
     if (!teamId) return [];
     const { data, error } = await supabase
@@ -126,6 +135,9 @@ export const scheduleService = {
       eventType: e.event_type,
       typeLocked: e.type_locked || false,
       isCancelled: e.is_cancelled,
+      // Absent until sql/event_scores_migration.sql has run; null means no result yet.
+      scoreFor: e.score_for ?? null,
+      scoreAgainst: e.score_against ?? null,
     }));
   },
 

@@ -1,13 +1,12 @@
-// Smoke coverage for the AdminLTE shell: every chrome region renders, the
-// sidebar toggle drives the right mode per breakpoint, and nav clicks navigate
-// then dismiss the mobile drawer. The shell has no logic of its own worth
-// unit-testing in isolation — what matters is that the four grid regions and
-// the toggle wiring survive refactors.
+// Smoke coverage for the app shell: header, content and footer render, the
+// destination tabs and section pills agree on where the user is, and the
+// account menu owns sign-out. Destination grouping itself is unit-tested in
+// utils/navDestinations.test.js.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { LayoutDashboard, ReceiptText, Calendar } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, Calendar, FileSpreadsheet } from 'lucide-react';
 
 // `virtual:git-info` is aliased to src/__tests__/stubs/gitInfo.js in vitest.config.js.
 vi.mock('../../hooks/usePushNotifications', () => ({
@@ -27,19 +26,20 @@ const signOut = vi.fn();
 
 const navValue = {
   club: { id: 'c1', name: 'NOLA DFC' },
-  teams: [{ id: 't1', name: 'U12 Boys', ageGroup: 'U12', gender: 'Boys', tier: 'Premier' }],
+  teams: [{ id: 't1', name: 'U12 Boys', ageGroup: 'U12', gender: 'Boys', tier: 'Premier', colorPrimary: '#0a7c3e' }],
   selectedTeamId: 't1',
   setSelectedTeamId: vi.fn(),
   appNavItems: [],
   clubNavItems: [],
   seasonNavItems: [
     { id: 'dashboard', label: 'Season Overview', icon: LayoutDashboard, section: 'season' },
+    { id: 'finance/budget', label: 'Budget', icon: FileSpreadsheet, section: 'season' },
     { id: 'finance/ledger', label: 'Ledger', icon: ReceiptText, section: 'season' },
   ],
   teamNavItems: [{ id: 'schedule', label: 'Schedule', icon: Calendar, section: 'team' }],
   selectedSeason: '2025-26',
   setSelectedSeason: vi.fn(),
-  seasons: [{ id: '2025-26' }],
+  seasons: [{ id: '2025-26' }, { id: '2024-25' }],
   currentView: 'finance/ledger',
   navigate,
   user: { email: 'coach@example.com' },
@@ -58,20 +58,10 @@ const navValue = {
   singleTeam: false,
 };
 
-function setViewport(isDesktop) {
-  window.matchMedia = vi.fn().mockImplementation((query) => ({
-    matches: isDesktop,
-    media: query,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  }));
-}
-
-// The bottom tab bar duplicates several nav labels (it is `md:hidden`, but
-// jsdom applies no Tailwind), and the email shows in both the sidebar user
-// panel and the header menu — so region-scope every ambiguous query.
-const sidebar = (container) => within(container.querySelector('.app-sidebar'));
+// The header tabs and the phone tab bar are both in the DOM (jsdom applies no
+// Tailwind breakpoints), so region-scope every ambiguous query.
 const header = (container) => within(container.querySelector('.app-header'));
+const tabBar = (container) => within(container.querySelector('.app-tabbar'));
 
 function renderShell() {
   return render(
@@ -90,75 +80,64 @@ function renderShell() {
 describe('AppShell', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    window.localStorage.clear();
-    setViewport(true);
     resetScreenPanels();
   });
 
-  it('renders all four AdminLTE grid regions', () => {
+  it('renders the header, main content and footer', () => {
     const { container } = renderShell();
-    expect(container.querySelector('.app-sidebar')).toBeInTheDocument();
     expect(container.querySelector('.app-header')).toBeInTheDocument();
     expect(container.querySelector('.app-main')).toBeInTheDocument();
     expect(container.querySelector('.app-footer')).toBeInTheDocument();
     expect(screen.getByText('page body')).toBeInTheDocument();
   });
 
-  it('titles the content header from the active nav item and trails a breadcrumb', () => {
+  it('titles the page from the active nav item and lists its sibling pages', () => {
     renderShell();
     expect(screen.getByRole('heading', { name: 'Ledger' })).toBeInTheDocument();
-    const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
-    expect(within(crumbs).getByText('Home')).toBeInTheDocument();
-    expect(within(crumbs).getByText('U12 Boys')).toBeInTheDocument();
+    const pills = screen.getByRole('navigation', { name: /pages in this section/i });
+    expect(within(pills).getByRole('button', { name: 'Ledger' })).toHaveAttribute('aria-current', 'page');
+    expect(within(pills).getByRole('button', { name: 'Budget' })).not.toHaveAttribute('aria-current');
   });
 
-  it('marks the active sidebar entry as the current page', () => {
+  it('lights the destination the current page belongs to, in both tab sets', () => {
     const { container } = renderShell();
-    expect(sidebar(container).getByRole('button', { name: 'Ledger' })).toHaveAttribute('aria-current', 'page');
-    expect(sidebar(container).getByRole('button', { name: 'Schedule' })).not.toHaveAttribute('aria-current');
+    for (const tabs of [header(container), tabBar(container)]) {
+      expect(tabs.getByRole('button', { name: 'Money' })).toHaveAttribute('aria-current', 'page');
+      expect(tabs.getByRole('button', { name: 'Home' })).not.toHaveAttribute('aria-current');
+    }
   });
 
-  it('minifies the sidebar on desktop when the toggle is pressed', async () => {
+  it('opens the first page of a destination from its tab', async () => {
     const user = userEvent.setup();
     const { container } = renderShell();
-    expect(container.querySelector('.app-wrapper')).toHaveAttribute('data-sidebar', 'expanded');
-
-    await user.click(screen.getByRole('button', { name: /collapse sidebar/i }));
-    expect(container.querySelector('.app-wrapper')).toHaveAttribute('data-sidebar', 'collapsed');
-  });
-
-  it('opens the off-canvas drawer on mobile instead of minifying', async () => {
-    setViewport(false);
-    const user = userEvent.setup();
-    const { container } = renderShell();
-    expect(container.querySelector('.app-sidebar')).toHaveAttribute('data-open', 'false');
-
-    await user.click(screen.getByRole('button', { name: /collapse sidebar|expand sidebar/i }));
-    expect(container.querySelector('.app-sidebar')).toHaveAttribute('data-open', 'true');
-    expect(container.querySelector('.app-wrapper')).toHaveAttribute('data-sidebar', 'expanded');
-  });
-
-  it('navigates and closes the drawer when a nav entry is chosen', async () => {
-    setViewport(false);
-    const user = userEvent.setup();
-    const { container } = renderShell();
-
-    await user.click(screen.getByRole('button', { name: /collapse sidebar|expand sidebar/i }));
-    await user.click(sidebar(container).getByRole('button', { name: 'Schedule' }));
-
+    await user.click(tabBar(container).getByRole('button', { name: 'Schedule' }));
     expect(navigate).toHaveBeenCalledWith('/schedule');
-    expect(container.querySelector('.app-sidebar')).toHaveAttribute('data-open', 'false');
   });
 
-  it('signs out from the header account menu, not the sidebar', async () => {
+  it('signs out from the account menu', async () => {
     const user = userEvent.setup();
     const { container } = renderShell();
 
-    await user.click(header(container).getByRole('button', { name: /account menu/i }));
+    await user.click(header(container).getByRole('button', { name: /^account$/i }));
     expect(header(container).getByText('coach@example.com')).toBeInTheDocument();
-    await user.click(header(container).getByRole('button', { name: /logout/i }));
+    await user.click(header(container).getByRole('button', { name: /sign out/i }));
 
     expect(signOut).toHaveBeenCalled();
+  });
+
+  it('switches season from the team switcher', async () => {
+    const user = userEvent.setup();
+    const { container } = renderShell();
+
+    await user.click(header(container).getByRole('button', { name: /switch team or season/i }));
+    await user.click(header(container).getByRole('button', { name: /2024-25/ }));
+
+    expect(navValue.setSelectedSeason).toHaveBeenCalledWith('2024-25');
+  });
+
+  it('paints the selected team colour onto the document', () => {
+    renderShell();
+    expect(document.documentElement.style.getPropertyValue('--team-fill-light')).toBe('#0a7c3e');
   });
 
   it('stamps the build into the footer', () => {

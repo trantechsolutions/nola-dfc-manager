@@ -109,35 +109,26 @@ describe('ParentView — profile layout', () => {
 
   const nestingWarnings = () => errorSpy.mock.calls.filter((c) => String(c[0]).includes('validateDOMNesting'));
 
-  it('renders the identity rail: avatar, name, team and the key/value list', () => {
+  it('leads with the child, then a season summary of balance and paperwork', () => {
     renderParent();
 
     expect(screen.getByRole('heading', { name: 'Ada Lovelace' })).toBeInTheDocument();
-    // Jersey number stands in for the reference's avatar image.
-    expect(screen.getByText('7')).toBeInTheDocument();
+    // The jersey number stands in for an avatar.
+    expect(screen.getByLabelText(/7$/)).toHaveTextContent('7');
     expect(screen.getAllByText(/U12 Boys/).length).toBeGreaterThan(0);
 
-    // Scope to the rail's key/value list — the fee and balance also appear in
-    // the Account pane, so an unscoped query matches twice.
-    const rail = screen.getAllByRole('list')[0];
-    expect(within(rail).getByText('$500.00')).toBeInTheDocument();
-    expect(within(rail).getByText('$200.00')).toBeInTheDocument();
-    expect(within(rail).getByText('$300.00')).toBeInTheDocument();
+    // Scope to the summary — the fee also appears in the Payments pane's
+    // breakdown, so an unscoped query matches twice.
+    const summary = screen.getByRole('region', { name: /this season/i });
+    expect(within(summary).getByText('$500.00')).toBeInTheDocument();
+    expect(within(summary).getByText('$200.00')).toBeInTheDocument();
+    expect(within(summary).getByText('$300.00')).toBeInTheDocument();
     expect(nestingWarnings()).toEqual([]);
   });
 
-  // The rail is a summary, not a control surface — its call-to-action button
-  // only ever jumped to a tab already one click away in the tab strip.
-  it('keeps the rail informational, with no call-to-action button', () => {
+  it('opens on the Payments tab', () => {
     renderParent();
-
-    expect(screen.queryByRole('button', { name: /make a payment/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /view paperwork/i })).not.toBeInTheDocument();
-  });
-
-  it('opens on the Account tab', () => {
-    renderParent();
-    expect(screen.getByRole('tab', { name: /account/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: /payments/i })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: /paperwork/i })).toHaveAttribute('aria-selected', 'false');
   });
 
@@ -147,7 +138,7 @@ describe('ParentView — profile layout', () => {
 
     await user.click(screen.getByRole('tab', { name: /details/i }));
     expect(screen.getByRole('tab', { name: /details/i })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', { name: /account/i })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('tab', { name: /payments/i })).toHaveAttribute('aria-selected', 'false');
 
     await user.click(screen.getByRole('tab', { name: /paperwork/i }));
     expect(screen.getByRole('tab', { name: /paperwork/i })).toHaveAttribute('aria-selected', 'true');
@@ -155,8 +146,10 @@ describe('ParentView — profile layout', () => {
     expect(nestingWarnings()).toEqual([]);
   });
 
-  it('lists guardians in the About card', () => {
+  it('lists guardians on the Details tab', async () => {
+    const user = userEvent.setup();
     renderParent();
+    await user.click(screen.getByRole('tab', { name: /details/i }));
     expect(screen.getByText('Byron Lovelace')).toBeInTheDocument();
   });
 
@@ -180,7 +173,7 @@ describe('ParentView — how to pay', () => {
   it('lists a published account as a payment method', () => {
     renderParent({ accounts: [account()] });
 
-    expect(screen.getByText(/how to pay/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /how to pay/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /@TeamVenmo/ })).toBeInTheDocument();
   });
 

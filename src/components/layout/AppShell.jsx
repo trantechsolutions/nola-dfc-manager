@@ -1,28 +1,48 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
-import { LayoutContext } from '../../context/LayoutContext';
-import { useSidebarState } from '../../hooks/useSidebarState';
+import { useEffect, useRef } from 'react';
+import { useNavigation } from '../../context/NavigationContext';
 import { useScreenPanelActive } from '../../hooks/useScreenPanel';
-import AppSidebar from './AppSidebar';
+import { teamColorVars } from '../../utils/teamColor';
+import { rememberPage } from '../../utils/navMemory';
+import { useDestinations } from '../../hooks/useDestinations';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import ContentHeader from './ContentHeader';
 import MobileBottomNav from '../MobileBottomNav';
 
 /**
- * AppShell — AdminLTE `.app-wrapper`.
+ * AppShell — header, centred content column, and a bottom tab bar on phones.
  *
- * A named CSS grid (see `.app-wrapper` in index.css) places the sidebar,
- * header, main and footer. The sidebar minifies to an icon rail on desktop and
- * becomes an off-canvas drawer under 768px; the bottom tab bar is retained
- * below that breakpoint as a PWA quick-nav affordance.
+ * Built for the people who open the app most: parents and volunteer coaches,
+ * usually on a phone. Navigation is a handful of destinations (see
+ * utils/navDestinations.js) rather than a sidebar of every page, and admin
+ * surfaces sit inside the Manage destination instead of in chrome of their own.
+ *
+ * The selected team's colour is written onto the document root here, so every
+ * token that derives from it (--primary, the next-match card, the active tab)
+ * follows the team switcher — see utils/teamColor.js.
  *
  * On a phone, a panel presenting as a full screen replaces the app rather than
  * covering it, so the shell steps aside for the duration — see below.
  */
 export default function AppShell({ children, banner }) {
-  const { collapsed, setCollapsed, mobileOpen, setMobileOpen, toggleSidebar, closeMobile, desktop } = useSidebarState();
-  const location = useLocation();
+  const { teams = [], selectedTeamId, currentView } = useNavigation();
+  const { active } = useDestinations();
+  const activeId = active?.id;
+
+  // The page each destination was last left on, so its tab returns there.
+  useEffect(() => {
+    if (activeId) rememberPage(activeId, currentView);
+  }, [activeId, currentView]);
+
+  const selectedTeam = teams.find((team) => team.id === selectedTeamId) || teams[0] || null;
+  const teamColor = selectedTeam?.colorPrimary;
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const vars = teamColorVars(teamColor);
+    Object.entries(vars).forEach(([name, value]) => root.style.setProperty(name, value));
+    return () => Object.keys(vars).forEach((name) => root.style.removeProperty(name));
+  }, [teamColor]);
 
   // A full-screen panel is a screen, not an overlay. Hidden rather than merely
   // covered, the shell leaves the accessibility tree and stops painting a page
@@ -47,45 +67,24 @@ export default function AppShell({ children, banner }) {
     return () => cancelAnimationFrame(frame);
   }, [screenPanelOpen]);
 
-  // Navigating from inside the drawer must dismiss it, including on the
-  // routes that navigate programmatically rather than through a nav button.
-  useEffect(() => {
-    closeMobile();
-  }, [location.pathname, closeMobile]);
-
-  const layoutValue = useMemo(
-    () => ({ collapsed, setCollapsed, mobileOpen, setMobileOpen, toggleSidebar, closeMobile, desktop }),
-    [collapsed, setCollapsed, mobileOpen, setMobileOpen, toggleSidebar, closeMobile, desktop],
-  );
-
   return (
-    <LayoutContext.Provider value={layoutValue}>
-      <div
-        className="app-wrapper bg-canvas text-foreground"
-        data-sidebar={collapsed ? 'collapsed' : 'expanded'}
-        // `hidden` rather than unmounting: the panel is a different screen, but
-        // the one underneath should still be the way it was left.
-        hidden={screenPanelOpen}
-      >
-        <AppSidebar />
+    <div
+      className="app-wrapper bg-canvas text-foreground"
+      // `hidden` rather than unmounting: the panel is a different screen, but
+      // the one underneath should still be the way it was left.
+      hidden={screenPanelOpen}
+    >
+      <AppHeader />
+      {banner}
 
-        {/* Drawer scrim — mobile only; the sidebar itself sits above it. */}
-        {mobileOpen && (
-          <div className="fixed inset-0 z-[1037] bg-black/50 md:hidden" onClick={closeMobile} aria-hidden="true" />
-        )}
+      <main className="app-main">
+        <ContentHeader />
+        <div className="app-content">{children}</div>
+      </main>
 
-        <AppHeader />
+      <AppFooter />
 
-        <main className="app-main">
-          {banner}
-          <ContentHeader />
-          <div className="app-content">{children}</div>
-        </main>
-
-        <AppFooter />
-
-        <MobileBottomNav />
-      </div>
-    </LayoutContext.Provider>
+      <MobileBottomNav />
+    </div>
   );
 }

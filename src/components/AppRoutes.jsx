@@ -1,3 +1,5 @@
+import NextMatchCard from './NextMatchCard';
+import AttentionStrip from './AttentionStrip';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Suspense, lazy, useMemo, useState } from 'react';
 import { Settings } from 'lucide-react';
@@ -244,6 +246,7 @@ export default function AppRoutes({
     toggleBlackout,
     handleSyncCalendar,
     handleTeamEventTypeChange,
+    handleTeamEventScore,
     handleSaveExpense,
     handleToggleCleared,
     handleDeleteExpense,
@@ -540,53 +543,64 @@ export default function AppRoutes({
             <Route
               path="/dashboard"
               element={
-                effectiveIsStaff ? (
-                  <TeamOverviewView
-                    teamId={selectedTeam?.id}
-                    players={seasonalPlayers}
-                    archivedPlayers={archivedPlayers}
-                    teamBalance={teamBalance}
-                    totalExpenses={totalExpenses}
-                    formatMoney={formatMoney}
-                    selectedSeasonData={currentSeasonData}
-                    transactions={seasonalTransactions}
-                    calculatePlayerFinancials={calculatePlayerFinancials}
-                    selectedSeason={selectedSeason}
-                    canViewFinancials={can(PERMISSIONS.TEAM_VIEW_BUDGET) || can(PERMISSIONS.TEAM_VIEW_LEDGER)}
-                    compliance={compliance}
-                    onAddPlayer={() => {
-                      openPanel(PANELS.PLAYER_FORM);
-                    }}
-                    onEditPlayer={(p) => openPanel(PANELS.PLAYER_FORM, { id: p.id })}
-                    onViewPlayer={(p) => openPanel(PANELS.PLAYER, { id: p.id })}
-                    onToggleWaive={guardedAction((pId, state) => handleToggleWaiveFee(pId, selectedSeason, state), {
-                      action: 'toggle_waive_fee',
-                      tableName: 'players',
-                    })}
-                    accountMap={accountMap}
-                  />
-                ) : (
-                  <ParentView
-                    players={myPlayers}
-                    transactions={seasonalTransactions}
-                    calculatePlayerFinancials={calculatePlayerFinancials}
-                    formatMoney={formatMoney}
-                    teams={teams}
-                    seasons={seasons}
-                    selectedSeason={selectedSeason}
-                    setSelectedSeason={setSelectedSeason}
-                    currentSeasonData={currentSeasonData}
-                    clubId={club?.id}
-                    onRefresh={fetchData}
-                    showToast={showToast}
-                    showConfirm={showConfirm}
-                    user={user}
-                    accounts={accounts}
-                    isReadOnly={isReadOnly}
-                    compliance={compliance}
-                    scorekeeperTeamIds={scorekeeperTeamIds}
-                  />
-                )
+                // Home leads with the next match for everyone; the role-specific
+                // dashboard follows beneath it.
+                <div
+                  // A parent's Home is one reading column, card to payments;
+                  // staff get the full width for the season's numbers.
+                  className={`space-y-6 pt-4 md:pt-6 ${effectiveIsStaff ? '' : 'mx-auto max-w-3xl'}`}
+                >
+                  {/* Anything a parent owes leads, ahead of the match itself. */}
+                  {!effectiveIsStaff && <AttentionStrip />}
+                  <NextMatchCard />
+                  {effectiveIsStaff ? (
+                    <TeamOverviewView
+                      teamId={selectedTeam?.id}
+                      players={seasonalPlayers}
+                      archivedPlayers={archivedPlayers}
+                      teamBalance={teamBalance}
+                      totalExpenses={totalExpenses}
+                      formatMoney={formatMoney}
+                      selectedSeasonData={currentSeasonData}
+                      transactions={seasonalTransactions}
+                      calculatePlayerFinancials={calculatePlayerFinancials}
+                      selectedSeason={selectedSeason}
+                      canViewFinancials={can(PERMISSIONS.TEAM_VIEW_BUDGET) || can(PERMISSIONS.TEAM_VIEW_LEDGER)}
+                      compliance={compliance}
+                      onAddPlayer={() => {
+                        openPanel(PANELS.PLAYER_FORM);
+                      }}
+                      onEditPlayer={(p) => openPanel(PANELS.PLAYER_FORM, { id: p.id })}
+                      onViewPlayer={(p) => openPanel(PANELS.PLAYER, { id: p.id })}
+                      onToggleWaive={guardedAction((pId, state) => handleToggleWaiveFee(pId, selectedSeason, state), {
+                        action: 'toggle_waive_fee',
+                        tableName: 'players',
+                      })}
+                      accountMap={accountMap}
+                    />
+                  ) : (
+                    <ParentView
+                      players={myPlayers}
+                      transactions={seasonalTransactions}
+                      calculatePlayerFinancials={calculatePlayerFinancials}
+                      formatMoney={formatMoney}
+                      teams={teams}
+                      seasons={seasons}
+                      selectedSeason={selectedSeason}
+                      setSelectedSeason={setSelectedSeason}
+                      currentSeasonData={currentSeasonData}
+                      clubId={club?.id}
+                      onRefresh={fetchData}
+                      showToast={showToast}
+                      showConfirm={showConfirm}
+                      user={user}
+                      accounts={accounts}
+                      isReadOnly={isReadOnly}
+                      compliance={compliance}
+                      scorekeeperTeamIds={scorekeeperTeamIds}
+                    />
+                  )}
+                </div>
               }
             />
 
@@ -642,6 +656,7 @@ export default function AppRoutes({
                   onSyncCalendar={canEditSchedule ? handleSyncCalendar : null}
                   teamEvents={teamEvents}
                   onTypeChange={canEditSchedule ? handleTeamEventTypeChange : null}
+                  onScoreChange={canEditSchedule ? handleTeamEventScore : null}
                   transactions={seasonalTransactions}
                   onSaveExpense={canEditSchedule ? handleSaveExpense : null}
                   onToggleCleared={canEditSchedule ? handleToggleCleared : null}

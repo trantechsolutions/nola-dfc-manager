@@ -74,7 +74,7 @@ describe('TeamOverviewView', () => {
       responses: [{ playerId: 'p1', itemKey: 'uniform', completed: true }],
     });
 
-    await user.click(screen.getAllByRole('button', { name: /roster/i })[0]);
+    await user.click(screen.getByRole('tab', { name: /roster/i }));
 
     expect(screen.getByText(/Ada/)).toBeInTheDocument();
     expect(screen.getByText(/Grace/)).toBeInTheDocument();

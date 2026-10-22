@@ -7,6 +7,8 @@ import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary';
 import { registerServiceWorker } from './registerSW';
 import '@fontsource-variable/geist';
+// Matchday numerals only: dates, jersey numbers, scores — see DESIGN.md.
+import '@fontsource-variable/big-shoulders-display';
 import './index.css';
 
 registerServiceWorker();

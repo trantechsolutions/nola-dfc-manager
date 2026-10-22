@@ -50,6 +50,17 @@ export default {
   },
 
   parent: {
+    thisSeason: 'This season',
+
+    payNow: 'Pay balance',
+
+    openChecklist: 'Open checklist',
+
+    tabPayments: 'Payments',
+
+    tabPaperwork: 'Paperwork',
+
+    tabDetails: 'Details',
     noPlayers: 'No Players Found',
     noPlayersMsg:
       "We couldn't find any rostered players associated with your email address. Please contact a team manager to get linked.",
@@ -115,6 +126,12 @@ export default {
   },
 
   overview: {
+    atAGlance: 'Season at a glance',
+    pending: 'pending',
+    of: 'of',
+    spentShort: 'spent',
+    perPlayer: 'per player',
+    seeWhoOwes: 'See who owes',
     budgetDraftAlert: 'Budget is in Draft',
     notFinalized: 'Not Finalized',
     estimatedFee: 'Estimated season fee:',
@@ -183,6 +200,9 @@ export default {
   },
 
   roles: {
+    superAdmin: 'App admin',
+    fundraiser: 'Fundraiser',
+    scorekeeper: 'Scorekeeper',
     clubAdmin: 'Club Admin',
     clubManager: 'Club Manager',
     teamManager: 'Team Manager',

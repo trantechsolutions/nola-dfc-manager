@@ -1,31 +1,26 @@
 import { buildNumber, commitHash } from 'virtual:git-info';
-import { useNavigation } from '../../context/NavigationContext';
 import { PUB_NAME, PUB_URL } from '../../utils/constants';
 
 /**
- * AppFooter — AdminLTE `.app-footer`: attribution left, build stamp right.
+ * AppFooter — attribution and build stamp, kept quiet at the end of the page.
  * The build stamp comes from the `virtual:git-info` module (see vite.config.js)
- * so it can never drift from the deployed commit.
+ * so it can never drift from the deployed commit. Its bottom padding clears
+ * the phone tab bar (see `.app-footer` in index.css).
  */
 export default function AppFooter() {
-  const { club } = useNavigation();
-
   return (
-    // The extra mobile bottom padding clears the fixed tab bar (and the club
-    // strip stacked above it) so the footer is never buried underneath.
-    <footer className="app-footer flex flex-wrap items-center justify-between gap-2 border-t border-border bg-card px-4 pb-32 pt-3 text-xs text-muted-foreground md:py-3">
-      <span>
-        © {new Date().getFullYear()}{' '}
-        <span className="font-semibold text-foreground">
-          <a href={PUB_URL} title={`${PUB_NAME} Website`}>
+    <footer className="app-footer">
+      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 pt-3 text-xs text-muted-foreground md:px-6">
+        <span>
+          © {new Date().getFullYear()}{' '}
+          <a href={PUB_URL} title={`${PUB_NAME} Website`} className="font-semibold text-foreground">
             {PUB_NAME}
           </a>
         </span>
-        . All rights reserved.
-      </span>
-      <span className="font-mono">
-        build {buildNumber} · {commitHash}
-      </span>
+        <span className="tabular-nums">
+          build {buildNumber} · {commitHash}
+        </span>
+      </div>
     </footer>
   );
 }

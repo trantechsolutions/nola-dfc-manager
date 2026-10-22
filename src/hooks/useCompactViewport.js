@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 
-// Deliberately the same breakpoint the shell uses (see useSidebarState): a
-// panel should go full-screen at exactly the width where the sidebar collapses
-// into a drawer, so the two never disagree about what "mobile" means.
+// Deliberately the same breakpoint the shell uses (`md` in index.css): a panel
+// should go full-screen at exactly the width where the header tabs give way to
+// the bottom tab bar, so the two never disagree about what "mobile" means.
 const DESKTOP_QUERY = '(min-width: 768px)';
 
 const readCompact = () => (typeof window === 'undefined' ? false : !window.matchMedia(DESKTOP_QUERY).matches);

@@ -6,91 +6,96 @@
   html {
     @apply bg-background text-foreground font-sans antialiased;
   }
-  /* ── AdminLTE v4 / Bootstrap 5.3 palette ──────────────────────────────
-     Values are lifted verbatim from the stylesheet AdminLTE v4 ships, so the
-     app reads as the reference theme rather than an approximation of it:
+  /* ── Chalk & team colour ──────────────────────────────────────────────
+     The neutrals are deliberately quiet — chalk canvas, white cards, ink
+     text with a faint pitch-green cast — because the colour in this app
+     belongs to the team. --primary is not a brand constant: AppShell writes
+     the selected team's colour into --team-* (see utils/teamColor.js), and
+     --primary resolves to whichever variant holds AA on the active theme.
+     The fallbacks below only show before a team loads, and on the landing
+     bundle, which never sets a team.
 
-       #0d6efd primary   #198754 success   #0dcaf0 info/accent
-       #ffc107 warning   #dc3545 danger    #6c757d secondary
-
-     Two Bootstrap conventions worth knowing before editing:
-     · Accent (info) and warning take BLACK foregrounds, not white — that is
-       what `.text-bg-info` / `.text-bg-warning` do, and it is the only way
-       either passes contrast as a solid fill.
-     · Cards share the body background and separate by a translucent border,
-       not by a raised surface. AdminLTE v4 dropped v3's grey #f4f6f9 canvas,
-       so --canvas intentionally equals --background. Set it to #f8f9fa
-       (Bootstrap's tertiary-bg) if you ever want the v3 recessed look back. */
+     Functional hues (success / warning / destructive) stay conventional and
+     theme-invariant: a solid fill with its own foreground works on either
+     canvas. Warning takes a BLACK foreground — it fails as white-on-amber. */
   :root {
-    --background: #ffffff;
-    --foreground: #212529;
-    --canvas: #ffffff;
+    --background: #f6f7f5;
+    --foreground: #1c2421;
+    --canvas: #f6f7f5;
     --card: #ffffff;
-    --card-foreground: #212529;
+    --card-foreground: #1c2421;
     --popover: #ffffff;
-    --popover-foreground: #212529;
-    --primary: #0d6efd;
-    --primary-foreground: #ffffff;
-    --secondary: #e9ecef;
-    --secondary-foreground: #212529;
-    --muted: #e9ecef;
-    --muted-foreground: rgba(33, 37, 41, 0.75);
-    --accent: #0dcaf0;
-    --accent-foreground: #000000;
+    --popover-foreground: #1c2421;
+    --primary: var(--team-light, #23407a);
+    --primary-foreground: var(--team-light-foreground, #ffffff);
+    /* Large team-colour fills (next-match card, jersey badge) and their
+       outline — see teamPalette() for when the outline differs from the fill. */
+    --team: var(--team-fill-light, #23407a);
+    --team-foreground: var(--team-fill-light-foreground, #ffffff);
+    --team-edge: var(--team-edge-light, #23407a);
+    --secondary: #eceee9;
+    --secondary-foreground: #1c2421;
+    --muted: #eceee9;
+    --muted-foreground: #59625d;
+    --accent: #0e7490;
+    --accent-foreground: #ffffff;
     --success: #198754;
     --success-foreground: #ffffff;
     --warning: #ffc107;
     --warning-foreground: #000000;
     --destructive: #dc3545;
     --destructive-foreground: #ffffff;
-    --border: rgba(0, 0, 0, 0.175);
-    --input: #dee2e6;
-    --ring: #86b7fe;
-    --chart-1: #0d6efd;
-    --chart-2: #0dcaf0;
+    --border: #dde1db;
+    --input: #cfd5cd;
+    --ring: var(--primary);
+    --chart-1: var(--primary);
+    --chart-2: #0e7490;
     --chart-3: #198754;
     --chart-4: #ffc107;
     --chart-5: #6c757d;
-    --shadow-color: rgba(33, 37, 41, 0.075);
-    --radius: 0.375rem;
-    --calendar-today-bg: rgba(13, 110, 253, 0.1);
+    --shadow-color: rgba(28, 36, 33, 0.08);
+    --radius: 0.5rem;
+    --calendar-today-bg: color-mix(in srgb, var(--primary) 10%, transparent);
 
-    /* Sidebar — AdminLTE's dark rail. Identical in both themes by design:
-       against a white canvas it is the darker surface, against the dark
-       canvas (#212529) it is the lighter one, so it separates either way.
-       No .dark override below — these cascade into it. */
-    --sidebar: #343a40;
-    --sidebar-foreground: #c2c7d0;
-    --sidebar-muted: rgba(194, 199, 208, 0.7);
-    --sidebar-heading: #c5c9d2;
-    --sidebar-brand: #343a40;
-    --sidebar-primary: #0d6efd;
-    --sidebar-primary-foreground: #ffffff;
+    /* Sidebar tokens no longer drive the app chrome; they survive as the one
+       surface that is dark in both themes, which the landing page's
+       night-match hero relies on. */
+    --sidebar: #1f2724;
+    --sidebar-foreground: #c9d1cc;
+    --sidebar-muted: rgba(201, 209, 204, 0.7);
+    --sidebar-heading: #c9d1cc;
+    --sidebar-brand: #1f2724;
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
     --sidebar-accent: rgba(255, 255, 255, 0.1);
     --sidebar-accent-foreground: #ffffff;
     --sidebar-border: rgba(255, 255, 255, 0.15);
-    --sidebar-ring: #86b7fe;
+    --sidebar-ring: var(--primary);
   }
   .dark {
-    --background: #212529;
-    --foreground: #dee2e6;
-    --canvas: #212529;
-    --card: #212529;
-    --card-foreground: #dee2e6;
-    /* Dropdowns lift to tertiary-bg so they read above the page they cover. */
-    --popover: #2b3035;
-    --popover-foreground: #dee2e6;
-    --secondary: #343a40;
-    --secondary-foreground: #dee2e6;
-    --muted: #343a40;
-    --muted-foreground: rgba(222, 226, 230, 0.75);
-    --border: rgba(255, 255, 255, 0.15);
-    --input: #495057;
+    --background: #141917;
+    --foreground: #e3e8e4;
+    --canvas: #141917;
+    /* Must match DARK_SURFACE in utils/teamColor.js — the dark team tint is
+       tuned for contrast against this value. */
+    --card: #1a201d;
+    --card-foreground: #e3e8e4;
+    --popover: #212825;
+    --popover-foreground: #e3e8e4;
+    --primary: var(--team-dark, #9db4e0);
+    --primary-foreground: var(--team-dark-foreground, #1c2421);
+    --team: var(--team-fill-dark, #213659);
+    --team-foreground: var(--team-fill-dark-foreground, #ffffff);
+    --team-edge: var(--team-edge-dark, #213659);
+    --secondary: #252c29;
+    --secondary-foreground: #e3e8e4;
+    --muted: #252c29;
+    --muted-foreground: #a3aca7;
+    --accent: #5ec4d8;
+    --accent-foreground: #000000;
+    --border: rgba(255, 255, 255, 0.12);
+    --input: #3a423e;
     --shadow-color: rgba(0, 0, 0, 0.5);
-    --calendar-today-bg: rgba(13, 110, 253, 0.25);
-    /* The six brand/state hues are theme-invariant in Bootstrap 5.3 — a
-       solid #0d6efd fill with white text works on either canvas — so they
-       are deliberately NOT overridden here. */
   }
   * {
     border-color: var(--border);
@@ -102,30 +107,20 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   APP SHELL — AdminLTE v4 layout
+   APP SHELL — top bar, centred content, bottom tabs on phones
    ═══════════════════════════════════════════════════════════════════════
-   Metrics are lifted from AdminLTE v4's own stylesheet: a 250px sidebar
-   that minifies to 4.6rem, a 3.5rem brand block / header, and a named
-   CSS-grid wrapper. Everything here is structure only — colors resolve to
-   the app's design tokens (see @layer base above).
+   The app is used by parents and volunteer coaches far more than by club
+   admins, so the chrome is an app's, not a console's: one 3.5rem header
+   (team switcher, destination tabs from 768px up, account), a centred
+   content column, and a bottom tab bar below 768px. Admin surfaces live in
+   the Manage destination rather than in chrome of their own.
 
-   Grid areas:
-     ┌───────────┬───────────┐
-     │           │  header   │
-     │  sidebar  ├───────────┤
-     │           │   main    │
-     │           ├───────────┤
-     │           │  footer   │
-     └───────────┴───────────┘
+   Stacking order. The header and tab bar sit in the 1030s, above anything
+   Tailwind's z-0..z-50 scale can express — so overlays have to be given
+   explicit values in the same range or the chrome paints over them:
 
-   Stacking order. AdminLTE parks its chrome in the 1030s, which is above
-   anything Tailwind's z-0..z-50 scale can express — so overlays have to be
-   given explicit values in the same range or the header and the mobile tab
-   bar paint straight over them:
-
-     1030  .app-header
-     1037  mobile drawer scrim
-     1038  .app-sidebar
+     1029  impersonation banner (sticks under the header)
+     1030  .app-header, mobile tab bar
      1050  overlay panels (ResponsiveModal and the hand-rolled modals)
      1060  an overlay opened from inside another overlay
      1070  ConfirmModal — reachable from inside any of the above
@@ -133,167 +128,63 @@
    ═══════════════════════════════════════════════════════════════════════ */
 @layer components {
   .app-wrapper {
-    --lte-sidebar-w: 250px;
-    --lte-sidebar-mini-w: 4.6rem;
-    --lte-header-h: 3.5rem;
-    --lte-sidebar-current-w: var(--lte-sidebar-w);
-
-    display: grid;
-    grid-template-areas:
-      'lte-sidebar lte-header'
-      'lte-sidebar lte-main'
-      'lte-sidebar lte-footer';
-    grid-template-columns: var(--lte-sidebar-current-w) minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    --app-header-h: 3.5rem;
+    --app-tabbar-h: 4rem;
+    display: flex;
+    flex-direction: column;
     min-height: 100vh;
     min-height: 100dvh;
   }
 
   /* A panel presenting as a full screen replaces the app rather than covering
      it, so AppShell marks the shell hidden while one is up. Spelled out here
-     because the `display: grid` above outranks the browser's own [hidden]
+     because the `display: flex` above outranks the browser's own [hidden]
      rule, which would otherwise leave the shell on screen behind the panel. */
   .app-wrapper[hidden] {
     display: none;
   }
 
-  /* Minified ("sidebar-mini") state. The grid TRACK shrinks but the <aside>
-     is free to overflow it on hover — that is what lets the flyout expansion
-     overlay the content instead of shoving it sideways. */
-  .app-wrapper[data-sidebar='collapsed'] {
-    --lte-sidebar-current-w: var(--lte-sidebar-mini-w);
-  }
-
-  .app-sidebar {
-    grid-area: lte-sidebar;
-    position: sticky;
-    top: 0;
-    z-index: 1038;
-    align-self: start;
-    display: flex;
-    flex-direction: column;
-    width: var(--lte-sidebar-current-w);
-    height: 100vh;
-    height: 100dvh;
-    transition:
-      width 0.3s ease-in-out,
-      transform 0.3s ease-in-out;
-  }
-
   .app-header {
-    grid-area: lte-header;
     position: sticky;
     top: 0;
     z-index: 1030;
-    min-height: var(--lte-header-h);
+    height: var(--app-header-h);
   }
 
   .app-main {
-    grid-area: lte-main;
-    min-width: 0;
-  }
-
-  .app-footer {
-    grid-area: lte-footer;
-    min-height: 3rem;
-  }
-
-  /* Only the nav scrolls — brand block and user block stay pinned. */
-  .sidebar-wrapper {
     flex: 1 1 auto;
-    min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--sidebar-accent) transparent;
-  }
-  .sidebar-wrapper::-webkit-scrollbar {
-    width: 6px;
-  }
-  .sidebar-wrapper::-webkit-scrollbar-thumb {
-    background-color: var(--sidebar-accent);
-    border-radius: 3px;
+    width: 100%;
+    min-width: 0;
+    max-width: 72rem;
+    margin-inline: auto;
   }
 
-  /* Labels collapse to zero width in mini mode and animate back on hover. */
-  .sidebar-label {
-    white-space: nowrap;
-    transition:
-      opacity 0.2s ease-in-out,
-      max-width 0.3s ease-in-out;
-    opacity: 1;
-    max-width: 12rem;
-  }
-
-  @media (min-width: 768px) {
-    .app-wrapper[data-sidebar='collapsed'] .sidebar-label,
-    .app-wrapper[data-sidebar='collapsed'] .sidebar-only-wide {
-      opacity: 0;
-      max-width: 0;
-      overflow: hidden;
-      pointer-events: none;
-    }
-    .app-wrapper[data-sidebar='collapsed'] .sidebar-only-wide {
-      height: 0;
-      margin: 0;
-      padding: 0;
-      border: 0;
-    }
-    /* Flyout: hovering the minified rail restores the full 250px pane. */
-    .app-wrapper[data-sidebar='collapsed'] .app-sidebar:hover {
-      width: var(--lte-sidebar-w);
-      box-shadow: 0 0 1rem rgb(0 0 0 / 25%);
-    }
-    .app-wrapper[data-sidebar='collapsed'] .app-sidebar:hover .sidebar-label {
-      opacity: 1;
-      max-width: 12rem;
-    }
-  }
-
-  /* ── Mobile: off-canvas drawer ──
-     Sidebar leaves the grid entirely and slides in over the content. */
-  @media (max-width: 767.98px) {
-    .app-wrapper {
-      grid-template-areas:
-        'lte-header'
-        'lte-main'
-        'lte-footer';
-      grid-template-columns: minmax(0, 1fr);
-    }
-    .app-sidebar {
-      grid-area: auto;
-      position: fixed;
-      inset-block: 0;
-      left: 0;
-      width: var(--lte-sidebar-w);
-      height: 100dvh;
-      transform: translateX(-100%);
-    }
-    .app-sidebar[data-open='true'] {
-      transform: translateX(0);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .app-sidebar,
-    .sidebar-label {
-      transition: none;
-    }
-  }
-
-  /* AdminLTE's `.app-content-header` / `.app-content` rhythm. */
   .app-content-header {
-    padding: 1rem 0.75rem 0.5rem;
+    padding: 1.25rem 1rem 0.75rem;
   }
   .app-content {
-    padding: 0 0.75rem 1.5rem;
+    padding: 0 1rem 1.5rem;
   }
+
+  /* Clears the fixed tab bar and the home indicator on notched phones. */
+  .app-footer {
+    padding-bottom: calc(var(--app-tabbar-h) + env(safe-area-inset-bottom) + 0.75rem);
+  }
+
+  .app-tabbar {
+    height: calc(var(--app-tabbar-h) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
   @media (min-width: 768px) {
     .app-content-header {
-      padding: 1rem 1.25rem 0.5rem;
+      padding: 1.5rem 1.5rem 1rem;
     }
     .app-content {
-      padding: 0 1.25rem 1.5rem;
+      padding: 0 1.5rem 2rem;
+    }
+    .app-footer {
+      padding-bottom: 1rem;
     }
   }
 }

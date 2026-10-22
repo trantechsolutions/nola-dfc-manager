@@ -52,7 +52,7 @@ export default function ClubCalendarView({ club, teams }) {
                     month: 'short',
                     day: 'numeric',
                   }),
-                  displayTime: jsDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+                  displayTime: jsDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }),
                 });
               });
             } catch (e) {

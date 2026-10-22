@@ -16,6 +16,8 @@ import {
   Layers,
   FileText,
   PlayCircle,
+  CalendarPlus,
+  Pencil,
 } from 'lucide-react';
 import { filmService, filmGameLink } from '../../services/filmService';
 import CalendarView from '../../components/CalendarView';
@@ -25,25 +27,36 @@ import PanelHost from '../../components/layout/PanelHost';
 import { usePanelRoute } from '../../hooks/usePanelRoute';
 import { EVENT_TYPES } from '../../utils/eventClassifier';
 import { useT } from '../../i18n/I18nContext';
+import { downloadEventIcs, subscribeUrl } from '../../utils/ics';
 import { filterEventsBySeason, getSeasonForDate } from '../../utils/seasonUtils';
 import { PANELS } from '../../utils/panelRoute';
 import { buildInstallmentIndex, isInstallment, planProgress } from '../../utils/installments';
 
-// ── Event card ────────────────────────────────────────────────
-const EventCard = ({
+// ── Event row ────────────────────────────────────────────────
+// One line of a month: the date set large on the left (the same block the
+// Home card and its "after that" list use, so the eye learns it once), then
+// what, when and where. Staff tools — the event type, expenses, game film —
+// hang underneath rather than competing with the time and place.
+const EventRow = ({
   event,
   isPast = false,
+  isNext = false,
   dbEvent = null,
   onTypeChange = null,
+  onScoreChange = null,
+  teamName = '',
   expenseSummary = null,
   onManageExpenses = null,
   film = null,
 }) => {
-  const { t } = useT();
+  const { t, locale } = useT();
+  const isGame = GAME_TYPES.includes(dbEvent?.eventType || event.eventType);
   const [editing, setEditing] = useState(false);
   const effectiveType = dbEvent?.eventType || event.eventType;
   const type = EVENT_TYPES[effectiveType] || EVENT_TYPES.event;
+  const typeLabel = t(`eventTypes.${effectiveType}`, type.label);
   const canEdit = onTypeChange && dbEvent;
+  const date = new Date(event.timestamp * 1000);
 
   const handleTypeSelect = async (e) => {
     const newType = e.target.value;
@@ -52,69 +65,107 @@ const EventCard = ({
   };
 
   return (
-    <div
-      className={`w-full text-left bg-card rounded-lg border shadow-sm overflow-hidden flex transition-shadow ${
-        isPast ? 'opacity-60 border-border' : `${type.border} hover:shadow-md`
-      } ${event.isCancelled ? 'opacity-40' : ''}`}
-    >
-      <div className={`w-1.5 shrink-0 ${type.color}`} />
-      <div className="p-4 flex-grow min-w-0">
-        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+    <li className={`relative flex gap-4 px-4 py-4 ${event.isCancelled ? 'opacity-50' : ''}`}>
+      {isNext && (
+        <span
+          className="absolute inset-y-3 left-0 w-1 rounded-r-full"
+          style={{ backgroundColor: 'var(--team-edge)' }}
+          aria-hidden="true"
+        />
+      )}
+      <span className="w-12 shrink-0 text-center">
+        <span className="block text-xs text-muted-foreground">
+          {date.toLocaleDateString(locale, { weekday: 'short' })}
+        </span>
+        <span
+          className={`block font-numeral text-3xl font-bold leading-tight tabular-nums ${
+            isPast ? 'text-muted-foreground' : 'text-foreground'
+          }`}
+        >
+          {date.getDate()}
+        </span>
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-3">
+          <h4
+            className={`text-base font-semibold leading-snug text-foreground ${event.isCancelled ? 'line-through' : ''}`}
+          >
+            {event.title}
+          </h4>
+          {isPast && isGame && <ScoreChip scoreFor={dbEvent?.scoreFor} scoreAgainst={dbEvent?.scoreAgainst} />}
+          {isNext && (
+            <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
+              {t('nav.nextUp')}
+            </span>
+          )}
+        </div>
+
+        <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1.5 tabular-nums">
+            <Clock size={14} className="shrink-0" aria-hidden="true" />
+            {event.displayTime}
+          </span>
+          <span className="flex min-w-0 items-center gap-1.5" title={event.location}>
+            <MapPin size={14} className="shrink-0" aria-hidden="true" />
+            <span className="truncate">{event.location}</span>
+          </span>
+          {!isPast && (
+            <button
+              type="button"
+              onClick={() => downloadEventIcs(event, { teamName })}
+              className="flex items-center gap-1.5 rounded-md hover:text-foreground"
+            >
+              <CalendarPlus size={14} className="shrink-0" aria-hidden="true" />
+              {t('nav.addToCalendar')}
+            </button>
+          )}
           {canEdit && editing ? (
             <select
               autoFocus
               onBlur={() => setEditing(false)}
               onChange={handleTypeSelect}
               defaultValue={effectiveType}
-              className="text-xs font-bold px-2 py-0.5 rounded border border-border bg-card outline-none cursor-pointer"
+              className="rounded-md border border-border bg-card px-2 py-0.5 text-sm outline-none"
             >
-              {Object.entries(EVENT_TYPES).map(([key, et]) => (
+              {Object.keys(EVENT_TYPES).map((key) => (
                 <option key={key} value={key}>
-                  {et.label}
+                  {t(`eventTypes.${key}`, EVENT_TYPES[key].label)}
                 </option>
               ))}
             </select>
           ) : (
             <button
+              type="button"
               onClick={canEdit ? () => setEditing(true) : undefined}
-              className={`text-xs font-bold uppercase px-2 py-0.5 rounded flex items-center gap-1 ${type.colorLight} ${canEdit ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+              disabled={!canEdit}
+              className={`flex items-center gap-1.5 rounded-md ${canEdit ? 'hover:text-foreground' : 'cursor-default'}`}
               title={canEdit ? t('schedule.clickToChangeType') : undefined}
             >
-              {type.label}
-              {dbEvent?.typeLocked && <Lock size={8} className="opacity-60" />}
+              <span className={`h-2 w-2 rounded-full ${type.dot}`} aria-hidden="true" />
+              {typeLabel}
+              {dbEvent?.typeLocked && <Lock size={11} className="opacity-60" aria-label="Locked" />}
             </button>
           )}
-          <span className="text-xs text-muted-foreground ml-auto">{event.displayDate}</span>
-        </div>
-        <h4
-          className={`font-bold text-foreground text-sm leading-tight mb-1.5 ${event.isCancelled ? 'line-through' : ''}`}
-        >
-          {event.title}
-        </h4>
-        <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <Clock size={12} className="text-muted-foreground shrink-0" />
-            <span className="font-medium">{event.displayTime}</span>
-          </span>
-          <span className="flex items-center gap-1.5 min-w-0" title={event.location}>
-            <MapPin size={12} className="text-muted-foreground shrink-0" />
-            <span className="font-medium truncate">{event.location}</span>
-          </span>
-        </div>
+        </p>
+
+        {isPast && isGame && dbEvent && onScoreChange && (
+          <ScoreEditor dbEvent={dbEvent} onScoreChange={onScoreChange} />
+        )}
 
         {/* This game's breakdowns on the game film site */}
         {film?.games?.length > 0 && (
           <div className="mt-3 space-y-1.5">
             {film.games.map((g) => (
-              <div key={g.slug} className="flex items-center gap-2 flex-wrap">
+              <div key={g.slug} className="flex flex-wrap items-center gap-2">
                 {film.games.length > 1 && (
-                  <span className="text-xs font-semibold text-muted-foreground mr-1">{gameLabel(g.slug)}</span>
+                  <span className="mr-1 text-xs font-semibold text-muted-foreground">{gameLabel(g.slug)}</span>
                 )}
-                <FilmButton href={filmGameLink(film.access, g.slug, 'report')} icon={<FileText size={12} />}>
+                <FilmButton href={filmGameLink(film.access, g.slug, 'report')} icon={<FileText size={13} />}>
                   {t('schedule.filmReport')}
                 </FilmButton>
                 {g.hasHighlights && (
-                  <FilmButton href={filmGameLink(film.access, g.slug, 'highlights')} icon={<PlayCircle size={12} />}>
+                  <FilmButton href={filmGameLink(film.access, g.slug, 'highlights')} icon={<PlayCircle size={13} />}>
                     {t('schedule.filmHighlights')}
                   </FilmButton>
                 )}
@@ -123,37 +174,203 @@ const EventCard = ({
           </div>
         )}
 
-        {/* Expense badge — only for synced events when admin */}
+        {/* Expenses — only for synced events, and only for staff who can edit */}
         {dbEvent && onManageExpenses && (
           <button
+            type="button"
             onClick={() => onManageExpenses(dbEvent)}
-            className="mt-3 w-full flex items-center justify-between px-3 py-2 rounded-lg border border-dashed border-border hover:border-border dark:hover:border-border hover:bg-background transition-all group"
+            className="mt-3 inline-flex items-center gap-2 rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
+            <DollarSign size={12} aria-hidden="true" />
             {expenseSummary && expenseSummary.total > 0 ? (
               <>
-                <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                  <DollarSign size={11} className="text-muted-foreground" />
+                <span>
                   {expenseSummary.paid}/{expenseSummary.count} {t('schedule.paid').toLowerCase()}
                 </span>
                 {expenseSummary.remaining > 0 ? (
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
+                  <span className="text-amber-700 dark:text-amber-300">
                     ${expenseSummary.remaining.toFixed(2)} {t('schedule.due')}
                   </span>
                 ) : (
-                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                    <CheckCircle2 size={9} /> {t('schedule.paid')}
-                  </span>
+                  <CheckCircle2 size={12} className="text-success" aria-label={t('schedule.paid')} />
                 )}
               </>
             ) : (
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground group-hover:text-foreground mx-auto">
-                <DollarSign size={11} /> {t('schedule.manageExpenses')}
-              </span>
+              t('schedule.manageExpenses')
             )}
           </button>
         )}
       </div>
+    </li>
+  );
+};
+
+/** Events grouped under a heading per month, in the order given. */
+const MonthGroups = ({ events, locale, renderRow }) => {
+  const groups = [];
+  events.forEach((event) => {
+    const date = new Date(event.timestamp * 1000);
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    let group = groups[groups.length - 1];
+    if (!group || group.key !== key) {
+      group = {
+        key,
+        label: date.toLocaleDateString(locale, { month: 'long', year: 'numeric' }),
+        events: [],
+      };
+      groups.push(group);
+    }
+    group.events.push(event);
+  });
+
+  return (
+    <div className="space-y-6">
+      {groups.map((group) => (
+        <section key={group.key} aria-label={group.label}>
+          {/* Stays under the header while its month scrolls past, so a long
+              season never leaves you wondering which month a date is in. */}
+          <h3 className="sticky top-14 z-10 -mx-1 mb-2 bg-canvas px-2 py-2 text-sm font-semibold text-muted-foreground">
+            {group.label}
+          </h3>
+          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+            {group.events.map(renderRow)}
+          </ul>
+        </section>
+      ))}
     </div>
+  );
+};
+
+// Events that end in a result worth recording.
+const GAME_TYPES = ['league', 'friendly', 'tournament'];
+
+/** "W 3–1" beside a past game, once its result is in. */
+const ScoreChip = ({ scoreFor, scoreAgainst }) => {
+  const { t } = useT();
+  if (scoreFor == null || scoreAgainst == null) return null;
+  const outcome = scoreFor > scoreAgainst ? 'Win' : scoreFor < scoreAgainst ? 'Loss' : 'Draw';
+  const tone =
+    outcome === 'Win'
+      ? 'bg-success text-success-foreground'
+      : outcome === 'Loss'
+        ? 'bg-foreground text-background'
+        : 'bg-muted text-foreground';
+  return (
+    <span
+      className="flex shrink-0 items-center gap-1.5"
+      aria-label={`${t(`nav.score${outcome}Long`)} ${scoreFor}–${scoreAgainst}`}
+    >
+      <span className={`grid h-6 w-6 place-items-center rounded-md text-xs font-bold ${tone}`} aria-hidden="true">
+        {t(`nav.score${outcome}`)}
+      </span>
+      <span className="font-numeral text-xl font-bold leading-none tabular-nums text-foreground" aria-hidden="true">
+        {scoreFor}–{scoreAgainst}
+      </span>
+    </span>
+  );
+};
+
+/** Staff enter or correct a past game's result in place; blank both to clear it. */
+const ScoreEditor = ({ dbEvent, onScoreChange }) => {
+  const { t } = useT();
+  const hasScore = dbEvent.scoreFor != null && dbEvent.scoreAgainst != null;
+  const [open, setOpen] = useState(false);
+  const [us, setUs] = useState('');
+  const [them, setThem] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(false);
+
+  const start = () => {
+    setUs(hasScore ? String(dbEvent.scoreFor) : '');
+    setThem(hasScore ? String(dbEvent.scoreAgainst) : '');
+    setError(false);
+    setOpen(true);
+  };
+
+  const save = async (scoreFor, scoreAgainst) => {
+    setSaving(true);
+    setError(false);
+    try {
+      await onScoreChange(dbEvent.id, scoreFor, scoreAgainst);
+      setOpen(false);
+    } catch {
+      setError(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const parse = (v) => (v === '' ? null : Math.max(0, Math.min(99, parseInt(v, 10) || 0)));
+  const ready = us !== '' && them !== '';
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={start}
+        className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <Pencil size={12} aria-hidden="true" />
+        {hasScore ? t('nav.editScore') : t('nav.addScore')}
+      </button>
+    );
+  }
+
+  const field = (label, value, setValue) => (
+    <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
+      {label}
+      <input
+        type="number"
+        inputMode="numeric"
+        min="0"
+        max="99"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="w-14 rounded-md border border-input bg-card px-2 py-1 text-center font-numeral text-lg font-bold text-foreground outline-none focus:ring-2 focus:ring-ring"
+      />
+    </label>
+  );
+
+  return (
+    <form
+      className="mt-3 flex flex-wrap items-center gap-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (ready) save(parse(us), parse(them));
+      }}
+    >
+      {field(t('nav.scoreUs'), us, setUs)}
+      {field(t('nav.scoreThem'), them, setThem)}
+      <button
+        type="submit"
+        disabled={!ready || saving}
+        className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+      >
+        {t('nav.saveScore')}
+      </button>
+      {hasScore && (
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => save(null, null)}
+          className="text-sm font-semibold text-muted-foreground hover:text-foreground"
+        >
+          {t('nav.clearScore')}
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => setOpen(false)}
+        className="text-sm font-semibold text-muted-foreground hover:text-foreground"
+      >
+        {t('common.cancel')}
+      </button>
+      {error && (
+        <p role="alert" className="w-full text-sm text-destructive">
+          {t('nav.scoreSaveFailed')}
+        </p>
+      )}
+    </form>
   );
 };
 
@@ -199,37 +416,6 @@ function useFilmGames(teamId) {
   return film;
 }
 
-// ── Next-up highlight banner ──────────────────────────────────
-const NextUpBanner = ({ event }) => {
-  const { t } = useT();
-  if (!event) return null;
-  const type = EVENT_TYPES[event.eventType] || EVENT_TYPES.event;
-  return (
-    <div className={`rounded-lg border ${type.border} bg-card p-4 flex items-center gap-4 shadow-sm`}>
-      <div className={`w-1 self-stretch rounded-full ${type.color}`} />
-      <div className="flex-grow min-w-0">
-        <p className="text-xs font-bold text-muted-foreground mb-0.5">{t('schedule.nextUp')}</p>
-        <p className="font-bold text-foreground text-sm truncate">{event.title}</p>
-        <div className="flex items-center gap-3 mt-1 text-xs font-semibold text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Calendar size={11} />
-            {event.displayDate}
-          </span>
-          <span className="flex items-center gap-1">
-            <Clock size={11} />
-            {event.displayTime}
-          </span>
-          <span className="flex items-center gap-1 truncate">
-            <MapPin size={11} />
-            {event.location}
-          </span>
-        </div>
-      </div>
-      <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-lg ${type.colorLight}`}>{type.label}</span>
-    </div>
-  );
-};
-
 // ── Main ──────────────────────────────────────────────────────
 export default function ScheduleView({
   events,
@@ -240,6 +426,7 @@ export default function ScheduleView({
   onSyncCalendar,
   teamEvents = [],
   onTypeChange = null,
+  onScoreChange = null,
   transactions = [],
   onSaveExpense = null,
   onToggleCleared = null,
@@ -254,7 +441,7 @@ export default function ScheduleView({
   budgetLocked = false,
   budgetRecalculatesFee = true,
 }) {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [tab, setTab] = useState('upcoming');
   const [isSyncing, setIsSyncing] = useState(false);
   const { panel, panelParams, openPanel, closePanel } = usePanelRoute();
@@ -385,99 +572,152 @@ export default function ScheduleView({
   const filteredPast = useMemo(() => applyFilters(seasonEvents.past), [seasonEvents.past, typeFilters, searchTerm]);
   const hasFilters = typeFilters.length > 0 || searchTerm;
 
+  // Search and type filters sit inline above the list rather than in a box of
+  // their own: they refine the list, they are not a destination.
   const FilterBar = () => (
-    <div className="bg-card p-4 rounded-lg border border-border shadow-sm space-y-3">
+    <div className="space-y-3">
       <div className="relative">
-        <Search className="absolute left-3 top-2.5 text-muted-foreground" size={16} />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
         <input
-          type="text"
+          type="search"
           placeholder={t('schedule.searchPlaceholder')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-9 pr-8 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-ring outline-none"
+          className="w-full rounded-lg border border-border bg-card py-2.5 pl-9 pr-9 text-sm outline-none focus:ring-2 focus:ring-ring"
         />
         {searchTerm && (
           <button
+            type="button"
             onClick={() => setSearchTerm('')}
-            className="absolute right-3 top-2.5 text-muted-foreground hover:text-muted-foreground"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label={t('common.reset')}
           >
             <X size={16} />
           </button>
         )}
       </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        <Filter size={13} className="text-muted-foreground" />
-        <div className="flex flex-wrap gap-1 bg-muted rounded-lg p-0.5">
-          <button
-            onClick={() => setTypeFilters([])}
-            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${typeFilters.length === 0 ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
-          >
-            {t('common.all')}
-          </button>
-          {Object.entries(EVENT_TYPES).map(([key, type]) => (
+      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+        {Object.entries(EVENT_TYPES).map(([key, type]) => {
+          const on = typeFilters.includes(key);
+          return (
             <button
               key={key}
+              type="button"
               onClick={() => toggleTypeFilter(key)}
-              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1 ${
-                typeFilters.includes(key) ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'
+              aria-pressed={on}
+              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                on
+                  ? 'border-foreground bg-foreground text-background'
+                  : 'border-border bg-card text-muted-foreground hover:text-foreground'
               }`}
             >
-              <span className={`w-2 h-2 rounded-full ${type.dot}`} />
-              {type.label}
+              <span className={`h-2 w-2 rounded-full ${type.dot}`} aria-hidden="true" />
+              {t(`eventTypes.${key}`, type.label)}
             </button>
-          ))}
-        </div>
+          );
+        })}
         {hasFilters && (
           <button
+            type="button"
             onClick={() => {
               setTypeFilters([]);
               setSearchTerm('');
             }}
-            className="text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 flex items-center gap-1 ml-auto"
+            className="flex shrink-0 items-center gap-1 px-2 text-sm font-semibold text-primary"
           >
-            <X size={12} /> {t('common.reset')}
+            <X size={14} /> {t('common.reset')}
           </button>
         )}
       </div>
     </div>
   );
 
+  const renderRow = (isPast) => (e, index) => {
+    const db = findDbEvent(e);
+    return (
+      <EventRow
+        key={e.id}
+        event={e}
+        isPast={isPast}
+        isNext={!isPast && !hasFilters && index === 0 && e.id === seasonEvents.upcoming[0]?.id}
+        dbEvent={db}
+        onTypeChange={onTypeChange}
+        onScoreChange={onScoreChange}
+        teamName={selectedTeam?.name}
+        expenseSummary={getExpenseSummary(db)}
+        film={filmFor(db)}
+        onManageExpenses={canEditSchedule ? (event) => openPanel(PANELS.EVENT_EXPENSE, { id: event.id }) : null}
+      />
+    );
+  };
+
+  const EmptyList = ({ children }) => (
+    <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+      {children}
+    </div>
+  );
+
   return (
     <div className="space-y-5">
-      {/* ── Header ── (page title now comes from the shell's content header) */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs text-muted-foreground font-semibold mt-0.5">
-            {t('schedule.upcomingStat', { n: seasonEvents.upcoming.length })} ·{' '}
-            {t('schedule.pastStat', { n: seasonEvents.past.length })}
-          </p>
+      {/* ── View switch + staff actions ── (page title comes from the shell) */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-1 rounded-lg bg-muted p-1" role="tablist">
+          {ALL_TABS.map((tb) => (
+            <button
+              key={tb.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === tb.id}
+              onClick={() => setTab(tb.id)}
+              className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-sm font-semibold transition-colors ${
+                tab === tb.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tb.label}
+              {tb.id !== 'calendar' && (
+                <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                  {tb.id === 'upcoming' ? seasonEvents.upcoming.length : seasonEvents.past.length}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
+
         <div className="flex items-center gap-2">
           {onBulkAddExpenses && bulkCandidates.length > 0 && (
             <button
+              type="button"
               onClick={() => openPanel(PANELS.BULK_EXPENSES)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted text-foreground text-xs font-semibold rounded-lg transition-colors"
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
             >
-              <Layers size={12} />
+              <Layers size={14} />
               {t('bulkExpenses.open')}
             </button>
           )}
           {canEditSchedule && currentIcsUrl && (
             <button
+              type="button"
               onClick={handleSync}
               disabled={isSyncing}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-muted hover:bg-muted text-foreground text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
             >
-              <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
+              <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
               {isSyncing ? t('schedule.syncing') : t('schedule.sync')}
             </button>
           )}
-          {currentIcsUrl && (
-            <span className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
-              </span>
+          {subscribeUrl(currentIcsUrl) && (
+            <a
+              href={subscribeUrl(currentIcsUrl)}
+              title={t('nav.subscribeHint')}
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+            >
+              <CalendarPlus size={14} aria-hidden="true" />
+              {t('nav.subscribe')}
+            </a>
+          )}
+          {currentIcsUrl && !canEditSchedule && (
+            <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" />
               {t('schedule.live')}
             </span>
           )}
@@ -486,99 +726,32 @@ export default function ScheduleView({
 
       {/* ── No feed warning (non-admins only) ── */}
       {!currentIcsUrl && !canEditSchedule && (
-        <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg p-4 flex items-center gap-3">
-          <AlertCircle size={18} className="text-amber-700 dark:text-amber-400 shrink-0" />
-          <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">{t('schedule.noFeed')}</p>
+        <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-900/30">
+          <AlertCircle size={18} className="shrink-0 text-amber-700 dark:text-amber-400" />
+          <p className="text-sm font-medium text-amber-700 dark:text-amber-300">{t('schedule.noFeed')}</p>
         </div>
       )}
-
-      {/* ── Tabs ── */}
-      <div className="flex gap-1 bg-muted rounded-lg p-1 w-fit">
-        {ALL_TABS.map((tb) => (
-          <button
-            key={tb.id}
-            onClick={() => setTab(tb.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              tab === tb.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <tb.icon size={14} />
-            {tb.label}
-            {tb.id === 'upcoming' && seasonEvents.upcoming.length > 0 && (
-              <span
-                className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
-                  tab === 'upcoming'
-                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                    : 'bg-muted text-muted-foreground'
-                }`}
-              >
-                {seasonEvents.upcoming.length}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
 
       {/* ── Upcoming ── */}
       {tab === 'upcoming' && (
         <>
-          <NextUpBanner event={seasonEvents.upcoming[0]} />
           <FilterBar />
           {filteredUpcoming.length === 0 ? (
-            <div className="bg-card rounded-lg border-2 border-dashed border-border p-10 text-center text-muted-foreground font-semibold italic text-sm">
-              {hasFilters ? t('schedule.noFilterMatch') : t('schedule.noUpcoming')}
-            </div>
+            <EmptyList>{hasFilters ? t('schedule.noFilterMatch') : t('schedule.noUpcoming')}</EmptyList>
           ) : (
-            <div className="space-y-2">
-              {filteredUpcoming.map((e) => {
-                const db = findDbEvent(e);
-                return (
-                  <EventCard
-                    key={e.id}
-                    event={e}
-                    dbEvent={db}
-                    onTypeChange={onTypeChange}
-                    expenseSummary={getExpenseSummary(db)}
-                    film={filmFor(db)}
-                    onManageExpenses={
-                      canEditSchedule ? (event) => openPanel(PANELS.EVENT_EXPENSE, { id: event.id }) : null
-                    }
-                  />
-                );
-              })}
-            </div>
+            <MonthGroups events={filteredUpcoming} locale={locale} renderRow={renderRow(false)} />
           )}
         </>
       )}
 
-      {/* ── Past ── */}
+      {/* ── Past ── newest first, so last weekend is at the top */}
       {tab === 'past' && (
         <>
           <FilterBar />
           {filteredPast.length === 0 ? (
-            <div className="bg-card rounded-lg border-2 border-dashed border-border p-10 text-center text-muted-foreground font-semibold italic text-sm">
-              {hasFilters ? t('schedule.noFilterMatch') : t('schedule.noPast')}
-            </div>
+            <EmptyList>{hasFilters ? t('schedule.noFilterMatch') : t('schedule.noPast')}</EmptyList>
           ) : (
-            <div className="space-y-2">
-              {filteredPast.map((e) => {
-                const db = findDbEvent(e);
-                return (
-                  <EventCard
-                    key={e.id}
-                    event={e}
-                    isPast
-                    dbEvent={db}
-                    onTypeChange={onTypeChange}
-                    expenseSummary={getExpenseSummary(db)}
-                    film={filmFor(db)}
-                    onManageExpenses={
-                      canEditSchedule ? (event) => openPanel(PANELS.EVENT_EXPENSE, { id: event.id }) : null
-                    }
-                  />
-                );
-              })}
-            </div>
+            <MonthGroups events={filteredPast} locale={locale} renderRow={renderRow(true)} />
           )}
         </>
       )}

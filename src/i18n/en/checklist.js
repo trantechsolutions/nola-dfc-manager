@@ -1,5 +1,7 @@
 export default {
   checklist: {
+    groupTodo: 'Still to do',
+    groupDone: 'Done',
     // ── Shared ──
     title: 'Season Checklist',
     subtitle: '{{season}} · {{team}}',
