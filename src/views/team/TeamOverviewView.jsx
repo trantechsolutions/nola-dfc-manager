@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PageTabs from '../../components/layout/PageTabs';
 import OnboardingChecklist from '../../components/OnboardingChecklist';
 import GameFilmCard from '../../components/GameFilmCard';
 import SmallBox from '../../components/layout/SmallBox';
@@ -355,25 +356,7 @@ export default function TeamOverviewView({
         })()}
 
       {/* ── Tabs ── */}
-      <div role="tablist" className="flex gap-1 border-b border-border">
-        {TABS.map((tb) => (
-          <button
-            key={tb.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === tb.id}
-            onClick={() => setTab(tb.id)}
-            className={`relative -mb-px px-3 py-2.5 text-sm font-semibold transition-colors ${
-              tab === tb.id ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {tb.label}
-            {tab === tb.id && (
-              <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary" aria-hidden="true" />
-            )}
-          </button>
-        ))}
-      </div>
+      <PageTabs tabs={TABS} active={tab} onChange={setTab} />
       {/* ════════════════ OVERVIEW TAB ════════════════ */}
       {tab === 'overview' && (
         <div className="space-y-5">
@@ -394,7 +377,7 @@ export default function TeamOverviewView({
           {canViewFinancials && (
             <section
               aria-label={t('overview.atAGlance', 'Season at a glance')}
-              className="divide-y divide-border rounded-lg border border-border bg-card"
+              className="m-bleed divide-y divide-border rounded-lg border border-border bg-card"
             >
               <GlanceRow
                 label={t('overview.availableCash')}

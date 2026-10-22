@@ -85,7 +85,7 @@ export default function PlayerChecklistCard({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
+    <div className="m-bleed overflow-hidden rounded-lg border border-border bg-card">
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
         <ListChecks size={18} className="shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">

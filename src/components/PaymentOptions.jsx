@@ -37,8 +37,12 @@ function QRCode({ value, label, size = 150 }) {
 // #dee2e6 text on a near-white chip in dark mode, about 1.05:1. Theme tokens
 // are the whole point: --card and --foreground are a designed pair and stay
 // legible in both. py-1.5 clears the 24px WCAG 2.5.8 target minimum.
+// Payment actions sit on their own row at a full 44px: this card is opened on
+// a phone more than anywhere else, often with the banking app one tap away.
 const CHIP =
-  'shrink-0 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+  'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+const PAY =
+  'inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none';
 
 function getServiceStyle(name) {
   const n = name.toLowerCase();
@@ -206,7 +210,7 @@ export default function PaymentOptions({
   return (
     <div className="bg-card rounded-lg border border-border overflow-hidden">
       <div className="p-4 border-b border-border">
-        <h3 className="font-semibold text-foreground text-xs flex items-center gap-2">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
           <DollarSign size={14} className="text-emerald-700 dark:text-emerald-400" /> How to Pay
         </h3>
       </div>
@@ -223,9 +227,9 @@ export default function PaymentOptions({
           <button
             onClick={() => handleCopy(memo, 'memo')}
             aria-label={`Copy payment memo: ${memo}`}
-            className="mt-1 inline-flex items-center gap-1 rounded text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {copiedField === 'memo' ? <Check size={10} /> : <Copy size={10} />}
+            {copiedField === 'memo' ? <Check size={14} /> : <Copy size={14} />}
             Memo: {memo}
           </button>
         </div>
@@ -239,7 +243,7 @@ export default function PaymentOptions({
 
               return (
                 <div key={method.key} className={`rounded-lg border p-3 ${method.bgColor} ${method.borderColor}`}>
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-3">
                     {/* min-w-0 lets this column shrink. Without it a long handle
                         — a Zeffy donation URL, say — refuses to give ground and
                         shoves the buttons out past the card edge. */}
@@ -258,12 +262,12 @@ export default function PaymentOptions({
                             // The visible label is the handle itself, which tells
                             // a screen reader nothing about what the button does.
                             aria-label={`Copy ${method.label} handle ${method.handle}`}
-                            className="flex max-w-full items-start gap-1 rounded text-left text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="mt-0.5 flex min-h-8 max-w-full items-start gap-1.5 rounded py-1 text-left text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
                             {copiedField === method.key ? (
-                              <Check size={10} className="mt-0.5 shrink-0" />
+                              <Check size={14} className="mt-0.5 shrink-0" />
                             ) : (
-                              <Copy size={10} className="mt-0.5 shrink-0" />
+                              <Copy size={14} className="mt-0.5 shrink-0" />
                             )}
                             {/* Wraps rather than truncates: a handle a parent
                                 cannot read in full is a handle they cannot
@@ -273,7 +277,18 @@ export default function PaymentOptions({
                         )}
                       </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {deepLink && (
+                        <a
+                          href={deepLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`Pay ${formatMoney(amount)} with ${method.label} (opens in a new tab)`}
+                          className={PAY}
+                        >
+                          <ExternalLink size={14} aria-hidden="true" /> Pay {formatMoney(amount)}
+                        </a>
+                      )}
                       {method.handle && (
                         <button
                           onClick={() => setShowQR(isShowingQR ? null : method.key)}
@@ -283,17 +298,6 @@ export default function PaymentOptions({
                         >
                           {isShowingQR ? 'Hide QR' : 'QR Code'}
                         </button>
-                      )}
-                      {deepLink && (
-                        <a
-                          href={deepLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label={`Pay ${formatMoney(amount)} with ${method.label} (opens in a new tab)`}
-                          className={`${CHIP} flex items-center gap-1`}
-                        >
-                          <ExternalLink size={10} aria-hidden="true" /> Pay
-                        </a>
                       )}
                     </div>
                   </div>

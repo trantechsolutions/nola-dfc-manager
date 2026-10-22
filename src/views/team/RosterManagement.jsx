@@ -486,6 +486,32 @@ export default function RosterManagement({
                             Archived
                           </span>
                         )}
+                        {/* Phone only: the desktop columns are hidden, but these
+                            are the two things a coach on the sideline looks
+                            for — is anything missing, and how to reach a parent. */}
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 md:hidden">
+                          {playerCompliant ? (
+                            <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                              <ShieldCheck size={12} /> Complete
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                              <AlertCircle size={12} /> {missingCount} missing
+                            </span>
+                          )}
+                          {(() => {
+                            const reachable = player.guardians?.find((g) => g.phone);
+                            return reachable ? (
+                              <a
+                                href={phoneHref(reachable.phone)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-1 text-xs font-semibold text-primary"
+                              >
+                                <Phone size={12} /> {t('rosterMgmt.call', 'Call')} {reachable.name?.split(' ')[0]}
+                              </a>
+                            ) : null;
+                          })()}
+                        </div>
                       </div>
                     </div>
                   </td>

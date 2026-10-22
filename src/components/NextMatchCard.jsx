@@ -141,7 +141,7 @@ export default function NextMatchCard() {
       </section>
 
       {later.length > 0 && (
-        <section aria-label={t('nav.afterThat')} className="rounded-lg border border-border bg-card">
+        <section aria-label={t('nav.afterThat')} className="m-bleed rounded-lg border border-border bg-card">
           <h3 className="px-4 pt-3 text-sm font-semibold text-muted-foreground">{t('nav.afterThat')}</h3>
           <ul className="divide-y divide-border">
             {later.map((event) => {

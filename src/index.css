@@ -130,6 +130,7 @@
   .app-wrapper {
     --app-header-h: 3.5rem;
     --app-tabbar-h: 4rem;
+    --page-tabs-h: 2.75rem;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
@@ -157,6 +158,32 @@
     min-width: 0;
     max-width: 72rem;
     margin-inline: auto;
+    /* One over-wide element (a long email, an unwrapped table) must not slide
+       the whole page sideways under a thumb. `clip` rather than `hidden` so
+       sticky children still stick. Wide data scrolls inside its own box. */
+    overflow-x: clip;
+  }
+
+  /* In-page tabs (PageTabs) pin under the header while their panes scroll.
+     Full-bleed to the content gutter so nothing shows through at the sides. */
+  .page-tabs {
+    position: sticky;
+    top: var(--app-header-h);
+    z-index: 20;
+    display: flex;
+    align-items: stretch;
+    height: var(--page-tabs-h);
+    margin-inline: -1rem;
+    padding-inline: 0.5rem;
+    background-color: var(--canvas);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Things that stick beneath a pinned tab row (schedule month headings). */
+  .sticky-below-tabs {
+    position: sticky;
+    top: calc(var(--app-header-h) + var(--page-tabs-h));
+    z-index: 10;
   }
 
   .app-content-header {
@@ -174,6 +201,26 @@
   .app-tabbar {
     height: calc(var(--app-tabbar-h) + env(safe-area-inset-bottom));
     padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* ── Phone theme ───────────────────────────────────────────────────────
+     Below 768px the app is read one-handed: lists run edge to edge (iOS
+     inset-list style) to give every row the full width, form fields use
+     16px text so iOS does not zoom the page on focus, and anything that
+     only appeared on hover is simply shown. */
+  @media (max-width: 767.98px) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .page-tabs {
+      margin-inline: 0;
+      padding-inline: 0;
+    }
   }
 
   @media (min-width: 768px) {
@@ -231,4 +278,25 @@ textarea::placeholder {
 .fc .fc-button-primary:not(:disabled).fc-button-active,
 .fc .fc-button-primary:not(:disabled):active {
   color: var(--primary-foreground);
+}
+
+/* Touch screens have no hover: row actions that fade in on hover would be
+   unreachable, so on those devices they are always visible. */
+@media (hover: none) {
+  .opacity-0.group-hover\:opacity-100 {
+    opacity: 1;
+  }
+}
+
+/* Edge-to-edge lists on phones. A utility, not a component class, so it
+   outranks the rounded-lg / border utilities on the same element. */
+@layer utilities {
+  @media (max-width: 767.98px) {
+    .m-bleed {
+      margin-inline: -1rem;
+      border-left-width: 0;
+      border-right-width: 0;
+      border-radius: 0;
+    }
+  }
 }

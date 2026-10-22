@@ -32,7 +32,7 @@ export default function AttentionStrip() {
   return (
     <section
       aria-label={t('nav.needsAttention')}
-      className="divide-y divide-border rounded-lg border border-border bg-card"
+      className="m-bleed divide-y divide-border rounded-lg border border-border bg-card"
     >
       {paperwork.map((item) => (
         <div key={`${item.player.id}-${item.key}`} className="flex items-center gap-3 px-4 py-3">

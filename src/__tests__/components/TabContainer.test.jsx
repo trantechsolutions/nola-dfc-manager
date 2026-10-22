@@ -33,7 +33,7 @@ describe('TabContainer', () => {
   it('switches when a tab is clicked', async () => {
     const user = userEvent.setup();
     render(<Harness />);
-    await user.click(screen.getByRole('button', { name: 'Checklist' }));
+    await user.click(screen.getByRole('tab', { name: 'Checklist' }));
     expect(screen.getByText('active: checklist')).toBeInTheDocument();
   });
 
@@ -44,7 +44,7 @@ describe('TabContainer', () => {
     const user = userEvent.setup();
     render(<Harness />);
 
-    await user.click(screen.getByRole('button', { name: 'Checklist' }));
+    await user.click(screen.getByRole('tab', { name: 'Checklist' }));
     await user.click(screen.getByRole('button', { name: 're-render' }));
 
     expect(screen.getByText('active: checklist')).toBeInTheDocument();
