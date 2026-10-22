@@ -54,6 +54,14 @@ describe('getPageMeta', () => {
     expect(crumbs.map((c) => c.label)).toEqual(['Home', 'Update Log']);
   });
 
+  it('names a deep link by its first segment rather than the id at its end', () => {
+    const { title } = getPageMeta('film/6af6b882-62f3-40de-8246-c98bbb55c407/game/2026-10-18-brsc-black/report', {
+      navGroups: staffNavGroups,
+      t,
+    });
+    expect(title).toBe('Game film');
+  });
+
   it('humanizes an unknown deep link instead of rendering an empty header', () => {
     const { title } = getPageMeta('evaluate/session-42', { navGroups: staffNavGroups, t });
     expect(title).toBe('Session 42');

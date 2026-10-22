@@ -8,6 +8,7 @@ import club from './club';
 import evaluations from './evaluations';
 import checklist from './checklist';
 import field from './field';
+import film from './film';
 
 export default {
   common,
@@ -46,4 +47,6 @@ export default {
   evaluations: evaluations.evaluations,
   checklist: checklist.checklist,
   fieldSchedule: field.fieldSchedule,
+  film: film.film,
+  filmEvents: film.filmEvents,
 };

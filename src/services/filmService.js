@@ -45,7 +45,75 @@ export function filmGameLink(access, slug, page = 'report', siteOverride = DEV_S
   return `${base}#unlock=${b64url(JSON.stringify(payload))}`;
 }
 
+// Before sql/film_native_migration.sql: no table or column yet, which reads as "no film here".
+const missing = (error, name) =>
+  ['42P01', '42703', 'PGRST205', 'PGRST202'].includes(error.code) || new RegExp(name).test(error.message || '');
+
 export const filmService = {
+  /**
+   * The film inside the manager (sql/film_native_migration.sql): the team's short name and every published
+   * game, oldest first. Row-level security leaves it empty for anyone not on the team.
+   * → { shortName, games: [PublicGame] }
+   */
+  async getLibrary(teamId) {
+    if (!teamId) return { shortName: '', games: [] };
+    const [team, games] = await Promise.all([
+      supabase.from('film_teams').select('short_name').eq('team_id', teamId).maybeSingle(),
+      supabase
+        .from('film_games')
+        .select('content')
+        .eq('team_id', teamId)
+        .not('content', 'is', null)
+        .order('game_date')
+        .order('game_time'),
+    ]);
+    for (const r of [team, games]) {
+      if (r.error && !missing(r.error, 'film_')) throw r.error;
+    }
+    return {
+      shortName: team.data?.short_name || '',
+      games: (games.error ? [] : games.data || []).map((g) => g.content),
+    };
+  },
+
+  /** Whether the signed-in user gets the coach area (breakdowns, lineups, notes) for this team. */
+  async isCoach(teamId) {
+    if (!teamId) return false;
+    const { data, error } = await supabase.rpc('film_is_coach', { p_team_id: teamId });
+    if (error) return false;
+    return data === true;
+  },
+
+  /** The coaches' breakdowns by game slug; empty for anyone who isn't a coach. */
+  async getBreakdowns(teamId) {
+    const { data, error } = await supabase.from('film_breakdowns').select('slug, content').eq('team_id', teamId);
+    if (error) {
+      if (missing(error, 'film_breakdowns')) return {};
+      throw error;
+    }
+    return Object.fromEntries((data || []).map((r) => [r.slug, r.content]));
+  },
+
+  /** For coaches: the team's players with their positions, and every lineup (see film/squad.js). */
+  async getSquadRows(teamId) {
+    const [players, positions, lineups] = await Promise.all([
+      supabase.from('players').select('id, first_name, last_name, jersey_number').eq('team_id', teamId),
+      supabase.from('film_positions').select('player_id, positions').eq('team_id', teamId),
+      supabase.from('film_lineups').select('slug, lineup').eq('team_id', teamId),
+    ]);
+    for (const r of [players, positions, lineups]) {
+      if (r.error && !missing(r.error, 'film_')) throw r.error;
+    }
+    return { players: players.data || [], positions: positions.data || [], lineups: lineups.data || [] };
+  },
+
+  /** Short-lived links to a game's highlight clips (supabase/functions/film-clip): { urls: { id: url }, expiresIn }. */
+  async getClipLinks(teamId, slug) {
+    const { data, error } = await supabase.functions.invoke('film-clip', { body: { teamId, slug } });
+    if (error) throw error;
+    return data;
+  },
+
   /** { siteUrl, team, coach, keeper } or null when the team has no film site or the user isn't on it. */
   async getAccess(teamId) {
     if (!teamId) return null;
@@ -91,14 +159,15 @@ export const filmService = {
 
   /**
    * The team's games on the film site, by their game in the schedule (sql/game_film_games_migration.sql):
-   * [{ slug, eventId, gameDate, hasHighlights }]. Empty before the migration or when the user isn't on the team.
+   * [{ slug, eventId, gameDate, hasHighlights, published }]. Empty before the migration or when the user isn't on
+   * the team.
    */
   async getGames(teamId) {
     if (!teamId) return [];
-    const { data, error } = await supabase
-      .from('film_games')
-      .select('slug, event_id, game_date, has_highlights')
-      .eq('team_id', teamId);
+    const query = (cols) => supabase.from('film_games').select(cols).eq('team_id', teamId);
+    let { data, error } = await query('slug, event_id, game_date, has_highlights, published:content->>slug');
+    // Before sql/film_native_migration.sql there is no content column: every game still opens on the film site.
+    if (error?.code === '42703') ({ data, error } = await query('slug, event_id, game_date, has_highlights'));
     if (error) {
       if (['42P01', 'PGRST205'].includes(error.code) || /film_games/.test(error.message || '')) return [];
       throw error;
@@ -108,6 +177,8 @@ export const filmService = {
       eventId: g.event_id,
       gameDate: g.game_date,
       hasHighlights: !!g.has_highlights,
+      // Its write-up is in the manager (film_native_migration.sql), so it opens in the app's film pages.
+      published: !!g.published,
     }));
   },
 };

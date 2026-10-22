@@ -10,6 +10,38 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-22 — Game film inside the manager (ab4c813..ab4c813)
+
+**Scope.** First phase of moving the stand-alone game film site into the
+manager: database, clip delivery, and the season, library, match report and
+highlights pages. 40 files, ~5,350 insertions (about 2,100 of them the film's
+existing logic and its tests, carried over unchanged). One commit.
+
+**Decision: drop the film's password encryption.** The film was a public static
+site, so every game was encrypted with shared passwords. Inside the manager the
+same data is protected by sign-in and the database's per-team access rules, the
+same as everything else. Approved by the owner. Removes three shared passwords.
+
+**Decision: clips stay on Cloudflare R2, in a private bucket.** About 726 MB of
+video; R2 is free at this size with no download charges, where Supabase's free
+storage tier would not fit. Clips are never public: the app hands each viewer a
+link that works for one hour, after checking they are on the team.
+
+**Decision: carry the film's logic over unchanged.** Its calculations (season
+summary, lineups, naming players at a position) move in as-is with 40 of their
+tests, rather than being rewritten, so the numbers match the old site exactly.
+
+**Risk.** Low for existing features: unpublished games still open on the old
+site, and nothing existing was removed. The old film site must stay up until the
+remaining pages move. Cloud keys were shown in a screenshot during setup and
+should be rotated.
+
+**Open.** Play-by-play, unit review, coaches' breakdown, player pages, Ollie
+history, coach notes screen, and the scorekeeper (largest piece: offline stat
+logging). Then retire the old site and its passwords.
+
+---
+
 ## 2026-10-22 — Phone-ready layout, and "Balance" (d6f11bd..b981b70)
 
 **Scope.** A phone pass over the redesigned pages, plus one label change.

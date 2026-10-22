@@ -57,6 +57,7 @@ const ParentChecklistView = lazy(() => import('../views/team/ParentChecklistView
 // Used by the /evaluate/:sessionId deep link below. Was referenced without ever
 // being imported, so that route threw ReferenceError on entry.
 const EvaluatorScoringView = lazy(() => import('../views/club/evaluations/EvaluatorScoringView'));
+const FilmView = lazy(() => import('../views/film/FilmView'));
 
 // Inline route fallback — matches the app's existing loading spinner
 function RouteFallback() {
@@ -797,6 +798,9 @@ export default function AppRoutes({
             <Route path="/changelog" element={<Changelog />} />
             {/* Open to every signed-in user — the guide covers parents and staff alike. */}
             <Route path="/help" element={<HelpView />} />
+            {/* The team's game film. Open to every signed-in user; row-level security
+                returns a team's games only to people on that team. */}
+            <Route path="/film/:teamId/*" element={<FilmView />} />
 
             {effectiveIsStaff && (
               <>

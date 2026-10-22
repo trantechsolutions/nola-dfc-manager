@@ -26,6 +26,63 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-10-22 — Game film inside the manager (ab4c813..ab4c813)
+
+**Commits.** `ab4c813 feat: bring the game film into the manager`
+
+**Touched.**
+
+- `sql/film_native_migration.sql` (new)
+- `supabase/functions/film-clip/index.ts` (new edge function, deployed)
+- `src/film/` — `schema.ts` and `lib/*.ts` copied from dfc-game-film `app/src`
+  (TypeScript, compiled by Vite; not linted by ESLint), `FilmContext.jsx`,
+  `RichText.jsx`, `squad.js`, `pages.js`, `lib/film.test.ts`
+- `src/views/film/` — `FilmView` (routes + breadcrumbs), `FilmSeason`,
+  `FilmLibrary`, `FilmGame`, `FilmMatchReport`, `FilmHighlights`, `filmUi`
+- `src/i18n/{en,es}/film.js` (458 strings + 25 event types, `{{x}}` placeholders),
+  registered as `film` / `filmEvents`
+- `src/services/filmService.js` — `getLibrary`, `isCoach`, `getBreakdowns`,
+  `getSquadRows`, `getClipLinks`; `getGames` returns `published`
+- `src/components/AppRoutes.jsx` — lazy `/film/:teamId/*`
+- `src/components/GameFilmCard.jsx`, `src/views/team/ScheduleView.jsx` — in-app
+  links for published games, film-site fallback otherwise
+- `src/utils/pageMeta.js` — static pages also match on a deep link's first segment
+- `package.json` — `zod` (the film schema); `vitest.config.js` — `src/film/**/*.test.ts`
+
+**Schema/API.**
+
+- New tables, RLS on, all writes by service role except notes:
+  `film_teams` (member read), `film_breakdowns` (coach read, FK to `film_games`),
+  `film_positions` (coach), `film_lineups` (coach; slug `'*'` = default starters;
+  players as `players.id`), `film_notes` (coach CRUD; insert requires
+  `author_id = auth.uid()`), `film_ollie_games` (member), `film_ollie_players` (coach).
+- `film_games` + `game_time`, `opponent`, `home`, `score_us`, `score_them`, `content jsonb`.
+- `grant execute on film_is_coach(uuid) to authenticated` (used in policies).
+- Edge function `film-clip`: POST `{ teamId, slug }` → `{ urls, expiresIn }`. Reads
+  `film_games` with the caller's JWT (RLS = membership), signs R2 GETs for
+  `<team_id>/<slug>/<clip_id>.mp4` via aws4fetch, 3600 s. Secrets: `R2_ENDPOINT`,
+  `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
+- Data is written by dfc-game-film `tools/manager/manager.ts publish` / `move-notes`.
+
+**Rationale.** RLS replaces the client-side AES layer, so the film's data model is
+stored as jsonb per game rather than normalised; the pages read it the same way
+the old site did. Lineups are stored by player id and mapped back to names in
+`squad.js`, so the copied logic stays unchanged and renames in the manager carry
+through. `getGames` retries without `content` on `42703`, so schedule links keep
+working before the migration.
+
+**Tests.** `vitest run`: 91 files, 1290 tests passing (40 carried-over film logic
+tests, 4 for `squadFrom`, 1 page-title test). `npm run build` clean; the film chunk
+is ~146 kB (43 kB gzip), lazy.
+
+**Rollback.** Revert `ab4c813`; the schedule and card go back to film-site links
+only. The migration is additive: to remove it, drop the seven `film_*` tables
+above and the six new `film_games` columns, and
+`revoke execute on function film_is_coach(uuid) from authenticated`. Delete the
+function with `supabase functions delete film-clip`.
+
+---
+
 ## 2026-10-22 — Phone-ready layout, and "Balance" (d6f11bd..b981b70)
 
 **Commits.**
