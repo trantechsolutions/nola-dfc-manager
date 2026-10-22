@@ -10,6 +10,27 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-22 — Game film inside the manager (ab4c813..ab4c813)
+
+Game film now lives inside the app, so there are no film passwords to remember.
+
+- **Open it from the team.** The Game film card on the team page (and under
+  About in the parent portal) now opens the film right in the app, for everyone
+  on the team.
+- **Season and library.** See the season at a glance (results, form, when goals
+  come, the numbers per game) and a library of every game reviewed.
+- **Each game.** Read the match report and watch the highlight clips without
+  leaving the app. A trail at the top (Game film › Library › the game) takes you
+  back a step at a time.
+- **From the schedule.** A game's Match report and Highlights buttons now open
+  these pages.
+- **Coaches** also see the recurring themes across the season, and who played
+  where.
+- **Still on the old film site for now:** the play-by-play, unit review, coaches'
+  breakdown, player pages and the scorekeeper screen. They move over next.
+
+---
+
 ## 2026-10-22 — Phone-ready layout, and "Balance" (d6f11bd..b981b70)
 
 The app now works properly on a phone, which is where most families open it.
