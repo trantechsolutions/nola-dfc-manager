@@ -36,6 +36,7 @@ import { CATEGORY_LABELS, CATEGORY_TEXT_COLORS as CATEGORY_COLORS, DOC_TYPE_LABE
 import PaymentOptions from '../../components/PaymentOptions';
 import { isPayableAccount } from '../../utils/accounts';
 import Badge from '../../components/layout/Badge';
+import PageTabs from '../../components/layout/PageTabs';
 import PanelHost from '../../components/layout/PanelHost';
 import { usePanelRoute } from '../../hooks/usePanelRoute';
 import { compressImageFile } from '../../utils/imageCompression';
@@ -474,7 +475,7 @@ export default function ParentView({
           sentence first and offers the next step beside it. */}
       <section
         aria-label={t('parent.thisSeason', 'This season')}
-        className="divide-y divide-border rounded-lg border border-border bg-card"
+        className="m-bleed divide-y divide-border rounded-lg border border-border bg-card"
       >
         <div className="p-5">
           <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
@@ -583,28 +584,12 @@ export default function ParentView({
 
       {/* ── DETAIL ── plain tabs; each pane is reference, not the headline */}
       <div>
-        <div role="tablist" className="flex gap-1 border-b border-border">
-          {PARENT_TABS.map((pt) => {
-            const isActive = tab === pt.id;
-            return (
-              <button
-                key={pt.id}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => setTab(pt.id)}
-                className={`relative -mb-px px-3 py-2.5 text-sm font-semibold transition-colors ${
-                  isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {t(pt.key, pt.label)}
-                {isActive && (
-                  <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary" aria-hidden="true" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+        <PageTabs
+          label={t('parent.thisSeason', 'This season')}
+          tabs={PARENT_TABS.map((pt) => ({ id: pt.id, label: t(pt.key, pt.label) }))}
+          active={tab}
+          onChange={setTab}
+        />
         <div role="tabpanel">
           {tab === 'account' && (
             <div className="space-y-4 pt-5">

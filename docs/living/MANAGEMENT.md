@@ -10,6 +10,35 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-22 — Phone-ready layout, and "Balance" (d6f11bd..b981b70)
+
+**Scope.** A phone pass over the redesigned pages, plus one label change.
+17 files, ~250 insertions. Two commits.
+
+**Decision: pin in-page tabs rather than add more navigation.** Long pages on a
+phone were the main friction; keeping the existing tabs pinned under the header
+fixes it without adding new controls. One shared component now draws every
+in-page tab row, so they behave the same everywhere.
+
+**Decision: phone-specific styling, same design system.** Phones get edge-to-
+edge lists, 16px form text (which stops iOS zooming into fields) and larger
+tap targets through a small set of phone-only rules. No separate mobile app or
+second set of components.
+
+**Decision: desk-task pages are contained, not redesigned.** Budget, Balance
+and Fundraising keep their desktop tables, scrolling inside their own box on a
+phone. A full phone layout for those is deferred until coaches ask for it.
+
+**Risk.** Low. Layout and styling only; no data, schema or permission changes.
+Checked in the local preview at 360px and 390px with sample data, not against
+live accounts. Two stray Update Log entries from the previous push are still
+outstanding, as is the scores migration.
+
+**Open.** Phone layouts for Budget, Balance and Fundraising if needed. Carried
+over: run `event_scores_migration.sql`; remove the two stray Update Log rows.
+
+---
+
 ## 2026-10-22 — An app for parents and coaches (3fb8f43..918423d)
 
 **Scope.** End-user redesign of the app shell and the four most-visited pages

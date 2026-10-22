@@ -511,7 +511,7 @@ export default function BulkUploadLedgerModal({
             </div>
 
             <div className="border border-border rounded-lg overflow-hidden">
-              <div className="max-h-[35vh] overflow-y-auto">
+              <div className="max-h-[35vh] overflow-auto">
                 <table className="w-full text-xs">
                   <thead className="bg-background sticky top-0">
                     <tr className="text-xs font-semibold text-muted-foreground">

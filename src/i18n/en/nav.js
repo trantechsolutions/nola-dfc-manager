@@ -80,7 +80,7 @@ export default {
   checklist: 'Checklist',
   users: 'Users',
   categories: 'Categories',
-  bookBalance: 'Book Balance',
+  bookBalance: 'Balance',
   fieldSchedule: 'Field Schedule',
   help: 'Help & User Guide',
 };

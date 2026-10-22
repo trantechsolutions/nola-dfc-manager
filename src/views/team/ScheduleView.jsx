@@ -24,6 +24,7 @@ import CalendarView from '../../components/CalendarView';
 import EventExpenseModal from '../../components/EventExpenseModal';
 import BulkExpenseModal from '../../components/BulkExpenseModal';
 import PanelHost from '../../components/layout/PanelHost';
+import PageTabs from '../../components/layout/PageTabs';
 import { usePanelRoute } from '../../hooks/usePanelRoute';
 import { EVENT_TYPES } from '../../utils/eventClassifier';
 import { useT } from '../../i18n/I18nContext';
@@ -110,16 +111,6 @@ const EventRow = ({
             <MapPin size={14} className="shrink-0" aria-hidden="true" />
             <span className="truncate">{event.location}</span>
           </span>
-          {!isPast && (
-            <button
-              type="button"
-              onClick={() => downloadEventIcs(event, { teamName })}
-              className="flex items-center gap-1.5 rounded-md hover:text-foreground"
-            >
-              <CalendarPlus size={14} className="shrink-0" aria-hidden="true" />
-              {t('nav.addToCalendar')}
-            </button>
-          )}
           {canEdit && editing ? (
             <select
               autoFocus
@@ -134,12 +125,16 @@ const EventRow = ({
                 </option>
               ))}
             </select>
+          ) : !canEdit ? (
+            <span className="flex items-center gap-1.5">
+              <span className={`h-2 w-2 rounded-full ${type.dot}`} aria-hidden="true" />
+              {typeLabel}
+            </span>
           ) : (
             <button
               type="button"
-              onClick={canEdit ? () => setEditing(true) : undefined}
-              disabled={!canEdit}
-              className={`flex items-center gap-1.5 rounded-md ${canEdit ? 'hover:text-foreground' : 'cursor-default'}`}
+              onClick={() => setEditing(true)}
+              className={`-my-2 flex items-center gap-1.5 rounded-md py-2 ${canEdit ? 'hover:text-foreground' : 'cursor-default'}`}
               title={canEdit ? t('schedule.clickToChangeType') : undefined}
             >
               <span className={`h-2 w-2 rounded-full ${type.dot}`} aria-hidden="true" />
@@ -148,6 +143,13 @@ const EventRow = ({
             </button>
           )}
         </p>
+
+        {!isPast && (
+          <button type="button" onClick={() => downloadEventIcs(event, { teamName })} className={ROW_ACTION}>
+            <CalendarPlus size={14} aria-hidden="true" />
+            {t('nav.addToCalendar')}
+          </button>
+        )}
 
         {isPast && isGame && dbEvent && onScoreChange && (
           <ScoreEditor dbEvent={dbEvent} onScoreChange={onScoreChange} />
@@ -176,11 +178,7 @@ const EventRow = ({
 
         {/* Expenses — only for synced events, and only for staff who can edit */}
         {dbEvent && onManageExpenses && (
-          <button
-            type="button"
-            onClick={() => onManageExpenses(dbEvent)}
-            className="mt-3 inline-flex items-center gap-2 rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
+          <button type="button" onClick={() => onManageExpenses(dbEvent)} className={ROW_ACTION}>
             <DollarSign size={12} aria-hidden="true" />
             {expenseSummary && expenseSummary.total > 0 ? (
               <>
@@ -229,10 +227,10 @@ const MonthGroups = ({ events, locale, renderRow }) => {
         <section key={group.key} aria-label={group.label}>
           {/* Stays under the header while its month scrolls past, so a long
               season never leaves you wondering which month a date is in. */}
-          <h3 className="sticky top-14 z-10 -mx-1 mb-2 bg-canvas px-2 py-2 text-sm font-semibold text-muted-foreground">
+          <h3 className="sticky-below-tabs -mx-1 mb-2 bg-canvas px-2 py-2 text-sm font-semibold text-muted-foreground">
             {group.label}
           </h3>
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+          <ul className="m-bleed divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
             {group.events.map(renderRow)}
           </ul>
         </section>
@@ -240,6 +238,11 @@ const MonthGroups = ({ events, locale, renderRow }) => {
     </div>
   );
 };
+
+// Row actions under an event: 40px tall so each is a comfortable tap on a
+// phone, and spaced so a thumb cannot catch the neighbour.
+const ROW_ACTION =
+  'mr-2 mt-3 inline-flex min-h-10 items-center gap-2 rounded-md border border-border px-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground';
 
 // Events that end in a result worth recording.
 const GAME_TYPES = ['league', 'friendly', 'tournament'];
@@ -305,11 +308,7 @@ const ScoreEditor = ({ dbEvent, onScoreChange }) => {
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={start}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-      >
+      <button type="button" onClick={start} className={ROW_ACTION}>
         <Pencil size={12} aria-hidden="true" />
         {hasScore ? t('nav.editScore') : t('nav.addScore')}
       </button>
@@ -659,31 +658,9 @@ export default function ScheduleView({
 
   return (
     <div className="space-y-5">
-      {/* ── View switch + staff actions ── (page title comes from the shell) */}
+      {/* ── Staff and calendar actions ── (page title comes from the shell) */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 rounded-lg bg-muted p-1" role="tablist">
-          {ALL_TABS.map((tb) => (
-            <button
-              key={tb.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === tb.id}
-              onClick={() => setTab(tb.id)}
-              className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-sm font-semibold transition-colors ${
-                tab === tb.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {tb.label}
-              {tb.id !== 'calendar' && (
-                <span className="text-xs font-medium tabular-nums text-muted-foreground">
-                  {tb.id === 'upcoming' ? seasonEvents.upcoming.length : seasonEvents.past.length}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {onBulkAddExpenses && bulkCandidates.length > 0 && (
             <button
               type="button"
@@ -723,6 +700,18 @@ export default function ScheduleView({
           )}
         </div>
       </div>
+
+      {/* ── View switch ── pinned under the header while the list scrolls */}
+      <PageTabs
+        tabs={ALL_TABS.map((tb) => ({
+          id: tb.id,
+          label: tb.label,
+          count:
+            tb.id === 'upcoming' ? seasonEvents.upcoming.length : tb.id === 'past' ? seasonEvents.past.length : null,
+        }))}
+        active={tab}
+        onChange={setTab}
+      />
 
       {/* ── No feed warning (non-admins only) ── */}
       {!currentIcsUrl && !canEditSchedule && (

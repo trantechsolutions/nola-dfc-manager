@@ -80,7 +80,7 @@ export default {
   checklist: 'Lista',
   users: 'Usuarios',
   categories: 'Categorías',
-  bookBalance: 'Balance de Libros',
+  bookBalance: 'Balance',
   fieldSchedule: 'Calendario de Cancha',
   help: 'Ayuda y Guía del Usuario',
 };

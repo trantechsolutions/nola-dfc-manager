@@ -181,6 +181,7 @@ export default {
   },
 
   rosterMgmt: {
+    call: 'Llamar a',
     searchPlaceholder: 'Buscar jugadores, tutores o notas...',
     compliant: 'En Cumplimiento',
     nonCompliant: 'Sin Cumplimiento',

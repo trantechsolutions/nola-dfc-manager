@@ -180,6 +180,7 @@ export default {
   },
 
   rosterMgmt: {
+    call: 'Call',
     searchPlaceholder: 'Search players, guardians, or notes...',
     compliant: 'Compliant',
     nonCompliant: 'Non-compliant',

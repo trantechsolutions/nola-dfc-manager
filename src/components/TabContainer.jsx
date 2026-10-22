@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import PageTabs from './layout/PageTabs';
 
 export default function TabContainer({ tabs, defaultTab, children }) {
   const [activeTab, setActiveTab] = useState(() => (tabs.some((t) => t.id === defaultTab) ? defaultTab : tabs[0]?.id));
@@ -19,20 +20,7 @@ export default function TabContainer({ tabs, defaultTab, children }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex gap-1 bg-muted rounded-lg p-1 w-fit">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setActiveTab(t.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              activeTab === t.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {t.icon && <t.icon size={14} />}
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <PageTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
       {children(activeTab)}
     </div>
   );

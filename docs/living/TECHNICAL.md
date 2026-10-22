@@ -26,6 +26,57 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-10-22 — Phone-ready layout, and "Balance" (d6f11bd..b981b70)
+
+**Commits.**
+
+```
+b981b70 feat: add a phone theme with pinned tabs and larger touch targets
+d6f11bd chore: rename Book Balance to Balance
+```
+
+**Touched.**
+
+- New `src/components/layout/PageTabs.jsx` (sticky underline tablist, 44px
+  tabs, optional counts). Adopted by `ParentView`, `TeamOverviewView`,
+  `ScheduleView` (replaces the segmented control; actions moved above it) and
+  `TabContainer` (People).
+- `src/index.css`: `--page-tabs-h`, `.page-tabs`, `.sticky-below-tabs`,
+  `overflow-x: clip` on `.app-main`, phone-only 16px form controls, a
+  `@layer utilities` `.m-bleed` (edge-to-edge below 768px, outranks
+  `rounded-lg`), and `@media (hover: none)` showing
+  `.opacity-0.group-hover:opacity-100`.
+- `ScheduleView`: `ROW_ACTION` (40px) for Add to calendar, Add/Edit score and
+  Manage Expenses; the type label is a span for non-editors; month headings use
+  `.sticky-below-tabs`.
+- `PaymentOptions`: actions on their own row, `PAY` primary (44px), larger copy
+  controls. Accessible names unchanged.
+- `RosterManagement`: phone-only compliance status and tap-to-call guardian
+  link; i18n `rosterMgmt.call` (en/es).
+- `m-bleed` on `NextMatchCard`, `AttentionStrip`, `PlayerChecklistCard`, the
+  parent season summary and the coach glance card.
+- `BulkUploadModal`, `BulkUploadLedgerModal`: preview scrolls on both axes.
+- i18n: `nav.bookBalance` and `bookBalance.title` → "Balance" (en and es).
+
+**Schema/API.** None.
+
+**Rationale.** Sticky positioning keeps the existing tab state model; no routing
+or URL changes. `overflow-x: clip` (not `hidden`) contains stray width without
+creating a scroll container, so sticky descendants still stick. `.m-bleed`
+lives in the utilities layer because component-layer rules lose to Tailwind
+utilities on the same element.
+
+**Tests.** 1,243 tests pass; `TabContainer.test.jsx` updated to query `tab`
+roles. Playwright checks of the preview at 360px and 390px: document scroll
+width equals viewport width on Home and Schedule for both roles; remaining
+sub-32px targets are the footer link and the staff-only type control (hit area
+enlarged). Production build passes.
+
+**Rollback.** `git revert b981b70` restores the previous tab rows and styling;
+`git revert d6f11bd` restores the "Book Balance" label. No migrations.
+
+---
+
 ## 2026-10-22 — An app for parents and coaches (3fb8f43..918423d)
 
 **Commits.**
