@@ -12,6 +12,8 @@ const STATIC_PAGES = {
   help: { key: 'nav.help', fallback: 'Help & User Guide', section: null },
   'club-onboard': { key: 'nav.onboardTeam', fallback: 'Onboard Team', section: 'club' },
   'club-players': { key: 'nav.players', fallback: 'Players', section: 'club' },
+  // /film/:teamId/… — every page under it is the team's game film.
+  film: { key: 'film.appTitle', fallback: 'Game film', section: 'team' },
 };
 
 // Nav groups that carry no explicit `section` on their items.
@@ -46,7 +48,8 @@ export function getPageMeta(view, { navGroups = [], t, teamName } = {}) {
   }
 
   if (!title) {
-    const staticPage = STATIC_PAGES[view];
+    // An exact route, else the first segment of a deep link with ids in it.
+    const staticPage = STATIC_PAGES[view] || STATIC_PAGES[String(view || '').split('/')[0]];
     if (staticPage) {
       title = t(staticPage.key, staticPage.fallback);
       section = staticPage.section;

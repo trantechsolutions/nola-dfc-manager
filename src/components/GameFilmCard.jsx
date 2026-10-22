@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Clapperboard, ExternalLink, ClipboardList } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Clapperboard, ExternalLink, ClipboardList, PlayCircle } from 'lucide-react';
 import { filmService, filmLink } from '../services/filmService';
 import { useT } from '../i18n/I18nContext';
 
@@ -14,11 +15,13 @@ export default function GameFilmCard({ teamId }) {
 
   useEffect(() => {
     let live = true;
-    filmService.getAccess(teamId).then(
-      async (a) => {
+    Promise.all([filmService.getAccess(teamId), filmService.getGames(teamId).catch(() => [])]).then(
+      async ([a, games]) => {
         // A scorekeeper or coach also gets a token for their own account, so the stats they keep are theirs.
         const keeperToken = a?.keeper ? await filmService.keeperToken(teamId).catch(() => null) : null;
-        if (live) setAccess(a && { ...a, keeperToken });
+        // Once games are published into the manager, the film opens in the app itself.
+        const inApp = games.some((g) => g.published);
+        if (live) setAccess(a || inApp ? { ...a, keeperToken, inApp } : null);
       },
       () => live && setAccess(null),
     );
@@ -44,15 +47,27 @@ export default function GameFilmCard({ teamId }) {
           </p>
         </div>
       </div>
-      <a
-        href={film}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-      >
-        <ExternalLink size={13} />
-        {access.coach ? t('common.gameFilm.openCoach') : t('common.gameFilm.open')}
-      </a>
+      {access.inApp ? (
+        <Link
+          to={`/film/${teamId}`}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+        >
+          <PlayCircle size={13} />
+          {t('common.gameFilm.open')}
+        </Link>
+      ) : (
+        film && (
+          <a
+            href={film}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          >
+            <ExternalLink size={13} />
+            {access.coach ? t('common.gameFilm.openCoach') : t('common.gameFilm.open')}
+          </a>
+        )
+      )}
       {keeper && (
         <a
           href={keeper}

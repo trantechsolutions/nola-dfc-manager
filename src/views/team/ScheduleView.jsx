@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Calendar,
   CalendarDays,
@@ -163,11 +164,19 @@ const EventRow = ({
                 {film.games.length > 1 && (
                   <span className="mr-1 text-xs font-semibold text-muted-foreground">{gameLabel(g.slug)}</span>
                 )}
-                <FilmButton href={filmGameLink(film.access, g.slug, 'report')} icon={<FileText size={13} />}>
+                <FilmButton
+                  to={g.published ? `/film/${film.teamId}/game/${g.slug}/report` : null}
+                  href={filmGameLink(film.access, g.slug, 'report')}
+                  icon={<FileText size={13} />}
+                >
                   {t('schedule.filmReport')}
                 </FilmButton>
                 {g.hasHighlights && (
-                  <FilmButton href={filmGameLink(film.access, g.slug, 'highlights')} icon={<PlayCircle size={13} />}>
+                  <FilmButton
+                    to={g.published ? `/film/${film.teamId}/game/${g.slug}/highlights` : null}
+                    href={filmGameLink(film.access, g.slug, 'highlights')}
+                    icon={<PlayCircle size={13} />}
+                  >
                     {t('schedule.filmHighlights')}
                   </FilmButton>
                 )}
@@ -381,14 +390,18 @@ const gameLabel = (slug) =>
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
 
-const FilmButton = ({ href, icon, children }) =>
-  href ? (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border border-border bg-card text-foreground hover:bg-background transition-colors"
-    >
+const FILM_BUTTON =
+  'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border border-border bg-card text-foreground hover:bg-background transition-colors';
+
+// A published game opens in the app's own film pages (to); one that isn't yet still opens on the film site.
+const FilmButton = ({ to, href, icon, children }) =>
+  to ? (
+    <Link to={to} className={FILM_BUTTON}>
+      {icon}
+      {children}
+    </Link>
+  ) : href ? (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={FILM_BUTTON}>
       {icon}
       {children}
     </a>
@@ -403,7 +416,7 @@ function useFilmGames(teamId) {
       ([access, games]) => {
         if (!live) return;
         const byEvent = {};
-        for (const g of access ? games : []) if (g.eventId) (byEvent[g.eventId] ||= []).push(g);
+        for (const g of games.filter((x) => access || x.published)) if (g.eventId) (byEvent[g.eventId] ||= []).push(g);
         setFilm({ access, byEvent });
       },
       () => live && setFilm({ access: null, byEvent: {} }),
@@ -453,7 +466,8 @@ export default function ScheduleView({
       : null;
 
   const film = useFilmGames(selectedTeam?.id);
-  const filmFor = (db) => (db && film.byEvent[db.id] ? { access: film.access, games: film.byEvent[db.id] } : null);
+  const filmFor = (db) =>
+    db && film.byEvent[db.id] ? { access: film.access, teamId: selectedTeam?.id, games: film.byEvent[db.id] } : null;
 
   // Map iCal event → DB event so EventCards can show/edit the locked type.
   // Matched by UID, then by start time: after a feed URL change the synced row
