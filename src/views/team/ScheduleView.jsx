@@ -21,6 +21,8 @@ import {
   Pencil,
   Plus,
   Shirt,
+  BarChart3,
+  ClipboardList,
 } from 'lucide-react';
 import { filmService, filmGameLink } from '../../services/filmService';
 import CalendarView from '../../components/CalendarView';
@@ -30,6 +32,8 @@ import EventEditor from '../../components/EventEditor';
 import EventRsvp from '../../components/EventRsvp';
 import { mergeSavedEvents } from '../../hooks/useSchedule';
 import { scheduleService } from '../../services/scheduleService';
+import { liveGameService } from '../../services/liveGameService';
+import { isOpen, windowFor } from '../../film/gameWindow';
 import PanelHost from '../../components/layout/PanelHost';
 import PageTabs from '../../components/layout/PageTabs';
 import { usePanelRoute } from '../../hooks/usePanelRoute';
@@ -58,6 +62,9 @@ const EventRow = ({
   film = null,
   onEdit = null,
   rsvp = null,
+  liveGame = null,
+  teamId = null,
+  canKeep = false,
 }) => {
   const { t, locale } = useT();
   const isGame = GAME_TYPES.includes(dbEvent?.eventType || event.eventType);
@@ -172,6 +179,42 @@ const EventRow = ({
               </span>
             )}
           </p>
+        )}
+
+        {/* Keeping stats is per game, from 2 hours before it until 2 hours after (sql/keeper_game_window_migration.sql). */}
+        {canKeep &&
+          dbEvent &&
+          isGame &&
+          !event.isCancelled &&
+          isOpen(windowFor(dbEvent.eventDate, dbEvent.endDate), Date.now()) && (
+            <Link to={`/keep/${teamId}/event/${dbEvent.id}`} className={ROW_ACTION}>
+              <ClipboardList size={14} aria-hidden="true" />
+              {t('film.live_keepStats')}
+            </Link>
+          )}
+
+        {/* The scorekeeper kept this game: follow it live, or read its stats afterwards. */}
+        {liveGame && teamId && (
+          <Link
+            to={`/live/${teamId}/${encodeURIComponent(liveGame.game)}`}
+            className={`mr-2 mt-3 inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors ${
+              liveGame.live
+                ? 'bg-destructive text-destructive-foreground hover:opacity-90'
+                : 'border border-border text-foreground hover:bg-muted'
+            }`}
+          >
+            {liveGame.live ? (
+              <span className="live-dot h-2 w-2 rounded-full bg-current" aria-hidden="true" />
+            ) : (
+              <BarChart3 size={14} aria-hidden="true" />
+            )}
+            <span className="tabular-nums">
+              {t(liveGame.live ? 'film.live_follow' : 'film.live_gameStats', {
+                us: liveGame.score.us,
+                them: liveGame.score.them,
+              })}
+            </span>
+          </Link>
         )}
 
         {!isPast && !event.isCancelled && rsvp && <EventRsvp {...rsvp} />}
@@ -445,6 +488,31 @@ const FilmButton = ({ to, href, icon, children }) =>
     </a>
   ) : null;
 
+// Games the scorekeeper kept, by schedule entry, checked again every minute so "Live" appears on its own.
+function useLiveGames(teamId) {
+  const [byEvent, setByEvent] = useState({});
+  useEffect(() => {
+    let live = true;
+    const load = () =>
+      liveGameService.getSummaries(teamId).then(
+        (list) => {
+          if (!live) return;
+          const next = {};
+          for (const g of list) if (g.eventId && !next[g.eventId]) next[g.eventId] = g;
+          setByEvent(next);
+        },
+        () => {},
+      );
+    load();
+    const timer = setInterval(load, 60000);
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
+  }, [teamId]);
+  return byEvent;
+}
+
 // The team's breakdowns on the game film site, by schedule entry, with the keys that open them.
 function useFilmGames(teamId) {
   const [film, setFilm] = useState({ access: null, byEvent: {} });
@@ -528,6 +596,18 @@ export default function ScheduleView({
   }, [appRun, selectedTeam?.id]);
 
   const film = useFilmGames(selectedTeam?.id);
+  const liveGames = useLiveGames(selectedTeam?.id);
+  const [canKeep, setCanKeep] = useState(false);
+  useEffect(() => {
+    let live = true;
+    filmService.canKeep(selectedTeam?.id).then(
+      (v) => live && setCanKeep(!!v),
+      () => live && setCanKeep(false),
+    );
+    return () => {
+      live = false;
+    };
+  }, [selectedTeam?.id]);
   const filmFor = (db) =>
     db && film.byEvent[db.id] ? { access: film.access, teamId: selectedTeam?.id, games: film.byEvent[db.id] } : null;
 
@@ -784,6 +864,9 @@ export default function ScheduleView({
         film={filmFor(db)}
         onManageExpenses={canEditSchedule ? (event) => openPanel(PANELS.EVENT_EXPENSE, { id: event.id }) : null}
         onEdit={canAddEvents && db ? () => openPanel(PANELS.EVENT_EDITOR, { id: db.id }) : null}
+        liveGame={db ? liveGames[db.id] || null : null}
+        teamId={selectedTeam?.id}
+        canKeep={canKeep}
         rsvp={
           !isPast && db && (canEditSchedule || myTeamPlayers.length)
             ? {

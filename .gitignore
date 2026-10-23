@@ -54,3 +54,5 @@ playwright-report/
 .e2e-seed-state.json
 
 .claude
+# Game film working files (game data, clips, keys); never committed
+/private/

@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageTabs from '../../components/layout/PageTabs';
 import OnboardingChecklist from '../../components/OnboardingChecklist';
-import GameFilmCard from '../../components/GameFilmCard';
 import SmallBox from '../../components/layout/SmallBox';
 import {
   Users,
@@ -105,7 +104,6 @@ function LegendDot({ className = '' }) {
 }
 
 export default function TeamOverviewView({
-  teamId,
   players,
   archivedPlayers = [],
   teamBalance,
@@ -289,9 +287,6 @@ export default function TeamOverviewView({
 
   return (
     <div className="space-y-6">
-      {/* ── Game film: the team's film site, opened with this account's access ── */}
-      <GameFilmCard teamId={teamId} />
-
       {/* ── Draft budget notice ── */}
       {!isFinalized &&
         baseFee > 0 &&

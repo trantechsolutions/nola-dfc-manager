@@ -37,6 +37,8 @@ export default {
   team: 'Team',
   money: 'Money',
   manage: 'Manage',
+  stats: 'Stats',
+  gameFilm: 'Game film',
   switchTeam: 'Switch team or season',
   yourTeams: 'Your teams',
   activeSeason: 'current',

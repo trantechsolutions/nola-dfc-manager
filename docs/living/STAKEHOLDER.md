@@ -10,6 +10,25 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-23 — Scorekeeper, live games and the Stats tab (b219849..a4e2d62)
+
+Keeping score and following games now happens in the app, and game film has its own tab.
+
+- **New Stats tab.** Game film has moved from the Home page to a Stats tab at the bottom of the screen. More
+  stats pages will join it over time.
+- **Keep stats in the app.** Coaches, the manager and scorekeepers can keep a game's stats from the schedule.
+  The button appears from 2 hours before kickoff until 2 hours after the game, and works without signal at the
+  field; it catches up once the phone is back online.
+- **Practice runs.** Scorekeepers can try it out with a practice run from the bottom of the Stats page. A
+  practice run never counts and clears itself after an hour, or when you start another.
+- **Follow a game live.** Families can tap a game in the schedule to see the running score, the play-by-play
+  and the stats, with a celebration on screen when we score or win.
+- **Matches the app.** The scorekeeper now uses the app's colours and follows light or dark mode.
+- **Phone tabs.** Staff see Home, Schedule, Stats, Team and Money; Manage moved into the account menu (the
+  circle at the top right). Families see Home, Schedule, Stats and Checklist.
+
+---
+
 ## 2026-10-22 — App-run schedule, team chat, phone film and access control (51a594b..0461e48)
 
 The schedule and the conversation around it now live in the app, and access to club data is tighter.

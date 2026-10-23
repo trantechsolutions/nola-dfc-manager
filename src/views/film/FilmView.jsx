@@ -7,10 +7,12 @@ import { FilmStatus } from './filmUi';
 import FilmSeason from './FilmSeason';
 import FilmLibrary from './FilmLibrary';
 import FilmGame from './FilmGame';
+import FilmScorekeeper from './FilmScorekeeper';
 
 /**
- * The team's game film: the season overview, the library of games, and each game's pages. Open to anyone on
- * the team; row-level security decides what they get (coaches also get the breakdowns and the squad).
+ * The Stats tab: the team's game film (the season overview, the library of games, and each game's pages), and
+ * at its foot the scorekeeper for the team's stat keepers. Open to anyone on the team; row-level security
+ * decides what they get (coaches also get the breakdowns and the squad).
  *
  *   /film/:teamId                 season overview
  *   /film/:teamId/library         every game, newest first
@@ -20,7 +22,10 @@ export default function FilmView() {
   const { teamId } = useParams();
   return (
     <FilmProvider teamId={teamId}>
-      <FilmShell />
+      <div className="space-y-8">
+        <FilmShell />
+        <FilmScorekeeper teamId={teamId} />
+      </div>
     </FilmProvider>
   );
 }

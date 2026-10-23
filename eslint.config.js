@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
 export default defineConfig([
-  globalIgnores(['dist', 'playwright-report', 'test-results']),
+  globalIgnores(['dist', 'playwright-report', 'test-results', 'private']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [js.configs.recommended, reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
@@ -49,7 +49,7 @@ export default defineConfig([
     },
   }, // E2E test files and config (node env)
   {
-    files: ['scripts/**/*.js', 'vite.config.js', 'vitest.config.js'],
+    files: ['scripts/**/*.js', 'tools/**/*.js', 'vite.config.js', 'vitest.config.js'],
     languageOptions: {
       globals: globals.node,
     },

@@ -3,14 +3,14 @@
 // next, check the schedule, look after the team, settle money — not in the
 // club/season/team layering the data is stored in. So the nav items App.jsx
 // builds (already filtered by role and permission) are regrouped here into at
-// most five destinations. A destination only appears when the user can reach
-// at least one page in it, so a parent ends up with three tabs and a team
-// manager with up to five, from the same code path.
+// most six destinations. A destination only appears when the user can reach
+// at least one page in it, so a parent ends up with four tabs and a team
+// manager with up to six (five on a phone), from the same code path.
 //
 // URLs are untouched: a destination is a grouping over existing routes, and
 // its tab always opens the first page in it that the user is allowed to see.
 
-import { CalendarDays, House, Settings2, Users, Wallet } from 'lucide-react';
+import { ChartColumn, CalendarDays, House, Settings2, Users, Wallet } from 'lucide-react';
 
 const DESTINATIONS = [
   { id: 'home', key: 'nav.home', fallback: 'Home', icon: House, views: ['dashboard'] },
@@ -21,6 +21,9 @@ const DESTINATIONS = [
     icon: CalendarDays,
     views: ['schedule', 'planner', 'field-schedule'],
   },
+  // Everything about how the team played: game film first, more to come. The tab keeps the name Stats even
+  // while game film is its only page, so it reads the same once more pages join it.
+  { id: 'stats', key: 'nav.stats', fallback: 'Stats', icon: ChartColumn, views: ['film'] },
   {
     id: 'team',
     key: 'nav.team',
@@ -59,7 +62,13 @@ const PREFIX_FALLBACKS = [
   ['finance/', 'money'],
   ['club-', 'manage'],
   ['evaluate/', 'team'],
+  ['film/', 'stats'],
+  ['live/', 'stats'],
 ];
+
+// Phones get five tabs at most, so Manage — club setup, users, insights, visited now and then — moves into
+// the account menu there. Desktop keeps it in the header.
+const OFF_PHONE_TAB_BAR = new Set(['manage']);
 
 /**
  * @param {Array}    navItems  every nav item the user may see, in any order
@@ -88,13 +97,14 @@ export function buildDestinations(navItems = [], t = (_key, fallback) => fallbac
     .map((dest) => {
       // A destination holding a single page is that page — a parent's "Team"
       // tab is just their checklist, so it should say so. Home keeps its name.
-      const solo = dest.items.length === 1 && dest.id !== 'home' ? dest.items[0] : null;
+      const solo = dest.items.length === 1 && dest.id !== 'home' && dest.id !== 'stats' ? dest.items[0] : null;
       return {
         id: dest.id,
         label: solo ? solo.label : t(dest.key, dest.fallback),
         icon: solo ? solo.icon : dest.icon,
         to: `/${dest.items[0].id}`,
         items: dest.items,
+        phoneTab: !OFF_PHONE_TAB_BAR.has(dest.id),
       };
     });
 }

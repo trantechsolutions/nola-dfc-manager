@@ -1300,9 +1300,7 @@ export default function ParentView({
         </div>
       </div>
 
-      {/* ── GAME FILM ── the team's film site, opened already unlocked for this
-          account, and this child's season numbers from it */}
-      <GameFilmCard teamId={playerTeam?.id} />
+      {/* This child's season numbers from the game film; the film itself is on the Stats tab. */}
       <PlayerFilmStats playerId={activePlayer.id} seasonId={selectedSeason} className="bg-card" />
     </div>
   );

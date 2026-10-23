@@ -59,6 +59,8 @@ const ParentChecklistView = lazy(() => import('../views/team/ParentChecklistView
 const EvaluatorScoringView = lazy(() => import('../views/club/evaluations/EvaluatorScoringView'));
 const FilmView = lazy(() => import('../views/film/FilmView'));
 const ChatView = lazy(() => import('../views/general/ChatView'));
+const KeepView = lazy(() => import('../views/film/KeepView'));
+const LiveGameView = lazy(() => import('../views/film/LiveGameView'));
 
 // Inline route fallback — matches the app's existing loading spinner
 function RouteFallback() {
@@ -76,6 +78,7 @@ export default function AppRoutes({
   teams,
   selectedTeam,
   selectedTeamId,
+  effectiveTeamId,
   setSelectedTeamId,
   userRoles,
   effectiveRole,
@@ -559,7 +562,6 @@ export default function AppRoutes({
                   <NextMatchCard />
                   {effectiveIsStaff ? (
                     <TeamOverviewView
-                      teamId={selectedTeam?.id}
                       players={seasonalPlayers}
                       archivedPlayers={archivedPlayers}
                       teamBalance={teamBalance}
@@ -808,8 +810,17 @@ export default function AppRoutes({
             {/* The team's game film. Open to every signed-in user; row-level security
                 returns a team's games only to people on that team. */}
             <Route path="/film/:teamId/*" element={<FilmView />} />
+            {/* The Stats tab opens the team's film (a parent's team is found from their player). */}
+            <Route
+              path="/film"
+              element={<Navigate to={effectiveTeamId ? `/film/${effectiveTeamId}` : '/dashboard'} replace />}
+            />
             {/* Team chat: every signed-in user; the chats listed are the teams they're on. */}
             <Route path="/chat" element={<ChatView user={user} />} />
+            {/* The scorekeeper, full screen. Who may keep stats is checked by the database (keeper_can_keep). */}
+            <Route path="/keep/:teamId/*" element={<KeepView />} />
+            {/* A kept game, live: everyone on the team (row-level security decides). */}
+            <Route path="/live/:teamId/:game" element={<LiveGameView />} />
 
             {effectiveIsStaff && (
               <>
