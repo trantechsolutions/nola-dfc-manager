@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import { useCompactViewport } from '../../hooks/useCompactViewport';
 import { cn } from '@/lib/utils';
 import { useFilm, useFilmText, useNamer } from '../../film/FilmContext';
 import { Md, T } from '../../film/RichText';
@@ -45,10 +46,10 @@ export default function FilmMatchReport({ game: g }) {
         />
 
         <FilmSection id="story" eyebrow={<T t={R.story.eyebrow} />} title={tx(R.story.title)}>
-          <p className="text-sm leading-relaxed text-foreground">
+          <p className="max-w-prose text-sm leading-relaxed text-foreground">
             <T t={R.story.lede} />
           </p>
-          <div className="mt-4 overflow-x-auto rounded-md border border-border bg-background p-2">
+          <div className="mt-4 rounded-md border border-border bg-background p-2">
             <Timeline g={g} />
           </div>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -123,7 +124,7 @@ export default function FilmMatchReport({ game: g }) {
                   </div>
                 ))}
               </div>
-              <MiniStats g={g} events={g.events.filter((e) => e.h === h)} />
+              <MiniStats events={g.events.filter((e) => e.h === h)} />
             </FilmSection>
           );
         })}
@@ -235,15 +236,17 @@ function ReportEvent({ g, e, d, label }) {
           : e.t === 'O'
             ? 'bg-accent/10 text-accent'
             : 'bg-muted text-muted-foreground';
+  // A phone gets the clock and what happened on one line, the description under it at full width. The video
+  // and clip times are for scrubbing footage on a bigger screen.
   return (
     <li
       className={cn(
-        'grid grid-cols-[4.5rem_1fr] gap-x-3 rounded-md px-2 py-1.5 text-sm',
-        e.y === 'Goal' && 'bg-muted/60',
-        e.key && 'ring-1 ring-border',
+        'rounded-md py-2 text-sm sm:grid sm:grid-cols-[4.5rem_1fr] sm:gap-x-3 sm:px-2',
+        e.y === 'Goal' && '-mx-2 bg-muted/60 px-2 sm:mx-0',
+        e.key && 'border-l-2 border-foreground/40 pl-2 sm:border-l-0 sm:ring-1 sm:ring-border',
       )}
     >
-      <span className="text-xs font-bold tabular-nums text-foreground">
+      <span className="hidden text-xs font-bold tabular-nums text-foreground sm:block">
         {e.c}
         <span className="block font-normal text-muted-foreground">
           {t('vid')} {mmss(v)}
@@ -252,24 +255,13 @@ function ReportEvent({ g, e, d, label }) {
           <b>{clip.label}</b> {clip.at}
         </span>
       </span>
-      <span>
-        <span className={cn('mr-2 inline-block rounded px-1.5 py-0.5 text-[11px] font-bold', tone)}>{text}</span>
-        <span className="text-muted-foreground">
-          {d !== undefined ? (
-            <Md s={named(e, d)} />
-          ) : (
-            <>
-              <Md s={named(e, tx(e.d))} />
-              {e.f && (
-                <>
-                  {' '}
-                  <i>
-                    <Md s={tx(e.f)} />
-                  </i>
-                </>
-              )}
-            </>
-          )}
+      <span className="block min-w-0">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="font-numeral text-base font-bold tabular-nums text-foreground sm:hidden">{e.c}</span>
+          <span className={cn('rounded px-1.5 py-0.5 text-xs font-bold', tone)}>{text}</span>
+        </span>
+        <span className="mt-1 block leading-relaxed text-muted-foreground">
+          {d !== undefined ? <Md s={named(e, d)} /> : <Md s={named(e, tx(e.d))} />}
           {e.y === 'Shot' && e.on !== undefined && (
             <>
               {' '}
@@ -277,6 +269,11 @@ function ReportEvent({ g, e, d, label }) {
             </>
           )}
         </span>
+        {d === undefined && e.f && (
+          <span className="mt-1 block text-xs leading-relaxed text-muted-foreground/80">
+            <Md s={tx(e.f)} />
+          </span>
+        )}
       </span>
     </li>
   );
@@ -291,22 +288,20 @@ const STATS = [
   ['statCards', (e) => e.y === 'Yellow' || e.y === 'Red'],
 ];
 
-function MiniStats({ g, events }) {
-  const { shortName: US } = useFilm();
+/** The half in six counts, ours first in the team colour, theirs second in the opponent's. */
+function MiniStats({ events }) {
   const { t } = useFilmText();
   return (
-    <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+    <div className="mt-5 grid grid-cols-3 gap-2 lg:grid-cols-6">
       {STATS.map(([k, f]) => {
         const d = events.filter((e) => e.t === 'D' && f(e)).length;
         const o = events.filter((e) => e.t === 'O' && f(e)).length;
         return (
-          <div key={k} className="rounded-md bg-muted/60 px-3 py-2">
-            <Eyebrow>{t(k)}</Eyebrow>
-            <span className="mt-1 flex items-baseline gap-2 text-lg font-bold tabular-nums">
+          <div key={k} className="rounded-md bg-muted/60 px-2.5 py-2">
+            <span className="block text-[11px] font-medium leading-tight text-muted-foreground">{t(k)}</span>
+            <span className="mt-1 block font-numeral text-xl font-bold tabular-nums">
               <span className="text-primary">{d}</span>
-              <span className="text-[10px] font-medium text-muted-foreground">
-                {US} · {g.opponent}
-              </span>
+              <span className="mx-1 text-muted-foreground">–</span>
               <span className="text-accent">{o}</span>
             </span>
           </div>
@@ -320,8 +315,11 @@ function MiniStats({ g, events }) {
 function Timeline({ g }) {
   const { shortName: US } = useFilm();
   const { t } = useFilmText();
-  const W = 1000;
-  const L = 52;
+  // A phone draws it narrower, so the same type reads at a legible size without scrolling sideways.
+  const compact = useCompactViewport();
+  const W = compact ? 560 : 1000;
+  // The team names sit at the left edge on a wide screen; a phone leaves them to the legend underneath.
+  const L = compact ? 16 : 52;
   const R = 24;
   const GAP = 44;
   const MID = 125;
@@ -332,18 +330,23 @@ function Timeline({ g }) {
   const x = (h, c) => (h === 1 ? L + sec(c) * k : htX + GAP + sec(c) * k);
   const offset = g.video.minute ? 30 : 0;
   const colour = (team) => (team === 'D' ? 'var(--primary)' : 'var(--accent)');
-  const small = { fontSize: 13, fill: 'var(--muted-foreground)' };
+  const fs = compact ? 18 : 13;
+  const small = { fontSize: fs, fill: 'var(--muted-foreground)' };
+  const step = compact ? 10 : 5;
 
   const ticks = [];
   [
     [1, len1],
     [2, len2],
   ].forEach(([h, len]) => {
-    for (let m = 0; m * 60 <= len; m += 5) ticks.push({ x: x(h, `${m}:00`), label: `${h === 2 ? m + offset : m}'` });
+    for (let m = 0; m * 60 <= len; m += step) ticks.push({ x: x(h, `${m}:00`), label: `${h === 2 ? m + offset : m}'` });
   });
 
   let us = 0;
   let them = 0;
+  // Goals close together would print their running scores on top of each other: the later one goes unlabelled.
+  const lastLabel = { D: -Infinity, O: -Infinity };
+  const labelGap = compact ? 60 : 30;
   const marks = g.events
     .filter((e) => e.y === 'Shot' || e.y === 'Goal')
     .map((e) => {
@@ -355,30 +358,42 @@ function Timeline({ g }) {
       const up = e.t === 'D' ? -1 : 1;
       const xx = x(e.h, e.c);
       const yy = MID + up * (goal ? 76 : 44);
+      const labelled = goal && xx - lastLabel[e.t] >= labelGap;
+      if (labelled) lastLabel[e.t] = xx;
       return (
         <g key={e.id}>
           <line x1={xx} x2={xx} y1={MID} y2={yy} stroke={colour(e.t)} strokeWidth={2} />
           {goal ? (
             <>
-              <circle cx={xx} cy={yy} r={10} fill={colour(e.t)} />
-              <text
-                x={xx}
-                y={yy + up * 18 + (up < 0 ? 0 : 10)}
-                textAnchor="middle"
-                style={{ fontSize: 14, fontWeight: 700, fill: 'var(--foreground)' }}
-              >
-                {us}–{them}
-              </text>
+              <circle cx={xx} cy={yy} r={compact ? 12 : 10} fill={colour(e.t)} />
+              {labelled && (
+                // On a phone the score sits beside the marker, clear of the minute marks under the chart.
+                <text
+                  x={compact ? xx + 16 : xx}
+                  y={compact ? yy + 6 : yy + up * 18 + (up < 0 ? 0 : 10)}
+                  textAnchor={compact ? 'start' : 'middle'}
+                  style={{ fontSize: fs + 1, fontWeight: 700, fill: 'var(--foreground)' }}
+                >
+                  {us}–{them}
+                </text>
+              )}
             </>
           ) : (
-            <circle cx={xx} cy={yy} r={5.5} fill="var(--background)" stroke={colour(e.t)} strokeWidth={2.5} />
+            <circle
+              cx={xx}
+              cy={yy}
+              r={compact ? 7 : 5.5}
+              fill="var(--background)"
+              stroke={colour(e.t)}
+              strokeWidth={2.5}
+            />
           )}
         </g>
       );
     });
 
   return (
-    <svg viewBox="0 0 1000 250" role="img" aria-label={t('timelineLabel', { us: US })} className="min-w-[640px]">
+    <svg viewBox={`0 0 ${W} 250`} role="img" aria-label={t('timelineLabel', { us: US })} className="w-full">
       <rect x={htX} y={20} width={GAP} height={210} rx={4} fill="var(--muted)" />
       <text x={htX + GAP / 2} y={MID + 4} textAnchor="middle" style={small}>
         {t('ht')}
@@ -399,12 +414,16 @@ function Timeline({ g }) {
           </text>
         </g>
       ))}
-      <text x={4} y={MID - 70} style={{ fontSize: 13, fontWeight: 700, fill: 'var(--primary)' }}>
-        {US}
-      </text>
-      <text x={4} y={MID + 78} style={{ fontSize: 13, fontWeight: 700, fill: 'var(--accent)' }}>
-        {g.opponent}
-      </text>
+      {!compact && (
+        <>
+          <text x={4} y={MID - 70} style={{ fontSize: fs, fontWeight: 700, fill: 'var(--primary)' }}>
+            {US}
+          </text>
+          <text x={4} y={MID + 78} style={{ fontSize: fs, fontWeight: 700, fill: 'var(--accent)' }}>
+            {g.opponent}
+          </text>
+        </>
+      )}
       {marks}
     </svg>
   );

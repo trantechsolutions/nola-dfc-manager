@@ -73,56 +73,54 @@ export default function FilmSeason() {
           {s.lines.map((l) => {
             const where = l.home === null ? '' : l.home ? t('homeShort') : t('awayShort');
             return (
-              <li
-                key={l.slug}
-                className="grid grid-cols-[6.5rem_1fr_auto] items-center gap-3 py-2 text-sm sm:grid-cols-[8rem_1fr_10rem_auto]"
-              >
-                <span className="text-xs text-muted-foreground">
-                  {day(l.date)}
-                  {where ? ` · ${where}` : ''}
-                </span>
-                <Link to={report(l.slug)} className="truncate font-semibold text-foreground hover:underline">
-                  <span className="mr-1 text-xs font-semibold uppercase text-muted-foreground">{t('vs')}</span>
-                  {l.opponent}
+              <li key={l.slug}>
+                <Link to={report(l.slug)} className="flex items-center gap-3 py-2.5 hover:bg-background sm:px-1">
+                  <Res r={l.result} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold text-foreground">{l.opponent}</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {[day(l.date), where, `${t('ht')} ${l.htUs}–${l.htThem}`].filter(Boolean).join(' · ')}
+                    </span>
+                  </span>
+                  <span className="hidden w-40 items-center gap-1 sm:flex" aria-hidden="true">
+                    <span className="flex h-2 flex-1 justify-end overflow-hidden rounded-full bg-muted">
+                      <span
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${(l.us / maxGoals) * 100}%` }}
+                      />
+                    </span>
+                    <span className="flex h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                      <span
+                        className="h-full rounded-full bg-accent"
+                        style={{ width: `${(l.them / maxGoals) * 100}%` }}
+                      />
+                    </span>
+                  </span>
+                  <span className="w-12 shrink-0 text-right font-numeral text-xl font-bold tabular-nums">
+                    {l.us}–{l.them}
+                  </span>
                 </Link>
-                <span className="hidden items-center gap-1 sm:flex" aria-hidden="true">
-                  <span className="flex h-2 flex-1 justify-end overflow-hidden rounded-full bg-muted">
-                    <span className="h-full rounded-full bg-primary" style={{ width: `${(l.us / maxGoals) * 100}%` }} />
-                  </span>
-                  <span className="flex h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                    <span
-                      className="h-full rounded-full bg-accent"
-                      style={{ width: `${(l.them / maxGoals) * 100}%` }}
-                    />
-                  </span>
-                </span>
-                <span className="flex items-center gap-1.5 whitespace-nowrap font-bold tabular-nums">
-                  <Res r={l.result} /> {l.us}–{l.them}
-                  <span className="text-xs font-normal text-muted-foreground">
-                    {t('ht')} {l.htUs}–{l.htThem}
-                  </span>
-                </span>
               </li>
             );
           })}
         </ol>
-        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <div className="mt-4 grid grid-cols-3 gap-2">
           {['ahead', 'level', 'behind'].map((k) => {
             const r = s.fromHalfTime[k];
             const total = r.W + r.D + r.L;
             return (
-              <div key={k} className="rounded-md bg-muted/60 px-3 py-2">
-                <Eyebrow>{t(`ht_${k}`)}</Eyebrow>
+              <div key={k} className="rounded-md bg-muted/60 px-2.5 py-2">
+                <span className="block text-[11px] font-medium leading-tight text-muted-foreground">
+                  {t(`ht_${k}`)}
+                </span>
                 <span className="mt-1 block text-lg font-bold">
                   {total} <span className="text-xs font-medium text-muted-foreground">{t('gamesShort')}</span>
                 </span>
-                <span className="mt-1 flex items-center gap-1 text-sm">
+                {/* How those games ended, as W-D-L like the season record. */}
+                <span className="mt-0.5 block text-xs text-muted-foreground">
                   {total ? (
                     <>
-                      {r.W}
-                      <Res r="W" /> {r.D}
-                      <Res r="D" /> {r.L}
-                      <Res r="L" />
+                      {t('record')} <b className="text-foreground">{`${r.W}-${r.D}-${r.L}`}</b>
                     </>
                   ) : (
                     '—'
@@ -214,7 +212,8 @@ export default function FilmSeason() {
                 <tr key={l.slug} className="border-b border-border last:border-0">
                   <th scope="row" className="py-2 pr-3 text-left font-medium">
                     <Link to={report(l.slug)} className="hover:underline">
-                      {day(l.date)} · {l.opponent}
+                      <span className="block">{l.opponent}</span>
+                      <span className="block text-xs font-normal text-muted-foreground">{day(l.date)}</span>
                     </Link>
                   </th>
                   <td className="whitespace-nowrap py-2 pr-3">
@@ -256,7 +255,7 @@ export default function FilmSeason() {
               return (
                 <div key={r.opponent} className="rounded-md border border-border p-3">
                   <h3 className="font-bold">
-                    <span className="mr-1 text-xs font-semibold uppercase text-muted-foreground">{t('vs')}</span>
+                    <span className="mr-1 text-sm font-medium text-muted-foreground">{t('vs')}</span>
                     {r.opponent}
                   </h3>
                   <ul className="mt-2 space-y-1 text-sm">

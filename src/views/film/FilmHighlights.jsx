@@ -5,7 +5,7 @@ import { useFilm, useFilmText } from '../../film/FilmContext';
 import { T } from '../../film/RichText';
 import { stripMarkup } from '../../film/lib/markup';
 import { mmss, sec } from '../../film/lib/time';
-import { Eyebrow, FilmStatus } from './filmUi';
+import { FilmStatus } from './filmUi';
 
 const TAG_TONE = {
   Goal: 'bg-success text-success-foreground',
@@ -41,10 +41,7 @@ export default function FilmHighlights({ game: g }) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <Eyebrow>{t('highlights')}</Eyebrow>
-        <p className="mt-1 text-sm text-muted-foreground">{t('hlLead', { n: g.highlights.clips.length })}</p>
-      </div>
+      <p className="text-sm text-muted-foreground">{t('hlLead', { n: g.highlights.clips.length })}</p>
       {links.status === 'error' && (
         <FilmStatus>
           <p>{t('clipsUnavailable')}</p>
