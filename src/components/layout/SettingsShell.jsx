@@ -22,7 +22,7 @@ export default function SettingsShell({ sections = [], active, onChange, classNa
         aria-label="Settings sections"
         // The negative margin lets the focus ring on the first/last pill breathe
         // without the scroller clipping it.
-        className="-mx-1 overflow-x-auto px-1 pb-1 md:mx-0 md:overflow-visible md:px-0 md:pb-0"
+        className="no-scrollbar -mx-1 overflow-x-auto px-1 pb-1 md:mx-0 md:overflow-visible md:px-0 md:pb-0"
       >
         <ul role="tablist" className="flex gap-1 md:flex-col">
           {sections.map((section) => {

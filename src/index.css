@@ -299,4 +299,13 @@ textarea::placeholder {
       border-radius: 0;
     }
   }
+
+  /* A row that scrolls sideways by swipe or trackpad, with no scrollbar
+     drawn under it: the cut-off item at the edge already says there's more. */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }

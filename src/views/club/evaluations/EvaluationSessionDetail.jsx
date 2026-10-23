@@ -421,7 +421,7 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
       </div>
 
       {/* ---- Tab Bar ---- */}
-      <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
+      <div className="no-scrollbar flex gap-1 overflow-x-auto rounded-lg bg-muted p-1">
         {TABS.map(({ key, icon: Icon, labelKey, fallback }) => (
           <button
             key={key}
