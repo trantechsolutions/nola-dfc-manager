@@ -10,6 +10,22 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-23 — Ollie-style event form (1c472c7..1c472c7)
+
+**Scope.** One commit bringing the event editor to parity with Ollie's "Create Game": opponent suggestions,
+arrive-by time, multi-day end, exclude-from-stats, location details and a video link.
+
+**Decision: time zone per event deferred.** The app shows events in each viewer's own time zone; storing a zone
+per event touches every time display and is a separate piece of work. Ollie's team picker isn't needed (events
+are added to the open team).
+
+**Risk.** Low. `sql/event_details_migration.sql` was applied and verified before the push. The team-calendar
+function still needs redeploying to include the new details in subscribed calendars.
+
+**Open.** Redeploy team-calendar; per-event time zones if wanted.
+
+---
+
 ## 2026-10-23 — Family view for staff who are parents (4616ff0..4616ff0)
 
 **Scope.** One commit: a staff-to-family view switch for staff whose own child is on a roster.

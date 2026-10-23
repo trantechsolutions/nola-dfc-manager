@@ -10,6 +10,17 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-23 — Ollie-style event form (1c472c7..1c472c7)
+
+- **Adding a game works like Ollie.** Pick the opponent from teams you've played, set an "arrive by" time, and
+  give a tournament weekend its own end date. Venues and uniforms you've used before are suggested.
+- **More detail for families.** Events can carry location details (field number, where to park) and a video
+  call link; both show on the schedule.
+- **Leave a game out of the season numbers.** A scrimmage or guest-player game can be excluded from players'
+  season stats while still being kept and followed live.
+
+---
+
 ## 2026-10-23 — Family view for staff who are parents (4616ff0..4616ff0)
 
 - **Coaches and managers who are also parents can see the app as their family does.** "View as a parent" in the
