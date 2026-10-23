@@ -21,6 +21,7 @@ import {
   Pencil,
   Plus,
   Shirt,
+  Video,
   BarChart3,
   ClipboardList,
 } from 'lucide-react';
@@ -78,7 +79,16 @@ const EventRow = ({
   const clock = (d) => d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
   // An event the app runs carries an end, an arrive-by and a uniform; a feed event usually doesn't.
   const endIso = dbEvent?.endDate || (event.endTimestamp ? new Date(event.endTimestamp * 1000).toISOString() : null);
-  const endTime = endIso ? clock(new Date(endIso)) : null;
+  // An event that ends on a later day (a tournament weekend) shows the end's date too.
+  const endDate = endIso ? new Date(endIso) : null;
+  const endsLater = endDate && endDate.toDateString() !== date.toDateString();
+  const endTime = endDate
+    ? endsLater
+      ? `${endDate.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' })} ${clock(endDate)}`
+      : clock(endDate)
+    : null;
+  const locationDetails = dbEvent?.locationDetails || event.locationDetails || null;
+  const meetingUrl = dbEvent?.meetingUrl || event.meetingUrl || null;
   const arrival = dbEvent?.arrivalMinutes ?? event.arrivalMinutes;
   const arriveAt = arrival ? clock(new Date((event.timestamp - arrival * 60) * 1000)) : null;
   const uniform = dbEvent?.uniform || event.uniform || null;
@@ -136,6 +146,18 @@ const EventRow = ({
             <MapPin size={14} className="shrink-0" aria-hidden="true" />
             <span className="truncate">{event.location}</span>
           </span>
+          {locationDetails && <span className="min-w-0 truncate">{locationDetails}</span>}
+          {meetingUrl && !event.isCancelled && (
+            <a
+              href={meetingUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 font-semibold text-primary hover:underline"
+            >
+              <Video size={14} className="shrink-0" aria-hidden="true" />
+              {t('schedule.joinCall')}
+            </a>
+          )}
           {canEdit && editing ? (
             <select
               autoFocus
@@ -1008,6 +1030,7 @@ export default function ScheduleView({
           teamName={selectedTeam?.name}
           dbEvent={editorEvent}
           blackoutDates={blackoutDates}
+          teamEvents={teamEvents}
           onSaved={onScheduleChanged}
         />
 

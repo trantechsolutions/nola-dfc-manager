@@ -169,6 +169,10 @@ export const scheduleService = {
       seriesId: e.series_id ?? null,
       seriesDetached: e.series_detached || false,
       source: e.source || 'feed',
+      // Absent until sql/event_details_migration.sql has run.
+      locationDetails: e.location_details ?? null,
+      meetingUrl: e.meeting_url ?? null,
+      excludeFromStats: e.exclude_from_stats || false,
     }));
   },
 
