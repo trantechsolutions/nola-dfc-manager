@@ -26,6 +26,26 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-10-23 — Family view for staff who are parents (4616ff0..4616ff0)
+
+**Commits.**
+
+- `4616ff0 feat: let staff who are parents switch to their family's view`
+
+**Touched.** `App.jsx`: `parentMode` (localStorage `ui.viewAsParent.<userId>`, re-read when the account loads),
+`canViewAsParent` from `my_player_links` guardian rows, `effectiveIsStaff` false in parent mode, `setParentMode`
+selects the child's team when it's one of the account's teams; the staff team context is kept (no `parentTeamId`
+lookup), so the parent-season gate never engages; staff default season kept. `AppHeader.jsx`: account-menu
+switch. Banner under the header. `nav.js` strings (en/es). Preview supports the switch.
+
+**Schema/API.** None.
+
+**Tests.** Vitest 1342/1342; lint 0 errors; build passes; preview check of the switch both ways.
+
+**Rollback.** Revert 4616ff0.
+
+---
+
 ## 2026-10-23 — Staff RSVPs on Home and feed + app schedules (fae444b..7288236)
 
 **Commits.**

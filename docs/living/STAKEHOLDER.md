@@ -10,6 +10,14 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-23 — Family view for staff who are parents (4616ff0..4616ff0)
+
+- **Coaches and managers who are also parents can see the app as their family does.** "View as a parent" in the
+  account menu shows your own child's balance, payments, forms and attendance — and you can act on them. A
+  banner shows you're in the family view, with a one-tap way back to the staff view.
+
+---
+
 ## 2026-10-23 — Staff RSVPs on Home and feed + app schedules (fae444b..7288236)
 
 - **Coaches can mark attendance from Home.** Tap the totals on the next game to open the roster and mark each

@@ -10,6 +10,20 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-23 — Family view for staff who are parents (4616ff0..4616ff0)
+
+**Scope.** One commit: a staff-to-family view switch for staff whose own child is on a roster.
+
+**Decision: a real family view, not the read-only preview.** The staff member is the guardian, so they can pay,
+fill in forms and answer RSVPs. The existing read-only preview of another family's view is unchanged.
+
+**Risk.** Low. An early version stuck on the loading screen (the family-loading gate never settled); fixed before
+this push. Known limit: a child on a team the staff member has no role on opens their current team's family view.
+
+**Open.** Nothing new.
+
+---
+
 ## 2026-10-23 — Staff RSVPs on Home and feed + app schedules (fae444b..7288236)
 
 **Scope.** Two commits: staff RSVP management on Home, and a third schedule mode (feed + app) alongside feed-only
