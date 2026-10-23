@@ -10,6 +10,24 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-23 — Document storage lockdown and marketing screenshots (ab5a6be..192b08c)
+
+**Scope.** Two commits: a storage security fix and a marketing page update with 16 app screenshots.
+
+**Risk closed (high).** While applying the pending migrations, three original storage policies were found on
+the player-documents bucket, one of which let any signed-in user read every player document, medical releases
+included. Policies combine, so the narrower rules already in place had no effect. The live database was fixed
+on 2026-10-23 together with the access-control, chat-oversight, medical-release, live-game and stats-window
+migrations; the team-calendar and notify-push functions are deployed. This commit records the fix in the repo.
+
+**Decision: screenshots use sample data only.** Real game film was left out of the marketing page because the
+only realistic film is the club's own games. The live-game screen still shows the club's short name "NOLA";
+changing it to a neutral name is a quick re-shoot if wanted.
+
+**Open.** Nothing pending on the database or functions.
+
+---
+
 ## 2026-10-23 — Scorekeeper, live games and the Stats tab (b219849..a4e2d62)
 
 **Scope.** Two commits, 63 files, ~16,300 insertions (most of it the scorekeeper and film tooling carried over

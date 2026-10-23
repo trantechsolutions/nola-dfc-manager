@@ -10,6 +10,20 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-23 — Document storage lockdown and marketing screenshots (ab5a6be..192b08c)
+
+Player documents are locked down, and the public website shows the app as it really looks.
+
+- **Player documents are private again.** An old setting let any signed-in person open any player's uploaded
+  documents, including medical forms, if they had the file's link. That is closed: only the player's family and
+  the staff allowed to see that document can open it.
+- **The website shows the app.** The front page now has a "Match day" section with real phone screens (sample
+  data only): the next game, the schedule with RSVPs, a live game, and team chat — in English or Spanish, light
+  or dark.
+- **New on the website:** team chat, live scores and stats, and game film are now listed as features.
+
+---
+
 ## 2026-10-23 — Scorekeeper, live games and the Stats tab (b219849..a4e2d62)
 
 Keeping score and following games now happens in the app, and game film has its own tab.
