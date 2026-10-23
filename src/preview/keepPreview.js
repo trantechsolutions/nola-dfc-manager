@@ -39,7 +39,8 @@ const TABLES = {
       id: '11111111-1111-4111-8111-111111111111',
       title: 'vs Mandeville FC',
       location: 'City Park Field 4',
-      event_date: at(0, 18),
+      // Kicked off 20 minutes ago, so its stat window is open whenever the preview runs.
+      event_date: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
       event_type: 'league',
       is_cancelled: false,
       opponent: 'Mandeville FC',

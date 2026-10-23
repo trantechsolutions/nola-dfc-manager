@@ -4,13 +4,16 @@ import {
   CalendarClock,
   Check,
   ClipboardCheck,
+  Clapperboard,
   FileSpreadsheet,
   Globe,
   Handshake,
   Languages,
   Lock,
+  MessageCircle,
   Monitor,
   Moon,
+  Radio,
   ReceiptText,
   ShieldCheck,
   Smartphone,
@@ -46,16 +49,23 @@ const appHref = (path) => `${APP_ORIGIN}${path}`;
 const SAMPLE = { balance: '$12,480', collectedPct: 78, cleared: 15, roster: 18 };
 
 const FEATURES = [
+  { id: 'schedule', icon: CalendarDays },
+  { id: 'chat', icon: MessageCircle },
+  { id: 'live', icon: Radio },
+  { id: 'film', icon: Clapperboard },
   { id: 'ledger', icon: ReceiptText },
   { id: 'budget', icon: FileSpreadsheet },
   { id: 'fundraising', icon: Handshake },
-  { id: 'schedule', icon: CalendarDays },
   { id: 'matchups', icon: CalendarClock },
   { id: 'roster', icon: ShieldCheck },
   { id: 'parents', icon: Users },
   { id: 'evaluations', icon: ClipboardCheck },
   { id: 'insights', icon: Sparkles },
 ];
+
+// Phone screenshots of the app (public/marketing/<id>-<theme>-<locale>.webp), taken from the design preview
+// with its sample team: nothing in them is a real family. Re-shoot with the preview harness when a screen changes.
+const TOUR = ['home', 'schedule', 'live', 'chat'];
 
 const ROLES = ['manager', 'treasurer', 'parent'];
 const STEPS = ['step1', 'step2', 'step3', 'step4'];
@@ -129,6 +139,7 @@ export default function LandingView() {
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
 
   const navLinks = [
+    { href: '#tour', label: t('landing.nav.tour') },
     { href: '#features', label: t('landing.nav.features') },
     { href: '#roles', label: t('landing.nav.roles') },
     { href: '#workflow', label: t('landing.nav.workflow') },
@@ -278,6 +289,54 @@ export default function LandingView() {
               </div>
             ))}
           </dl>
+        </div>
+      </section>
+
+      {/* ═══ MATCH DAY — the app itself, on a phone ═══ */}
+      <section id="tour" className="scroll-mt-14 border-b border-border py-16 md:py-24">
+        <div className="mx-auto max-w-6xl px-4 md:px-6">
+          <h2 className="max-w-2xl text-2xl font-bold tracking-tight md:text-3xl">{t('landing.tour.heading')}</h2>
+          <p className="mt-4 max-w-2xl leading-relaxed text-muted-foreground">{t('landing.tour.sub')}</p>
+
+          {/* A swipeable row on phones, four across on desktop. */}
+          <ol className="no-scrollbar -mx-4 mt-12 flex snap-x snap-mandatory gap-6 overflow-x-auto px-4 pb-2 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
+            {TOUR.map((id) => {
+              const lang = locale === 'es' ? 'es' : 'en';
+              const alt = t(`landing.tour.${id}.title`);
+              return (
+                <li key={id} className="w-[15rem] shrink-0 snap-center lg:w-auto">
+                  <figure>
+                    <div className="landing-phone">
+                      <img
+                        src={`/marketing/${id}-light-${lang}.webp`}
+                        alt={alt}
+                        width="390"
+                        height="844"
+                        loading="lazy"
+                        decoding="async"
+                        className="block h-auto w-full dark:hidden"
+                      />
+                      <img
+                        src={`/marketing/${id}-dark-${lang}.webp`}
+                        alt={alt}
+                        width="390"
+                        height="844"
+                        loading="lazy"
+                        decoding="async"
+                        className="hidden h-auto w-full dark:block"
+                      />
+                    </div>
+                    <figcaption className="mt-5">
+                      <h3 className="font-bold">{alt}</h3>
+                      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                        {t(`landing.tour.${id}.body`)}
+                      </p>
+                    </figcaption>
+                  </figure>
+                </li>
+              );
+            })}
+          </ol>
         </div>
       </section>
 

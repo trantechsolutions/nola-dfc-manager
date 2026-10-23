@@ -97,7 +97,8 @@ export default defineConfig({
         // landing.html and its chunks belong to the marketing origin, which
         // never registers this service worker — precaching them would just make
         // every app install carry a copy of a page it can't reach.
-        globIgnores: ['service-worker.js', 'landing.html', 'assets/landing-*'],
+        // marketing/ holds the landing page's screenshots, the same story.
+        globIgnores: ['service-worker.js', 'landing.html', 'assets/landing-*', 'marketing/**'],
       },
     }),
   ],

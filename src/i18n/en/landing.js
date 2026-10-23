@@ -6,6 +6,7 @@ export default {
     features: 'Features',
     roles: 'Who it is for',
     workflow: 'How it works',
+    tour: 'Match day',
     calendar: 'Public calendar',
     signIn: 'Sign in',
     menu: 'Menu',
@@ -15,7 +16,7 @@ export default {
     badge: 'Built for U.S. youth soccer',
     title: 'Run the club, not the spreadsheet.',
     subtitle:
-      'Cantera Manager keeps your roster, schedule, dues, documents, and parent updates in one place — from the first whistle of the season to the last line of the books.',
+      'Cantera Manager keeps your roster, schedule, team chat, live scores, dues, and documents in one place — from the first whistle of the season to the last line of the books.',
     ctaPrimary: 'Sign in to your club',
     ctaSecondary: 'See a public calendar',
     note: 'Works offline · Installs to your home screen · English & Español',
@@ -40,6 +41,27 @@ export default {
     spreadsheets: { value: '1', label: 'place the money actually lives' },
   },
 
+  tour: {
+    heading: 'What Saturday looks like in Cantera',
+    sub: 'Real screens from the app, on a phone, filled with sample data.',
+    home: {
+      title: 'The next game, front and center',
+      body: 'Kickoff, field, directions, and what comes after — the first thing every family sees.',
+    },
+    schedule: {
+      title: 'RSVPs, arrival, and uniform',
+      body: 'Families answer Going, Maybe, or Can’t go, and know when to arrive and what to wear.',
+    },
+    live: {
+      title: 'The score, live from the sideline',
+      body: 'The scorekeeper taps; grandparents at home see every goal, card, and save as it happens.',
+    },
+    chat: {
+      title: 'One chat for the whole team',
+      body: 'Team, group, and one-on-one chats, with unread counts — and no more personal numbers in a group text.',
+    },
+  },
+
   features: {
     heading: 'Everything a volunteer-run team actually needs',
     sub: 'Nine years of Saturday mornings, group texts, and shoebox receipts — replaced by tools built for exactly this job.',
@@ -56,8 +78,20 @@ export default {
       body: 'Record a sponsor check, then waterfall it down player balances or split it evenly. Every distribution is reversible and shows its work.',
     },
     schedule: {
-      title: 'A schedule that syncs itself',
-      body: 'Subscribe to your Ollie Sports, TeamSnap, or Google Calendar feed. Games, practices, and tournaments classify themselves, and blackout dates keep the field clear.',
+      title: 'Run the schedule here, or sync it',
+      body: 'Build games and repeating practices in the app with arrival times, uniforms, and RSVPs — or keep your Ollie Sports, TeamSnap, or Google Calendar feed. You choose whether a change notifies the team.',
+    },
+    chat: {
+      title: 'Team chat',
+      body: 'A chat for every team plus private and group conversations, with unread counts on every phone. Team admins can see every chat, and everyone is told so.',
+    },
+    live: {
+      title: 'Live scores & stats',
+      body: 'A sideline scorekeeper that works with no signal. Families follow the running score, play-by-play, and stats — with a celebration on every goal.',
+    },
+    film: {
+      title: 'Game film & highlights',
+      body: 'Each game’s match report and highlight clips, private to the team, alongside the season’s results under one Stats tab.',
     },
     matchups: {
       title: 'Friendlies without the group text',
@@ -88,7 +122,7 @@ export default {
       title: 'Managers & coaches',
       body: 'The whole team in one screen — who is on the roster, who is cleared to play, and what is happening this week.',
       p1: 'Roster, jerseys, and age groups',
-      p2: 'Schedule editing and calendar sync',
+      p2: 'Schedule, RSVPs, and team chat',
       p3: 'Documents and compliance status',
     },
     treasurer: {
@@ -103,7 +137,7 @@ export default {
       body: 'Open it on the way to the field. One tap to the only three things you needed to know.',
       p1: 'Your balance and what is due',
       p2: 'How to pay, with a QR code',
-      p3: "Your child's schedule and forms",
+      p3: "Your child's schedule, live scores, and forms",
     },
   },
 
@@ -114,8 +148,8 @@ export default {
       body: 'Create the season, import the roster from a CSV, then set fees and waivers once.',
     },
     step2: {
-      title: 'Sync the calendar',
-      body: 'Paste your league feed. Games, practices, and tournaments sort themselves out.',
+      title: 'Set the schedule',
+      body: 'Build it in the app or paste your league feed. Families RSVP and get the arrival time and uniform.',
     },
     step3: {
       title: 'Collect and record',
@@ -162,7 +196,7 @@ export default {
   },
 
   footer: {
-    tagline: 'Youth soccer club operations — roster, schedule, money, and compliance in one place.',
+    tagline: 'Youth soccer club operations — roster, schedule, chat, live scores, money, and compliance in one place.',
     product: 'Product',
     account: 'Account',
     changelog: 'Changelog',
