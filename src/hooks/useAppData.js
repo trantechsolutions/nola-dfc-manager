@@ -12,6 +12,7 @@ import { useRealtimeRefresh } from './useRealtimeRefresh';
  */
 export function useAppData({
   userEmail,
+  ownPlayerIds = [],
   selectedTeamId,
   parentTeamId,
   selectedSeason,
@@ -41,6 +42,8 @@ export function useAppData({
   // `!resolvedSeason` check here would never fire — this ref is what actually
   // lets the guardian's enrollment win the first time.
   const parentSeasonAppliedRef = useRef(false);
+  // A string, so a new array with the same ids doesn't refetch.
+  const ownPlayerIdsKey = ownPlayerIds.join(',');
 
   const fetchData = useCallback(
     async (seasonOverride) => {
@@ -69,6 +72,15 @@ export function useAppData({
             }
           } catch (e) {
             console.warn('Guardian email lookup failed:', e.message);
+          }
+          // A player signed in as themselves: their own roster entry gives the team.
+          if (pData.length === 0 && ownPlayerIdsKey) {
+            try {
+              pData = await supabaseService.getPlayersByIds(ownPlayerIdsKey.split(','));
+              fetchTeamId = pData.find((p) => p.teamId)?.teamId || null;
+            } catch (e) {
+              console.warn('Own player lookup failed:', e.message);
+            }
           }
         }
 
@@ -125,7 +137,7 @@ export function useAppData({
         }
       }
     },
-    [userEmail, selectedTeamId, parentTeamId, selectedSeason, currentTeamSeason?.id, teamSeasons],
+    [userEmail, ownPlayerIdsKey, selectedTeamId, parentTeamId, selectedSeason, currentTeamSeason?.id, teamSeasons],
   );
 
   // Refresh financials independently when team-season resolves

@@ -46,6 +46,9 @@ export function useAttention() {
       return { ...EMPTY, badges: owing ? { money: 'dot' } : {} };
     }
 
+    // A player signed in as themselves owes nothing here: paperwork and fees are their guardian's.
+    if (nav.isPlayerAccount) return EMPTY;
+
     const players = data.myPlayers || [];
     const today = new Date();
     const owed = players.flatMap((player) =>

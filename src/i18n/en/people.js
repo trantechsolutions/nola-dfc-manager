@@ -14,6 +14,11 @@ export default {
     guardianInfo: 'Parent / Guardian Info',
     addAnother: 'Add Another',
     fullName: 'Full Name',
+    playerLogin: "Player's own sign-in (optional)",
+    playerLoginHelp:
+      'With an email or mobile number here, the player can sign in themselves and see the schedule, answer for themselves, follow live games and film, and read the team chat. Never fees or documents.',
+    playerEmail: "Player's email",
+    playerPhone: "Player's mobile number",
     emailLogin: 'Email (Used for Login)',
     phoneNumber: 'Phone Number',
     archive: 'Archive',

@@ -1,4 +1,6 @@
 import NextMatchCard from './NextMatchCard';
+import PlayerFilmStats from './PlayerFilmStats';
+import { useNavigation } from '../context/NavigationContext';
 import AttentionStrip from './AttentionStrip';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Suspense, lazy, useMemo, useState } from 'react';
@@ -195,6 +197,8 @@ export default function AppRoutes({
   // Which panel is open, and on what, comes from the URL — so a panel survives
   // a reload, can be linked to, and closes on Back.
   const { panel, panelParams, openPanel, closePanel } = usePanelRoute();
+  // A player signed in as themselves (sql/player_login_migration.sql) gets the team side only.
+  const { isPlayerAccount } = useNavigation();
 
   // Panels are addressed by id, so each resolves its own record out of the
   // lists already in context rather than being handed the object.
@@ -558,9 +562,15 @@ export default function AppRoutes({
                   className={`space-y-6 pt-4 md:pt-6 ${effectiveIsStaff ? '' : 'mx-auto max-w-3xl'}`}
                 >
                   {/* Anything a parent owes leads, ahead of the match itself. */}
-                  {!effectiveIsStaff && <AttentionStrip />}
+                  {!effectiveIsStaff && !isPlayerAccount && <AttentionStrip />}
                   <NextMatchCard />
-                  {effectiveIsStaff ? (
+                  {isPlayerAccount ? (
+                    // A player signed in as themselves: the team side only — the next match and their own
+                    // season numbers. Fees, payments and paperwork stay with their guardian.
+                    myPlayers.map((p) => (
+                      <PlayerFilmStats key={p.id} playerId={p.id} seasonId={selectedSeason} className="bg-card" />
+                    ))
+                  ) : effectiveIsStaff ? (
                     <TeamOverviewView
                       players={seasonalPlayers}
                       archivedPlayers={archivedPlayers}
