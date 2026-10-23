@@ -104,6 +104,8 @@ const SCORES = { p1: [3, 1], p3: [0, 2], p4: [2, 2] };
 const TEAM_EVENTS = [...UPCOMING, ...PAST].map((e) => ({
   id: `db-${e.id}`,
   uid: e.id,
+  title: e.title,
+  location: e.location,
   eventDate: new Date(e.timestamp * 1000).toISOString(),
   eventType: e.eventType,
   typeLocked: false,

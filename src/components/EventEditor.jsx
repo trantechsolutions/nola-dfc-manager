@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Ban, Bell, Repeat, RotateCcw, Trash2 } from 'lucide-react';
+import { useContext, useEffect, useMemo, useState } from 'react';
+import { Ban, Bell, Repeat, RotateCcw, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ResponsiveModal, FormRow, formControl } from './layout';
 import { useT } from '../i18n/I18nContext';
@@ -7,9 +7,9 @@ import { scheduleService } from '../services/scheduleService';
 import { pushService } from '../services/pushService';
 import { EVENT_TYPES } from '../utils/eventClassifier';
 import { atLocal, eventRow, expandSeries, isGameType, isoDay, validateEvent } from '../utils/eventSeries';
+import { ScheduleContext } from '../context/ScheduleContext';
 
 const TYPE_ORDER = ['practice', 'league', 'friendly', 'tournament', 'event'];
-const ARRIVAL_CHOICES = [0, 15, 30, 45, 60, 90];
 
 const pad = (n) => String(n).padStart(2, '0');
 const hhmm = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -25,11 +25,15 @@ function initialForm(dbEvent) {
       isHome: true,
       day: today,
       startTime: '18:00',
+      endDay: today,
       endTime: '19:30',
+      arrivalTime: '',
       location: '',
-      arrivalMinutes: '',
+      locationDetails: '',
+      meetingUrl: '',
       uniform: '',
       notes: '',
+      excludeFromStats: false,
     };
   }
   const start = new Date(dbEvent.eventDate);
@@ -41,11 +45,16 @@ function initialForm(dbEvent) {
     isHome: dbEvent.isHome ?? null,
     day: isoDay(start),
     startTime: hhmm(start),
+    endDay: end ? isoDay(end) : isoDay(start),
     endTime: end ? hhmm(end) : '',
+    // Kept as minutes before the start; shown and edited as the clock time to arrive by.
+    arrivalTime: dbEvent.arrivalMinutes ? hhmm(new Date(start.getTime() - dbEvent.arrivalMinutes * 60000)) : '',
     location: dbEvent.location && dbEvent.location !== 'TBD' ? dbEvent.location : '',
-    arrivalMinutes: dbEvent.arrivalMinutes ? String(dbEvent.arrivalMinutes) : '',
+    locationDetails: dbEvent.locationDetails || '',
+    meetingUrl: dbEvent.meetingUrl || '',
     uniform: dbEvent.uniform || '',
     notes: dbEvent.description || '',
+    excludeFromStats: !!dbEvent.excludeFromStats,
   };
 }
 
@@ -54,7 +63,16 @@ function initialForm(dbEvent) {
  * repeats every week. Changing one session of a repeating practice asks whether the change is for that day
  * or for it and every later one. Each save can notify the whole team, or not.
  */
-export default function EventEditor({ open, onClose, teamId, teamName, dbEvent = null, blackoutDates = [], onSaved }) {
+export default function EventEditor({
+  open,
+  onClose,
+  teamId,
+  teamName,
+  dbEvent = null,
+  blackoutDates = [],
+  teamEvents = [],
+  onSaved,
+}) {
   const { t, locale } = useT();
   const isNew = !dbEvent;
   const [form, setForm] = useState(() => initialForm(dbEvent));
@@ -88,6 +106,34 @@ export default function EventEditor({ open, onClose, teamId, teamName, dbEvent =
   }, [scope, series, isNew]);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e?.target ? e.target.value : e }));
+  // Moving the start date carries a same-day end along with it.
+  const setDay = (e) =>
+    setForm((f) => ({ ...f, day: e.target.value, endDay: f.endDay === f.day ? e.target.value : f.endDay }));
+
+  // What the team has used before, offered as suggestions while typing: opponents (and the saved opponent
+  // contacts), venues and uniforms.
+  const schedule = useContext(ScheduleContext);
+  const suggest = useMemo(() => {
+    const uniq = (list) =>
+      [...new Set(list.map((v) => (v || '').trim()).filter((v) => v && v !== 'TBD'))].sort((a, b) =>
+        a.localeCompare(b),
+      );
+    const past = teamEvents.filter((e) => e.teamId === teamId || !e.teamId);
+    return {
+      // A feed game has no opponent field, only a title ("vs Chelsea", "at Liverpool"): its name is the title
+      // without the vs/at. A tournament's title is the tournament, not an opponent.
+      opponents: uniq([
+        ...past.map(
+          (e) =>
+            e.opponent ||
+            (['league', 'friendly'].includes(e.eventType) ? (e.title || '').replace(/^(vs\.?|@|at)\s+/i, '') : ''),
+        ),
+        ...(schedule?.opponentContacts || []).map((c) => c.clubName),
+      ]),
+      locations: uniq(past.map((e) => e.location)),
+      uniforms: uniq(past.map((e) => e.uniform)),
+    };
+  }, [teamEvents, teamId, schedule?.opponentContacts]);
   const game = isGameType(form.eventType);
   const typeLabel = (key) => t(`eventTypes.${key}`, EVENT_TYPES[key]?.label || key);
   const weekdayNames = useMemo(
@@ -276,7 +322,20 @@ export default function EventEditor({ open, onClose, teamId, teamName, dbEvent =
         {game && (
           <>
             <FormRow label={t('schedule.editor.opponent')} htmlFor="ev-opponent">
-              <input id="ev-opponent" value={form.opponent} onChange={set('opponent')} className={formControl} />
+              <input
+                id="ev-opponent"
+                list="ev-opponents"
+                autoComplete="off"
+                value={form.opponent}
+                onChange={set('opponent')}
+                placeholder={t('schedule.editor.opponentPlaceholder')}
+                className={formControl}
+              />
+              <datalist id="ev-opponents">
+                {suggest.opponents.map((v) => (
+                  <option key={v} value={v} />
+                ))}
+              </datalist>
             </FormRow>
             <FormRow label={t('schedule.editor.venue')}>
               <div className="flex gap-2" role="group" aria-label={t('schedule.editor.venue')}>
@@ -313,23 +372,78 @@ export default function EventEditor({ open, onClose, teamId, teamName, dbEvent =
           />
         </FormRow>
 
+        <h3 className="border-b border-border pb-1 pt-2 text-sm font-semibold text-muted-foreground">
+          {t('schedule.editor.sectionWhen')}
+        </h3>
+
         <FormRow
-          label={inSeries && scope === 'following' ? t('schedule.editor.fromDate') : t('schedule.editor.date')}
-          htmlFor="ev-day"
+          label={inSeries && scope === 'following' ? t('schedule.editor.fromDate') : t('schedule.editor.starts')}
         >
-          <input id="ev-day" type="date" value={form.day} onChange={set('day')} className={formControl} required />
+          <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-2">
+            <input
+              id="ev-day"
+              type="date"
+              aria-label={t('schedule.editor.date')}
+              value={form.day}
+              onChange={setDay}
+              className={formControl}
+              required
+            />
+            <input
+              type="time"
+              aria-label={t('schedule.editor.time')}
+              value={form.startTime}
+              onChange={set('startTime')}
+              className={formControl}
+              required
+            />
+          </div>
         </FormRow>
 
-        <FormRow label={t('schedule.editor.time')}>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="space-y-1 text-xs text-muted-foreground">
-              {t('schedule.editor.starts')}
-              <input type="time" value={form.startTime} onChange={set('startTime')} className={formControl} required />
-            </label>
-            <label className="space-y-1 text-xs text-muted-foreground">
-              {t('schedule.editor.ends')}
-              <input type="time" value={form.endTime} onChange={set('endTime')} className={formControl} />
-            </label>
+        <FormRow label={t('schedule.editor.arrive')} htmlFor="ev-arrive" help={t('schedule.editor.arriveHelp')}>
+          <div className="flex items-center gap-2">
+            <input
+              id="ev-arrive"
+              type="time"
+              value={form.arrivalTime}
+              onChange={set('arrivalTime')}
+              className={formControl}
+            />
+            {form.arrivalTime && (
+              <button
+                type="button"
+                onClick={() => set('arrivalTime')('')}
+                aria-label={t('schedule.editor.arriveClear')}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        </FormRow>
+
+        <FormRow label={t('schedule.editor.ends')}>
+          <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-2">
+            {/* A repeating practice ends the day it starts; a one-off event can run over days (a tournament). */}
+            {repeat ? (
+              <span className="flex items-center text-sm text-muted-foreground">{t('schedule.editor.sameDay')}</span>
+            ) : (
+              <input
+                type="date"
+                aria-label={t('schedule.editor.endDate')}
+                value={form.endDay}
+                min={form.day}
+                onChange={set('endDay')}
+                className={formControl}
+              />
+            )}
+            <input
+              type="time"
+              aria-label={t('schedule.editor.endTime')}
+              value={form.endTime}
+              onChange={set('endTime')}
+              className={formControl}
+            />
           </div>
         </FormRow>
 
@@ -409,22 +523,80 @@ export default function EventEditor({ open, onClose, teamId, teamName, dbEvent =
           </div>
         )}
 
-        <FormRow label={t('schedule.editor.arrive')} htmlFor="ev-arrive">
-          <select id="ev-arrive" value={form.arrivalMinutes} onChange={set('arrivalMinutes')} className={formControl}>
-            {ARRIVAL_CHOICES.map((m) => (
-              <option key={m} value={m ? String(m) : ''}>
-                {m ? t('schedule.editor.arriveMinutes', { n: m }) : t('schedule.editor.arriveNone')}
-              </option>
+        <FormRow label={t('schedule.editor.uniform')} htmlFor="ev-uniform" help={t('schedule.editor.uniformHelp')}>
+          <input
+            id="ev-uniform"
+            list="ev-uniforms"
+            autoComplete="off"
+            value={form.uniform}
+            onChange={set('uniform')}
+            className={formControl}
+          />
+          <datalist id="ev-uniforms">
+            {suggest.uniforms.map((v) => (
+              <option key={v} value={v} />
             ))}
-          </select>
+          </datalist>
         </FormRow>
+
+        {game && (
+          <label className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+            <span>
+              <span className="block text-sm font-semibold text-foreground">{t('schedule.editor.excludeStats')}</span>
+              <span className="block text-xs text-muted-foreground">{t('schedule.editor.excludeStatsHelp')}</span>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              checked={form.excludeFromStats}
+              onChange={(e) => set('excludeFromStats')(e.target.checked)}
+              className="h-5 w-5 shrink-0"
+            />
+          </label>
+        )}
+
+        <h3 className="border-b border-border pb-1 pt-2 text-sm font-semibold text-muted-foreground">
+          {t('schedule.editor.sectionWhere')}
+        </h3>
 
         <FormRow label={t('schedule.editor.location')} htmlFor="ev-location">
-          <input id="ev-location" value={form.location} onChange={set('location')} className={formControl} />
+          <input
+            id="ev-location"
+            list="ev-locations"
+            autoComplete="off"
+            value={form.location}
+            onChange={set('location')}
+            placeholder={t('schedule.editor.locationPlaceholder')}
+            className={formControl}
+          />
+          <datalist id="ev-locations">
+            {suggest.locations.map((v) => (
+              <option key={v} value={v} />
+            ))}
+          </datalist>
         </FormRow>
 
-        <FormRow label={t('schedule.editor.uniform')} htmlFor="ev-uniform" help={t('schedule.editor.uniformHelp')}>
-          <input id="ev-uniform" value={form.uniform} onChange={set('uniform')} className={formControl} />
+        <FormRow label={t('schedule.editor.locationDetails')} htmlFor="ev-location-details">
+          <input
+            id="ev-location-details"
+            value={form.locationDetails}
+            maxLength={300}
+            onChange={set('locationDetails')}
+            placeholder={t('schedule.editor.locationDetailsPlaceholder')}
+            className={formControl}
+          />
+        </FormRow>
+
+        <FormRow label={t('schedule.editor.meetingUrl')} htmlFor="ev-meeting">
+          <input
+            id="ev-meeting"
+            type="url"
+            inputMode="url"
+            value={form.meetingUrl}
+            onChange={set('meetingUrl')}
+            placeholder="https://"
+            className={formControl}
+          />
         </FormRow>
 
         <FormRow label={t('schedule.editor.notes')} htmlFor="ev-notes">

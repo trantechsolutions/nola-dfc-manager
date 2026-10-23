@@ -7,6 +7,8 @@ import {
   gameTitle,
   isoDay,
   validateEvent,
+  arrivalMinutesFrom,
+  normalizeUrl,
 } from '../../utils/eventSeries';
 
 describe('expandSeries', () => {
@@ -150,5 +152,46 @@ describe('validateEvent', () => {
 describe('isoDay', () => {
   it('formats a local date', () => {
     expect(isoDay(new Date(2026, 0, 5))).toBe('2026-01-05');
+  });
+});
+
+describe('Ollie-style event details', () => {
+  const base = {
+    eventType: 'league',
+    title: '',
+    opponent: 'Chelsea',
+    isHome: true,
+    day: '2026-10-25',
+    startTime: '09:00',
+    endTime: '10:30',
+  };
+
+  it('turns an arrive-by time into minutes before the start', () => {
+    expect(arrivalMinutesFrom('09:00', '08:15')).toBe(45);
+    expect(arrivalMinutesFrom('09:00', '09:30')).toBeNull();
+    expect(arrivalMinutesFrom('09:00', '')).toBeNull();
+    expect(eventRow({ ...base, arrivalTime: '08:15' }).arrival_minutes).toBe(45);
+  });
+
+  it('ends a multi-day event on its own end date', () => {
+    const row = eventRow({ ...base, eventType: 'tournament', endDay: '2026-10-26', endTime: '17:00' });
+    expect(new Date(row.end_date).getDate()).toBe(26);
+  });
+
+  it('keeps location details, adds https to a bare video link, and flags excluded games only', () => {
+    const row = eventRow({ ...base, locationDetails: ' Field 4 ', meetingUrl: 'zoom.us/j/1', excludeFromStats: true });
+    expect(row.location_details).toBe('Field 4');
+    expect(row.meeting_url).toBe('https://zoom.us/j/1');
+    expect(row.exclude_from_stats).toBe(true);
+    expect(
+      eventRow({ ...base, eventType: 'practice', title: 'Practice', excludeFromStats: true }).exclude_from_stats,
+    ).toBe(false);
+    expect(normalizeUrl('  ')).toBeNull();
+  });
+
+  it('checks an arrival before the start and an end after it, across days', () => {
+    expect(validateEvent({ ...base, arrivalTime: '09:15' })).toContain('arrivalAfterStart');
+    expect(validateEvent({ ...base, endDay: '2026-10-26', endTime: '08:00' })).not.toContain('endBeforeStart');
+    expect(validateEvent({ ...base, endTime: '08:00' })).toContain('endBeforeStart');
   });
 });

@@ -114,7 +114,23 @@ if (cmd === "teams") {
     sources.push(...o.games);
     console.log(`Ollie: ${o.games.length} games with player stats${o.unknown.length ? ` (not on the roster: ${o.unknown.join(", ")})` : ""}`);
   }
-  const bySeason = seasonStats(sources, roster.players.map(p => p.name));
+  // Games the schedule marks "exclude from season stats" (sql/event_details_migration.sql) are left out, whatever
+  // they came from. Matched by day and opponent, since the film, the scorekeeper and Ollie all know those.
+  const ex = await db.from("team_events").select("event_date, opponent, title").eq("team_id", teamId).eq("exclude_from_stats", true);
+  if (ex.error) console.warn(`  excluded games: ${ex.error.message} (none left out)`);
+  const dayOf = (iso: string) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: s.timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
+  const plain = (v: string | null | undefined) => (v ?? "").toLowerCase().replace(/^(vs\.?|@|at)\s+/, "").trim();
+  const excluded = (ex.data ?? []).map(r => ({ date: dayOf(r.event_date as string), opp: plain((r.opponent ?? r.title) as string) }));
+  const isExcluded = (g: SourceGame) =>
+    excluded.some(x => {
+      if (x.date !== g.date) return false;
+      const opp = plain(g.opponent);
+      return !x.opp || !opp || x.opp.includes(opp) || opp.includes(x.opp);
+    });
+  const counted = sources.filter(g => !isExcluded(g));
+  if (counted.length < sources.length) console.log(`excluded from season stats: ${sources.length - counted.length} games`);
+  const bySeason = seasonStats(counted, roster.players.map(p => p.name));
   const { data: seasonRows } = await db.from("seasons").select("id");
   const known = new Set((seasonRows ?? []).map(r => r.id as string));
   const rows = [];

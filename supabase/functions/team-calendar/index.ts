@@ -70,6 +70,9 @@ interface Row {
   arrival_minutes: number | null;
   uniform: string | null;
   updated_at: string | null;
+  // sql/event_details_migration.sql
+  location_details: string | null;
+  meeting_url: string | null;
 }
 
 function vevent(r: Row, teamName: string) {
@@ -79,6 +82,8 @@ function vevent(r: Row, teamName: string) {
     TYPE_LABEL[r.event_type || 'event'] || TYPE_LABEL.event,
     r.arrival_minutes ? `Arrive ${r.arrival_minutes} min early` : '',
     r.uniform ? `Uniform: ${r.uniform}` : '',
+    r.location_details ? `Where: ${r.location_details}` : '',
+    r.meeting_url ? `Video call: ${r.meeting_url}` : '',
     r.description || '',
   ].filter(Boolean);
   return [
@@ -90,6 +95,7 @@ function vevent(r: Row, teamName: string) {
     `SUMMARY:${text(`${teamName}: ${r.title || TYPE_LABEL[r.event_type || 'event'] || 'Team event'}`)}`,
     r.location ? `LOCATION:${text(r.location)}` : '',
     `DESCRIPTION:${text(details.join('\n'))}`,
+    r.meeting_url ? `URL:${r.meeting_url}` : '',
     `STATUS:${r.is_cancelled ? 'CANCELLED' : 'CONFIRMED'}`,
     'END:VEVENT',
   ].filter(Boolean);
@@ -108,7 +114,9 @@ serve(async (req) => {
   const since = new Date(Date.now() - HISTORY_DAYS * 86_400_000).toISOString();
   const { data: rows, error } = await supabase
     .from('team_events')
-    .select('uid, title, description, location, event_date, end_date, event_type, is_cancelled, arrival_minutes, uniform, updated_at')
+    .select(
+      'uid, title, description, location, location_details, meeting_url, event_date, end_date, event_type, is_cancelled, arrival_minutes, uniform, updated_at',
+    )
     .eq('team_id', link.team_id)
     .gte('event_date', since)
     .order('event_date');

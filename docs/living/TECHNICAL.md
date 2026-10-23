@@ -26,6 +26,30 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-10-23 — Ollie-style event form (1c472c7..1c472c7)
+
+**Commits.**
+
+- `1c472c7 feat: match Ollie's event form with arrival time, end date and more detail`
+
+**Touched.** `EventEditor.jsx` (Ollie-style sections; datalist suggestions from past team_events, game titles and
+`opponentContacts`; arrive-by time with clear; end date for one-off events; exclude-from-stats switch; location
+details; video link), `eventSeries.js` (`arrivalMinutesFrom`, `normalizeUrl`, `eventRow` endDay/new columns,
+`validateEvent` cross-day end and `arrivalAfterStart`), `ScheduleView.jsx` (details, Join the call, multi-day
+end), `scheduleService.getTeamEvents` + `mergeSavedEvents` mapping, `tools/film/film.ts` stats skips excluded
+games by day and opponent, `team-calendar` adds details and `URL:`. Strings en/es; preview sample events carry
+titles and locations.
+
+**Schema/API.** `sql/event_details_migration.sql`: `team_events.location_details` (≤300), `meeting_url`
+(http/https), `exclude_from_stats boolean default false`. Applied 2026-10-23 and verified. team-calendar not yet
+redeployed.
+
+**Tests.** Four new eventSeries cases. Vitest 1346/1346; lint 0 errors; build passes; preview check of the form.
+
+**Rollback.** Revert 1c472c7; the columns can stay (unused) or be dropped.
+
+---
+
 ## 2026-10-23 — Family view for staff who are parents (4616ff0..4616ff0)
 
 **Commits.**

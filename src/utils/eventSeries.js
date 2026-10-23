@@ -58,22 +58,49 @@ export function gameTitle(opponent, isHome) {
   return isHome === false ? `@ ${name}` : isHome === true ? `vs ${name}` : name;
 }
 
+/** Minutes from an arrive-by time ("08:15") to the start ("09:00"), or null when not set or not before it. */
+export function arrivalMinutesFrom(startTime, arrivalTime) {
+  if (!startTime || !arrivalTime) return null;
+  const mins = (t) => {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + (m || 0);
+  };
+  const diff = mins(startTime) - mins(arrivalTime);
+  return diff > 0 ? Math.min(240, diff) : null;
+}
+
+/** A video call link as typed, with https:// added when left off; null when blank. */
+export function normalizeUrl(url) {
+  const v = (url || '').trim();
+  if (!v) return null;
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+}
+
 /**
  * The team_events columns for one event from the editor form.
- * form: { eventType, title, opponent, isHome, day, startTime, endTime, location, arrivalMinutes, uniform, notes }
+ * form: { eventType, title, opponent, isHome, day, startTime, endDay?, endTime, location, locationDetails,
+ *         meetingUrl, arrivalTime | arrivalMinutes, uniform, notes, excludeFromStats }
+ * endDay is for an event over more than one day (a tournament weekend); without it the event ends the day it starts.
  */
 export function eventRow(form) {
   const game = isGameType(form.eventType);
   const title = (form.title || '').trim() || (game ? gameTitle(form.opponent, form.isHome) : '');
   const start = atLocal(form.day, form.startTime);
-  const end = form.endTime ? atLocal(form.day, form.endTime) : null;
-  const arrival = form.arrivalMinutes === '' || form.arrivalMinutes == null ? null : Number(form.arrivalMinutes);
+  const end = form.endTime ? atLocal(form.endDay || form.day, form.endTime) : null;
+  const arrival =
+    form.arrivalTime !== undefined
+      ? arrivalMinutesFrom(form.startTime, form.arrivalTime)
+      : form.arrivalMinutes === '' || form.arrivalMinutes == null
+        ? null
+        : Number(form.arrivalMinutes);
   return {
     title,
     event_type: form.eventType,
     // A type chosen here is the type: a later feed import must not reclassify it.
     type_locked: true,
     location: (form.location || '').trim() || null,
+    location_details: (form.locationDetails || '').trim() || null,
+    meeting_url: normalizeUrl(form.meetingUrl),
     description: (form.notes || '').trim() || null,
     event_date: start.toISOString(),
     end_date: end && end > start ? end.toISOString() : null,
@@ -81,6 +108,7 @@ export function eventRow(form) {
     uniform: (form.uniform || '').trim() || null,
     opponent: game ? (form.opponent || '').trim() || null : null,
     is_home: game && typeof form.isHome === 'boolean' ? form.isHome : null,
+    exclude_from_stats: game ? !!form.excludeFromStats : false,
     source: 'app',
     updated_at: new Date().toISOString(),
   };
@@ -91,7 +119,14 @@ export function validateEvent(form, { repeat = null } = {}) {
   const errors = [];
   if (!form.day) errors.push('dayRequired');
   if (!form.startTime) errors.push('startRequired');
-  if (form.endTime && form.startTime && form.endTime <= form.startTime) errors.push('endBeforeStart');
+  if (form.endTime && form.startTime && form.day) {
+    const start = atLocal(form.day, form.startTime);
+    const end = atLocal(form.endDay || form.day, form.endTime);
+    if (end <= start) errors.push('endBeforeStart');
+  }
+  if (form.arrivalTime && form.startTime && arrivalMinutesFrom(form.startTime, form.arrivalTime) === null) {
+    errors.push('arrivalAfterStart');
+  }
   const game = isGameType(form.eventType);
   if (!(form.title || '').trim() && !(game && (form.opponent || '').trim())) errors.push('titleRequired');
   if (repeat) {
