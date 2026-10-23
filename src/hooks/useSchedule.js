@@ -91,6 +91,9 @@ const toDisplayFields = (jsDate) => ({
  * the same event.
  */
 export function mergeSavedEvents(feedEvents, savedEvents, { feedFailed = false, now, team = null } = {}) {
+  // Feed + app (sql/hybrid_schedule_migration.sql): events added in the app are the app's own, shown whatever the
+  // feed says — upcoming too — and only dropped when the feed lists the very same event (by UID).
+  const hybrid = team?.scheduleSource === 'hybrid';
   const feedUids = new Set(feedEvents.map((e) => e.id));
   const feedTimestamps = new Set(feedEvents.map((e) => e.timestamp));
 
@@ -109,14 +112,15 @@ export function mergeSavedEvents(feedEvents, savedEvents, { feedFailed = false, 
         endTimestamp: row.endDate ? Math.floor(new Date(row.endDate).getTime() / 1000) : null,
         arrivalMinutes: row.arrivalMinutes ?? null,
         uniform: row.uniform || null,
+        source: row.source || 'feed',
         teamId: team?.id || null,
         teamName: team?.name || null,
         ...toDisplayFields(jsDate),
       };
     })
     .filter((e) => !feedUids.has(e.id))
-    .filter((e) => !feedTimestamps.has(e.timestamp))
-    .filter((e) => feedFailed || e.timestamp < now);
+    .filter((e) => (hybrid && e.source === 'app') || !feedTimestamps.has(e.timestamp))
+    .filter((e) => feedFailed || e.timestamp < now || (hybrid && e.source === 'app'));
 
   return [...feedEvents, ...fromDb];
 }
@@ -143,8 +147,8 @@ export const useSchedule = (user, team = null) => {
     }
     setBlackoutDates(blackoutsList);
 
-    // 2. A schedule the app runs is read from team_events alone: no feed.
-    if (team?.scheduleSource === 'app') {
+    // 2. A schedule the app runs is read from team_events alone: no feed. So is feed + app before a feed is set.
+    if (team?.scheduleSource === 'app' || (team?.scheduleSource === 'hybrid' && !team?.icalUrl)) {
       let saved = [];
       try {
         saved = await supabaseService.getTeamEvents(team.id);
@@ -231,9 +235,9 @@ export const useSchedule = (user, team = null) => {
   }, [user, fetchScheduleData]);
 
   // urlOverride lets a caller sync a just-saved feed URL before the team
-  // record in context has refreshed.
+  // record in context has refreshed; `source` does the same for a just-changed schedule source.
   const syncCalendar = useCallback(
-    async (urlOverride) => {
+    async (urlOverride, { source = team?.scheduleSource } = {}) => {
       const icsUrl = urlOverride || team?.icalUrl;
       if (!icsUrl || !team?.id) throw new Error('No calendar URL configured');
 
@@ -264,9 +268,14 @@ export const useSchedule = (user, team = null) => {
         parsedEvents.filter((e) => ['tournament', 'league', 'friendly'].includes(e.eventType)),
       );
 
+      // Feed + app: everything the feed lists is kept (practices too), so RSVPs and the app's subscribe link
+      // cover it, and the app's own events are left alone.
+      if (source === 'hybrid') {
+        return await supabaseService.syncTeamEvents(team.id, groupTournaments(parsedEvents), { keepAppEvents: true });
+      }
       return await supabaseService.syncTeamEvents(team.id, gameEvents);
     },
-    [team?.id, team?.icalUrl],
+    [team?.id, team?.icalUrl, team?.scheduleSource],
   );
 
   // Switching a team to run its schedule here: everything the feed lists (practices too, not only the games a

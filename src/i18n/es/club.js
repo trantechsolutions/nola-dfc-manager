@@ -27,6 +27,7 @@ export default {
 
   toast: {
     scheduleNowApp: 'La app ahora lleva el calendario. {{n}} eventos copiados.',
+    scheduleNowHybrid: 'El calendario externo y la app llevan ahora el calendario juntos. {{n}} eventos sincronizados.',
     scheduleNowFeed: 'El calendario externo vuelve a llevar el calendario.',
     categoryUpdated: 'Categoría actualizada',
     categoryCreated: 'Categoría creada',

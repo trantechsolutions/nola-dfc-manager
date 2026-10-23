@@ -12,7 +12,7 @@ export const teamService = {
       gender: t.gender,
       tier: t.tier,
       icalUrl: t.ical_url,
-      // Who runs the schedule: 'feed' (a calendar feed) or 'app' (sql/app_schedule_migration.sql).
+      // Who runs the schedule: 'feed', 'app' or 'hybrid' (feed + app; sql/hybrid_schedule_migration.sql).
       scheduleSource: t.schedule_source || 'feed',
       colorPrimary: t.color_primary,
       colorSecondary: t.color_secondary,
@@ -35,7 +35,7 @@ export const teamService = {
       gender: data.gender,
       tier: data.tier,
       icalUrl: data.ical_url,
-      // Who runs the schedule: 'feed' (a calendar feed) or 'app' (sql/app_schedule_migration.sql).
+      // Who runs the schedule: 'feed', 'app' or 'hybrid' (feed + app; sql/hybrid_schedule_migration.sql).
       scheduleSource: data.schedule_source || 'feed',
       colorPrimary: data.color_primary,
       colorSecondary: data.color_secondary,
@@ -59,6 +59,8 @@ export const teamService = {
         ical_url: teamData.icalUrl || '',
         color_primary: teamData.colorPrimary || '#1e293b',
         color_secondary: teamData.colorSecondary || '#ffffff',
+        // 'feed', 'app' or 'hybrid' (sql/hybrid_schedule_migration.sql); left to the column default when unset.
+        ...(teamData.scheduleSource ? { schedule_source: teamData.scheduleSource } : {}),
       })
       .select()
       .single();
@@ -73,6 +75,7 @@ export const teamService = {
     if ('gender' in updates) row.gender = updates.gender;
     if ('tier' in updates) row.tier = updates.tier;
     if ('icalUrl' in updates) row.ical_url = updates.icalUrl;
+    if ('scheduleSource' in updates) row.schedule_source = updates.scheduleSource;
     if ('colorPrimary' in updates) row.color_primary = updates.colorPrimary;
     if ('colorSecondary' in updates) row.color_secondary = updates.colorSecondary;
     if ('status' in updates) row.status = updates.status;

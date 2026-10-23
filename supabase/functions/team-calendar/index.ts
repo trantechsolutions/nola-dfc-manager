@@ -1,7 +1,8 @@
 // Supabase Edge Function: team-calendar
 // A team's schedule as a calendar feed families subscribe to (webcal://…/team-calendar?t=<token>), for a team
-// whose schedule runs in the app (teams.schedule_source = 'app'). Phone calendars poll it and pick up new,
-// moved and cancelled events on their own.
+// whose schedule runs in the app (teams.schedule_source = 'app'), or in the feed and the app together ('hybrid':
+// the feed's synced events plus the ones added here, all in team_events). Phone calendars poll it and pick up
+// new, moved and cancelled events on their own.
 //
 // Calendar apps can't sign in, so the link carries a secret instead: team_calendar_tokens.token, handed only
 // to people on the team by team_calendar_token() (sql/app_schedule_migration.sql). Deploy with

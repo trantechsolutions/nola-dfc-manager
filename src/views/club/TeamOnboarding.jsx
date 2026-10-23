@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronRight, ChevronLeft, CheckCircle2, Plus, Users, Calendar, DollarSign, Sparkles, X } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { fetchIcs } from '../../utils/fetchIcs';
+import ScheduleSourcePicker from '../../components/ScheduleSourcePicker';
 
 const STEPS = [
   { id: 'team', label: 'Team Info', icon: Users },
@@ -27,7 +28,9 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
     colorPrimary: '#1e293b',
   });
 
-  // Step 2: Calendar
+  // Step 2: Calendar — who runs the schedule, then the feed when there is one
+  const [scheduleSource, setScheduleSource] = useState('feed');
+  const usesFeed = scheduleSource !== 'app';
   const [icalUrl, setIcalUrl] = useState('');
   const [icalValid, setIcalValid] = useState(null);
 
@@ -66,7 +69,7 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
     if (createdTeam) {
       setIsSaving(true);
       try {
-        await supabaseService.updateTeam(createdTeam.id, { icalUrl });
+        await supabaseService.updateTeam(createdTeam.id, { icalUrl: usesFeed ? icalUrl : '', scheduleSource });
         setStep(2);
       } catch (e) {
         if (showToast) showToast('Failed to save calendar URL.', true);
@@ -223,40 +226,45 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
         {step === 1 && (
           <div className="space-y-4">
             <h3 className="font-bold text-foreground text-lg">Calendar Setup</h3>
-            <p className="text-xs text-muted-foreground">
-              Connect an iCal feed from Ollie Sports (or any .ics URL) to sync the team's schedule automatically.
-            </p>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground">iCal URL</label>
-              <div className="flex gap-2 mt-1">
-                <input
-                  type="url"
-                  placeholder="https://api.olliesports.com/ical/team-..."
-                  value={icalUrl}
-                  onChange={(e) => {
-                    setIcalUrl(e.target.value);
-                    setIcalValid(null);
-                  }}
-                  className="flex-grow border border-border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
-                />
-                <button
-                  onClick={handleTestIcal}
-                  className="px-4 py-2 bg-muted text-foreground text-xs font-semibold rounded-lg hover:bg-muted"
-                >
-                  Test
-                </button>
+            <ScheduleSourcePicker value={scheduleSource} onChange={setScheduleSource} />
+            {usesFeed && (
+              <p className="text-xs text-muted-foreground">
+                Connect an iCal feed from Ollie Sports (or any .ics URL) to sync the team's schedule automatically.
+              </p>
+            )}
+            {usesFeed && (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground">iCal URL</label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="url"
+                    placeholder="https://api.olliesports.com/ical/team-..."
+                    value={icalUrl}
+                    onChange={(e) => {
+                      setIcalUrl(e.target.value);
+                      setIcalValid(null);
+                    }}
+                    className="flex-grow border border-border rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <button
+                    onClick={handleTestIcal}
+                    className="px-4 py-2 bg-muted text-foreground text-xs font-semibold rounded-lg hover:bg-muted"
+                  >
+                    Test
+                  </button>
+                </div>
+                {icalValid === true && (
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold mt-1 flex items-center gap-1">
+                    <CheckCircle2 size={12} /> Calendar verified
+                  </p>
+                )}
+                {icalValid === false && (
+                  <p className="text-xs text-red-700 dark:text-red-400 font-semibold mt-1">
+                    Invalid or unreachable URL. Check the link and try again.
+                  </p>
+                )}
               </div>
-              {icalValid === true && (
-                <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold mt-1 flex items-center gap-1">
-                  <CheckCircle2 size={12} /> Calendar verified
-                </p>
-              )}
-              {icalValid === false && (
-                <p className="text-xs text-red-700 dark:text-red-400 font-semibold mt-1">
-                  Invalid or unreachable URL. Check the link and try again.
-                </p>
-              )}
-            </div>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={() => setStep(0)}
@@ -269,7 +277,7 @@ export default function TeamOnboarding({ club, seasons, onComplete, onCancel, sh
                 disabled={isSaving}
                 className="flex-1 py-3 bg-accent text-accent-foreground font-bold rounded-lg hover:bg-accent/90 disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {icalUrl ? 'Save & Continue' : 'Skip'} <ChevronRight size={16} />
+                {icalUrl || !usesFeed ? 'Save & Continue' : 'Skip'} <ChevronRight size={16} />
               </button>
             </div>
           </div>

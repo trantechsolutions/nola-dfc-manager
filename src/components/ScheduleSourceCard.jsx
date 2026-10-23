@@ -5,9 +5,10 @@ import AdminCard from './layout/AdminCard';
 import { useT } from '../i18n/I18nContext';
 
 /**
- * Who runs the team's schedule: a calendar feed (TeamSnap, Google, GotSport…) the app reads, or the app itself,
- * where staff add games and practices, practices repeat, and families RSVP and subscribe to the app's link.
- * Switching takes a second, confirming tap that says what will happen to the events already there.
+ * Who runs the team's schedule: a calendar feed (TeamSnap, Google, GotSport…) the app reads, the app itself
+ * (staff add games and practices, practices repeat, families RSVP and subscribe to the app's link), or both: the
+ * feed's events plus the team's own. Switching takes a second, confirming tap that says what will happen to the
+ * events already there.
  */
 export default function ScheduleSourceCard({ source = 'feed', hasFeed = false, onChange }) {
   const { t } = useT();
@@ -18,7 +19,18 @@ export default function ScheduleSourceCard({ source = 'feed', hasFeed = false, o
   const options = [
     { id: 'feed', title: t('settings.scheduleSourceFeed'), body: t('settings.scheduleSourceFeedBody') },
     { id: 'app', title: t('settings.scheduleSourceApp'), body: t('settings.scheduleSourceAppBody') },
+    { id: 'hybrid', title: t('settings.scheduleSourceHybrid'), body: t('settings.scheduleSourceHybridBody') },
   ];
+  const consequence = {
+    app: hasFeed ? t('settings.scheduleSourceToAppImport') : t('settings.scheduleSourceToAppEmpty'),
+    feed: t('settings.scheduleSourceToFeed'),
+    hybrid: hasFeed ? t('settings.scheduleSourceToHybrid') : t('settings.scheduleSourceToHybridNoFeed'),
+  };
+  const switchLabel = {
+    app: t('settings.scheduleSourceSwitchApp'),
+    feed: t('settings.scheduleSourceSwitchFeed'),
+    hybrid: t('settings.scheduleSourceSwitchHybrid'),
+  };
 
   const confirm = async () => {
     setBusy(true);
@@ -35,7 +47,7 @@ export default function ScheduleSourceCard({ source = 'feed', hasFeed = false, o
 
   return (
     <AdminCard title={t('settings.scheduleSource')} icon={CalendarCog} bodyClassName="space-y-3">
-      <div role="radiogroup" aria-label={t('settings.scheduleSource')} className="grid gap-2 sm:grid-cols-2">
+      <div role="radiogroup" aria-label={t('settings.scheduleSource')} className="grid gap-2 sm:grid-cols-3">
         {options.map((o) => {
           const current = source === o.id;
           const chosen = (pending ?? source) === o.id;
@@ -68,13 +80,7 @@ export default function ScheduleSourceCard({ source = 'feed', hasFeed = false, o
 
       {pending && pending !== source && (
         <div className="space-y-3 rounded-lg border border-border bg-muted/50 p-3">
-          <p className="text-sm text-foreground">
-            {pending === 'app'
-              ? hasFeed
-                ? t('settings.scheduleSourceToAppImport')
-                : t('settings.scheduleSourceToAppEmpty')
-              : t('settings.scheduleSourceToFeed')}
-          </p>
+          <p className="text-sm text-foreground">{consequence[pending]}</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -83,7 +89,7 @@ export default function ScheduleSourceCard({ source = 'feed', hasFeed = false, o
               className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-50"
             >
               {busy && <Loader2 size={14} className="animate-spin" />}
-              {pending === 'app' ? t('settings.scheduleSourceSwitchApp') : t('settings.scheduleSourceSwitchFeed')}
+              {switchLabel[pending]}
             </button>
             <button
               type="button"

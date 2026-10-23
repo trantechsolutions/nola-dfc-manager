@@ -21,16 +21,19 @@ async function eventsWithMoney(ids) {
 
 export const scheduleService = {
   // `source` marks who owns the rows: 'feed' for a regular sync, 'app' for the one-time import when a team
-  // switches to running its schedule here (sql/app_schedule_migration.sql).
-  syncTeamEvents: async (teamId, events, { source } = {}) => {
+  // switches to running its schedule here (sql/app_schedule_migration.sql). `keepAppEvents` is for a team that
+  // runs feed and app together (sql/hybrid_schedule_migration.sql): events added in the app are never matched,
+  // overwritten or pruned by the feed.
+  syncTeamEvents: async (teamId, events, { source, keepAppEvents = false } = {}) => {
     if (!teamId || !events.length) return 0;
 
     // Fetch existing rows so we can preserve admin-locked types
-    const { data: existing } = await supabase
+    const { data: allExisting } = await supabase
       .from('team_events')
-      .select('uid, event_date, event_type, type_locked')
+      .select('uid, event_date, event_type, type_locked, source')
       .eq('team_id', teamId)
       .order('created_at', { ascending: true });
+    const existing = keepAppEvents ? (allExisting || []).filter((e) => e.source !== 'app') : allExisting;
     const lockedMap = {};
     (existing || []).forEach((e) => {
       if (e.type_locked) lockedMap[e.uid] = e.event_type;
@@ -81,6 +84,7 @@ export const scheduleService = {
     await scheduleService.pruneStaleUpcomingEvents(
       teamId,
       rows.map((r) => r.uid),
+      { keepAppEvents },
     );
     return rows.length;
   },
@@ -91,19 +95,21 @@ export const scheduleService = {
   // touched. Events with money attached (ledger entries or a budget push) are
   // kept — deleting them would cascade away budget contribution records and
   // unlink expenses.
-  pruneStaleUpcomingEvents: async (teamId, keepUids) => {
+  pruneStaleUpcomingEvents: async (teamId, keepUids, { keepAppEvents = false } = {}) => {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
     const { data: upcoming, error } = await supabase
       .from('team_events')
-      .select('id, uid')
+      .select('id, uid, source')
       .eq('team_id', teamId)
       .gte('event_date', startOfToday.toISOString());
     if (error) throw error;
 
     const keep = new Set(keepUids);
-    const staleIds = (upcoming || []).filter((e) => !keep.has(e.uid)).map((e) => e.id);
+    const staleIds = (upcoming || [])
+      .filter((e) => !keep.has(e.uid) && !(keepAppEvents && e.source === 'app'))
+      .map((e) => e.id);
     if (!staleIds.length) return 0;
 
     const linked = await eventsWithMoney(staleIds);
@@ -372,7 +378,7 @@ export const scheduleService = {
     return base ? `${base}/functions/v1/team-calendar?t=${encodeURIComponent(data)}` : null;
   },
 
-  /** Who runs the team's schedule: 'feed' (a calendar feed) or 'app' (this app). */
+  /** Who runs the team's schedule: 'feed' (a calendar feed), 'app' (this app) or 'hybrid' (both). */
   setScheduleSource: async (teamId, source) => {
     const { error } = await supabase.from('teams').update({ schedule_source: source }).eq('id', teamId);
     if (error) throw error;

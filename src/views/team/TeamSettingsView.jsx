@@ -313,6 +313,9 @@ export default function TeamSettingsView({
             {selectedTeam?.scheduleSource === 'app' && (
               <p className="text-xs text-muted-foreground">{t('settings.feedUnusedWhileApp')}</p>
             )}
+            {selectedTeam?.scheduleSource === 'hybrid' && (
+              <p className="text-xs text-muted-foreground">{t('settings.feedUsedWhileHybrid')}</p>
+            )}
             <StatusLine ok={Boolean(currentIcsUrl)} okText={currentIcsUrl} warnText={t('settings.noFeed')} />
             <FormRow label={t('settings.icsLabel')} htmlFor="ics-url" help={t('settings.icsHelp')}>
               <input
