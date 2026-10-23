@@ -883,6 +883,21 @@ function App() {
     deleteOpponentContact,
   };
 
+  // The public calendar is a page of its own (own header, no app chrome), and it has to open for a signed-in
+  // visitor too: the marketing page and shared links send everyone to /calendar.
+  if (location.pathname === '/calendar' || location.pathname.startsWith('/calendar/')) {
+    return (
+      <ErrorBoundary>
+        <Routes>
+          <Route
+            path="/calendar/:teamId?"
+            element={<PublicCalendarView signedIn onBack={() => navigate('/dashboard')} />}
+          />
+        </Routes>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <NavigationContext.Provider value={navContextValue}>
       <DataContext.Provider value={dataContextValue}>
