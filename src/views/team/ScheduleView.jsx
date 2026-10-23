@@ -19,11 +19,17 @@ import {
   PlayCircle,
   CalendarPlus,
   Pencil,
+  Plus,
+  Shirt,
 } from 'lucide-react';
 import { filmService, filmGameLink } from '../../services/filmService';
 import CalendarView from '../../components/CalendarView';
 import EventExpenseModal from '../../components/EventExpenseModal';
 import BulkExpenseModal from '../../components/BulkExpenseModal';
+import EventEditor from '../../components/EventEditor';
+import EventRsvp from '../../components/EventRsvp';
+import { mergeSavedEvents } from '../../hooks/useSchedule';
+import { scheduleService } from '../../services/scheduleService';
 import PanelHost from '../../components/layout/PanelHost';
 import PageTabs from '../../components/layout/PageTabs';
 import { usePanelRoute } from '../../hooks/usePanelRoute';
@@ -50,6 +56,8 @@ const EventRow = ({
   expenseSummary = null,
   onManageExpenses = null,
   film = null,
+  onEdit = null,
+  rsvp = null,
 }) => {
   const { t, locale } = useT();
   const isGame = GAME_TYPES.includes(dbEvent?.eventType || event.eventType);
@@ -57,8 +65,15 @@ const EventRow = ({
   const effectiveType = dbEvent?.eventType || event.eventType;
   const type = EVENT_TYPES[effectiveType] || EVENT_TYPES.event;
   const typeLabel = t(`eventTypes.${effectiveType}`, type.label);
-  const canEdit = onTypeChange && dbEvent;
+  const canEdit = onTypeChange && dbEvent && !onEdit;
   const date = new Date(event.timestamp * 1000);
+  const clock = (d) => d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+  // An event the app runs carries an end, an arrive-by and a uniform; a feed event usually doesn't.
+  const endIso = dbEvent?.endDate || (event.endTimestamp ? new Date(event.endTimestamp * 1000).toISOString() : null);
+  const endTime = endIso ? clock(new Date(endIso)) : null;
+  const arrival = dbEvent?.arrivalMinutes ?? event.arrivalMinutes;
+  const arriveAt = arrival ? clock(new Date((event.timestamp - arrival * 60) * 1000)) : null;
+  const uniform = dbEvent?.uniform || event.uniform || null;
 
   const handleTypeSelect = async (e) => {
     const newType = e.target.value;
@@ -107,6 +122,7 @@ const EventRow = ({
           <span className="flex items-center gap-1.5 tabular-nums">
             <Clock size={14} className="shrink-0" aria-hidden="true" />
             {event.displayTime}
+            {endTime && <> – {endTime}</>}
           </span>
           <span className="flex min-w-0 items-center gap-1.5" title={event.location}>
             <MapPin size={14} className="shrink-0" aria-hidden="true" />
@@ -144,6 +160,28 @@ const EventRow = ({
             </button>
           )}
         </p>
+
+        {/* What a family needs before leaving the house: when to be there, and what to wear. */}
+        {!isPast && (arriveAt || uniform) && (
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-foreground">
+            {arriveAt && <span>{t('schedule.arriveBy', { time: arriveAt })}</span>}
+            {uniform && (
+              <span className="flex items-center gap-1.5">
+                <Shirt size={14} className="shrink-0 text-muted-foreground" aria-hidden="true" />
+                {uniform}
+              </span>
+            )}
+          </p>
+        )}
+
+        {!isPast && !event.isCancelled && rsvp && <EventRsvp {...rsvp} />}
+
+        {onEdit && (
+          <button type="button" onClick={onEdit} className={ROW_ACTION}>
+            <Pencil size={12} aria-hidden="true" />
+            {t('schedule.editor.editShort')}
+          </button>
+        )}
 
         {!isPast && (
           <button type="button" onClick={() => downloadEventIcs(event, { teamName })} className={ROW_ACTION}>
@@ -452,8 +490,15 @@ export default function ScheduleView({
   budgetContributions = [],
   budgetLocked = false,
   budgetRecalculatesFee = true,
+  onScheduleChanged = null,
+  players = [],
+  myPlayers = [],
 }) {
   const { t, locale } = useT();
+  // The app runs this team's schedule (Team Settings): staff add and edit events here, and families
+  // subscribe to the app's own calendar link instead of the feed's.
+  const appRun = selectedTeam?.scheduleSource === 'app';
+  const canAddEvents = appRun && canEditSchedule;
   const [tab, setTab] = useState('upcoming');
   const [isSyncing, setIsSyncing] = useState(false);
   const { panel, panelParams, openPanel, closePanel } = usePanelRoute();
@@ -464,6 +509,23 @@ export default function ScheduleView({
     panel === PANELS.EVENT_EXPENSE && panelParams.id
       ? teamEvents.find((e) => String(e.id) === panelParams.id) || null
       : null;
+  // The event editor: a new event, or the one the URL names.
+  const editorOpen = canAddEvents && panel === PANELS.EVENT_EDITOR;
+  const editorEvent =
+    editorOpen && panelParams.id ? teamEvents.find((e) => String(e.id) === panelParams.id) || null : null;
+
+  // The app's own subscribe link, fetched once per team when the app runs the schedule.
+  const [appFeedUrl, setAppFeedUrl] = useState(null);
+  useEffect(() => {
+    let live = true;
+    setAppFeedUrl(null);
+    if (appRun && selectedTeam?.id) {
+      scheduleService.getCalendarFeedUrl(selectedTeam.id).then((u) => live && setAppFeedUrl(u));
+    }
+    return () => {
+      live = false;
+    };
+  }, [appRun, selectedTeam?.id]);
 
   const film = useFilmGames(selectedTeam?.id);
   const filmFor = (db) =>
@@ -521,6 +583,68 @@ export default function ScheduleView({
     return filterEventsBySeason(events, selectedSeason);
   }, [events, selectedSeason]);
 
+  // Upcoming events left out of `events` because they're cancelled. On a schedule the app runs they stay on
+  // the list, struck through, so families see the cancellation and staff can restore it.
+  const cancelledUpcoming = useMemo(() => {
+    if (!appRun) return [];
+    const now = Math.floor(Date.now() / 1000);
+    const rows = teamEvents.filter((e) => e.isCancelled && new Date(e.eventDate).getTime() / 1000 >= now);
+    const list = mergeSavedEvents([], rows, { feedFailed: true, now, team: selectedTeam });
+    return selectedSeason ? filterEventsBySeason({ upcoming: list, past: [] }, selectedSeason).upcoming : list;
+  }, [appRun, teamEvents, selectedTeam, selectedSeason]);
+  const upcomingList = useMemo(
+    () => [...seasonEvents.upcoming, ...cancelledUpcoming].sort((a, b) => a.timestamp - b.timestamp),
+    [seasonEvents.upcoming, cancelledUpcoming],
+  );
+
+  // RSVPs for the upcoming events saved in team_events (every event, when the app runs the schedule).
+  const [rsvps, setRsvps] = useState({});
+  const rsvpKey = useMemo(
+    () =>
+      upcomingList
+        .map((e) => findDbEvent(e)?.id)
+        .filter(Boolean)
+        .join(','),
+    [upcomingList, findDbEvent],
+  );
+  useEffect(() => {
+    let live = true;
+    if (!rsvpKey) {
+      setRsvps({});
+      return undefined;
+    }
+    scheduleService.getRsvps(rsvpKey.split(',')).then(
+      (rows) => {
+        if (!live) return;
+        const byEvent = {};
+        rows.forEach((row) => {
+          (byEvent[row.eventId] ||= []).push(row);
+        });
+        setRsvps(byEvent);
+      },
+      () => live && setRsvps({}),
+    );
+    return () => {
+      live = false;
+    };
+  }, [rsvpKey]);
+
+  const setRsvp = async (eventId, playerId, status) => {
+    await scheduleService.setRsvp(eventId, playerId, status);
+    setRsvps((prev) => {
+      const rest = (prev[eventId] || []).filter((row) => row.playerId !== playerId);
+      return { ...prev, [eventId]: status ? [...rest, { eventId, playerId, status }] : rest };
+    });
+  };
+  const teamPlayers = useMemo(
+    () => players.filter((p) => !p.teamId || p.teamId === selectedTeam?.id),
+    [players, selectedTeam?.id],
+  );
+  const myTeamPlayers = useMemo(
+    () => myPlayers.filter((p) => !p.teamId || p.teamId === selectedTeam?.id),
+    [myPlayers, selectedTeam?.id],
+  );
+
   // Only events synced into the DB can carry an expense (a transaction keys off
   // the team_events row), so the bulk picker is built from those alone.
   const bulkCandidates = useMemo(() => {
@@ -552,6 +676,8 @@ export default function ScheduleView({
   const [searchTerm, setSearchTerm] = useState('');
 
   const currentIcsUrl = selectedTeam?.icalUrl || '';
+  // Families subscribe to the app's own link when it runs the schedule, otherwise to the feed's.
+  const feedForSubscribe = appRun ? appFeedUrl : currentIcsUrl;
 
   const ALL_TABS = [
     { id: 'upcoming', label: t('schedule.upcoming'), icon: Calendar },
@@ -578,10 +704,7 @@ export default function ScheduleView({
     return result;
   };
 
-  const filteredUpcoming = useMemo(
-    () => applyFilters(seasonEvents.upcoming),
-    [seasonEvents.upcoming, typeFilters, searchTerm],
-  );
+  const filteredUpcoming = useMemo(() => applyFilters(upcomingList), [upcomingList, typeFilters, searchTerm]);
   const filteredPast = useMemo(() => applyFilters(seasonEvents.past), [seasonEvents.past, typeFilters, searchTerm]);
   const hasFilters = typeFilters.length > 0 || searchTerm;
 
@@ -609,7 +732,7 @@ export default function ScheduleView({
           </button>
         )}
       </div>
-      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+      <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
         {Object.entries(EVENT_TYPES).map(([key, type]) => {
           const on = typeFilters.includes(key);
           return (
@@ -660,6 +783,18 @@ export default function ScheduleView({
         expenseSummary={getExpenseSummary(db)}
         film={filmFor(db)}
         onManageExpenses={canEditSchedule ? (event) => openPanel(PANELS.EVENT_EXPENSE, { id: event.id }) : null}
+        onEdit={canAddEvents && db ? () => openPanel(PANELS.EVENT_EDITOR, { id: db.id }) : null}
+        rsvp={
+          !isPast && db && (canEditSchedule || myTeamPlayers.length)
+            ? {
+                rsvps: rsvps[db.id] || [],
+                roster: canEditSchedule ? teamPlayers : [],
+                mine: myTeamPlayers,
+                canManage: canEditSchedule,
+                onChange: (playerId, status) => setRsvp(db.id, playerId, status),
+              }
+            : null
+        }
       />
     );
   };
@@ -675,6 +810,16 @@ export default function ScheduleView({
       {/* ── Staff and calendar actions ── (page title comes from the shell) */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
+          {canAddEvents && (
+            <button
+              type="button"
+              onClick={() => openPanel(PANELS.EVENT_EDITOR)}
+              className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
+            >
+              <Plus size={14} aria-hidden="true" />
+              {t('schedule.editor.newButton')}
+            </button>
+          )}
           {onBulkAddExpenses && bulkCandidates.length > 0 && (
             <button
               type="button"
@@ -685,7 +830,7 @@ export default function ScheduleView({
               {t('bulkExpenses.open')}
             </button>
           )}
-          {canEditSchedule && currentIcsUrl && (
+          {canEditSchedule && currentIcsUrl && !appRun && (
             <button
               type="button"
               onClick={handleSync}
@@ -696,9 +841,9 @@ export default function ScheduleView({
               {isSyncing ? t('schedule.syncing') : t('schedule.sync')}
             </button>
           )}
-          {subscribeUrl(currentIcsUrl) && (
+          {subscribeUrl(feedForSubscribe) && (
             <a
-              href={subscribeUrl(currentIcsUrl)}
+              href={subscribeUrl(feedForSubscribe)}
               title={t('nav.subscribeHint')}
               className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
             >
@@ -706,7 +851,7 @@ export default function ScheduleView({
               {t('nav.subscribe')}
             </a>
           )}
-          {currentIcsUrl && !canEditSchedule && (
+          {currentIcsUrl && !canEditSchedule && !appRun && (
             <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <span className="h-2 w-2 rounded-full bg-success" aria-hidden="true" />
               {t('schedule.live')}
@@ -720,15 +865,14 @@ export default function ScheduleView({
         tabs={ALL_TABS.map((tb) => ({
           id: tb.id,
           label: tb.label,
-          count:
-            tb.id === 'upcoming' ? seasonEvents.upcoming.length : tb.id === 'past' ? seasonEvents.past.length : null,
+          count: tb.id === 'upcoming' ? upcomingList.length : tb.id === 'past' ? seasonEvents.past.length : null,
         }))}
         active={tab}
         onChange={setTab}
       />
 
       {/* ── No feed warning (non-admins only) ── */}
-      {!currentIcsUrl && !canEditSchedule && (
+      {!currentIcsUrl && !canEditSchedule && !appRun && (
         <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-900/30">
           <AlertCircle size={18} className="shrink-0 text-amber-700 dark:text-amber-400" />
           <p className="text-sm font-medium text-amber-700 dark:text-amber-300">{t('schedule.noFeed')}</p>
@@ -795,6 +939,17 @@ export default function ScheduleView({
             !!expenseModalEvent &&
             getSeasonForDate(expenseModalEvent.eventDate?.split('T')[0], [selectedSeason]) !== null
           }
+        />
+
+        {/* ── Add or change an event (the app runs the schedule) ── */}
+        <EventEditor
+          open={editorOpen}
+          onClose={closePanel}
+          teamId={selectedTeam?.id}
+          teamName={selectedTeam?.name}
+          dbEvent={editorEvent}
+          blackoutDates={blackoutDates}
+          onSaved={onScheduleChanged}
         />
 
         {/* ── Bulk Expense Modal ── */}

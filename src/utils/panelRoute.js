@@ -56,6 +56,7 @@ export const PANELS = {
 
   // Schedule and fields
   EVENT_EXPENSE: 'eventExpense',
+  EVENT_EDITOR: 'eventEditor',
   BULK_EXPENSES: 'bulkExpenses',
   BOOKING: 'booking',
   CLOSURE: 'closure',

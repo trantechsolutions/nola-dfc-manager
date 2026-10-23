@@ -12,12 +12,15 @@ import {
   Wallet,
   Trash2,
   CalendarCheck,
+  MessageCircle,
 } from 'lucide-react';
 import { supabaseService } from '../../services/supabaseService';
 import { useT } from '../../i18n/I18nContext';
 import AccountManager from '../../components/AccountManager';
 import PaymentInstructionsText from '../../components/PaymentInstructionsText';
 import ViewScopeCard from '../../components/ViewScopeCard';
+import ScheduleSourceCard from '../../components/ScheduleSourceCard';
+import ChatSettingsCard from '../../components/ChatSettingsCard';
 import AdminCard from '../../components/layout/AdminCard';
 import FormRow from '../../components/layout/FormRow';
 import { formControl } from '../../components/layout/formControl';
@@ -40,6 +43,7 @@ export default function TeamSettingsView({
   teamSeasons = [],
   canSetActiveSeason = false,
   onSyncCalendar = null,
+  onSetScheduleSource = null,
 }) {
   const { t } = useT();
 
@@ -213,6 +217,7 @@ export default function TeamSettingsView({
       : []),
     ...(canSetActiveSeason ? [{ id: 'season', label: t('settings.activeSeason'), icon: CalendarCheck }] : []),
     { id: 'calendar', label: t('settings.calendarFeed'), icon: Rss },
+    { id: 'chat', label: t('settings.chat'), icon: MessageCircle },
     ...(onSaveAccount ? [{ id: 'accounts', label: t('settings.sectionAccounts', 'Accounts'), icon: Wallet }] : []),
     { id: 'payments', label: t('settings.paymentInstructions'), icon: CreditCard },
     { id: 'links', label: t('settings.reeplayerLinks'), icon: Link2 },
@@ -260,6 +265,17 @@ export default function TeamSettingsView({
           </AdminCard>
         )}
 
+        {section === 'chat' && <ChatSettingsCard teamId={selectedTeam?.id} showToast={showToast} />}
+
+        {section === 'calendar' && (
+          <ScheduleSourceCard
+            source={selectedTeam?.scheduleSource || 'feed'}
+            hasFeed={Boolean(currentIcsUrl)}
+            onChange={onSetScheduleSource}
+          />
+        )}
+
+        {/* The feed card stays while the app runs the schedule: switching back reads it again. */}
         {section === 'calendar' && (
           <AdminCard
             title={t('settings.calendarFeed')}
@@ -294,6 +310,9 @@ export default function TeamSettingsView({
             }
             bodyClassName="space-y-4"
           >
+            {selectedTeam?.scheduleSource === 'app' && (
+              <p className="text-xs text-muted-foreground">{t('settings.feedUnusedWhileApp')}</p>
+            )}
             <StatusLine ok={Boolean(currentIcsUrl)} okText={currentIcsUrl} warnText={t('settings.noFeed')} />
             <FormRow label={t('settings.icsLabel')} htmlFor="ics-url" help={t('settings.icsHelp')}>
               <input

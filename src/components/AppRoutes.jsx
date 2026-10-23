@@ -58,6 +58,7 @@ const ParentChecklistView = lazy(() => import('../views/team/ParentChecklistView
 // being imported, so that route threw ReferenceError on entry.
 const EvaluatorScoringView = lazy(() => import('../views/club/evaluations/EvaluatorScoringView'));
 const FilmView = lazy(() => import('../views/film/FilmView'));
+const ChatView = lazy(() => import('../views/general/ChatView'));
 
 // Inline route fallback — matches the app's existing loading spinner
 function RouteFallback() {
@@ -246,6 +247,8 @@ export default function AppRoutes({
     blackoutDates,
     toggleBlackout,
     handleSyncCalendar,
+    handleScheduleChanged,
+    handleSetScheduleSource,
     handleTeamEventTypeChange,
     handleTeamEventScore,
     handleSaveExpense,
@@ -658,6 +661,9 @@ export default function AppRoutes({
                   teamEvents={teamEvents}
                   onTypeChange={canEditSchedule ? handleTeamEventTypeChange : null}
                   onScoreChange={canEditSchedule ? handleTeamEventScore : null}
+                  onScheduleChanged={handleScheduleChanged}
+                  players={seasonalPlayers}
+                  myPlayers={myPlayers}
                   transactions={seasonalTransactions}
                   onSaveExpense={canEditSchedule ? handleSaveExpense : null}
                   onToggleCleared={canEditSchedule ? handleToggleCleared : null}
@@ -769,6 +775,7 @@ export default function AppRoutes({
                     teamSeasons={teamSeasons}
                     canSetActiveSeason={can(PERMISSIONS.TEAM_SET_ACTIVE_SEASON)}
                     onSyncCalendar={canEditSchedule ? handleSyncCalendar : null}
+                    onSetScheduleSource={canEditSchedule ? handleSetScheduleSource : null}
                   />
                 }
               />
@@ -801,6 +808,8 @@ export default function AppRoutes({
             {/* The team's game film. Open to every signed-in user; row-level security
                 returns a team's games only to people on that team. */}
             <Route path="/film/:teamId/*" element={<FilmView />} />
+            {/* Team chat: every signed-in user; the chats listed are the teams they're on. */}
+            <Route path="/chat" element={<ChatView user={user} />} />
 
             {effectiveIsStaff && (
               <>

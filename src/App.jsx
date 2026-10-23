@@ -48,6 +48,7 @@ import { NavigationContext } from './context/NavigationContext';
 import { DataContext } from './context/DataContext';
 import { FinanceContext } from './context/FinanceContext';
 import { ScheduleContext } from './context/ScheduleContext';
+import { ChatProvider } from './context/ChatContext';
 
 // Services & Hooks
 import { supabaseService } from './services/supabaseService';
@@ -285,6 +286,8 @@ function App() {
     blackoutDates,
     toggleBlackout,
     syncCalendar,
+    importFeed,
+    refreshSchedule,
     loadedFor: scheduleLoadedFor,
   } = useSchedule(user, effectiveTeam);
   // Until the feed for the team on screen has landed, "no upcoming events" is
@@ -568,6 +571,25 @@ function App() {
     showToast(t('toast.syncedEvents', { n: count }));
   };
 
+  // After an event is added, moved or cancelled in the app: the list and the saved rows both reload.
+  const handleScheduleChanged = async () => {
+    await Promise.all([refreshSchedule(), refreshTeamEvents(selectedTeamId || parentTeamId)]);
+  };
+
+  // Who runs the team's schedule. Moving to the app copies the feed in first, practices included, so nothing
+  // drops off the calendar; moving back to the feed lets the next sync take over again.
+  const handleSetScheduleSource = async (source) => {
+    const teamId = selectedTeamId || parentTeamId;
+    if (!teamId) return;
+    let imported = 0;
+    if (source === 'app') imported = await importFeed();
+    await supabaseService.setScheduleSource(teamId, source);
+    if (refreshContext) await refreshContext();
+    await refreshTeamEvents(teamId);
+    if (source === 'feed' && effectiveTeam?.icalUrl) await syncCalendar(effectiveTeam.icalUrl).catch(() => {});
+    showToast(source === 'app' ? t('toast.scheduleNowApp', { n: imported }) : t('toast.scheduleNowFeed'));
+  };
+
   const handleTeamEventTypeChange = async (dbEventId, newType) => {
     await supabaseService.updateTeamEventType(dbEventId, newType);
     updateTeamEvent(dbEventId, { eventType: newType, typeLocked: true });
@@ -830,6 +852,8 @@ function App() {
     blackoutDates,
     toggleBlackout,
     handleSyncCalendar,
+    handleScheduleChanged,
+    handleSetScheduleSource,
     handleTeamEventTypeChange,
     handleTeamEventScore,
     handleSaveExpense,
@@ -857,7 +881,7 @@ function App() {
       <DataContext.Provider value={dataContextValue}>
         <FinanceContext.Provider value={financeContextValue}>
           <ScheduleContext.Provider value={scheduleContextValue}>
-            <>
+            <ChatProvider userId={user?.id}>
               <AppShell
                 banner={
                   viewingAsParent ? (
@@ -969,7 +993,7 @@ function App() {
               <NotificationPermissionBanner />
               <OutboxIndicator />
               <OfflineBanner />
-            </>
+            </ChatProvider>
           </ScheduleContext.Provider>
         </FinanceContext.Provider>
       </DataContext.Provider>

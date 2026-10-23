@@ -9,6 +9,7 @@ import evaluations from './evaluations';
 import checklist from './checklist';
 import field from './field';
 import film from './film';
+import chat from './chat';
 
 export default {
   common,
@@ -49,4 +50,5 @@ export default {
   fieldSchedule: field.fieldSchedule,
   film: film.film,
   filmEvents: film.filmEvents,
+  chat: chat.chat,
 };
