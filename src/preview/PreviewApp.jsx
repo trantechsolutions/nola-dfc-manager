@@ -365,7 +365,9 @@ function LivePreview() {
 function ShellPreview({ params }) {
   const { t, setLocale } = useT();
   const role = params.get('role') === 'parent' ? 'parent' : 'staff';
-  const isStaff = role === 'staff';
+  // A staff member who is also a parent can switch to the parent view (App.jsx parentMode).
+  const [parentMode, setParentMode] = useState(false);
+  const isStaff = role === 'staff' && !parentMode;
   const [view, setView] = useState(
     { schedule: 'schedule', film: 'film/t1', chat: 'chat' }[params.get('page')] || 'dashboard',
   );
@@ -453,6 +455,12 @@ function ShellPreview({ params }) {
     ThemeIcon: Sun,
     supabase: { auth: { signOut: () => {} } },
     effectiveIsStaff: isStaff,
+    canViewAsParent: role === 'staff',
+    parentMode,
+    setParentMode: (on) => {
+      setParentMode(on);
+      setView('dashboard');
+    },
     canEditSchedule: isStaff,
     isClubAdmin: false,
     canEditLedger: isStaff,

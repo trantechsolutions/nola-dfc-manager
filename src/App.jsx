@@ -169,7 +169,31 @@ function App() {
 
   // When impersonating, act as parent regardless of actual role
   const viewingAsParent = !!impersonatingAs;
-  const effectiveIsStaff = viewingAsParent ? false : isStaff;
+
+  // ── PARENT VIEW FOR STAFF WHO ARE ALSO PARENTS ──
+  // A team manager whose own child is on a roster can switch to seeing the app as that child's parent: the real
+  // parent view, not the read-only preview above, since they are the guardian. Remembered per account on this
+  // device.
+  const parentModeKey = user?.id ? `ui.viewAsParent.${user.id}` : null;
+  const [parentModeOn, setParentModeOn] = useState(() => {
+    try {
+      return !!parentModeKey && window.localStorage.getItem(parentModeKey) === '1';
+    } catch {
+      return false;
+    }
+  });
+  // The account loads after the first render, so the remembered choice is read again once it does.
+  useEffect(() => {
+    try {
+      setParentModeOn(!!parentModeKey && window.localStorage.getItem(parentModeKey) === '1');
+    } catch {
+      setParentModeOn(false);
+    }
+  }, [parentModeKey]);
+  const [guardianLinkCount, setGuardianLinkCount] = useState(0);
+  const canViewAsParent = isStaff && !viewingAsParent && guardianLinkCount > 0;
+  const parentMode = canViewAsParent && parentModeOn;
+  const effectiveIsStaff = viewingAsParent || parentMode ? false : isStaff;
   const role = effectiveIsStaff ? 'manager' : PARENT_ROLE;
 
   // ── PLAYER SIGN-IN ──
@@ -184,7 +208,11 @@ function App() {
       return undefined;
     }
     supabaseService.getMyPlayerLinks().then(
-      (links) => live && setPlayerLinks(links),
+      (links) => {
+        if (!live) return;
+        setPlayerLinks(links);
+        setGuardianLinkCount(links.filter((l) => l.relation === 'guardian').length);
+      },
       () => live && setPlayerLinks([]),
     );
     return () => {
@@ -197,7 +225,7 @@ function App() {
   );
   const ownPlayerIdList = useMemo(() => [...selfPlayerIds], [selfPlayerIds]);
   const isPlayerAccount =
-    !effectiveIsStaff && !viewingAsParent && selfPlayerIds.size > 0 && playerLinks.every((l) => l.relation === 'self');
+    !isStaff && !viewingAsParent && selfPlayerIds.size > 0 && playerLinks.every((l) => l.relation === 'self');
 
   // ── PARENT TEAM DETECTION ──
   // Parents have no roles so selectedTeamId is null. We derive their team
@@ -227,7 +255,9 @@ function App() {
     user,
     effectiveTeamId,
     // The team's active season (set by its team manager) for everyone; else the club default for staff.
-    (selectedTeam || parentTeam)?.activeSeasonId || (effectiveIsStaff ? club?.settings?.defaultSeason || null : null),
+    // Staff in the parent view of their own family keep the staff default, so the season doesn't change under them.
+    (selectedTeam || parentTeam)?.activeSeasonId ||
+      (effectiveIsStaff || parentMode ? club?.settings?.defaultSeason || null : null),
   );
 
   const {
@@ -269,6 +299,8 @@ function App() {
       setParentTeamId(impersonatingAs.teamId || null);
       return;
     }
+    // Staff, including staff in the parent view of their own family (which keeps the team selected — the
+    // child's team, see setParentMode — rather than looking the family's team up the way a parent's login does).
     if (isStaff || selectedTeamId) {
       setParentTeamId(null);
       return;
@@ -846,8 +878,28 @@ function App() {
   const canBookField = can(PERMISSIONS.TEAM_BOOK_FIELD);
   const canEditLedger = can(PERMISSIONS.TEAM_EDIT_LEDGER);
 
+  // Switching between the staff view and the parent view of one's own children. Going to the parent view
+  // selects the child's team when it is one of this account's teams, so the parent sees that team's schedule.
+  const setParentMode = async (on) => {
+    setParentModeOn(on);
+    try {
+      if (parentModeKey) window.localStorage.setItem(parentModeKey, on ? '1' : '0');
+    } catch {
+      // Remembering the choice is a nicety.
+    }
+    if (on && user?.email) {
+      const kids = await supabaseService.getPlayersByGuardianEmail(user.email).catch(() => []);
+      const kidTeam = kids.find((p) => p.teamId && teams.some((tm) => tm.id === p.teamId))?.teamId;
+      if (kidTeam && kidTeam !== selectedTeamId) setSelectedTeamId(kidTeam);
+    }
+    navigate('/dashboard');
+  };
+
   const navContextValue = {
     isPlayerAccount,
+    parentMode,
+    canViewAsParent,
+    setParentMode,
     canEditSchedule,
     club,
     teams,
@@ -990,6 +1042,19 @@ function App() {
                         className="rounded-md bg-black/15 px-3 py-1 text-xs font-bold transition-colors hover:bg-black/25"
                       >
                         {t('common.exit')}
+                      </button>
+                    </div>
+                  ) : parentMode ? (
+                    <div className="sticky top-14 z-[1029] flex items-center justify-between gap-3 border-b border-border bg-muted px-4 py-2 text-foreground">
+                      <span className="flex items-center gap-2 text-sm font-semibold">
+                        <Eye size={14} aria-hidden="true" />
+                        {t('nav.viewingAsParent')}
+                      </span>
+                      <button
+                        onClick={() => setParentMode(false)}
+                        className="rounded-md bg-card px-3 py-1 text-xs font-bold text-foreground shadow-sm transition-colors hover:bg-background"
+                      >
+                        {t('nav.backToStaffView')}
                       </button>
                     </div>
                   ) : null
