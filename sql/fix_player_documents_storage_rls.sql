@@ -57,6 +57,11 @@ GRANT EXECUTE ON FUNCTION user_can_access_document_path(text) TO authenticated;
 drop policy if exists "player_documents_select" on storage.objects;
 drop policy if exists "player_documents_insert" on storage.objects;
 drop policy if exists "player_documents_delete" on storage.objects;
+-- The bucket's original dashboard policies. Policies are OR'd, so while these stand the narrow ones below change
+-- nothing: storage_documents_select let any signed-in user read every player document (found live 2026-10-23).
+drop policy if exists "storage_documents_select" on storage.objects;
+drop policy if exists "storage_documents_insert" on storage.objects;
+drop policy if exists "storage_documents_delete" on storage.objects;
 
 -- SELECT/DELETE: the documents row for this exact path must exist and be
 -- visible to the caller. Works for delete because documentService.deleteDocument
