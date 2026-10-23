@@ -10,6 +10,20 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-23 — Public calendar for signed-in users and screenshots in the hero (1d424f9..8ed8ecc)
+
+**Scope.** Two small commits: a routing fix and a marketing visual change.
+
+**Fix.** The public calendar route existed only for signed-out visitors, so every signed-in user following the
+marketing page's calendar button or a shared link hit a dead end. Low risk; no data or permissions change.
+
+**Decision.** The hero now leads with real app screens (sample team) instead of an illustrative finance panel,
+so the first thing a visitor sees is the product.
+
+**Open.** Nothing new.
+
+---
+
 ## 2026-10-23 — Document storage lockdown and marketing screenshots (ab5a6be..192b08c)
 
 **Scope.** Two commits: a storage security fix and a marketing page update with 16 app screenshots.

@@ -20,18 +20,7 @@ export default {
     ctaPrimary: 'Entrar a tu club',
     ctaSecondary: 'Ver un calendario público',
     note: 'Funciona sin conexión · Se instala en tu pantalla de inicio · English & Español',
-  },
-
-  scoreboard: {
-    label: 'La temporada de un vistazo',
-    live: 'Ejemplo',
-    balance: 'Saldo del equipo',
-    collected: 'Cuotas cobradas',
-    nextEvent: 'Próximo evento',
-    nextEventValue: 'Sáb · 9:00 AM · Local',
-    compliance: 'Plantel al día',
-    playersUnit: '{{done}} de {{total}} jugadores',
-    caption: 'Datos de ejemplo — tu club ve sus propios números.',
+    screensCaption: 'Pantallas reales de la aplicación, con un equipo de ejemplo.',
   },
 
   stats: {

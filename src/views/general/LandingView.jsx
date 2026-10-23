@@ -44,10 +44,6 @@ import './landing.css';
 const APP_ORIGIN = (import.meta.env.VITE_APP_URL || '').replace(/\/$/, '');
 const appHref = (path) => `${APP_ORIGIN}${path}`;
 
-// Sample figures for the hero panel. Deliberately round and obviously fake —
-// the caption underneath says so — so nobody reads them as a real club's books.
-const SAMPLE = { balance: '$12,480', collectedPct: 78, cleared: 15, roster: 18 };
-
 const FEATURES = [
   { id: 'schedule', icon: CalendarDays },
   { id: 'chat', icon: MessageCircle },
@@ -109,6 +105,30 @@ function BrandMark({ className = 'h-9 w-9' }) {
   );
 }
 
+/**
+ * One app screenshot in a phone bezel (public/marketing/<id>-<theme>-<lang>.webp). Both themes are in the page
+ * and CSS shows the one matching the site's theme, so switching it never waits on a download.
+ */
+function PhoneShot({ id, lang, alt, eager = false, className = '' }) {
+  const img = (theme, shown) => (
+    <img
+      src={`/marketing/${id}-${theme}-${lang}.webp`}
+      alt={alt}
+      width="390"
+      height="844"
+      loading={eager ? 'eager' : 'lazy'}
+      decoding="async"
+      className={`h-auto w-full ${shown}`}
+    />
+  );
+  return (
+    <div className={`landing-phone ${className}`}>
+      {img('light', 'block dark:hidden')}
+      {img('dark', 'hidden dark:block')}
+    </div>
+  );
+}
+
 /** Pitch markings behind the dark slabs — halfway line, circle, boxes, arcs. */
 function PitchMarkings() {
   return (
@@ -137,6 +157,8 @@ export default function LandingView() {
   // Same light → dark → system cycle the app header uses, so the control means
   // the same thing before and after sign-in.
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
+  // The screenshots come in English and Spanish.
+  const lang = locale === 'es' ? 'es' : 'en';
 
   const navLinks = [
     { href: '#tour', label: t('landing.nav.tour') },
@@ -236,46 +258,24 @@ export default function LandingView() {
               <p className="mt-6 text-xs font-medium text-white/60">{t('landing.hero.note')}</p>
             </div>
 
-            {/* Sample panel — a stripped-down read of the season overview */}
+            {/* Two real screens, a live game behind the home screen: what a family actually opens. */}
             <div className="landing-float">
-              <div className="rounded-lg border border-white/15 bg-black/30 p-5 shadow-md backdrop-blur-sm">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-white/70">{t('landing.scoreboard.label')}</p>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-white/80">
-                    <span className="landing-dot h-1.5 w-1.5 rounded-full bg-success" />
-                    {t('landing.scoreboard.live')}
-                  </span>
-                </div>
-
-                <div className="mt-5">
-                  <p className="text-xs font-semibold text-white/60">{t('landing.scoreboard.balance')}</p>
-                  <p className="landing-figure mt-1 text-4xl font-bold text-white">{SAMPLE.balance}</p>
-                </div>
-
-                <div className="mt-6">
-                  <div className="flex items-baseline justify-between">
-                    <p className="text-xs font-semibold text-white/60">{t('landing.scoreboard.collected')}</p>
-                    <p className="landing-figure text-sm font-bold text-white">{SAMPLE.collectedPct}%</p>
-                  </div>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15">
-                    <div className="h-full rounded-full bg-accent" style={{ width: `${SAMPLE.collectedPct}%` }} />
-                  </div>
-                </div>
-
-                <div className="mt-6 grid grid-cols-2 gap-3">
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                    <p className="text-xs font-semibold text-white/60">{t('landing.scoreboard.nextEvent')}</p>
-                    <p className="mt-1 text-sm font-bold text-white">{t('landing.scoreboard.nextEventValue')}</p>
-                  </div>
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                    <p className="text-xs font-semibold text-white/60">{t('landing.scoreboard.compliance')}</p>
-                    <p className="landing-figure mt-1 text-sm font-bold text-white">
-                      {t('landing.scoreboard.playersUnit', { done: SAMPLE.cleared, total: SAMPLE.roster })}
-                    </p>
-                  </div>
-                </div>
+              <div className="relative mx-auto flex h-[26rem] max-w-md items-center justify-center sm:h-[32rem]">
+                <PhoneShot
+                  id="live"
+                  lang={lang}
+                  alt={t('landing.tour.live.title')}
+                  className="absolute right-0 top-0 w-[11.5rem] rotate-[5deg] opacity-95 sm:w-[14rem]"
+                />
+                <PhoneShot
+                  id="home"
+                  lang={lang}
+                  alt={t('landing.tour.home.title')}
+                  eager
+                  className="absolute bottom-0 left-2 w-[12.5rem] -rotate-[3deg] sm:left-6 sm:w-[15rem]"
+                />
               </div>
-              <p className="mt-3 text-center text-xs text-white/50">{t('landing.scoreboard.caption')}</p>
+              <p className="mt-4 text-center text-xs text-white/50">{t('landing.hero.screensCaption')}</p>
             </div>
           </div>
 
@@ -301,31 +301,11 @@ export default function LandingView() {
           {/* A swipeable row on phones, four across on desktop. */}
           <ol className="no-scrollbar -mx-4 mt-12 flex snap-x snap-mandatory gap-6 overflow-x-auto px-4 pb-2 lg:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
             {TOUR.map((id) => {
-              const lang = locale === 'es' ? 'es' : 'en';
               const alt = t(`landing.tour.${id}.title`);
               return (
                 <li key={id} className="w-[15rem] shrink-0 snap-center lg:w-auto">
                   <figure>
-                    <div className="landing-phone">
-                      <img
-                        src={`/marketing/${id}-light-${lang}.webp`}
-                        alt={alt}
-                        width="390"
-                        height="844"
-                        loading="lazy"
-                        decoding="async"
-                        className="block h-auto w-full dark:hidden"
-                      />
-                      <img
-                        src={`/marketing/${id}-dark-${lang}.webp`}
-                        alt={alt}
-                        width="390"
-                        height="844"
-                        loading="lazy"
-                        decoding="async"
-                        className="hidden h-auto w-full dark:block"
-                      />
-                    </div>
+                    <PhoneShot id={id} lang={lang} alt={alt} />
                     <figcaption className="mt-5">
                       <h3 className="font-bold">{alt}</h3>
                       <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">

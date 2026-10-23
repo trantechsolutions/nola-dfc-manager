@@ -8,6 +8,7 @@ import {
   Share2,
   Check,
   Link2,
+  ArrowLeft,
   LogIn,
   List,
   CalendarDays,
@@ -178,7 +179,7 @@ function UnavailableModal({ detail, onClose }) {
   );
 }
 
-export default function PublicCalendarView({ onBack }) {
+export default function PublicCalendarView({ onBack, signedIn = false }) {
   const { teamId: routeTeamId } = useParams();
   const navigate = useNavigate();
 
@@ -348,7 +349,7 @@ export default function PublicCalendarView({ onBack }) {
                   onClick={onBack}
                   className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg font-semibold text-xs bg-accent-foreground/10 text-accent-foreground hover:bg-accent-foreground/20 transition-all"
                 >
-                  <LogIn size={14} /> Sign In
+                  {signedIn ? <ArrowLeft size={14} /> : <LogIn size={14} />} {signedIn ? 'Back to the app' : 'Sign In'}
                 </button>
               )}
             </div>
