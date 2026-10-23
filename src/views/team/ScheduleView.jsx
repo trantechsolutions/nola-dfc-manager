@@ -568,7 +568,10 @@ export default function ScheduleView({
   // The app runs this team's schedule (Team Settings): staff add and edit events here, and families
   // subscribe to the app's own calendar link instead of the feed's.
   const appRun = selectedTeam?.scheduleSource === 'app';
-  const canAddEvents = appRun && canEditSchedule;
+  // Feed + app (sql/hybrid_schedule_migration.sql): staff add their own events too; the feed's stay read-only.
+  const hybrid = selectedTeam?.scheduleSource === 'hybrid';
+  const appEvents = appRun || hybrid;
+  const canAddEvents = appEvents && canEditSchedule;
   const [tab, setTab] = useState('upcoming');
   const [isSyncing, setIsSyncing] = useState(false);
   const { panel, panelParams, openPanel, closePanel } = usePanelRoute();
@@ -589,13 +592,13 @@ export default function ScheduleView({
   useEffect(() => {
     let live = true;
     setAppFeedUrl(null);
-    if (appRun && selectedTeam?.id) {
+    if (appEvents && selectedTeam?.id) {
       scheduleService.getCalendarFeedUrl(selectedTeam.id).then((u) => live && setAppFeedUrl(u));
     }
     return () => {
       live = false;
     };
-  }, [appRun, selectedTeam?.id]);
+  }, [appEvents, selectedTeam?.id]);
 
   const film = useFilmGames(selectedTeam?.id);
   const liveGames = useLiveGames(selectedTeam?.id);
@@ -668,12 +671,14 @@ export default function ScheduleView({
   // Upcoming events left out of `events` because they're cancelled. On a schedule the app runs they stay on
   // the list, struck through, so families see the cancellation and staff can restore it.
   const cancelledUpcoming = useMemo(() => {
-    if (!appRun) return [];
+    if (!appEvents) return [];
     const now = Math.floor(Date.now() / 1000);
-    const rows = teamEvents.filter((e) => e.isCancelled && new Date(e.eventDate).getTime() / 1000 >= now);
+    const rows = teamEvents.filter(
+      (e) => e.isCancelled && new Date(e.eventDate).getTime() / 1000 >= now && (appRun || e.source === 'app'),
+    );
     const list = mergeSavedEvents([], rows, { feedFailed: true, now, team: selectedTeam });
     return selectedSeason ? filterEventsBySeason({ upcoming: list, past: [] }, selectedSeason).upcoming : list;
-  }, [appRun, teamEvents, selectedTeam, selectedSeason]);
+  }, [appEvents, appRun, teamEvents, selectedTeam, selectedSeason]);
   const upcomingList = useMemo(
     () => [...seasonEvents.upcoming, ...cancelledUpcoming].sort((a, b) => a.timestamp - b.timestamp),
     [seasonEvents.upcoming, cancelledUpcoming],
@@ -722,8 +727,9 @@ export default function ScheduleView({
   const [searchTerm, setSearchTerm] = useState('');
 
   const currentIcsUrl = selectedTeam?.icalUrl || '';
-  // Families subscribe to the app's own link when it runs the schedule, otherwise to the feed's.
-  const feedForSubscribe = appRun ? appFeedUrl : currentIcsUrl;
+  // Families subscribe to the app's own link when it runs the schedule (alone or with the feed, whose synced
+  // events the link carries too), otherwise to the feed's.
+  const feedForSubscribe = appEvents ? appFeedUrl : currentIcsUrl;
 
   const ALL_TABS = [
     { id: 'upcoming', label: t('schedule.upcoming'), icon: Calendar },
@@ -829,7 +835,11 @@ export default function ScheduleView({
         expenseSummary={getExpenseSummary(db)}
         film={filmFor(db)}
         onManageExpenses={canEditSchedule ? (event) => openPanel(PANELS.EVENT_EXPENSE, { id: event.id }) : null}
-        onEdit={canAddEvents && db ? () => openPanel(PANELS.EVENT_EDITOR, { id: db.id }) : null}
+        onEdit={
+          canAddEvents && db && (appRun || db.source === 'app')
+            ? () => openPanel(PANELS.EVENT_EDITOR, { id: db.id })
+            : null
+        }
         liveGame={db ? liveGames[db.id] || null : null}
         teamId={selectedTeam?.id}
         canKeep={canKeep}

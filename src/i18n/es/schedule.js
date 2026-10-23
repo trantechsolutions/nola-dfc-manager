@@ -328,6 +328,15 @@ export default {
     scheduleSourceApp: 'Esta app',
     scheduleSourceAppBody:
       'Añade partidos, entrenamientos y eventos aquí. Los entrenamientos se pueden repetir, las familias confirman asistencia y los teléfonos se suscriben al calendario del equipo.',
+    scheduleSourceHybrid: 'Calendario externo + esta app',
+    scheduleSourceHybridBody:
+      'Conserva el calendario externo para los partidos de liga y añade aquí tus entrenamientos, amistosos y eventos. Los eventos externos se cambian allí; los tuyos, aquí.',
+    scheduleSourceToHybrid:
+      'El calendario externo sigue llevando sus eventos. Los que añadas aquí se quedan, diga lo que diga el externo, y las familias confirman asistencia a ambos.',
+    scheduleSourceToHybridNoFeed:
+      'Aún no hay calendario externo, así que por ahora el calendario es solo lo que añadas aquí. Añade uno abajo para traer también sus eventos.',
+    scheduleSourceSwitchHybrid: 'Usar externo + esta app',
+    feedUsedWhileHybrid: 'Este calendario trae sus eventos; los que añadas en la app van junto a ellos.',
     scheduleSourceCurrent: 'Actual',
     scheduleSourceToAppImport:
       'Todo lo del calendario externo, entrenamientos incluidos, se copia una vez. Después ya no se lee y los cambios se hacen aquí.',

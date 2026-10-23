@@ -10,6 +10,16 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-23 — Staff RSVPs on Home and feed + app schedules (fae444b..7288236)
+
+- **Coaches can mark attendance from Home.** Tap the totals on the next game to open the roster and mark each
+  player going, maybe or can't go — same as on the schedule.
+- **Use your league calendar and add your own events.** A team can now keep its league or club calendar feed
+  and still add its own practices, friendlies and team events in the app. Families answer for both and get
+  both in their phone calendar. Choose it in Team Settings, or when a team is set up.
+
+---
+
 ## 2026-10-23 — RSVP icons everywhere, player sign-in and scorekeeper exits (6841484..dc00a16)
 
 - **Answer in one tap, anywhere.** Going, maybe and can't go are now a green check, orange question mark and

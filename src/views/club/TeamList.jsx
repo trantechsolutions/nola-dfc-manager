@@ -7,6 +7,7 @@ import Badge from '../../components/layout/Badge';
 import ResponsiveModal from '../../components/layout/ResponsiveModal';
 import PanelHost from '../../components/layout/PanelHost';
 import { usePanelRoute } from '../../hooks/usePanelRoute';
+import ScheduleSourcePicker from '../../components/ScheduleSourcePicker';
 import DirectoryCard, { DetailRow, EmptyRow } from '../../components/layout/DirectoryCard';
 import { DirectoryToolbar, SearchInput, ToolbarButton, RowAction } from '../../components/layout/DirectoryControls';
 import { paginate } from '../../utils/pagination';
@@ -41,6 +42,7 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
     gender: 'M',
     tier: 'competitive',
     icalUrl: '',
+    scheduleSource: 'feed',
     colorPrimary: '#1e293b',
   });
 
@@ -71,9 +73,21 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
     if (!newTeam.name.trim()) return;
     setIsSaving(true);
     try {
-      await supabaseService.createTeam({ ...newTeam, clubId: club.id });
+      await supabaseService.createTeam({
+        ...newTeam,
+        icalUrl: newTeam.scheduleSource === 'app' ? '' : newTeam.icalUrl,
+        clubId: club.id,
+      });
       closePanel();
-      setNewTeam({ name: '', ageGroup: '', gender: 'M', tier: 'competitive', icalUrl: '', colorPrimary: '#1e293b' });
+      setNewTeam({
+        name: '',
+        ageGroup: '',
+        gender: 'M',
+        tier: 'competitive',
+        icalUrl: '',
+        scheduleSource: 'feed',
+        colorPrimary: '#1e293b',
+      });
       await refreshContext();
       if (showToast) showToast(t('clubTeams.teamCreated', { name: newTeam.name }));
     } catch (e) {
@@ -496,15 +510,25 @@ export default function TeamList({ club, teams, onSelectTeam, formatMoney, showT
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold text-muted-foreground">iCal URL (optional)</label>
-                <input
-                  type="url"
-                  placeholder="https://..."
-                  value={newTeam.icalUrl}
-                  onChange={(e) => setNewTeam({ ...newTeam, icalUrl: e.target.value })}
-                  className="w-full border border-border rounded-lg p-2.5 text-sm outline-none mt-1 bg-card"
+                <label className="text-xs font-semibold text-muted-foreground">{t('settings.scheduleSource')}</label>
+                <ScheduleSourcePicker
+                  className="mt-1"
+                  value={newTeam.scheduleSource || 'feed'}
+                  onChange={(scheduleSource) => setNewTeam({ ...newTeam, scheduleSource })}
                 />
               </div>
+              {newTeam.scheduleSource !== 'app' && (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground">iCal URL (optional)</label>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={newTeam.icalUrl}
+                    onChange={(e) => setNewTeam({ ...newTeam, icalUrl: e.target.value })}
+                    className="w-full border border-border rounded-lg p-2.5 text-sm outline-none mt-1 bg-card"
+                  />
+                </div>
+              )}
             </ResponsiveModal.Body>
 
             <ResponsiveModal.Footer>

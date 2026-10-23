@@ -325,6 +325,15 @@ export default {
     scheduleSourceApp: 'This app',
     scheduleSourceAppBody:
       'Add games, practices and events here. Practices can repeat, families RSVP, and phones subscribe to the team calendar.',
+    scheduleSourceHybrid: 'Feed + this app',
+    scheduleSourceHybridBody:
+      'Keep the calendar feed for league games, and add your own practices, friendlies and team events here. Feed events change in the feed; yours change here.',
+    scheduleSourceToHybrid:
+      'The feed keeps running its events. Events you add here stay, whatever the feed says, and families RSVP to both.',
+    scheduleSourceToHybridNoFeed:
+      "There's no feed yet, so for now the schedule is only what you add here. Add a feed below to bring its events in too.",
+    scheduleSourceSwitchHybrid: 'Use feed + this app',
+    feedUsedWhileHybrid: 'This feed brings in its events; the ones you add in the app sit alongside them.',
     scheduleSourceCurrent: 'Current',
     scheduleSourceToAppImport:
       'Everything in the feed, practices included, is copied in once. After that the feed is no longer read, and changes are made here.',

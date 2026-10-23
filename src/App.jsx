@@ -618,7 +618,8 @@ function App() {
   };
 
   // Who runs the team's schedule. Moving to the app copies the feed in first, practices included, so nothing
-  // drops off the calendar; moving back to the feed lets the next sync take over again.
+  // drops off the calendar; moving back to the feed lets the next sync take over again; feed + app syncs the
+  // whole feed in alongside the events added here, which it leaves alone.
   const handleSetScheduleSource = async (source) => {
     const teamId = selectedTeamId || parentTeamId;
     if (!teamId) return;
@@ -628,7 +629,17 @@ function App() {
     if (refreshContext) await refreshContext();
     await refreshTeamEvents(teamId);
     if (source === 'feed' && effectiveTeam?.icalUrl) await syncCalendar(effectiveTeam.icalUrl).catch(() => {});
-    showToast(source === 'app' ? t('toast.scheduleNowApp', { n: imported }) : t('toast.scheduleNowFeed'));
+    if (source === 'hybrid' && effectiveTeam?.icalUrl) {
+      // The team in context still has the old source until it reloads, so the sync is told which mode to use.
+      imported = await syncCalendar(effectiveTeam.icalUrl, { source: 'hybrid' }).catch(() => 0);
+    }
+    showToast(
+      source === 'app'
+        ? t('toast.scheduleNowApp', { n: imported })
+        : source === 'hybrid'
+          ? t('toast.scheduleNowHybrid', { n: imported })
+          : t('toast.scheduleNowFeed'),
+    );
   };
 
   const handleTeamEventTypeChange = async (dbEventId, newType) => {

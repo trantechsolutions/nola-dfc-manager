@@ -35,6 +35,42 @@ describe('mergeSavedEvents', () => {
     expect(merged[0].title).toBe('Live');
   });
 
+  describe('feed + app (hybrid)', () => {
+    const team = { id: 't1', scheduleSource: 'hybrid' };
+
+    it('shows the app own upcoming events alongside the feed', () => {
+      const merged = mergeSavedEvents(
+        [feed('f1', FUTURE)],
+        [saved('a1', '2026-11-02T15:00:00.000Z', { source: 'app' })],
+        {
+          now: NOW,
+          team,
+        },
+      );
+      expect(merged.map((e) => e.id).sort()).toEqual(['a1', 'f1']);
+    });
+
+    it('keeps an app event that starts at the same time as a feed event', () => {
+      const merged = mergeSavedEvents([feed('f1', FUTURE)], [saved('a1', FUTURE, { source: 'app' })], {
+        now: NOW,
+        team,
+      });
+      expect(merged.map((e) => e.id).sort()).toEqual(['a1', 'f1']);
+    });
+
+    it('still leaves upcoming feed-synced rows to the feed', () => {
+      expect(mergeSavedEvents([], [saved('synced', FUTURE, { source: 'feed' })], { now: NOW, team })).toEqual([]);
+    });
+
+    it('does nothing special for a feed-only team', () => {
+      const merged = mergeSavedEvents([], [saved('a1', FUTURE, { source: 'app' })], {
+        now: NOW,
+        team: { id: 't1', scheduleSource: 'feed' },
+      });
+      expect(merged).toEqual([]);
+    });
+  });
+
   it('does not resurrect upcoming DB events while the feed is healthy', () => {
     expect(mergeSavedEvents([], [saved('stale', FUTURE)], { now: NOW })).toEqual([]);
   });
