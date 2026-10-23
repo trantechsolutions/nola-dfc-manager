@@ -71,6 +71,8 @@ export default {
       going: 'Going',
       maybe: 'Maybe',
       no: "Can't go",
+      notePlaceholder: 'Reason (optional)',
+      answerFor: 'For {{name}}',
       forPlayer: 'Is {{name}} coming?',
       countGoing: '{{n}} going',
       countMaybe: '{{n}} maybe',

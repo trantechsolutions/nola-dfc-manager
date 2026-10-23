@@ -3,6 +3,8 @@ import { useT } from '../i18n/I18nContext';
 import { useNavigation } from '../context/NavigationContext';
 import { useScheduleContext } from '../context/ScheduleContext';
 import { downloadEventIcs } from '../utils/ics';
+import { useRsvpPropsFor } from '../hooks/useEventRsvps';
+import EventRsvp from './EventRsvp';
 
 const AFTER_THAT = 3;
 
@@ -20,6 +22,7 @@ export default function NextMatchCard() {
   const { navigate, teams = [], selectedTeamId } = useNavigation();
   const teamName = (teams.find((team) => team.id === selectedTeamId) || teams[0])?.name;
   const { t, locale } = useT();
+  const rsvpFor = useRsvpPropsFor();
 
   const upcoming = events?.upcoming || [];
   const next = upcoming[0];
@@ -58,6 +61,7 @@ export default function NextMatchCard() {
 
   const when = new Date(next.timestamp * 1000);
   const hasPlace = next.location && next.location !== 'TBD';
+  const nextRsvp = next.isCancelled ? null : rsvpFor(next);
 
   return (
     <div className="space-y-3">
@@ -138,6 +142,14 @@ export default function NextMatchCard() {
             </div>
           </div>
         </div>
+
+        {/* Who's coming, on the card itself: a guardian answers here without opening the schedule. A light band,
+            so the green, orange and red read on any team colour. */}
+        {nextRsvp && (
+          <div className="relative border-t border-border bg-card px-5 py-3 text-foreground sm:px-8">
+            <EventRsvp {...nextRsvp} compact={nextRsvp.canManage && !nextRsvp.mine.length} className="" />
+          </div>
+        )}
       </section>
 
       {later.length > 0 && (
@@ -146,6 +158,7 @@ export default function NextMatchCard() {
           <ul className="divide-y divide-border">
             {later.map((event) => {
               const date = new Date(event.timestamp * 1000);
+              const rsvp = event.isCancelled ? null : rsvpFor(event);
               return (
                 <li key={event.id} className="flex items-center gap-4 px-4 py-3">
                   <span className="w-14 shrink-0 text-center">
@@ -159,6 +172,7 @@ export default function NextMatchCard() {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-foreground">{event.title}</span>
                     <span className="block truncate text-xs text-muted-foreground">{event.location}</span>
+                    {rsvp && <EventRsvp {...rsvp} compact className="mt-2" />}
                   </span>
                   <span className="shrink-0 text-sm tabular-nums text-muted-foreground">{event.displayTime}</span>
                 </li>

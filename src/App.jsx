@@ -53,6 +53,7 @@ import { ChatProvider } from './context/ChatContext';
 
 // Services & Hooks
 import { supabaseService } from './services/supabaseService';
+import { useEventRsvps } from './hooks/useEventRsvps';
 import { useSoccerYear } from './hooks/useSoccerYear';
 import { useFinance } from './hooks/useFinance';
 import { useSchedule } from './hooks/useSchedule';
@@ -171,6 +172,33 @@ function App() {
   const effectiveIsStaff = viewingAsParent ? false : isStaff;
   const role = effectiveIsStaff ? 'manager' : PARENT_ROLE;
 
+  // ── PLAYER SIGN-IN ──
+  // A player can sign in themselves with the email or phone on their own roster entry
+  // (sql/player_login_migration.sql). my_player_links says which of the players this account sees are its own
+  // ('self') rather than a guardian's. An account that is only a player gets the team side of the app.
+  const [playerLinks, setPlayerLinks] = useState([]);
+  useEffect(() => {
+    let live = true;
+    if (!user?.id) {
+      setPlayerLinks([]);
+      return undefined;
+    }
+    supabaseService.getMyPlayerLinks().then(
+      (links) => live && setPlayerLinks(links),
+      () => live && setPlayerLinks([]),
+    );
+    return () => {
+      live = false;
+    };
+  }, [user?.id]);
+  const selfPlayerIds = useMemo(
+    () => new Set(playerLinks.filter((l) => l.relation === 'self').map((l) => l.playerId)),
+    [playerLinks],
+  );
+  const ownPlayerIdList = useMemo(() => [...selfPlayerIds], [selfPlayerIds]);
+  const isPlayerAccount =
+    !effectiveIsStaff && !viewingAsParent && selfPlayerIds.size > 0 && playerLinks.every((l) => l.relation === 'self');
+
   // ── PARENT TEAM DETECTION ──
   // Parents have no roles so selectedTeamId is null. We derive their team
   // from the player roster so useSoccerYear can fetch the correct team_seasons
@@ -220,6 +248,7 @@ function App() {
     checklistLoadedFor,
   } = useAppData({
     userEmail: user?.email || null,
+    ownPlayerIds: ownPlayerIdList,
     selectedTeamId,
     parentTeamId,
     selectedSeason,
@@ -245,10 +274,13 @@ function App() {
       return;
     }
     const myPlayer = players.find(
-      (p) => p.guardians?.some((g) => g.email?.toLowerCase() === user?.email?.toLowerCase()) && p.teamId,
+      (p) =>
+        (selfPlayerIds.has(p.id) ||
+          (user?.email && p.guardians?.some((g) => g.email?.toLowerCase() === user.email.toLowerCase()))) &&
+        p.teamId,
     );
     setParentTeamId(myPlayer?.teamId || null);
-  }, [isStaff, selectedTeamId, players, user, viewingAsParent, impersonatingAs]);
+  }, [isStaff, selectedTeamId, players, user, viewingAsParent, impersonatingAs, selfPlayerIds]);
 
   // For parents, fetch the team object directly since useTeamContext returns
   // an empty teams array for users with no roles.
@@ -291,6 +323,8 @@ function App() {
     refreshSchedule,
     loadedFor: scheduleLoadedFor,
   } = useSchedule(user, effectiveTeam);
+  // Every RSVP for the team's events, shared by Home, the schedule and the calendar.
+  const { rsvpsByEvent, dbEventOf, setRsvp } = useEventRsvps({ events, teamEvents });
   // Until the feed for the team on screen has landed, "no upcoming events" is
   // unknown rather than true — Home shows a placeholder instead of saying so.
   const scheduleLoading = scheduleLoadedFor !== (effectiveTeam?.id || '');
@@ -305,6 +339,7 @@ function App() {
     selectedTeamId,
     players,
     email: user?.email,
+    selfIds: selfPlayerIds,
   });
   useEffect(() => {
     if (effectiveIsStaff) return;
@@ -365,8 +400,13 @@ function App() {
       return players.filter((p) => p.guardians?.some((g) => guardianEmails.has(g.email?.toLowerCase())));
     }
     if (!user || role === 'manager') return [];
-    return players.filter((p) => p.guardians?.some((g) => g.email?.toLowerCase() === user.email.toLowerCase()));
-  }, [players, user, role, viewingAsParent, impersonatingAs]);
+    const email = user.email?.toLowerCase();
+    // A guardian's children, and the player's own roster entry when they signed in themselves (marked isSelf,
+    // so the schedule doesn't say "For Maya" to Maya).
+    return players
+      .filter((p) => selfPlayerIds.has(p.id) || (email && p.guardians?.some((g) => g.email?.toLowerCase() === email)))
+      .map((p) => (selfPlayerIds.has(p.id) ? { ...p, isSelf: true } : p));
+  }, [players, user, role, viewingAsParent, impersonatingAs, selfPlayerIds]);
 
   const seasonalPlayers = useMemo(() => {
     if (!selectedSeason) return players.filter((p) => p.status !== 'archived');
@@ -742,7 +782,9 @@ function App() {
           ? [{ id: 'finance/book-balance', label: t('nav.bookBalance'), icon: BookOpen, section: 'season' }]
           : []),
       ]
-    : [{ id: 'dashboard', label: t('nav.myPlayer'), icon: Users, section: 'season' }];
+    : isPlayerAccount
+      ? [{ id: 'dashboard', label: t('nav.home'), icon: Users, section: 'season' }]
+      : [{ id: 'dashboard', label: t('nav.myPlayer'), icon: Users, section: 'season' }];
 
   // The Stats tab's pages (utils/navDestinations.js): game film, for everyone on a team.
   const statsNavItems = effectiveTeamId
@@ -781,7 +823,8 @@ function App() {
     : // Parents get the checklist first: it is the only surface here that asks
       // something of them, and burying it cost them a tab dive to find it.
       [
-        { id: 'checklist', label: t('nav.checklist'), icon: ListChecks, section: 'team' },
+        // A player signed in as themselves has no paperwork: the checklist is their guardian's.
+        ...(isPlayerAccount ? [] : [{ id: 'checklist', label: t('nav.checklist'), icon: ListChecks, section: 'team' }]),
         { id: 'schedule', label: t('nav.schedule'), icon: Calendar, section: 'team' },
       ];
   teamNavItems.push(...statsNavItems);
@@ -793,6 +836,8 @@ function App() {
   const canEditLedger = can(PERMISSIONS.TEAM_EDIT_LEDGER);
 
   const navContextValue = {
+    isPlayerAccount,
+    canEditSchedule,
     club,
     teams,
     selectedTeamId,
@@ -855,6 +900,9 @@ function App() {
 
   const scheduleContextValue = {
     events,
+    rsvpsByEvent,
+    dbEventOf,
+    setRsvp,
     scheduleLoading,
     blackoutDates,
     toggleBlackout,

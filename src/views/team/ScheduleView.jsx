@@ -31,6 +31,7 @@ import BulkExpenseModal from '../../components/BulkExpenseModal';
 import EventEditor from '../../components/EventEditor';
 import EventRsvp from '../../components/EventRsvp';
 import { mergeSavedEvents } from '../../hooks/useSchedule';
+import { useScheduleContext } from '../../context/ScheduleContext';
 import { scheduleService } from '../../services/scheduleService';
 import { liveGameService } from '../../services/liveGameService';
 import { isOpen, windowFor } from '../../film/gameWindow';
@@ -187,7 +188,7 @@ const EventRow = ({
           isGame &&
           !event.isCancelled &&
           isOpen(windowFor(dbEvent.eventDate, dbEvent.endDate), Date.now()) && (
-            <Link to={`/keep/${teamId}/event/${dbEvent.id}`} className={ROW_ACTION}>
+            <Link to={`/keep/${teamId}/event/${dbEvent.id}`} state={{ from: '/schedule' }} className={ROW_ACTION}>
               <ClipboardList size={14} aria-hidden="true" />
               {t('film.live_keepStats')}
             </Link>
@@ -217,7 +218,8 @@ const EventRow = ({
           </Link>
         )}
 
-        {!isPast && !event.isCancelled && rsvp && <EventRsvp {...rsvp} />}
+        {/* Past games keep their answers, read-only. */}
+        {!event.isCancelled && rsvp && <EventRsvp {...rsvp} readOnly={isPast} />}
 
         {onEdit && (
           <button type="button" onClick={onEdit} className={ROW_ACTION}>
@@ -677,45 +679,9 @@ export default function ScheduleView({
     [seasonEvents.upcoming, cancelledUpcoming],
   );
 
-  // RSVPs for the upcoming events saved in team_events (every event, when the app runs the schedule).
-  const [rsvps, setRsvps] = useState({});
-  const rsvpKey = useMemo(
-    () =>
-      upcomingList
-        .map((e) => findDbEvent(e)?.id)
-        .filter(Boolean)
-        .join(','),
-    [upcomingList, findDbEvent],
-  );
-  useEffect(() => {
-    let live = true;
-    if (!rsvpKey) {
-      setRsvps({});
-      return undefined;
-    }
-    scheduleService.getRsvps(rsvpKey.split(',')).then(
-      (rows) => {
-        if (!live) return;
-        const byEvent = {};
-        rows.forEach((row) => {
-          (byEvent[row.eventId] ||= []).push(row);
-        });
-        setRsvps(byEvent);
-      },
-      () => live && setRsvps({}),
-    );
-    return () => {
-      live = false;
-    };
-  }, [rsvpKey]);
-
-  const setRsvp = async (eventId, playerId, status) => {
-    await scheduleService.setRsvp(eventId, playerId, status);
-    setRsvps((prev) => {
-      const rest = (prev[eventId] || []).filter((row) => row.playerId !== playerId);
-      return { ...prev, [eventId]: status ? [...rest, { eventId, playerId, status }] : rest };
-    });
-  };
+  // RSVPs for every event saved in team_events (every event, when the app runs the schedule), shared with Home
+  // and the calendar through ScheduleContext (hooks/useEventRsvps.js).
+  const { rsvpsByEvent: rsvps = {}, setRsvp } = useScheduleContext();
   const teamPlayers = useMemo(
     () => players.filter((p) => !p.teamId || p.teamId === selectedTeam?.id),
     [players, selectedTeam?.id],
@@ -868,13 +834,13 @@ export default function ScheduleView({
         teamId={selectedTeam?.id}
         canKeep={canKeep}
         rsvp={
-          !isPast && db && (canEditSchedule || myTeamPlayers.length)
+          db && (canEditSchedule || myTeamPlayers.length)
             ? {
                 rsvps: rsvps[db.id] || [],
                 roster: canEditSchedule ? teamPlayers : [],
                 mine: myTeamPlayers,
                 canManage: canEditSchedule,
-                onChange: (playerId, status) => setRsvp(db.id, playerId, status),
+                onChange: (playerId, status, note) => setRsvp(db.id, playerId, status, note),
               }
             : null
         }
