@@ -405,19 +405,23 @@ export const scheduleService = {
     }));
   },
 
-  /** Sets a player's answer; null clears it. */
-  setRsvp: async (eventId, playerId, status) => {
+  /** Sets a player's answer; null clears it. A "can't go" can carry an optional note (the reason). */
+  setRsvp: async (eventId, playerId, status, note = null) => {
     if (!status) {
       const { error } = await supabase.from('event_rsvps').delete().eq('event_id', eventId).eq('player_id', playerId);
       if (error) throw error;
       return;
     }
-    const { error } = await supabase
-      .from('event_rsvps')
-      .upsert(
-        { event_id: eventId, player_id: playerId, status, updated_at: new Date().toISOString() },
-        { onConflict: 'event_id,player_id' },
-      );
+    const { error } = await supabase.from('event_rsvps').upsert(
+      {
+        event_id: eventId,
+        player_id: playerId,
+        status,
+        note: status === 'no' ? note?.trim() || null : null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'event_id,player_id' },
+    );
     if (error) throw error;
   },
 

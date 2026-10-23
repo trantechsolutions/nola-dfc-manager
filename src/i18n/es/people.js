@@ -14,6 +14,11 @@ export default {
     guardianInfo: 'Info del Padre / Tutor',
     addAnother: 'Agregar Otro',
     fullName: 'Nombre Completo',
+    playerLogin: 'Acceso propio del jugador (opcional)',
+    playerLoginHelp:
+      'Con un correo o un celular aquí, el jugador puede entrar por su cuenta y ver el calendario, responder por sí mismo, seguir los partidos en vivo y los vídeos, y leer el chat del equipo. Nunca cuotas ni documentos.',
+    playerEmail: 'Correo del jugador',
+    playerPhone: 'Celular del jugador',
     emailLogin: 'Correo (Usado para Iniciar Sesión)',
     phoneNumber: 'Número de Teléfono',
     archive: 'Archivar',

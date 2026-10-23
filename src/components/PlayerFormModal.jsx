@@ -25,6 +25,8 @@ export default function PlayerFormModal({
     status: 'active',
     shirtSize: '',
     siblingsCount: '',
+    email: '',
+    phone: '',
     guardians: [{ name: '', email: '', phone: '' }],
   });
 
@@ -39,6 +41,8 @@ export default function PlayerFormModal({
         gender: initialData.gender || '',
         shirtSize: initialData.shirtSize || '',
         siblingsCount: initialData.siblingsCount ?? '',
+        email: initialData.email || '',
+        phone: initialData.phone || '',
         guardians: initialData.guardians?.length ? initialData.guardians : [{ name: '', email: '', phone: '' }],
         status: initialData.status || 'active',
       });
@@ -52,6 +56,8 @@ export default function PlayerFormModal({
         status: 'active',
         shirtSize: '',
         siblingsCount: '',
+        email: '',
+        phone: '',
         guardians: [{ name: '', email: '', phone: '' }],
       });
     }
@@ -248,6 +254,31 @@ export default function PlayerFormModal({
               value={formData.siblingsCount ?? ''}
               onChange={(e) => setFormData({ ...formData, siblingsCount: e.target.value })}
               className="w-full border border-border rounded-lg p-2 focus:ring-2 focus:ring-ring outline-none"
+            />
+          </div>
+        </div>
+
+        {/* The player's own sign-in: an account with this email or phone sees the team side of the app as
+            this player (schedule, RSVP, live games, film, team chat), never fees or documents. */}
+        <div className="bg-background p-4 rounded-lg border border-border">
+          <p className="block text-xs font-semibold text-foreground">{t('playerForm.playerLogin')}</p>
+          <p className="mt-1 mb-3 text-xs text-muted-foreground">{t('playerForm.playerLoginHelp')}</p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <input
+              type="email"
+              autoComplete="off"
+              placeholder={t('playerForm.playerEmail')}
+              value={formData.email || ''}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full border border-border rounded md p-1.5 text-sm focus:ring-1 focus:ring-ring outline-none"
+            />
+            <input
+              type="tel"
+              autoComplete="off"
+              placeholder={t('playerForm.playerPhone')}
+              value={formData.phone || ''}
+              onChange={(e) => setFormData({ ...formData, phone: formatPhoneInput(e.target.value) })}
+              className="w-full border border-border rounded md p-1.5 text-sm focus:ring-1 focus:ring-ring outline-none"
             />
           </div>
         </div>

@@ -71,6 +71,8 @@ export default {
       going: 'Va',
       maybe: 'Quizás',
       no: 'No puede',
+      notePlaceholder: 'Motivo (opcional)',
+      answerFor: 'Por {{name}}',
       forPlayer: '¿Viene {{name}}?',
       countGoing: '{{n}} van',
       countMaybe: '{{n}} quizás',

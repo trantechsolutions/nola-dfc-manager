@@ -22,8 +22,13 @@ import type { KeepEntry, KeepSetup, KeepType, ScheduledGame } from "../schema";
 // ---------- Routing inside /keep/<team> (the manager's router) ----------
 
 // One scorekeeper is open at a time, so its base address and the router's navigate live here for go() and KLink.
-const nav: { base: string; navigate: ((to: string) => void) | null } = { base: "", navigate: null };
+const nav: { base: string; navigate: ((to: string) => void) | null; leave: () => void; openedAtHome: boolean } = {
+  base: "", navigate: null, leave: () => {}, openedAtHome: true,
+};
 const go = (path: string) => nav.navigate?.(`${nav.base}${path}`);
+// Back out of a game, a practice run or a closed window: to the scorekeeper's home if that's where this visit
+// started, otherwise out of the scorekeeper to the page it was opened from (the schedule, the Stats page).
+const backOut = (homePath = "") => (nav.openedAtHome ? go(homePath) : nav.leave());
 function KLink({ to, ...rest }: { to: string; className?: string; "aria-label"?: string; children: ReactNode }) {
   return <Link to={`${nav.base}${to}`} {...rest} />;
 }
@@ -32,6 +37,11 @@ function KLink({ to, ...rest }: { to: string; className?: string; "aria-label"?:
 export function KeepApp({ teamId, teamName, onLeave }: { teamId: string; teamName: string; onLeave: () => void }) {
   nav.base = `/keep/${teamId}`;
   nav.navigate = useNavigate();
+  nav.leave = onLeave;
+  // Where this visit started, read once: the scorekeeper's home, or straight onto a game or practice run.
+  const { pathname } = useLocation();
+  const [entry] = useState(() => pathname.replace(/\/+$/, ""));
+  nav.openedAtHome = entry === nav.base;
   return <KeeperProvider teamId={teamId} teamName={teamName} onLeave={onLeave}><KeepRoutes /></KeeperProvider>;
 }
 
@@ -81,7 +91,7 @@ function WindowClosed({ slug, eventId }: { slug?: string; eventId?: string }) {
       <p>{msg}</p>
       <div className="kp-row">
         {slug && setup ? <Link className="btn-solid" to={`/live/${nav.base.split("/")[2]}/${encodeURIComponent(slug)}`}>{t("kp_viewStats")}</Link> : null}
-        <KLink className="btn-line" to="">{t("kp_back")}</KLink>
+        <button type="button" className="btn-line" onClick={() => backOut()}>{t("kp_back")}</button>
       </div>
     </div>
   );
@@ -272,7 +282,7 @@ function Setup({ slug, practice: practiceProp = false, eventId: presetEvent }: {
 
   const steps: SetupStep[] = ["details", "players", "level", "minutes", "side", ...(level === "advanced" ? ["formation", "starters"] as SetupStep[] : [])];
   const at = steps.indexOf(step);
-  const back = () => (at > 0 ? setStep(steps[at - 1]) : go(slug ? `/g/${encodeURIComponent(slug)}` : ""));
+  const back = () => (at > 0 ? setStep(steps[at - 1]) : slug ? go(`/g/${encodeURIComponent(slug)}`) : backOut());
   const next = () => {
     if (step === "details" && !practice && !eventId) { setErr(t("kp_needGame")); return; }
     if (step === "details" && !opponent.trim()) { setErr(t("kp_needOpponent")); return; }
@@ -830,7 +840,7 @@ function Live({ slug }: { slug: string }) {
   return (
     <main className={`kp-live${voiceOn ? " voice" : ""}`}>
       <header className="kp-bar">
-        <KLink className="btn-line" to="" aria-label={t("kp_back")}>‹</KLink>
+        <button type="button" className="btn-line" aria-label={t("kp_back")} onClick={() => backOut()}>‹</button>
         <button type="button" className="btn-line kp-undo" disabled={!last} aria-label={t("kp_undo")} onClick={() => last && undo(last.id)}><span aria-hidden="true">↶</span><span className="kp-lbl"> {t("kp_undo")}</span></button>
         <div className="kp-score" aria-live="polite"><span className="dfc-t">{us}</span> <b>{s.score.us}–{s.score.them}</b> <span className="opp-t">{opp}</span></div>
         <button type="button" className={`kp-clock mono${running ? " run" : ""}${over ? " over" : ""}`} onClick={() => setSheet({ kind: "clock" })} aria-label={t("kp_clockTitle")}>

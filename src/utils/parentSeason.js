@@ -4,11 +4,22 @@
 // screen until all of it is in, so a parent never sees another season's page first and watches it flip.
 
 /** The team id the parent-team effect will settle on, from what's loaded right now. */
-export function expectedParentTeamId({ viewingAsParent, impersonatingAs, isStaff, selectedTeamId, players, email }) {
+export function expectedParentTeamId({
+  viewingAsParent,
+  impersonatingAs,
+  isStaff,
+  selectedTeamId,
+  players,
+  email,
+  selfIds = new Set(),
+}) {
   if (viewingAsParent) return impersonatingAs?.teamId || null;
   if (isStaff || selectedTeamId) return null;
   const me = (email || '').toLowerCase();
-  const mine = (players || []).find((p) => p.teamId && p.guardians?.some((g) => g.email?.toLowerCase() === me));
+  // A guardian's player, or the player's own roster entry when they signed in themselves.
+  const mine = (players || []).find(
+    (p) => p.teamId && (selfIds.has(p.id) || (me && p.guardians?.some((g) => g.email?.toLowerCase() === me))),
+  );
   return mine?.teamId || null;
 }
 

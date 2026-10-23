@@ -17,6 +17,7 @@ import { NavigationContext } from '../context/NavigationContext';
 import { DataContext } from '../context/DataContext';
 import { FinanceContext } from '../context/FinanceContext';
 import { ScheduleContext } from '../context/ScheduleContext';
+import { useEventRsvps } from '../hooks/useEventRsvps';
 import AppShell from '../components/layout/AppShell';
 import NextMatchCard from '../components/NextMatchCard';
 import AttentionStrip from '../components/AttentionStrip';
@@ -36,7 +37,7 @@ import { liveGameService } from '../services/liveGameService';
 import { teamColorVars } from '../utils/teamColor';
 import { fixtureGame } from '../film/lib/fixture';
 import { buildCompliance } from '../utils/compliance';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 
 // ── Sample game film ──────────────────────────────────────────────────────
 // Real games can be dropped into src/preview/film.local/sample.json
@@ -86,18 +87,18 @@ const event = (id, title, ts, eventType, location) => ({
 });
 
 const UPCOMING = [
-  event('u1', 'vs Mandeville FC', at(2, 9), 'league', 'City Park Field 4, New Orleans'),
-  event('u2', 'Practice', at(4, 18), 'practice', 'Pan American Stadium'),
-  event('u3', 'at Baton Rouge SC', at(9, 10), 'league', 'BREC Burbank Soccer Complex'),
-  event('u4', 'Fall Classic', at(15, 8), 'tournament', 'Lafreniere Park, Metairie'),
-  event('u5', 'Practice', at(18, 18), 'practice', 'Pan American Stadium'),
-  event('u6', 'vs Lake Charles United', at(37, 11), 'friendly', 'TBD'),
+  event('u1', 'vs Chelsea', at(2, 9), 'league', 'Emirates Stadium, London'),
+  event('u2', 'Practice', at(4, 18), 'practice', 'Hale End Academy'),
+  event('u3', 'at Liverpool', at(9, 10), 'league', 'Anfield'),
+  event('u4', 'Fall Classic', at(15, 8), 'tournament', 'Wembley Stadium'),
+  event('u5', 'Practice', at(18, 18), 'practice', 'Hale End Academy'),
+  event('u6', 'vs Aston Villa', at(37, 11), 'friendly', 'TBD'),
 ];
 const PAST = [
-  event('p1', 'vs Northshore Strikers', at(-5, 9), 'league', 'City Park Field 2'),
-  event('p2', 'Practice', at(-7, 18), 'practice', 'Pan American Stadium'),
-  event('p3', 'at Houma Hurricanes', at(-12, 10), 'league', 'Houma Sports Complex'),
-  event('p4', 'vs Slidell Storm', at(-19, 9), 'friendly', 'City Park Field 4'),
+  event('p1', 'vs Newcastle United', at(-5, 9), 'league', 'Emirates Stadium'),
+  event('p2', 'Practice', at(-7, 18), 'practice', 'Hale End Academy'),
+  event('p3', 'at Everton', at(-12, 10), 'league', 'Goodison Park'),
+  event('p4', 'vs Brighton', at(-19, 9), 'friendly', 'Emirates Stadium'),
 ];
 const SCORES = { p1: [3, 1], p3: [0, 2], p4: [2, 2] };
 const TEAM_EVENTS = [...UPCOMING, ...PAST].map((e) => ({
@@ -126,8 +127,8 @@ const ago = (minutes) => new Date(Date.now() - minutes * 60000).toISOString();
 const CHAT = [
   ['m1', 'u-dana', 'Coach Dana', 'staff', 'Practice moves to Field 3 tonight, same time.', ago(60 * 26)],
   ['m2', 'u-sam', 'Sam Thompson', 'family', 'Thanks! Maya will be there.', ago(60 * 25)],
-  ['m3', 'u-ava', 'Kim Broussard', 'family', 'Who has snacks Saturday?', ago(95)],
-  ['m4', 'u-dana', 'Coach Dana', 'staff', 'Landry family has snacks. Arrive 8:15 for warm-up, white jerseys.', ago(90)],
+  ['m3', 'u-ava', 'Kim Bennett', 'family', 'Who has snacks Saturday?', ago(95)],
+  ['m4', 'u-dana', 'Coach Dana', 'staff', 'Lawson family has snacks. Arrive 8:15 for warm-up, white jerseys.', ago(90)],
   ['m5', 'u-dana', 'Coach Dana', 'staff', 'Forecast says rain; check here Saturday morning before you leave.', ago(88)],
   ['m6', 'u-lila', 'Mai Nguyen', 'family', 'Lila has a cold, she will sit this one out.', ago(12)],
 ].map(([id, authorId, authorName, authorRole, body, createdAt]) => ({
@@ -146,12 +147,12 @@ const PEOPLE = [
   { userId: 'u-dana', name: 'Dana Whitfield', role: 'staff', detail: '' },
   { userId: 'u-ray', name: 'Ray Castillo', role: 'staff', detail: '' },
   { userId: 'u-sam', name: 'Sam Thompson', role: 'family', detail: 'Maya' },
-  { userId: 'u-ava', name: 'Kim Broussard', role: 'family', detail: 'Ava' },
-  { userId: 'u-zoe', name: 'Paul Landry', role: 'family', detail: 'Zoe' },
+  { userId: 'u-ava', name: 'Kim Bennett', role: 'family', detail: 'Ava' },
+  { userId: 'u-zoe', name: 'Paul Lawson', role: 'family', detail: 'Zoe' },
   { userId: 'u-lila', name: 'Mai Nguyen', role: 'family', detail: 'Lila' },
 ];
 const GROUP_CHAT = [
-  ['g1', 'u-zoe', 'Paul Landry', 'family', 'Can anyone take Zoe Saturday? I work till 10.', ago(40)],
+  ['g1', 'u-zoe', 'Paul Lawson', 'family', 'Can anyone take Zoe Saturday? I work till 10.', ago(40)],
   ['g2', 'u-sam', 'Sam Thompson', 'family', 'We have room, pick her up at 7:45.', ago(35)],
   ['g3', 'u-dana', 'Dana Whitfield', 'staff', 'Thank you both!', ago(30)],
 ].map(([id, authorId, authorName, authorRole, body, createdAt]) => ({
@@ -234,10 +235,10 @@ Object.assign(chatService, {
       id: 'c-review',
       teamId: 't1',
       teamName: 'U12 Girls Premier',
-      title: 'Kim Broussard, Paul Landry',
+      title: 'Kim Bennett, Paul Lawson',
       unread: 0,
       lastBody: 'Can you drop Ava off after practice?',
-      lastAuthor: 'Kim Broussard',
+      lastAuthor: 'Kim Bennett',
       lastAt: ago(120),
       members: 2,
       closed: false,
@@ -261,10 +262,10 @@ const isoIn = (days) => new Date((now + days * DAY) * 1000).toISOString().slice(
 
 const PLAYERS = [
   ['p-1', 'Maya', 'Thompson', 7],
-  ['p-2', 'Ava', 'Broussard', 10],
-  ['p-3', 'Zoe', 'Landry', 4],
+  ['p-2', 'Ava', 'Bennett', 10],
+  ['p-3', 'Zoe', 'Lawson', 4],
   ['p-4', 'Lila', 'Nguyen', 14],
-  ['p-5', 'Chloe', 'Hebert', 22],
+  ['p-5', 'Chloe', 'Hughes', 22],
 ].map(([id, firstName, lastName, jerseyNumber]) => ({
   id,
   firstName,
@@ -274,7 +275,7 @@ const PLAYERS = [
   status: 'active',
   birthdate: '2015-03-14',
   shirtSize: 'YL',
-  guardians: [{ id: `g-${id}`, name: `Sam ${lastName}`, phone: '5045550142', email: `sam@${lastName}.example` }],
+  guardians: [{ id: `g-${id}`, name: `Sam ${lastName}`, phone: '5555550142', email: `sam@${lastName}.example` }],
   seasonProfiles: { [SEASON]: { feeWaived: id === 'p-5' } },
 }));
 
@@ -322,8 +323,15 @@ function KeepPreview() {
   return (
     <Routes>
       <Route path="/keep/:teamId/*" element={<KeepView />} />
+      {/* Where leaving the scorekeeper lands, so the preview shows it. */}
+      <Route path="*" element={<LeftKeeper />} />
     </Routes>
   );
+}
+
+function LeftKeeper() {
+  const { pathname } = useLocation();
+  return <p className="p-6 text-lg font-semibold">Left the scorekeeper for {pathname}</p>;
 }
 
 // page=live: a game in progress; a second goal arrives two seconds in, to show the celebration.
@@ -375,7 +383,7 @@ function ShellPreview({ params }) {
     tier: 'Premier',
     icalUrl: 'https://calendar.google.com/calendar/ical/demo/public/basic.ics',
     activeSeasonId: SEASON,
-    paymentInfo: 'Checks payable to NOLA DFC, or Venmo @NOLADFC-U12G.',
+    paymentInfo: 'Checks payable to Arsenal FC, or Venmo @ArsenalFC-U12G.',
     scheduleSource: params.get('source') === 'app' ? 'app' : 'feed',
   };
   if (team.scheduleSource === 'app') {
@@ -422,7 +430,7 @@ function ShellPreview({ params }) {
     : [];
 
   const nav = {
-    club: { id: 'c1', name: 'NOLA DFC' },
+    club: { id: 'c1', name: 'Arsenal FC' },
     teams: [team],
     selectedTeamId: 't1',
     selectedTeam: team,
@@ -445,6 +453,7 @@ function ShellPreview({ params }) {
     ThemeIcon: Sun,
     supabase: { auth: { signOut: () => {} } },
     effectiveIsStaff: isStaff,
+    canEditSchedule: isStaff,
     isClubAdmin: false,
     canEditLedger: isStaff,
     singleTeam: false,
@@ -452,7 +461,9 @@ function ShellPreview({ params }) {
   // loading=1 shows the moment before the feed answers.
   const loading = params.get('loading') === '1';
   const events = loading ? { upcoming: [], past: [] } : { upcoming: UPCOMING, past: PAST };
+  const { rsvpsByEvent, dbEventOf, setRsvp } = useEventRsvps({ events, teamEvents: TEAM_EVENTS });
   const data = {
+    players,
     seasonalPlayers: players,
     myPlayers: isStaff ? [] : players,
     seasonalTransactions: [],
@@ -540,7 +551,7 @@ function ShellPreview({ params }) {
     <NavigationContext.Provider value={nav}>
       <DataContext.Provider value={data}>
         <FinanceContext.Provider value={finance}>
-          <ScheduleContext.Provider value={{ events, scheduleLoading: loading }}>
+          <ScheduleContext.Provider value={{ events, scheduleLoading: loading, rsvpsByEvent, dbEventOf, setRsvp }}>
             <ChatProvider userId="u-dana">
               <AppShell>{page}</AppShell>
             </ChatProvider>

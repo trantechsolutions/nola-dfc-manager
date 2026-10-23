@@ -16,6 +16,13 @@ describe('expectedParentTeamId', () => {
     expect(expectedParentTeamId({ players, email: 'nobody@example.com' })).toBeNull();
     expect(expectedParentTeamId({ players: [], email: 'mom@example.com' })).toBeNull();
   });
+  it('finds the team of a player signed in as themselves, by email or with no email at all', () => {
+    const roster = [{ id: 'p9', teamId: 't3', guardians: [{ email: '' }] }, ...players];
+    expect(expectedParentTeamId({ players: roster, email: 'maya@example.com', selfIds: new Set(['p9']) })).toBe('t3');
+    // A phone-only account has no email; it must not match a guardian who has none either.
+    expect(expectedParentTeamId({ players: roster, email: undefined, selfIds: new Set(['p9']) })).toBe('t3');
+    expect(expectedParentTeamId({ players: roster, email: undefined })).toBeNull();
+  });
   it('uses the impersonated team when viewing as a parent', () => {
     expect(expectedParentTeamId({ viewingAsParent: true, impersonatingAs: { teamId: 't9' }, isStaff: true })).toBe(
       't9',

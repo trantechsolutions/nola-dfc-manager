@@ -22,7 +22,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <MemoryRouter
         initialEntries={[
           params.get('page') === 'live'
-            ? '/live/t1/2026-10-22-mandeville-fc'
+            ? '/live/t1/2026-10-22-chelsea'
             : params.get('page') === 'keep'
               ? `/keep/t1${params.get('keep') ? `/${params.get('keep')}` : ''}`
               : params.get('page') === 'chat'

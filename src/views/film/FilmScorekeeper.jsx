@@ -38,6 +38,7 @@ export default function FilmScorekeeper({ teamId }) {
       <div className="flex flex-wrap gap-2">
         <Link
           to={`/keep/${teamId}/practice`}
+          state={{ from: `/film/${teamId}` }}
           className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:opacity-90"
         >
           <Dumbbell size={15} aria-hidden="true" />
@@ -45,6 +46,7 @@ export default function FilmScorekeeper({ teamId }) {
         </Link>
         <Link
           to={`/keep/${teamId}`}
+          state={{ from: `/film/${teamId}` }}
           className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border px-4 text-sm font-semibold text-foreground hover:bg-muted"
         >
           <ClipboardList size={15} aria-hidden="true" />

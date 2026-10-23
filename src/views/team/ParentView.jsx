@@ -107,7 +107,14 @@ export default function ParentView({
   // siblings, guardian phones — see sql/add_guardian_self_service_rpc.sql) ──
   const [editingInfo, setEditingInfo] = useState(false);
   const [savingInfo, setSavingInfo] = useState(false);
-  const [infoForm, setInfoForm] = useState({ birthdate: '', shirtSize: '', siblingsCount: '', guardianPhones: {} });
+  const [infoForm, setInfoForm] = useState({
+    birthdate: '',
+    shirtSize: '',
+    siblingsCount: '',
+    playerEmail: '',
+    playerPhone: '',
+    guardianPhones: {},
+  });
 
   // ── SELF-SUFFICIENT DATA FETCH for parents ──
   // If props come in empty (timing issue), fetch directly
@@ -354,6 +361,8 @@ export default function ParentView({
       birthdate: activePlayer.birthdate || '',
       shirtSize: activePlayer.shirtSize || '',
       siblingsCount: activePlayer.siblingsCount ?? '',
+      playerEmail: activePlayer.email || '',
+      playerPhone: activePlayer.phone || '',
       guardianPhones: Object.fromEntries((activePlayer.guardians || []).map((g) => [g.id, g.phone || ''])),
     });
     setEditingInfo(true);
@@ -372,6 +381,17 @@ export default function ParentView({
         .filter((g) => (infoForm.guardianPhones[g.id] || '') !== (g.phone || ''))
         .map((g) => supabaseService.updateGuardianPhone(g.id, infoForm.guardianPhones[g.id]));
       if (phoneUpdates.length > 0) await Promise.all(phoneUpdates);
+
+      // The player's own sign-in, set by their guardian (sql/player_login_migration.sql).
+      if (
+        (infoForm.playerEmail || '') !== (activePlayer.email || '') ||
+        (infoForm.playerPhone || '') !== (activePlayer.phone || '')
+      ) {
+        await supabaseService.setPlayerContact(activePlayer.id, {
+          email: infoForm.playerEmail,
+          phone: infoForm.playerPhone,
+        });
+      }
 
       setEditingInfo(false);
       onRefresh?.();
@@ -1258,6 +1278,42 @@ export default function ParentView({
                       />
                     ) : (
                       <span className="text-sm font-semibold text-foreground">{activePlayer.siblingsCount ?? '—'}</span>
+                    )}
+                  </div>
+
+                  {/* The player's own sign-in: they see the team side (schedule, live games, film, team chat). */}
+                  <div className="space-y-2 border-t border-border pt-2">
+                    <p className="text-xs font-bold text-muted-foreground">{t('playerForm.playerLogin')}</p>
+                    {editingInfo ? (
+                      <>
+                        <p className="text-xs text-muted-foreground">{t('playerForm.playerLoginHelp')}</p>
+                        <input
+                          type="email"
+                          autoComplete="off"
+                          placeholder={t('playerForm.playerEmail')}
+                          value={infoForm.playerEmail}
+                          onChange={(e) => setInfoForm((f) => ({ ...f, playerEmail: e.target.value }))}
+                          className="w-full border border-border rounded-lg px-2 py-1 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                        />
+                        <input
+                          type="tel"
+                          autoComplete="off"
+                          placeholder={t('playerForm.playerPhone')}
+                          value={infoForm.playerPhone}
+                          onChange={(e) =>
+                            setInfoForm((f) => ({ ...f, playerPhone: formatPhoneInput(e.target.value) }))
+                          }
+                          className="w-full border border-border rounded-lg px-2 py-1 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                        />
+                      </>
+                    ) : activePlayer.email || activePlayer.phone ? (
+                      <p className="text-sm font-semibold text-foreground">
+                        {[activePlayer.email, activePlayer.phone && formatPhone(activePlayer.phone)]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">—</p>
                     )}
                   </div>
 

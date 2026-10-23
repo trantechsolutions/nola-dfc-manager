@@ -10,6 +10,20 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-23 — RSVP icons everywhere, player sign-in and scorekeeper exits (6841484..dc00a16)
+
+- **Answer in one tap, anywhere.** Going, maybe and can't go are now a green check, orange question mark and
+  red cross, on the Home screen, the schedule and every event in the calendar. Parents see "For Maya" so it's
+  clear they're answering for their player. An answer given in one place shows everywhere.
+- **Say why you can't make it.** "Can't go" has an optional reason that coaches can see.
+- **Players can sign in themselves.** With an email or mobile number on their roster entry, a player can see the
+  schedule, answer for themselves, follow live games and film, and read the team chat. They never see fees,
+  payments or documents, and can't start private chats. Text-message sign-in turns on once it's set up.
+- **Leaving the scorekeeper always works.** Back and Done now return to the page you came from.
+- **The website's sample screens** use well-known club names instead of local ones.
+
+---
+
 ## 2026-10-23 — Public calendar for signed-in users and screenshots in the hero (1d424f9..8ed8ecc)
 
 - **The public calendar opens again when you're signed in.** Following "See a public calendar" or a shared

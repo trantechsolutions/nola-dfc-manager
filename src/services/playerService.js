@@ -11,6 +11,9 @@ function normalizeSiblingsCount(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+// A player's own sign-in email, compared case-insensitively against their account's.
+const normalizeLoginEmail = (email) => email?.trim().toLowerCase() || null;
+
 export const playerService = {
   getAllPlayers: async () => {
     const { data: players, error: pErr } = await supabase
@@ -30,6 +33,8 @@ export const playerService = {
       teamId: p.team_id,
       shirtSize: p.shirt_size,
       siblingsCount: p.siblings_count,
+      email: p.email || '',
+      phone: p.phone || '',
       guardians: (p.guardians || []).map((g) => ({
         id: g.id,
         name: g.name,
@@ -65,6 +70,9 @@ export const playerService = {
         status: playerData.status || 'active',
         shirt_size: playerData.shirtSize || null,
         siblings_count: normalizeSiblingsCount(playerData.siblingsCount),
+        // The player's own sign-in (sql/player_login_migration.sql).
+        email: normalizeLoginEmail(playerData.email),
+        phone: playerData.phone?.trim() || null,
         ...(playerData.clubId ? { club_id: playerData.clubId } : {}),
         ...(playerData.teamId ? { team_id: playerData.teamId } : {}),
       })
@@ -141,6 +149,8 @@ export const playerService = {
     if ('gender' in playerData) row.gender = playerData.gender || null;
     if ('shirtSize' in playerData) row.shirt_size = playerData.shirtSize || null;
     if ('siblingsCount' in playerData) row.siblings_count = normalizeSiblingsCount(playerData.siblingsCount);
+    if ('email' in playerData) row.email = normalizeLoginEmail(playerData.email);
+    if ('phone' in playerData) row.phone = playerData.phone?.trim() || null;
     const { error: pErr } = await supabase.from('players').update(row).eq('id', playerId);
     if (pErr) throw pErr;
 
@@ -412,6 +422,8 @@ export const playerService = {
       teamId: p.team_id,
       shirtSize: p.shirt_size,
       siblingsCount: p.siblings_count,
+      email: p.email || '',
+      phone: p.phone || '',
       guardians: (p.guardians || []).map((g) => ({ id: g.id, name: g.name, email: g.email, phone: g.phone })),
       seasonProfiles: (p.player_seasons || []).reduce((acc, ps) => {
         acc[ps.season_id] = {
@@ -449,7 +461,29 @@ export const playerService = {
       teamAgeGroup: p.teams?.age_group || null,
       shirtSize: p.shirt_size,
       siblingsCount: p.siblings_count,
+      email: p.email || '',
+      phone: p.phone || '',
       guardians: (p.guardians || []).map((g) => ({ id: g.id, name: g.name, email: g.email, phone: g.phone })),
+    }));
+  },
+
+  // The player's own roster entries, for a player signed in as themselves. RLS limits what comes back.
+  getPlayersByIds: async (ids) => {
+    if (!ids?.length) return [];
+    const { data, error } = await supabase.from('players').select('*').in('id', ids);
+    if (error) throw error;
+    return (data || []).map((p) => ({
+      id: p.id,
+      firstName: p.first_name,
+      lastName: p.last_name,
+      jerseyNumber: p.jersey_number,
+      status: p.status,
+      clubId: p.club_id,
+      teamId: p.team_id,
+      email: p.email || '',
+      phone: p.phone || '',
+      guardians: [],
+      seasonProfiles: {},
     }));
   },
 
@@ -475,6 +509,8 @@ export const playerService = {
           teamId: p.team_id,
           shirtSize: p.shirt_size,
           siblingsCount: p.siblings_count,
+          email: p.email || '',
+          phone: p.phone || '',
           guardians: (p.guardians || []).map((gu) => ({ id: gu.id, name: gu.name, email: gu.email, phone: gu.phone })),
           seasonProfiles: (p.player_seasons || []).reduce((acc, ps) => {
             acc[ps.season_id] = {
@@ -511,6 +547,25 @@ export const playerService = {
   // RPC — players_update RLS is staff-only (club_id IN user_club_ids()), so a
   // direct UPDATE from a parent session matches zero rows and would look like
   // a silent no-op. See sql/add_guardian_self_service_rpc.sql.
+  // A guardian (or staff) sets the player's own sign-in email and phone. Guardians can't update players
+  // directly, so this goes through the set_player_contact RPC (sql/player_login_migration.sql).
+  setPlayerContact: async (playerId, { email, phone }) => {
+    const { data: ok, error } = await supabase.rpc('set_player_contact', {
+      p_player_id: playerId,
+      p_email: email?.trim() || null,
+      p_phone: phone?.trim() || null,
+    });
+    if (error) throw error;
+    if (!ok) throw new Error('You do not have permission to update this player.');
+  },
+
+  // How the signed-in account relates to each player it can see: 'guardian' or 'self' (the player's own login).
+  getMyPlayerLinks: async () => {
+    const { data, error } = await supabase.rpc('my_player_links');
+    if (error) throw error;
+    return (data || []).map((r) => ({ playerId: r.player_id, relation: r.relation }));
+  },
+
   updateOwnPlayerDetails: async (playerId, { birthdate, shirtSize, siblingsCount }) => {
     const { data: ok, error } = await supabase.rpc('update_guardian_player_details', {
       p_player_id: playerId,

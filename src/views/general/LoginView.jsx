@@ -1,10 +1,39 @@
-import React, { useState } from 'react';
-import { Globe } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Globe, Smartphone } from 'lucide-react';
 import { supabase } from '../../supabase';
 import { useT } from '../../i18n/I18nContext';
 
-// 'signin' | 'register' | 'forgot' | 'magiclink'
-const MODES = { SIGNIN: 'signin', REGISTER: 'register', FORGOT: 'forgot', MAGICLINK: 'magiclink' };
+// 'signin' | 'register' | 'forgot' | 'magiclink' | 'phone'
+const MODES = { SIGNIN: 'signin', REGISTER: 'register', FORGOT: 'forgot', MAGICLINK: 'magiclink', PHONE: 'phone' };
+
+// A 10-digit US number gets its country code; anything else is taken as typed, with a leading +.
+const toE164 = (raw) => {
+  const digits = String(raw || '').replace(/\D/g, '');
+  if (!digits) return '';
+  return `+${digits.length === 10 ? `1${digits}` : digits}`;
+};
+
+/**
+ * Whether Supabase Auth has phone sign-in on (it needs an SMS provider such as Twilio). Read from the public
+ * settings endpoint, so the phone option only shows once text messages can actually be sent.
+ */
+function usePhoneSignIn() {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    let live = true;
+    const url = import.meta.env.VITE_SUPABASE_URL;
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    if (!url || !key) return undefined;
+    fetch(`${url}/auth/v1/settings`, { headers: { apikey: key } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((settings) => live && setOn(!!settings?.external?.phone))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+  return on;
+}
 
 export default function Login() {
   const { t, locale, toggleLocale } = useT();
@@ -14,6 +43,9 @@ export default function Login() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [noticeSent, setNoticeSent] = useState(false);
+  const phoneSignIn = usePhoneSignIn();
+  const [phone, setPhone] = useState('');
+  const [code, setCode] = useState('');
 
   const isRegistering = mode === MODES.REGISTER;
 
@@ -21,6 +53,7 @@ export default function Login() {
     setMode(next);
     setError('');
     setNoticeSent(false);
+    setCode('');
   };
 
   const handleAuth = async (e) => {
@@ -92,6 +125,37 @@ export default function Login() {
     }
   };
 
+  // A player (or anyone) signing in with the mobile number on their roster entry: a code by text message, then
+  // the code. The account is created on first sign-in; it only sees a team once a roster entry has that number.
+  const handleSendCode = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ phone: toE164(phone) });
+      if (error) throw error;
+      setNoticeSent(true);
+    } catch {
+      setError(t('auth.errorPhone'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleVerifyCode = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({ phone: toE164(phone), token: code.trim(), type: 'sms' });
+      if (error) throw error;
+    } catch {
+      setError(t('auth.errorCode'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const showLogoHeader = (
     <div className="text-center mb-8">
       <svg viewBox="0 0 512 512" className="w-16 h-16 mx-auto mb-4" role="img" aria-label="Cantera Manager">
@@ -131,7 +195,9 @@ export default function Login() {
             ? t('auth.forgotPasswordTitle')
             : mode === MODES.MAGICLINK
               ? t('auth.magicLinkTitle')
-              : t('auth.managerPortal')}
+              : mode === MODES.PHONE
+                ? t('auth.phoneTitle')
+                : t('auth.managerPortal')}
       </p>
     </div>
   );
@@ -235,6 +301,58 @@ export default function Login() {
             </form>
           ))}
 
+        {/* ── PHONE: a code by text message ── */}
+        {mode === MODES.PHONE && (
+          <form onSubmit={noticeSent ? handleVerifyCode : handleSendCode} className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              {noticeSent ? t('auth.codeSent', { phone: toE164(phone) }) : t('auth.phonePrompt')}
+            </p>
+            {noticeSent ? (
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">{t('auth.code')}</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="w-full border border-border rounded-lg p-3 text-center text-lg tracking-widest outline-none focus:ring-2 focus:ring-ring transition-all"
+                  required
+                  autoFocus
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">{t('auth.phone')}</label>
+                <input
+                  type="tel"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full border border-border rounded-lg p-3 outline-none focus:ring-2 focus:ring-ring transition-all"
+                  placeholder={t('auth.phonePlaceholder')}
+                  required
+                  autoFocus
+                />
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-accent text-accent-foreground font-semibold py-3 rounded-lg hover:bg-accent/90 transition-all shadow-lg disabled:opacity-50"
+            >
+              {submitting ? t('common.saving') : noticeSent ? t('auth.verifyCode') : t('auth.sendCode')}
+            </button>
+            <button
+              type="button"
+              onClick={() => switchMode(MODES.SIGNIN)}
+              className="w-full text-center text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {t('auth.backToLogin')}
+            </button>
+          </form>
+        )}
+
         {/* ── SIGN IN / REGISTER ── */}
         {(mode === MODES.SIGNIN || mode === MODES.REGISTER) && (
           <>
@@ -315,6 +433,15 @@ export default function Login() {
                   className="w-full flex items-center justify-center gap-2 border border-border py-3 rounded-lg font-semibold text-foreground hover:bg-background transition-all shadow-sm"
                 >
                   ✨ {t('auth.magicLink')}
+                </button>
+              )}
+
+              {!isRegistering && phoneSignIn && (
+                <button
+                  onClick={() => switchMode(MODES.PHONE)}
+                  className="w-full flex items-center justify-center gap-2 border border-border py-3 rounded-lg font-semibold text-foreground hover:bg-background transition-all shadow-sm"
+                >
+                  <Smartphone size={16} aria-hidden="true" /> {t('auth.phoneSignIn')}
                 </button>
               )}
             </div>

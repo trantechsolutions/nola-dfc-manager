@@ -26,6 +26,40 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-10-23 — RSVP icons everywhere, player sign-in and scorekeeper exits (6841484..dc00a16)
+
+**Commits.**
+
+- `6841484 chore: mask location in the sample data and retake marketing screenshots`
+- `d75282d feat: let players sign in with their own email or phone`
+- `71cb8e2 feat: answer RSVPs with colour-coded icons on Home, the schedule and calendar`
+- `dc00a16 fix: always leave the scorekeeper to the page it was opened from`
+
+**Touched.** RSVP: `components/EventRsvp.jsx` (icons, `readOnly`, `compact`, decline note), new
+`hooks/useEventRsvps.js` (App-level loader shared via ScheduleContext; `useRsvpPropsFor`), `NextMatchCard.jsx`,
+`CalendarView.jsx` (badges via `eventContent`, details sheet replaces `alert`), `ScheduleView.jsx`,
+`scheduleService.setRsvp(…, note)`. Player sign-in: `sql/player_login_migration.sql`, `playerService`
+(email/phone mapping, `setPlayerContact`, `getMyPlayerLinks`, `getPlayersByIds`), `PlayerFormModal`, `ParentView`,
+`App.jsx` (`isPlayerAccount`, `selfPlayerIds`), `useAppData` (`ownPlayerIds`), `parentSeason.expectedParentTeamId`
+(`selfIds`; no empty-email match), `AppRoutes` (player Home), `useAttention`, `LoginView` (SMS OTP, gated on
+`/auth/v1/settings` external.phone). Keeper: `KeepView` leaves to `location.state.from` or `/film/:team`;
+`Keep.tsx` `backOut()` leaves when opened straight onto a game/practice. Preview: sample data, RSVP context.
+
+**Schema/API.** NOT APPLIED: `player_login_migration.sql` — `players.email`, `players.phone`, `norm_phone`,
+`player_ids_for_user`, `user_self_player_ids`, `user_team_side_player_ids`, `my_player_links`,
+`set_player_contact`, `chat_player_only`; nine team-side policies and five functions switched from
+`user_guardian_player_ids()` to `user_team_side_player_ids()`; `chat_can_start`, `chat_display_name` replaced.
+`event_rsvps.note` already existed.
+
+**Tests.** New `EventRsvp.test.jsx` (answers, clear, decline note, read-only, self label), parentSeason cases.
+Vitest 1338/1338; lint 0 errors; build passes. Preview checks: Home, schedule, calendar (badges, sheet), keeper
+exits from four entry paths.
+
+**Rollback.** Revert the four commits. The migration (once applied) is additive; to undo, restore the guardian
+function in the nine policies and five functions and drop the new functions and columns.
+
+---
+
 ## 2026-10-23 — Public calendar for signed-in users and screenshots in the hero (1d424f9..8ed8ecc)
 
 **Commits.**
