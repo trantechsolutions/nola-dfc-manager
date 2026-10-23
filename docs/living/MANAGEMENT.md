@@ -10,6 +10,35 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-23 — Scorekeeper, live games and the Stats tab (b219849..a4e2d62)
+
+**Scope.** Two commits, 63 files, ~16,300 insertions (most of it the scorekeeper and film tooling carried over
+from the retired game-film site): an in-app scorekeeper with practice mode, live game following, a Stats tab,
+and the film tooling moved into this repo.
+
+**Decision: stats are kept per scheduled game, inside a window.** Only from 2 hours before kickoff to 2 hours
+after the game, so stats can't be logged against the wrong game or long after the fact. Entries are checked by
+the time they were tapped, so a phone offline at the field still syncs afterwards.
+
+**Decision: old encrypted stat logs are not migrated.** The scorekeeper starts fresh in the app.
+
+**Decision: a Stats tab, with Manage moved off the phone tab bar.** Six phone tabs would be cramped, so Manage
+(used rarely) opens from the account menu on phones; desktop keeps it as a tab. Stats is the umbrella for game
+film and future stats pages.
+
+**Decision: one repo for film work.** Adding games, cutting highlight clips and publishing them to the private
+clip storage now run from this repo; the separate game-film repo is retired.
+
+**Risk (medium).** Two database changes are written but not yet run on production: live-game reading for
+families, and the per-game stats window. Until they run, families can't follow a game live and the window is
+enforced only in the app.
+
+**Open.** Run `live_game_migration.sql` and `keeper_game_window_migration.sql`. Still pending from 2026-10-22:
+the access-control, chat-oversight, medical-release and document-storage migrations, and deploying the
+team-calendar and notify-push functions.
+
+---
+
 ## 2026-10-22 — App-run schedule, team chat, phone film and access control (51a594b..0461e48)
 
 **Scope.** Four commits, 50 files, ~5,350 insertions: app-run scheduling, team chat with private and group

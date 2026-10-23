@@ -26,6 +26,53 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-10-23 — Scorekeeper, live games and the Stats tab (b219849..a4e2d62)
+
+**Commits.**
+
+- `b219849 chore: move the game film tooling into this repo`
+- `a4e2d62 feat: add the scorekeeper, live games and a Stats tab`
+
+**Touched.**
+
+- Tooling: `tools/film/` (film.ts CLI, validate, i18n, ollie, reeplayer, scan_tape.py, make_highlights.py,
+  r2.ts), npm scripts `film`, `film:validate`, `film:i18n`, `film:ollie`, `film:tape`; `/private/` git-ignored
+  and lint-ignored.
+- Scorekeeper: `src/film/keeper.tsx`, `src/film/pages/Keep.tsx`, `src/film/components/` (KeepPickers,
+  KeepPitch, VoiceBox), `src/film/keeper.css` (scoped under `.film-keep`, colours mapped to the app's theme
+  tokens, hand-edited from here on), `src/film/gameWindow.ts`, `src/film/lib/{schedule,voice}.ts`,
+  `src/views/film/KeepView.jsx`.
+- Live game: `src/views/film/LiveGameView.jsx`, `GoalCelebration.jsx`, `src/film/liveFeed.ts`,
+  `src/services/liveGameService.js`; schedule rows link to it and show Keep stats while the window is open.
+- Navigation: `utils/navDestinations.js` adds the `stats` destination (views `film`, prefixes `film/`, `live/`)
+  and a `phoneTab` flag; `MobileBottomNav` drops Manage; `AppHeader` account menu lists off-tab destinations on
+  phones; `App.jsx` adds the `film` nav item; `AppRoutes` adds `/film` → `/film/:effectiveTeamId`.
+- Stats page: `views/film/FilmScorekeeper.jsx` (practice run + open scorekeeper, keepers only) under
+  `FilmView`. Removed `ScorekeeperSettingsCard` and the Settings section; removed `GameFilmCard` from staff and
+  parent Home (kept on the no-players screen).
+- i18n: `nav.stats`, `nav.gameFilm`, `film.keeper_*`, `film.kp_*`, `film.live_*` (en/es).
+
+**Schema/API.**
+
+- `sql/keeper_native_migration.sql`: `keeper_entries` (append-only), `keeper_can_keep(team)`, RLS. **Applied.**
+- `sql/live_game_migration.sql`: select on `keeper_entries` for team members, `keeper_game_summaries(team)`,
+  realtime publication. **Not applied.**
+- `sql/keeper_game_window_migration.sql`: `keeper_window_ok`, `keeper_entry_ok`, insert policy limited to the
+  game's ±2h window by entry time. **Not applied.**
+
+**Rationale.** The scorekeeper's original screens are kept (about 1,100 lines of tuned touch UI) and re-themed
+through CSS variables rather than rewritten in Tailwind. Destinations stay a grouping over routes, so `/film`
+URLs and shared links are unchanged.
+
+**Tests.** Added navDestinations cases (Stats label, phone tabs, film/live mapping), keeper, liveFeed and
+gameWindow tests. Vitest 1332/1332 pass; lint 0 errors; build passes. Preview screenshots checked at 390px and
+landscape in both themes.
+
+**Rollback.** Revert a4e2d62 and b219849. The two unapplied migrations need nothing. To undo
+`keeper_native_migration.sql`, drop `keeper_entries` and `keeper_can_keep` (stat entries are lost).
+
+---
+
 ## 2026-10-22 — App-run schedule, team chat, phone film and access control (51a594b..0461e48)
 
 **Commits.**
