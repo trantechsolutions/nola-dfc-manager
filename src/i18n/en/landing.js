@@ -20,18 +20,7 @@ export default {
     ctaPrimary: 'Sign in to your club',
     ctaSecondary: 'See a public calendar',
     note: 'Works offline · Installs to your home screen · English & Español',
-  },
-
-  scoreboard: {
-    label: 'Season at a glance',
-    live: 'Sample',
-    balance: 'Team balance',
-    collected: 'Dues collected',
-    nextEvent: 'Next event',
-    nextEventValue: 'Sat · 9:00 AM · Home',
-    compliance: 'Roster cleared',
-    playersUnit: '{{done}} of {{total}} players',
-    caption: 'Illustrative data — your club sees its own numbers.',
+    screensCaption: 'Real screens from the app, with a sample team.',
   },
 
   stats: {
