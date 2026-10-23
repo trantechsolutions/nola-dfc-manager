@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '../../supabase';
 import { useT } from '../../i18n/I18nContext';
@@ -43,8 +43,15 @@ export default function KeepView() {
     };
   }, []);
 
-  // Back where it was opened from (the schedule or the Stats page); a fresh tab lands on the Stats page.
-  const leave = () => (window.history.length > 1 ? navigate(-1) : navigate(`/film/${teamId}`));
+  // Back where it was opened from (the schedule or the Stats page, passed as location state by the links in);
+  // opened any other way, the Stats page. Never history -1: the scorekeeper's own screens add history entries,
+  // so one step back usually lands inside it again.
+  const location = useLocation();
+  const [from] = useState(() => {
+    const path = location.state?.from;
+    return typeof path === 'string' && path.startsWith('/') && !path.startsWith('/keep/') ? path : null;
+  });
+  const leave = () => navigate(from || `/film/${teamId}`);
 
   return (
     <div className="film-keep fixed inset-0 z-[2000] overflow-y-auto">
