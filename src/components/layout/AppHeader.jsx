@@ -1,5 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, Check, ChevronDown, CircleHelp, GitCommit, Globe, LogOut, Megaphone, MessageCircle } from 'lucide-react';
+import {
+  Bell,
+  Briefcase,
+  Check,
+  ChevronDown,
+  CircleHelp,
+  GitCommit,
+  Globe,
+  LogOut,
+  Megaphone,
+  MessageCircle,
+  Users,
+} from 'lucide-react';
 import { useT } from '../../i18n/I18nContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useDestinations } from '../../hooks/useDestinations';
@@ -225,8 +237,20 @@ function ChoiceItem({ selected, onClick, swatch, label, hint }) {
 const THEME_LABEL_KEYS = { light: 'nav.themeLight', dark: 'nav.themeDark', system: 'nav.themeSystem' };
 
 function AccountMenu() {
-  const { navigate, user, effectiveRole, toggleLocale, locale, cycleTheme, theme, ThemeIcon, supabase } =
-    useNavigation();
+  const {
+    navigate,
+    user,
+    effectiveRole,
+    toggleLocale,
+    locale,
+    cycleTheme,
+    theme,
+    ThemeIcon,
+    supabase,
+    canViewAsParent,
+    parentMode,
+    setParentMode,
+  } = useNavigation();
   const { destinations, active } = useDestinations();
   const { t } = useT();
   // On a phone the tab bar holds five destinations; the ones left off it (Manage) open from here instead.
@@ -263,6 +287,19 @@ function AccountMenu() {
                   }}
                 />
               ))}
+            </div>
+          )}
+          {/* A team manager who is also a parent: their own family's view, or back to the team's. */}
+          {canViewAsParent && (
+            <div className="border-b border-border py-1">
+              <MenuItem
+                icon={parentMode ? Briefcase : Users}
+                label={parentMode ? t('nav.viewAsStaff') : t('nav.viewAsParent')}
+                onClick={() => {
+                  close();
+                  setParentMode(!parentMode);
+                }}
+              />
             </div>
           )}
           {/* Settings rows keep the menu open: the change is visible behind it,
