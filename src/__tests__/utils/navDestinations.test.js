@@ -37,6 +37,26 @@ describe('buildDestinations', () => {
     expect(dests.find((d) => d.id === 'manage').items.map((i) => i.id)).toEqual(['brand-new-page']);
   });
 
+  it('keeps the Stats tab named Stats while game film is its only page', () => {
+    const dests = buildDestinations([item('dashboard', 'Home'), item('film', 'Game film')]);
+    const stats = dests.find((d) => d.id === 'stats');
+    expect(stats.label).toBe('Stats');
+    expect(stats.to).toBe('/film');
+  });
+
+  it('keeps Manage off the phone tab bar, and every other tab on it', () => {
+    const dests = buildDestinations([
+      item('dashboard', 'Home'),
+      item('schedule', 'Schedule'),
+      item('film', 'Game film'),
+      item('people', 'Players'),
+      item('finance/ledger', 'Ledger'),
+      item('team-admin', 'Settings'),
+    ]);
+    expect(dests.map((d) => d.id)).toEqual(['home', 'schedule', 'stats', 'team', 'money', 'manage']);
+    expect(dests.filter((d) => d.phoneTab).map((d) => d.id)).toEqual(['home', 'schedule', 'stats', 'team', 'money']);
+  });
+
   it('omits destinations the user has no pages in', () => {
     const dests = buildDestinations([item('dashboard', 'Home'), item('schedule', 'Schedule')]);
     expect(dests.map((d) => d.id)).toEqual(['home', 'schedule']);
@@ -56,6 +76,12 @@ describe('findDestination', () => {
 
   it('falls back by prefix for routes with no nav entry', () => {
     expect(findDestination(dests, 'club-onboard').id).toBe('manage');
+  });
+
+  it('puts every game film page, and a live game, under Stats', () => {
+    const withFilm = buildDestinations([item('dashboard', 'Home'), item('film', 'Game film')]);
+    expect(findDestination(withFilm, 'film/t1/game/vs-x/report').id).toBe('stats');
+    expect(findDestination(withFilm, 'live/t1/vs-x').id).toBe('stats');
   });
 
   it('returns null for app-level pages', () => {

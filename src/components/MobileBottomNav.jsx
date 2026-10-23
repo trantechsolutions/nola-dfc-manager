@@ -10,9 +10,8 @@ import { PANELS } from '../utils/panelRoute';
 
 /**
  * Phone tab bar — the same destinations as the header tabs, under the thumb.
- * A parent gets three; a team manager up to five. Club admin pages live in
- * Manage rather than in a strip of their own, so the bar is one row for
- * everyone.
+ * A parent gets four; a team manager five. Manage isn't here: it opens from
+ * the account menu on a phone (see AppHeader), so the bar stays at five.
  */
 export default function MobileBottomNav() {
   const { navigate, canEditLedger, effectiveIsStaff } = useNavigation();
@@ -44,29 +43,31 @@ export default function MobileBottomNav() {
         aria-label="Main"
         className="app-tabbar fixed inset-x-0 bottom-0 z-[1030] flex border-t border-border bg-card md:hidden"
       >
-        {destinations.map((dest) => {
-          const isActive = active?.id === dest.id;
-          return (
-            <button
-              key={dest.id}
-              type="button"
-              onClick={() => navigate(tabTarget(dest, active?.id))}
-              aria-current={isActive ? 'page' : undefined}
-              className={`relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 text-xs font-semibold ${
-                isActive ? 'text-primary' : 'text-muted-foreground'
-              }`}
-            >
-              {isActive && (
-                <span className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-primary" aria-hidden="true" />
-              )}
-              <span className="relative">
-                <dest.icon size={22} strokeWidth={isActive ? 2.4 : 1.8} />
-                <TabBadge value={badges[dest.id]} t={t} floating />
-              </span>
-              <span className="max-w-full truncate px-1">{dest.label}</span>
-            </button>
-          );
-        })}
+        {destinations
+          .filter((dest) => dest.phoneTab)
+          .map((dest) => {
+            const isActive = active?.id === dest.id;
+            return (
+              <button
+                key={dest.id}
+                type="button"
+                onClick={() => navigate(tabTarget(dest, active?.id))}
+                aria-current={isActive ? 'page' : undefined}
+                className={`relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 text-xs font-semibold ${
+                  isActive ? 'text-primary' : 'text-muted-foreground'
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-primary" aria-hidden="true" />
+                )}
+                <span className="relative">
+                  <dest.icon size={22} strokeWidth={isActive ? 2.4 : 1.8} />
+                  <TabBadge value={badges[dest.id]} t={t} floating />
+                </span>
+                <span className="max-w-full truncate px-1">{dest.label}</span>
+              </button>
+            );
+          })}
       </nav>
     </>
   );

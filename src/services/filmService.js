@@ -76,6 +76,17 @@ export const filmService = {
     };
   },
 
+  /**
+   * Whether the signed-in user may keep stats for this team in the manager's scorekeeper
+   * (sql/keeper_native_migration.sql): true or false, or null before that migration has run.
+   */
+  async canKeep(teamId) {
+    if (!teamId) return false;
+    const { data, error } = await supabase.rpc('keeper_can_keep', { p_team_id: teamId });
+    if (error) return missing(error, 'keeper_can_keep') ? null : false;
+    return data === true;
+  },
+
   /** Whether the signed-in user gets the coach area (breakdowns, lineups, notes) for this team. */
   async isCoach(teamId) {
     if (!teamId) return false;

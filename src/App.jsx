@@ -23,6 +23,7 @@ import {
   BookOpen,
   ListChecks,
   MapPin,
+  Clapperboard,
 } from 'lucide-react';
 import { useT } from './i18n/I18nContext';
 import { useTheme } from './theme/ThemeContext';
@@ -743,6 +744,11 @@ function App() {
       ]
     : [{ id: 'dashboard', label: t('nav.myPlayer'), icon: Users, section: 'season' }];
 
+  // The Stats tab's pages (utils/navDestinations.js): game film, for everyone on a team.
+  const statsNavItems = effectiveTeamId
+    ? [{ id: 'film', label: t('nav.gameFilm'), icon: Clapperboard, section: 'team' }]
+    : [];
+
   const teamNavItems = effectiveIsStaff
     ? [
         { id: 'schedule', label: t('nav.schedule'), icon: Calendar, section: 'team' },
@@ -778,6 +784,7 @@ function App() {
         { id: 'checklist', label: t('nav.checklist'), icon: ListChecks, section: 'team' },
         { id: 'schedule', label: t('nav.schedule'), icon: Calendar, section: 'team' },
       ];
+  teamNavItems.push(...statsNavItems);
 
   const canEditSchedule = can(PERMISSIONS.TEAM_EDIT_SCHEDULE);
   // A team manager books the home field outright; everyone else with schedule
@@ -920,6 +927,7 @@ function App() {
                   teams={contextTeams}
                   selectedTeam={selectedTeam}
                   selectedTeamId={selectedTeamId}
+                  effectiveTeamId={effectiveTeamId}
                   setSelectedTeamId={setSelectedTeamId}
                   userRoles={userRoles}
                   effectiveRole={effectiveRole}

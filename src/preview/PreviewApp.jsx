@@ -10,6 +10,7 @@ import {
   SlidersHorizontal,
   Sun,
   Users,
+  Clapperboard,
 } from 'lucide-react';
 import { useT } from '../i18n/I18nContext';
 import { NavigationContext } from '../context/NavigationContext';
@@ -28,6 +29,10 @@ import { scheduleService } from '../services/scheduleService';
 import { chatService } from '../services/chatService';
 import { ChatProvider } from '../context/ChatContext';
 import ChatView from '../views/general/ChatView';
+import KeepView from '../views/film/KeepView';
+import { useKeepPreviewDatabase, LIVE_ENTRIES, LIVE_NEXT } from './keepPreview';
+import LiveGameView from '../views/film/LiveGameView';
+import { liveGameService } from '../services/liveGameService';
 import { fixtureGame } from '../film/lib/fixture';
 import { buildCompliance } from '../utils/compliance';
 import { Route, Routes } from 'react-router-dom';
@@ -305,6 +310,41 @@ const money = (n) =>
   `$${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function PreviewApp({ params }) {
+  // page=keep: the scorekeeper, full screen, against a stand-in database (keepPreview.js).
+  if (params.get('page') === 'keep') return <KeepPreview />;
+  if (params.get('page') === 'live') return <LivePreview />;
+  return <ShellPreview params={params} />;
+}
+
+function KeepPreview() {
+  useKeepPreviewDatabase();
+  return (
+    <Routes>
+      <Route path="/keep/:teamId/*" element={<KeepView />} />
+    </Routes>
+  );
+}
+
+// page=live: a game in progress; a second goal arrives two seconds in, to show the celebration.
+function LivePreview() {
+  useKeepPreviewDatabase();
+  Object.assign(liveGameService, {
+    getEntries: async () => LIVE_ENTRIES,
+    subscribe: (_team, _game, onEntry) => {
+      const timer = setTimeout(() => onEntry(LIVE_NEXT), 2000);
+      return () => clearTimeout(timer);
+    },
+  });
+  return (
+    <div className="min-h-screen bg-background p-4 text-foreground">
+      <Routes>
+        <Route path="/live/:teamId/:game" element={<LiveGameView />} />
+      </Routes>
+    </div>
+  );
+}
+
+function ShellPreview({ params }) {
   const { t, setLocale } = useT();
   const role = params.get('role') === 'parent' ? 'parent' : 'staff';
   const isStaff = role === 'staff';
@@ -366,6 +406,7 @@ export default function PreviewApp({ params }) {
         { id: 'checklist', label: t('nav.checklist'), icon: ListChecks, section: 'team' },
         { id: 'schedule', label: t('nav.schedule'), icon: Calendar, section: 'team' },
       ];
+  teamNavItems.push({ id: 'film', label: t('nav.gameFilm'), icon: Clapperboard, section: 'team' });
   const clubNavItems = isStaff
     ? [{ id: 'club-overview', label: t('nav.overview'), icon: Building2, section: 'club' }]
     : [];

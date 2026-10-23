@@ -2,6 +2,50 @@
 // Carried over from dfc-game-film (app/src/i18n.tsx); placeholders use i18next's {{x}}.
 export default {
   film: {
+    // The foot of the Stats page, for stat keepers (views/film/FilmScorekeeper.jsx).
+    keeper_title: 'Scorekeeper',
+    keeper_help:
+      'Try the scorekeeper with a practice run: it stays on this phone and never counts. Stats for a real game are kept from that game in the schedule, from 2 hours before it until 2 hours after.',
+    keeper_practice: 'Start a practice run',
+    keeper_open: 'Open the scorekeeper',
+    kp_needGame: 'Pick the game from the schedule.',
+    kp_keepGame: 'Keep stats: {{game}}',
+    kp_noOpenGames:
+      'No game is open for stats right now. Stats can be kept from 2 hours before a game until 2 hours after it; start from the game in the schedule.',
+    kp_windowNotYet: 'Stats for this game open at {{at}}, 2 hours before kickoff.',
+    kp_windowClosed: 'Stats for this game closed at {{at}}, 2 hours after it ended.',
+    kp_windowNoGame: "This game isn't in the team's schedule, so stats can't be kept for it.",
+    kp_viewStats: 'View the game',
+    live_keepStats: 'Keep stats',
+    // Following a game live (views/film/LiveGameView.jsx, GoalCelebration.jsx).
+    live_title: 'Live game',
+    live_now: 'Live',
+    live_notStarted: 'Not started yet',
+    live_half1: '1st half',
+    live_half2: '2nd half',
+    live_halfTime: 'Half time',
+    live_fullTime: 'Full time',
+    live_playByPlay: 'Play-by-play',
+    live_stats: 'Stats',
+    live_noMoments: 'Nothing yet. Goals, shots, saves and cards appear here as the scorekeeper logs them.',
+    live_goal: 'Goal!',
+    live_theyScore: '{{team}} score',
+    live_win: 'You won!',
+    live_draw: "It's a draw",
+    live_loss: 'Full time',
+    live_tapToClose: 'Tap anywhere to close',
+    live_notFound: "This game isn't available.",
+    live_backToSchedule: 'Schedule',
+    live_follow: 'Live {{us}}–{{them}}',
+    live_gameStats: 'Game stats {{us}}–{{them}}',
+    kp_practiceRun: 'Practice run',
+    kp_practiceName: 'Practice',
+    kp_practiceTag: 'Practice',
+    kp_practiceNote:
+      "A practice run stays on this phone and never counts toward the team's stats. An unfinished one is deleted after an hour without a tap, or when you start another practice run.",
+    // The scorekeeper inside the manager.
+    kp_leave: 'Done',
+    kp_notAllowed: 'Keeping stats for this team is for its coaches, manager and scorekeepers.',
     appTitle: 'Game film',
     library: 'Game film library',
     teamOnly: 'Team only',
@@ -294,12 +338,12 @@ export default {
     kp_badPassword: "That scorekeeper password didn't work. Check it with the coach and try again.",
     kp_gateNote:
       "Sign in once with a connection. After that, games keep logging on this phone even without signal, and send when it's back.",
-    kp_needConnection:
-      "Signed in, but the squad list hasn't loaded yet. Connect to the internet once, then reopen this page.",
+    kp_needConnection: "The squad list hasn't loaded yet. Connect to the internet once, then reopen this page.",
     kp_toFilm: 'Game film',
     kp_newGame: 'New game',
     kp_noGames: 'No games on this device yet.',
-    kp_homeNote: 'Games started on another phone with the same password show up here once both have had a connection.',
+    kp_homeNote:
+      "Games started on another phone by anyone keeping this team's stats show up here once both have had a connection.",
     kp_phase_pre: 'Not started',
     kp_phase_live: 'In play',
     kp_phase_break: 'Half time',
@@ -309,7 +353,7 @@ export default {
     kp_syncWaiting: '{{n}} to send',
     kp_syncOffline: 'Offline · {{n}} saved on phone',
     kp_syncError: 'Not sent · {{n}} saved on phone',
-    kp_syncExpired: 'Open Keep stats from the manager again · {{n}} saved on phone',
+    kp_syncExpired: "You can't keep this team's stats any more · {{n}} saved on phone",
     kp_back: 'Back',
     kp_close: 'Close',
     kp_fromSchedule: 'From the team schedule',
@@ -458,7 +502,7 @@ export default {
     kp_deleteNote:
       "It's removed from this phone and from the stat log, so no other phone or the coach can get it back. This can't be undone.",
     kp_homeSaved:
-      "Games are saved on this phone first, then sent (encrypted) to the stat log whenever there's a connection.",
+      "Games are saved on this phone first, then sent to the team's stat log whenever there's a connection.",
     kp_voice: 'Voice',
     kp_voicePlaceholder: 'Dictate here: “9 to 17, shot saved top left”',
     kp_holdToTalk: 'Hold to talk',

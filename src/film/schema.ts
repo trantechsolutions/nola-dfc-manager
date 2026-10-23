@@ -255,6 +255,9 @@ export const KeepSetup = z.object({
   level: z.enum(["beginner", "advanced"]).optional(), // beginner: team stats only, no lineup
   start: Starters,
   eventId: z.string().uuid().optional(),     // the manager's schedule entry it was set up from
+  // A practice run: kept on this phone only, never sent to the stat log; deleted unfinished after an hour
+  // without a tap, or when another practice run starts (keeper.tsx).
+  practice: z.boolean().optional(),
 }).strict();
 export type KeepSetup = z.infer<typeof KeepSetup>;
 const Coord = z.number().min(0).max(100);

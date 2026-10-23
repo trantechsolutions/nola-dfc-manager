@@ -2,6 +2,50 @@
 // Carried over from dfc-game-film (app/src/i18n.tsx); placeholders use i18next's {{x}}.
 export default {
   film: {
+    // El pie de la página de estadísticas, para los anotadores (views/film/FilmScorekeeper.jsx).
+    keeper_title: 'Anotador',
+    keeper_help:
+      'Prueba el anotador con una práctica: se queda en este teléfono y nunca cuenta. Las estadísticas de un partido real se anotan desde ese partido en el calendario, desde 2 horas antes hasta 2 horas después.',
+    keeper_practice: 'Empezar una práctica',
+    keeper_open: 'Abrir el anotador',
+    kp_needGame: 'Elige el partido del calendario.',
+    kp_keepGame: 'Anotar: {{game}}',
+    kp_noOpenGames:
+      'Ningún partido está abierto para anotar ahora. Se puede anotar desde 2 horas antes de un partido hasta 2 horas después; empieza desde el partido en el calendario.',
+    kp_windowNotYet: 'Las estadísticas de este partido se abren a las {{at}}, 2 horas antes del inicio.',
+    kp_windowClosed: 'Las estadísticas de este partido se cerraron a las {{at}}, 2 horas después del final.',
+    kp_windowNoGame: 'Este partido no está en el calendario del equipo, así que no se pueden anotar sus estadísticas.',
+    kp_viewStats: 'Ver el partido',
+    live_keepStats: 'Anotar estadísticas',
+    // Seguir un partido en directo (views/film/LiveGameView.jsx, GoalCelebration.jsx).
+    live_title: 'Partido en directo',
+    live_now: 'En directo',
+    live_notStarted: 'Todavía no ha empezado',
+    live_half1: '1.ª parte',
+    live_half2: '2.ª parte',
+    live_halfTime: 'Descanso',
+    live_fullTime: 'Final',
+    live_playByPlay: 'Minuto a minuto',
+    live_stats: 'Estadísticas',
+    live_noMoments: 'Nada todavía. Los goles, tiros, paradas y tarjetas aparecen aquí cuando el anotador los registra.',
+    live_goal: '¡Gol!',
+    live_theyScore: 'Marca {{team}}',
+    live_win: '¡Habéis ganado!',
+    live_draw: 'Empate',
+    live_loss: 'Final del partido',
+    live_tapToClose: 'Toca para cerrar',
+    live_notFound: 'Este partido no está disponible.',
+    live_backToSchedule: 'Calendario',
+    live_follow: 'En directo {{us}}–{{them}}',
+    live_gameStats: 'Estadísticas {{us}}–{{them}}',
+    kp_practiceRun: 'Práctica',
+    kp_practiceName: 'Práctica',
+    kp_practiceTag: 'Práctica',
+    kp_practiceNote:
+      'Una práctica se queda en este teléfono y nunca cuenta para las estadísticas del equipo. Si no se termina, se borra tras una hora sin tocarla o al empezar otra práctica.',
+    // El anotador dentro del gestor.
+    kp_leave: 'Listo',
+    kp_notAllowed: 'Anotar las estadísticas de este equipo es para su cuerpo técnico, su responsable y sus anotadores.',
     appTitle: 'Vídeos de partidos',
     library: 'Biblioteca de partidos',
     teamOnly: 'Solo el equipo',
@@ -303,12 +347,12 @@ export default {
     kp_gateNote:
       'Inicia sesión una vez con conexión. Después, los partidos se siguen registrando en este teléfono aunque no haya señal, y se envían cuando vuelve.',
     kp_needConnection:
-      'Sesión iniciada, pero la lista de la plantilla aún no se ha cargado. Conéctate a internet una vez y vuelve a abrir esta página.',
+      'La lista de la plantilla aún no se ha cargado. Conéctate a internet una vez y vuelve a abrir esta página.',
     kp_toFilm: 'Vídeos de partidos',
     kp_newGame: 'Nuevo partido',
     kp_noGames: 'Todavía no hay partidos en este dispositivo.',
     kp_homeNote:
-      'Los partidos empezados en otro teléfono con la misma contraseña aparecen aquí cuando ambos han tenido conexión.',
+      'Los partidos empezados en otro teléfono por quien anote las estadísticas de este equipo aparecen aquí cuando ambos han tenido conexión.',
     kp_phase_pre: 'Sin empezar',
     kp_phase_live: 'En juego',
     kp_phase_break: 'Descanso',
@@ -318,7 +362,7 @@ export default {
     kp_syncWaiting: '{{n}} por enviar',
     kp_syncOffline: 'Sin conexión · {{n}} guardados en el teléfono',
     kp_syncError: 'Sin enviar · {{n}} guardados en el teléfono',
-    kp_syncExpired: 'Vuelve a abrir Anotar estadísticas desde el gestor · {{n}} guardados en el teléfono',
+    kp_syncExpired: 'Ya no puedes anotar las estadísticas de este equipo · {{n}} guardados en el teléfono',
     kp_back: 'Volver',
     kp_close: 'Cerrar',
     kp_fromSchedule: 'Del calendario del equipo',
@@ -468,7 +512,7 @@ export default {
     kp_deleteNote:
       'Se borra de este teléfono y del registro de estadísticas, así que ningún otro teléfono ni el entrenador podrán recuperarlo. No se puede deshacer.',
     kp_homeSaved:
-      'Los partidos se guardan primero en este teléfono y luego se envían (cifrados) al registro de estadísticas cuando hay conexión.',
+      'Los partidos se guardan primero en este teléfono y luego se envían al registro de estadísticas del equipo cuando hay conexión.',
     kp_voice: 'Voz',
     kp_voicePlaceholder: 'Dicta aquí: «9 to 17, shot saved top left»',
     kp_holdToTalk: 'Mantén pulsado para hablar',

@@ -5,9 +5,9 @@ import { filmService, filmLink } from '../services/filmService';
 import { useT } from '../i18n/I18nContext';
 
 /**
- * The team's game film site, opened already unlocked with the access this user's place on the team gives:
- * the games for everyone on the team, the coach area for coaches, the scorekeeper screen for the
- * scorekeeper role (assigned in Team Users). Hidden when the team has no film site or the user isn't on it.
+ * The team's game film for everyone on the team: inside the app once the team's film is published there, else
+ * the film site, already unlocked. Stats are kept per game from the schedule; the scorekeeper's practice run
+ * sits at the foot of the Stats tab.
  */
 export default function GameFilmCard({ teamId }) {
   const { t } = useT();
@@ -15,13 +15,18 @@ export default function GameFilmCard({ teamId }) {
 
   useEffect(() => {
     let live = true;
-    Promise.all([filmService.getAccess(teamId), filmService.getGames(teamId).catch(() => [])]).then(
-      async ([a, games]) => {
-        // A scorekeeper or coach also gets a token for their own account, so the stats they keep are theirs.
-        const keeperToken = a?.keeper ? await filmService.keeperToken(teamId).catch(() => null) : null;
+    Promise.all([
+      filmService.getAccess(teamId),
+      filmService.getGames(teamId).catch(() => []),
+      filmService.canKeep(teamId).catch(() => false),
+    ]).then(
+      async ([a, games, canKeep]) => {
+        // Before the manager has its own scorekeeper, the film site's still opens with an account token.
+        const keeperToken =
+          canKeep === null && a?.keeper ? await filmService.keeperToken(teamId).catch(() => null) : null;
         // Once games are published into the manager, the film opens in the app itself.
         const inApp = games.some((g) => g.published);
-        if (live) setAccess(a || inApp ? { ...a, keeperToken, inApp } : null);
+        if (live) setAccess(a || inApp ? { ...a, keeperToken, inApp, canKeep } : null);
       },
       () => live && setAccess(null),
     );
@@ -32,7 +37,8 @@ export default function GameFilmCard({ teamId }) {
 
   if (!access) return null;
   const film = filmLink(access, 'film');
-  const keeper = filmLink(access, 'keeper');
+  // The manager's own scorekeeper when it has one; the film site's until then.
+  const keeper = access.canKeep === null ? filmLink(access, 'keeper') : null;
 
   return (
     <div className="bg-card p-4 rounded-lg border border-border shadow-sm space-y-3">

@@ -13,6 +13,9 @@ import { clockAt, clockStr, goalZone, ordered, placeAll, replay, restartFor, SHA
 import { fmtStat, matchInApp, seasonOf, summarize } from "./ollie";
 import { fromKeeper, fromLibrary, fromOllie, managerSeason, rosterMatcher, sameGames, seasonStats } from "./playerStats";
 import { gameMinute, mmss, videoSec, workingClip } from "./time";
+import { parseVoice, runVoice, words } from "./voice";
+import { localParts, matchGame, parseTitle, toSchedule, upcoming, type ManagerEvent } from "./schedule";
+import { KeeperRoster, ScheduledGame } from "../schema";
 
 describe("time", () => {
   const g = fixtureGame();
@@ -524,5 +527,140 @@ describe("season numbers for the manager", () => {
     expect(ana).toMatchObject({ games: 2, minutes: 61 + 40, goals: 2, assists: 1, yellow: 1, starts: 1 });
     expect(ana.positions).toEqual([{ pos: "CB", minutes: 61 }]);
     expect(s.get("Cy Diaz")).toMatchObject({ games: 1, minutes: 20, starts: 0, goals: 0, timedGames: 2 });
+  });
+});
+
+describe("voice", () => {
+  const players = [
+    { name: "Gus Lee", number: 1, positions: ["GK"] }, { name: "Ana Ruiz", number: 4, positions: ["CB"] },
+    { name: "Kayden Espana", number: 6, positions: ["CB"] }, { name: "Dee Park", number: 8, positions: ["CM"] },
+    { name: "Cal Mason", number: 9, positions: ["ST"] }, { name: "Lucas Rodriguez", number: 10, positions: ["LM"] },
+    { name: "Bea Cole", number: 12, positions: ["CM"] }, { name: "Mario Rodriguez", number: 5, positions: ["CB"] },
+  ];
+  const start = [
+    { pos: "GK", player: "Gus Lee" }, { pos: "LCB", player: "Ana Ruiz" }, { pos: "RCB", player: "Kayden Espana" },
+    { pos: "CM", player: "Dee Park" }, { pos: "LM", player: "Lucas Rodriguez" }, { pos: "ST", player: "Cal Mason" },
+  ];
+  const ctx = { players, on: start };
+  const cmds = (text: string) => parseVoice(text, ctx);
+  const taps = (text: string) => cmds(text).cmds.map(c => (c.k === "tap" ? (c.a.t === "D" ? c.a.player ?? "team" : c.a.opp) : c.k));
+
+  it("reads numbers as digits and splits clauses", () => {
+    expect(words("Number nine to twenty-one, then shot")).toEqual([["number", "9", "to", "21"], ["shot"]]);
+  });
+
+  it("names players by number, name, misheard name or position", () => {
+    expect(taps("9 to 8 to Ana")).toEqual(["Cal Mason", "Dee Park", "Ana Ruiz"]);
+    expect(taps("number nine, Kaiden, striker, keeper, left mid")).toEqual(["Cal Mason", "Kayden Espana", "Cal Mason", "Gus Lee", "Lucas Rodriguez"]);
+    expect(taps("Rodriguez")).toEqual(["Lucas Rodriguez"]); // Mario is on the bench
+    expect(taps("them, their keeper, my team")).toEqual(["pl", "gk", "team"]);
+    expect(cmds("center back").error).toMatch(/could be Ana Ruiz or Kayden Espana/);
+    expect(cmds("Zed").error).toMatch(/no player I know/);
+  });
+
+  it("reads shots, goals, crosses and restarts", () => {
+    expect(cmds("Cal shot, keeper saves top left").cmds).toEqual([{ k: "shot", a: { t: "D", player: "Cal Mason" }, result: "saved", goal: [0.15, 0.85] }]);
+    expect(cmds("they shoot wide right").cmds).toEqual([{ k: "shot", a: { t: "O", opp: "pl" }, result: "off", goal: [1.2, 0.3] }]);
+    expect(cmds("shot off the post").cmds[0]).toMatchObject({ k: "shot", result: "post" });
+    expect(cmds("goal 9 assist Dee").cmds).toEqual([{ k: "goal", a: { t: "D", player: "Cal Mason" }, assist: "Dee Park" }]);
+    expect(cmds("own goal Ana").cmds).toEqual([{ k: "og", a: { t: "D", player: "Ana Ruiz" } }]);
+    expect(cmds("corner us, crossed").cmds).toEqual([{ k: "restart", type: "Corner", side: "D", via: "cross" }]);
+    expect(cmds("goal kick them long").cmds).toEqual([{ k: "restart", type: "Goal kick", side: "O", taker: { t: "O", opp: "pl" }, via: "long" }]);
+    expect(cmds("throw in 4").cmds).toEqual([{ k: "restart", type: "Throw-in", side: "D", taker: { t: "D", player: "Ana Ruiz" } }]);
+    expect(cmds("Lucas crosses").cmds).toEqual([{ k: "cross", a: { t: "D", player: "Lucas Rodriguez" } }]);
+  });
+
+  it("reads fouls, cards, subs and the clock", () => {
+    expect(cmds("foul on 8").cmds).toEqual([{ k: "inf", what: "Foul", victim: { t: "D", player: "Dee Park" } }]);
+    expect(cmds("foul by them, penalty").cmds).toEqual([{ k: "inf", what: "Foul", who: { t: "O", opp: "pl" } }, { k: "restart", type: "Penalty" }]);
+    expect(cmds("yellow card Kayden").cmds).toEqual([{ k: "inf", what: "Yellow", who: { t: "D", player: "Kayden Espana" } }]);
+    expect(cmds("sub Mario for Dee").cmds).toEqual([{ k: "sub", on: "Mario Rodriguez", off: "Dee Park" }]);
+    expect(cmds("Dee off, Bea on").cmds).toEqual([{ k: "sub", on: "Bea Cole", off: "Dee Park" }]);
+    expect(cmds("sub Mario for Dee and Bea for Cal").cmds).toEqual([{ k: "sub", on: "Mario Rodriguez", off: "Dee Park" }, { k: "sub", on: "Bea Cole", off: "Cal Mason" }]);
+    expect(cmds("Bea for Cal").cmds).toEqual([{ k: "sub", on: "Bea Cole", off: "Cal Mason" }]);
+    expect(cmds("Dee moves to striker").cmds).toEqual([{ k: "move", player: "Dee Park", pos: "ST" }]);
+    expect(cmds("move 6 to left back").cmds).toEqual([{ k: "move", player: "Kayden Espana", pos: "LB" }]);
+    expect(cmds("left mid now plays right wing").cmds).toEqual([{ k: "move", player: "Lucas Rodriguez", pos: "RW" }]);
+    expect(cmds("swap Dee and Cal").cmds).toEqual([{ k: "swap", a: "Dee Park", b: "Cal Mason" }]);
+    expect(taps("Dee to left mid")).toEqual(["Dee Park", "Lucas Rodriguez"]); // no move word: a pass
+    expect(cmds("pause").cmds).toEqual([{ k: "clock", run: false }]);
+    expect(cmds("undo").cmds).toEqual([{ k: "undo" }]);
+  });
+
+  it("runs a dictated passage against the game", () => {
+    const setup = { slug: "2026-10-25-rivals", date: "2026-10-25", time: "", opponent: "Rivals", home: null, format: 6, halfMin: 30, start };
+    const log: KeepEntry[] = [{ id: "voice-setup", at: 1_000_000, k: "setup", setup }];
+    const say = (text: string) => {
+      const p = parseVoice(text, { players, on: replay(log).on });
+      expect(p.error).toBeUndefined();
+      const steps = runVoice(log, p.cmds, 2_000_000 + log.length * 1000);
+      log.push(...steps.flatMap(x => x.entries));
+      return steps;
+    };
+    say("9 kicks off, 9 to 8, 8 to them");
+    say("Ana");                          // we win it back
+    say("Ana to Cal, shot, keeper saves");
+    say("foul by them");                 // after their keeper had it: our free kick
+    say("throw in");                     // whose? the side that didn't touch it last (we had the free kick)
+    const s = replay(log);
+    const evs = s.feed.filter((e): e is Ev => e.k === "ev").map(e => `${e.type}:${e.t}${e.player ? `:${e.player}` : e.opp ? `:${e.opp}` : ""}`);
+    expect(evs).toEqual([
+      "Kickoff:D:Cal Mason", "Pass:D:Cal Mason", "Turnover:D:Dee Park", "Ball win:D:Ana Ruiz", "Pass:D:Ana Ruiz",
+      "Shot:D:Cal Mason", "Foul:O:pl", "Free kick:D", "Throw-in:O:pl",
+    ]);
+    expect(s.phase).toBe("live");
+    const steps = say("undo");
+    expect(steps[0].entries[0]).toMatchObject({ k: "void" });
+    expect(replay(log).feed.length).toBe(8);
+    expect(runVoice(log, [{ k: "sub", on: "Bea Cole", off: "Mario Rodriguez" }], 3_000_000)[0]).toMatchObject({ ok: false, note: "Mario Rodriguez isn't on the field" });
+    say("swap Dee and Cal, Ana moves to left back, sub Bea for Kayden");
+    expect(replay(log).on).toEqual([
+      { pos: "GK", player: "Gus Lee" }, { pos: "LB", player: "Ana Ruiz" }, { pos: "RCB", player: "Bea Cole" },
+      { pos: "ST", player: "Dee Park" }, { pos: "LM", player: "Lucas Rodriguez" }, { pos: "CM", player: "Cal Mason" },
+    ]);
+  });
+});
+
+describe("the manager's schedule", () => {
+  const us = ["DFC", "DFC 2014/2015B Black (U13)"];
+  it("reads the opponent from the usual calendar titles", () => {
+    expect(parseTitle("DFC – Game vs Test FC", us)).toEqual({ opponent: "Test FC", home: null });
+    expect(parseTitle("Game @ Test FC (LCSL)", us)).toEqual({ opponent: "Test FC", home: false });
+    expect(parseTitle("Test FC – DFC", us)).toEqual({ opponent: "Test FC", home: null });
+    expect(parseTitle("DFC - Game - Test FC", us)).toEqual({ opponent: "Test FC", home: null });
+    expect(parseTitle("(Cancelled) Game vs. Test FC", us)).toEqual({ opponent: "Test FC", home: null });
+    expect(parseTitle("Team photos", us)).toEqual({ opponent: "", home: null });
+  });
+  it("gives each game its local date and kickoff", () => {
+    expect(localParts("2026-03-01T23:30:00Z", "America/Chicago")).toEqual({ date: "2026-03-01", time: "17:30" });
+    expect(localParts("2026-03-02T03:00:00Z", "America/Chicago")).toEqual({ date: "2026-03-01", time: "21:00" });
+  });
+  const ev = (id: number, at: string, title: string, type = "league", cancelled = false): ManagerEvent =>
+    ({ id: `00000000-0000-4000-8000-${String(id).padStart(12, "0")}`, title, location: "Field 3", event_date: at, event_type: type, is_cancelled: cancelled });
+  const sched = toSchedule([
+    ev(3, "2026-03-08T15:00:00Z", "Spring Cup", "tournament"),
+    ev(1, "2026-03-01T23:30:00Z", "Game @ Test FC"),
+    ev(2, "2026-03-01T18:00:00Z", "Practice", "practice"),
+    ev(4, "2026-03-04T23:00:00Z", "Game vs Other SC", "friendly", true),
+    ev(5, "2026-03-05T23:00:00Z", "Game vs Other SC", "friendly"),
+  ], { timeZone: "America/Chicago", teamNames: us });
+  it("keeps only games, in order, in the shape the scorekeeper file checks", () => {
+    expect(sched.map(g => g.title)).toEqual(["Game @ Test FC", "Game vs Other SC", "Spring Cup"]);
+    expect(sched[0]).toMatchObject({ date: "2026-03-01", time: "17:30", opponent: "Test FC", home: false, location: "Field 3", tournament: false });
+    expect(sched[2]).toMatchObject({ opponent: "", tournament: true });
+    for (const g of sched) expect(() => ScheduledGame.parse(g)).not.toThrow();
+    expect(KeeperRoster.safeParse({ us: "X", players: [], schedule: sched }).success).toBe(true);
+  });
+  it("offers today's game first, then the next few days'", () => {
+    expect(upcoming(sched, "2026-03-01").map(g => g.title)).toEqual(["Game @ Test FC", "Game vs Other SC"]);
+    expect(upcoming(sched, "2026-03-02").map(g => g.title)).toEqual(["Game vs Other SC", "Spring Cup"]);
+    expect(upcoming(sched, "2026-04-01")).toEqual([]);
+  });
+  it("finds a game file's game: by opponent, else the only game that day, else the tournament that weekend", () => {
+    expect(matchGame({ date: "2026-03-01", opponent: "Test FC" }, sched)?.title).toBe("Game @ Test FC");
+    expect(matchGame({ date: "2026-03-05", opponent: "Somebody" }, sched)?.title).toBe("Game vs Other SC");
+    expect(matchGame({ date: "2026-03-09", opponent: "Cup Team" }, sched)?.title).toBe("Spring Cup");
+    expect(matchGame({ date: "2026-03-20", opponent: "Test FC" }, sched)).toBeNull();
+    expect(matchGame({ date: "2026-03-04", opponent: "Other SC" }, sched)).toBeNull(); // cancelled
   });
 });

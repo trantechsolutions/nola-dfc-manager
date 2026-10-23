@@ -227,7 +227,10 @@ const THEME_LABEL_KEYS = { light: 'nav.themeLight', dark: 'nav.themeDark', syste
 function AccountMenu() {
   const { navigate, user, effectiveRole, toggleLocale, locale, cycleTheme, theme, ThemeIcon, supabase } =
     useNavigation();
+  const { destinations, active } = useDestinations();
   const { t } = useT();
+  // On a phone the tab bar holds five destinations; the ones left off it (Manage) open from here instead.
+  const offTabBar = destinations.filter((dest) => !dest.phoneTab);
 
   return (
     <HeaderDropdown
@@ -246,6 +249,22 @@ function AccountMenu() {
             <p className="truncate text-sm font-semibold text-popover-foreground">{user?.email}</p>
             <p className="truncate text-xs text-muted-foreground">{roleLabel(effectiveRole, t)}</p>
           </div>
+          {offTabBar.length > 0 && (
+            <div className="border-b border-border py-1 md:hidden">
+              {offTabBar.map((dest) => (
+                <MenuItem
+                  key={dest.id}
+                  icon={dest.icon}
+                  label={dest.label}
+                  current={active?.id === dest.id}
+                  onClick={() => {
+                    navigate(tabTarget(dest, active?.id));
+                    close();
+                  }}
+                />
+              ))}
+            </div>
+          )}
           {/* Settings rows keep the menu open: the change is visible behind it,
               and the next tap is usually the other setting. */}
           <MenuItem
@@ -471,15 +490,16 @@ function HeaderDropdown({ trigger, children, align = 'right', width = 'w-64', la
   );
 }
 
-function MenuItem({ icon, label, value, onClick, destructive }) {
+function MenuItem({ icon, label, value, onClick, destructive, current }) {
   const Icon = icon;
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-current={current ? 'page' : undefined}
       className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium transition-colors ${
         destructive ? 'text-destructive hover:bg-muted' : 'text-popover-foreground hover:bg-muted'
-      }`}
+      } ${current ? 'bg-muted' : ''}`}
     >
       {Icon && <Icon size={16} className="shrink-0" />}
       <span className="flex-1">{label}</span>
