@@ -26,6 +26,29 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-10-23 — Public calendar for signed-in users and screenshots in the hero (1d424f9..8ed8ecc)
+
+**Commits.**
+
+- `1d424f9 fix: open the public calendar for signed-in users`
+- `8ed8ecc feat: show the app's screens in the marketing page hero`
+
+**Touched.** `src/App.jsx` (signed-in `/calendar/:teamId?` renders `PublicCalendarView` outside the app shell,
+before the provider tree); `PublicCalendarView.jsx` (`signedIn` prop: "Back to the app" → `/dashboard`);
+`LandingView.jsx` (`PhoneShot` component shared by hero and `#tour`; sample panel and `SAMPLE` removed);
+`src/i18n/{en,es}/landing.js` (`scoreboard.*` removed, `hero.screensCaption` added).
+
+**Schema/API.** None.
+
+**Rationale.** The calendar has its own full-page header, so it renders outside `AppShell` rather than as an
+AppRoutes child, matching the signed-out route.
+
+**Tests.** Vitest 1332/1332; lint 0 errors; build passes; hero checked at 1280px light/dark and 390px.
+
+**Rollback.** Revert 8ed8ecc and 1d424f9.
+
+---
+
 ## 2026-10-23 — Document storage lockdown and marketing screenshots (ab5a6be..192b08c)
 
 **Commits.**

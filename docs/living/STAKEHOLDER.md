@@ -10,6 +10,16 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-23 — Public calendar for signed-in users and screenshots in the hero (1d424f9..8ed8ecc)
+
+- **The public calendar opens again when you're signed in.** Following "See a public calendar" or a shared
+  calendar link while signed in used to show "Page not available". It now opens the calendar, with a button
+  back to the app.
+- **The website's top section shows the app.** Two phone screens (the home screen and a live game) replace the
+  old sample numbers panel.
+
+---
+
 ## 2026-10-23 — Document storage lockdown and marketing screenshots (ab5a6be..192b08c)
 
 Player documents are locked down, and the public website shows the app as it really looks.
