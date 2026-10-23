@@ -147,7 +147,8 @@ export default function NextMatchCard() {
             so the green, orange and red read on any team colour. */}
         {nextRsvp && (
           <div className="relative border-t border-border bg-card px-5 py-3 text-foreground sm:px-8">
-            <EventRsvp {...nextRsvp} compact={nextRsvp.canManage && !nextRsvp.mine.length} className="" />
+            {/* Staff get the same roster as the schedule: tap the totals to answer for any player. */}
+            <EventRsvp {...nextRsvp} className="" />
           </div>
         )}
       </section>
@@ -172,7 +173,7 @@ export default function NextMatchCard() {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-foreground">{event.title}</span>
                     <span className="block truncate text-xs text-muted-foreground">{event.location}</span>
-                    {rsvp && <EventRsvp {...rsvp} compact className="mt-2" />}
+                    {rsvp && <EventRsvp {...rsvp} compact={!rsvp.canManage} className="mt-2" />}
                   </span>
                   <span className="shrink-0 text-sm tabular-nums text-muted-foreground">{event.displayTime}</span>
                 </li>
