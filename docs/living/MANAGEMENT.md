@@ -10,6 +10,22 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-23 — Staff RSVPs on Home and feed + app schedules (fae444b..7288236)
+
+**Scope.** Two commits: staff RSVP management on Home, and a third schedule mode (feed + app) alongside feed-only
+and app-only.
+
+**Decision: feed events stay read-only in the combined mode.** The feed remains the source of truth for its own
+events; only events added in the app can be edited, and feed syncs never touch them. This avoids two systems
+fighting over the same game.
+
+**Risk.** Low. `sql/hybrid_schedule_migration.sql` (allows the new value) was applied before the push and
+verified.
+
+**Open.** Nothing new.
+
+---
+
 ## 2026-10-23 — RSVP icons everywhere, player sign-in and scorekeeper exits (6841484..dc00a16)
 
 **Scope.** Four commits: colour-coded RSVPs across Home, schedule and calendar with optional decline reasons;

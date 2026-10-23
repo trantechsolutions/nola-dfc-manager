@@ -26,6 +26,32 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-10-23 — Staff RSVPs on Home and feed + app schedules (fae444b..7288236)
+
+**Commits.**
+
+- `fae444b feat: let staff answer RSVPs for players from Home`
+- `7288236 feat: run a team's schedule from a feed and the app together`
+
+**Touched.** `NextMatchCard.jsx` (staff get the expandable roster). Hybrid: `useSchedule.js`
+(`mergeSavedEvents` keeps `source = 'app'` rows in hybrid, upcoming too, deduped by UID only; hybrid without a
+feed reads team_events alone; `syncCalendar(url, { source })` syncs the whole feed with `keepAppEvents`),
+`scheduleService.syncTeamEvents/pruneStaleUpcomingEvents` (`keepAppEvents` skips app rows in matching and
+pruning), `teamService` (`schedule_source` on create/update), `ScheduleSourceCard.jsx` (three options),
+new `ScheduleSourcePicker.jsx` (setup), `TeamOnboarding.jsx`, `TeamList.jsx`, `ScheduleView.jsx` (add/edit in
+hybrid, edit only `source = 'app'` rows, app subscribe link), `TeamSettingsView.jsx`, `App.jsx`
+(`handleSetScheduleSource('hybrid')` syncs the feed), team-calendar comment.
+
+**Schema/API.** `sql/hybrid_schedule_migration.sql`: `teams_schedule_source_check` allows 'hybrid'. Applied
+2026-10-23 and verified.
+
+**Tests.** Four new `mergeSavedEvents` cases (hybrid upcoming, same-time app event, feed rows still deferred to
+the feed, feed-only unchanged). Vitest 1342/1342; lint 0 errors; build passes.
+
+**Rollback.** Revert the two commits; move any hybrid teams to 'feed' or 'app' before restoring the old check.
+
+---
+
 ## 2026-10-23 — RSVP icons everywhere, player sign-in and scorekeeper exits (6841484..dc00a16)
 
 **Commits.**
