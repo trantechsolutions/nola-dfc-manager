@@ -33,6 +33,7 @@ import KeepView from '../views/film/KeepView';
 import { useKeepPreviewDatabase, LIVE_ENTRIES, LIVE_NEXT } from './keepPreview';
 import LiveGameView from '../views/film/LiveGameView';
 import { liveGameService } from '../services/liveGameService';
+import { teamColorVars } from '../utils/teamColor';
 import { fixtureGame } from '../film/lib/fixture';
 import { buildCompliance } from '../utils/compliance';
 import { Route, Routes } from 'react-router-dom';
@@ -328,6 +329,15 @@ function KeepPreview() {
 // page=live: a game in progress; a second goal arrives two seconds in, to show the celebration.
 function LivePreview() {
   useKeepPreviewDatabase();
+  const { setLocale } = useT();
+  // The app shell paints the team's colour and the shell preview sets the language; this page renders without
+  // either, so do both here.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const vars = teamColorVars(params.get('color') || '#0a7c3e');
+    Object.entries(vars).forEach(([name, value]) => document.documentElement.style.setProperty(name, value));
+    if (params.get('lang') === 'es') setLocale?.('es');
+  }, [setLocale]);
   Object.assign(liveGameService, {
     getEntries: async () => LIVE_ENTRIES,
     subscribe: (_team, _game, onEntry) => {

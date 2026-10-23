@@ -26,6 +26,40 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-10-23 — Document storage lockdown and marketing screenshots (ab5a6be..192b08c)
+
+**Commits.**
+
+- `ab5a6be fix: drop the bucket's original player-documents storage policies`
+- `192b08c feat: add app screenshots and match-day features to the marketing page`
+
+**Touched.**
+
+- `sql/fix_player_documents_storage_rls.sql`: drops `storage_documents_{select,insert,delete}` (dashboard
+  originals; select was `auth.role() = 'authenticated'`).
+- Marketing: `src/views/general/LandingView.jsx` (`#tour` section, `TOUR` list, features chat/live/film),
+  `landing.css` (`.landing-phone`), `src/i18n/{en,es}/landing.js`, `public/marketing/*.webp` (16 files,
+  ~820 KB: home/schedule/live/chat × light/dark × en/es, 780×1688).
+- `vite.config.js`: `marketing/**` excluded from the PWA precache.
+- Preview: `LivePreview` applies `teamColorVars` and `lang`; `keepPreview.js` game starts 20 minutes before load.
+
+**Schema/API.** Applied to production 2026-10-23 in one transaction (after a rollback dry run):
+`fix_access_control_migration`, `chat_admin_oversight_migration`, `fix_medical_release_admin_scope`,
+`fix_player_documents_storage_rls`, `live_game_migration`, `keeper_game_window_migration`. Verified: only
+`player_documents_*` remain on storage.objects for the bucket; keeper functions, policies and realtime present.
+Deployed: `team-calendar` (verify_jwt off), `notify-push`.
+
+**Rationale.** Screenshots come from the design preview so they contain no real families; images are chosen by
+theme (`dark:` classes) and locale.
+
+**Tests.** LandingView tests (feature count follows the strings) pass; Vitest 1332/1332; lint 0 errors; build
+passes; landing checked at 1280px light/dark and 390px.
+
+**Rollback.** Revert 192b08c. Re-adding the storage policies is not recommended; to undo ab5a6be's database
+effect, recreate them from the dashboard.
+
+---
+
 ## 2026-10-23 — Scorekeeper, live games and the Stats tab (b219849..a4e2d62)
 
 **Commits.**

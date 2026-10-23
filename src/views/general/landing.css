@@ -94,6 +94,18 @@
   opacity: 0.5;
 }
 
+/* A phone around each app screenshot: a dark bezel in both themes, so the screen reads as a device and not
+   as another card on the page. */
+.landing-phone {
+  overflow: hidden;
+  border: 7px solid color-mix(in srgb, var(--sidebar) 92%, black);
+  border-radius: 2.25rem;
+  background-color: var(--card);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, white 10%, transparent) inset,
+    0 18px 40px -18px color-mix(in srgb, black 45%, transparent);
+}
+
 /* Score-strip numerals: fixed-width so the four cells never jitter. */
 .landing-figure {
   font-variant-numeric: tabular-nums;

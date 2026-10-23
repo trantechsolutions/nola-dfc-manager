@@ -6,6 +6,7 @@ export default {
     features: 'Funciones',
     roles: 'Para quién es',
     workflow: 'Cómo funciona',
+    tour: 'Día de partido',
     calendar: 'Calendario público',
     signIn: 'Iniciar sesión',
     menu: 'Menú',
@@ -15,7 +16,7 @@ export default {
     badge: 'Hecho para el fútbol juvenil de EE. UU.',
     title: 'Dirige el club, no la hoja de cálculo.',
     subtitle:
-      'Cantera Manager reúne el plantel, el calendario, las cuotas, los documentos y los avisos a las familias en un solo lugar — desde el primer silbatazo de la temporada hasta la última línea de la contabilidad.',
+      'Cantera Manager reúne el plantel, el calendario, el chat del equipo, los marcadores en vivo, las cuotas y los documentos en un solo lugar — desde el primer silbatazo de la temporada hasta la última línea de la contabilidad.',
     ctaPrimary: 'Entrar a tu club',
     ctaSecondary: 'Ver un calendario público',
     note: 'Funciona sin conexión · Se instala en tu pantalla de inicio · English & Español',
@@ -40,6 +41,27 @@ export default {
     spreadsheets: { value: '1', label: 'solo lugar donde realmente vive el dinero' },
   },
 
+  tour: {
+    heading: 'Así se ve un sábado en Cantera',
+    sub: 'Pantallas reales de la aplicación, en un teléfono, con datos de ejemplo.',
+    home: {
+      title: 'El próximo partido, a la vista',
+      body: 'Hora, cancha, cómo llegar y lo que sigue — lo primero que ve cada familia.',
+    },
+    schedule: {
+      title: 'Asistencia, llegada y uniforme',
+      body: 'Las familias responden Va, Quizás o No puede, y saben a qué hora llegar y qué ponerse.',
+    },
+    live: {
+      title: 'El marcador, en vivo desde la banda',
+      body: 'El anotador toca la pantalla; los abuelos en casa ven cada gol, tarjeta y atajada al momento.',
+    },
+    chat: {
+      title: 'Un chat para todo el equipo',
+      body: 'Chats del equipo, de grupo y uno a uno, con mensajes sin leer — sin repartir números personales en un grupo de texto.',
+    },
+  },
+
   features: {
     heading: 'Todo lo que de verdad necesita un equipo de voluntarios',
     sub: 'Años de sábados por la mañana, cadenas de mensajes y recibos en una caja de zapatos — reemplazados por herramientas hechas justo para esto.',
@@ -56,8 +78,20 @@ export default {
       body: 'Registra el cheque de un patrocinador y repártelo en cascada sobre los saldos de los jugadores o en partes iguales. Cada distribución es reversible y muestra su cálculo.',
     },
     schedule: {
-      title: 'Un calendario que se sincroniza solo',
-      body: 'Suscríbete al feed de Ollie Sports, TeamSnap o Google Calendar. Partidos, entrenamientos y torneos se clasifican solos, y las fechas bloqueadas dejan la cancha libre.',
+      title: 'Lleva el calendario aquí, o sincronízalo',
+      body: 'Crea partidos y entrenamientos que se repiten, con hora de llegada, uniforme y confirmación de asistencia — o conserva el feed de Ollie Sports, TeamSnap o Google Calendar. Tú decides si un cambio avisa al equipo.',
+    },
+    chat: {
+      title: 'Chat del equipo',
+      body: 'Un chat para cada equipo, más conversaciones privadas y de grupo, con mensajes sin leer en cada teléfono. Los administradores del equipo pueden ver todos los chats, y todos lo saben.',
+    },
+    live: {
+      title: 'Marcador y estadísticas en vivo',
+      body: 'Un anotador para la banda que funciona sin señal. Las familias siguen el marcador, el minuto a minuto y las estadísticas — con una celebración en cada gol.',
+    },
+    film: {
+      title: 'Vídeos y jugadas destacadas',
+      body: 'El informe y los clips de cada partido, privados para el equipo, junto a los resultados de la temporada en la pestaña de Estadísticas.',
     },
     matchups: {
       title: 'Amistosos sin cadena de mensajes',
@@ -88,7 +122,7 @@ export default {
       title: 'Directivos y entrenadores',
       body: 'Todo el equipo en una pantalla: quién está en el plantel, quién está habilitado para jugar y qué hay esta semana.',
       p1: 'Plantel, camisetas y categorías',
-      p2: 'Edición del calendario y sincronización',
+      p2: 'Calendario, asistencia y chat del equipo',
       p3: 'Documentos y estado de cumplimiento',
     },
     treasurer: {
@@ -103,7 +137,7 @@ export default {
       body: 'Ábrelo camino a la cancha. Un toque para las únicas tres cosas que necesitabas saber.',
       p1: 'Tu saldo y lo que se debe',
       p2: 'Cómo pagar, con código QR',
-      p3: 'El horario y los formularios de tu hijo',
+      p3: 'El horario, el marcador en vivo y los formularios de tu hijo',
     },
   },
 
@@ -114,8 +148,8 @@ export default {
       body: 'Crea la temporada, importa el plantel desde un CSV y define cuotas y exenciones una sola vez.',
     },
     step2: {
-      title: 'Sincroniza el calendario',
-      body: 'Pega el feed de tu liga. Partidos, entrenamientos y torneos se acomodan solos.',
+      title: 'Arma el calendario',
+      body: 'Créalo en la aplicación o pega el feed de tu liga. Las familias confirman asistencia y reciben la hora de llegada y el uniforme.',
     },
     step3: {
       title: 'Cobra y registra',
@@ -162,7 +196,8 @@ export default {
   },
 
   footer: {
-    tagline: 'Operación de clubes de fútbol juvenil — plantel, calendario, dinero y cumplimiento en un solo lugar.',
+    tagline:
+      'Operación de clubes de fútbol juvenil — plantel, calendario, chat, marcadores en vivo, dinero y cumplimiento en un solo lugar.',
     product: 'Producto',
     account: 'Cuenta',
     changelog: 'Novedades',
