@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, Check, ChevronDown, CircleHelp, GitCommit, Globe, LogOut, Megaphone } from 'lucide-react';
+import { Bell, Check, ChevronDown, CircleHelp, GitCommit, Globe, LogOut, Megaphone, MessageCircle } from 'lucide-react';
 import { useT } from '../../i18n/I18nContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { useDestinations } from '../../hooks/useDestinations';
@@ -9,6 +9,8 @@ import { roleLabel } from '../../utils/roleLabel';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 import { pushService } from '../../services/pushService';
+import { useChat } from '../../context/ChatContext';
+import CountBadge from '../CountBadge';
 import IosInstallSheet from '../IosInstallSheet';
 import { APP_NAME } from '../../utils/constants';
 
@@ -56,6 +58,7 @@ export default function AppHeader() {
         </nav>
 
         <div className="ml-auto flex items-center gap-1">
+          <ChatButton />
           <NotificationsMenu />
           <AccountMenu />
         </div>
@@ -296,6 +299,33 @@ function AccountMenu() {
  * uninstalled iOS user gets the install route instead of a button that
  * cannot succeed.
  */
+/**
+ * The team chat, beside the bell: a speech bubble carrying how many messages are waiting across every team
+ * chat this person is in (context/ChatContext.jsx). Hidden for anyone who isn't in a team chat.
+ */
+function ChatButton() {
+  const { navigate, currentView } = useNavigation();
+  const { inbox, totalUnread } = useChat();
+  const { t } = useT();
+  if (!inbox.length) return null;
+  const label = totalUnread ? t('chat.openWithUnread', { n: totalUnread }) : t('chat.open');
+  return (
+    <button
+      type="button"
+      onClick={() => navigate('/chat')}
+      aria-label={label}
+      title={label}
+      aria-current={currentView === 'chat' ? 'page' : undefined}
+      className={`relative grid h-9 w-9 place-items-center rounded-full transition-colors hover:bg-muted hover:text-foreground ${
+        currentView === 'chat' ? 'text-foreground' : 'text-muted-foreground'
+      }`}
+    >
+      <MessageCircle size={18} />
+      {totalUnread > 0 && <CountBadge n={totalUnread} className="absolute -right-0.5 -top-0.5" />}
+    </button>
+  );
+}
+
 function NotificationsMenu() {
   const { selectedTeamId, teams = [], effectiveIsStaff } = useNavigation();
   const { t } = useT();

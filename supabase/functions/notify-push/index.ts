@@ -22,6 +22,8 @@ interface NotifyPayload {
   teamId?: string;
   clubId?: string;
   userIds?: string[];
+  // People to leave out, such as whoever sent the chat message being announced.
+  excludeUserIds?: string[];
   title: string;
   body: string;
   url?: string;
@@ -96,7 +98,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'title and body are required' }), { status: 400 });
     }
 
-    const targetUserIds = await resolveTargetUserIds(payload);
+    const exclude = new Set(payload.excludeUserIds || []);
+    const targetUserIds = (await resolveTargetUserIds(payload)).filter((id) => !exclude.has(id));
     if (targetUserIds.length === 0) {
       return new Response(JSON.stringify({ sent: 0, message: 'No target users found' }), { status: 200 });
     }

@@ -10,6 +10,29 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-22 — App-run schedule, team chat, phone film and access control (51a594b..0461e48)
+
+The schedule and the conversation around it now live in the app, and access to club data is tighter.
+
+- **The app can run your schedule.** In Team Settings, a team can choose to keep its outside calendar or run
+  the schedule here. Staff add games, practices and events; practices can repeat every week; each event can
+  say when to arrive and what to wear. Families mark each child Going, Maybe or Can't go, and can subscribe
+  their phone's calendar so changes show up on their own.
+- **Choose whether to notify.** When staff add, move or cancel an event, they decide whether the whole team
+  gets a notification.
+- **Team chat.** A chat bubble at the top shows how many messages you haven't read. Each team has a chat for
+  staff and families, and people can also talk one-on-one or in small groups with others on their team.
+  Team admins can read private and group chats, and everyone is told so when they start one.
+- **Names, not usernames.** Chat shows people's real names; anyone still showing a username is asked to add
+  their name.
+- **Game film on phones** is easier to read: a clear scoreboard at the top, full-width text, and lists you can
+  tap straight into.
+- **Tidier scrolling rows.** Rows of tabs and filters no longer show a scroll bar under them.
+- **Safer access.** People with only a parent or scorekeeper role no longer see other teams' information, and
+  only admins can give out roles.
+
+---
+
 ## 2026-10-22 — Game film inside the manager (ab4c813..ab4c813)
 
 Game film now lives inside the app, so there are no film passwords to remember.

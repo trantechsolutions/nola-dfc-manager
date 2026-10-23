@@ -2,8 +2,7 @@ import { useEffect } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import PageTabs from '../../components/layout/PageTabs';
-import { FilmProvider, formatDate, useFilm, useFilmText } from '../../film/FilmContext';
-import { GAME_PAGES } from '../../film/pages';
+import { FilmProvider, useFilm, useFilmText } from '../../film/FilmContext';
 import { FilmStatus } from './filmUi';
 import FilmSeason from './FilmSeason';
 import FilmLibrary from './FilmLibrary';
@@ -83,46 +82,37 @@ function FilmShell() {
 }
 
 /**
- * Where you are in the film, each step a way back: Game film › Library › vs Opponent · date › Match report.
- * The season overview is the film's home, so "Game film" leads there.
+ * Inside a game, the way back out: Game film › Library › vs Opponent, on one line. The game's tabs already
+ * say which of its pages you're on, and on the season and library pages the tabs are the navigation, so the
+ * trail only appears in a game.
  */
 function FilmBreadcrumbs() {
   const { teamId, games } = useFilm();
-  const { t, locale } = useFilmText();
+  const { t } = useFilmText();
   const { pathname } = useLocation();
   const base = `/film/${teamId}`;
-  const rest = pathname.startsWith(base) ? pathname.slice(base.length) : '';
-  const [, section, slug, page] = rest.split('/');
+  const [, section, slug] = (pathname.startsWith(base) ? pathname.slice(base.length) : '').split('/');
   const g = section === 'game' ? games.find((x) => x.slug === slug) : null;
+  if (!g) return null;
 
-  const crumbs = [{ label: t('appTitle'), to: base }];
-  if (section === 'library' || g) crumbs.push({ label: t('library'), to: `${base}/library` });
-  else crumbs.push({ label: t('seasonOverview') });
-  if (g) {
-    const report = `${base}/game/${g.slug}/report`;
-    crumbs.push({ label: `${t('vs')} ${g.opponent} · ${formatDate(g.date, locale, 'short')}`, to: report });
-    if (GAME_PAGES[page]) crumbs.push({ label: t(GAME_PAGES[page]) });
-  }
-  // The last step is the page you're on, so it isn't a link.
-  crumbs[crumbs.length - 1] = { label: crumbs[crumbs.length - 1].label };
-
+  const crumbs = [
+    { label: t('appTitle'), to: base },
+    { label: t('library'), to: `${base}/library` },
+  ];
   return (
     <nav aria-label={t('breadcrumb')}>
-      <ol className="flex flex-wrap items-center gap-x-1 gap-y-1 text-xs font-semibold text-muted-foreground">
-        {crumbs.map((c, i) => (
-          <li key={i} className="flex items-center gap-x-1">
-            {i > 0 && <ChevronRight size={12} aria-hidden="true" className="shrink-0" />}
-            {c.to ? (
-              <Link to={c.to} className="hover:text-foreground hover:underline">
-                {c.label}
-              </Link>
-            ) : (
-              <span aria-current="page" className="text-foreground">
-                {c.label}
-              </span>
-            )}
+      <ol className="flex min-w-0 items-center gap-x-1 whitespace-nowrap text-sm font-semibold text-muted-foreground">
+        {crumbs.map((c) => (
+          <li key={c.to} className="flex shrink-0 items-center gap-x-1">
+            <Link to={c.to} className="inline-flex min-h-9 items-center hover:text-foreground hover:underline">
+              {c.label}
+            </Link>
+            <ChevronRight size={14} aria-hidden="true" className="shrink-0" />
           </li>
         ))}
+        <li className="min-w-0 truncate text-foreground" aria-current="page">
+          {t('vs')} {g.opponent}
+        </li>
       </ol>
     </nav>
   );

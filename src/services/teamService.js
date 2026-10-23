@@ -12,6 +12,8 @@ export const teamService = {
       gender: t.gender,
       tier: t.tier,
       icalUrl: t.ical_url,
+      // Who runs the schedule: 'feed' (a calendar feed) or 'app' (sql/app_schedule_migration.sql).
+      scheduleSource: t.schedule_source || 'feed',
       colorPrimary: t.color_primary,
       colorSecondary: t.color_secondary,
       status: t.status,
@@ -33,6 +35,8 @@ export const teamService = {
       gender: data.gender,
       tier: data.tier,
       icalUrl: data.ical_url,
+      // Who runs the schedule: 'feed' (a calendar feed) or 'app' (sql/app_schedule_migration.sql).
+      scheduleSource: data.schedule_source || 'feed',
       colorPrimary: data.color_primary,
       colorSecondary: data.color_secondary,
       status: data.status,

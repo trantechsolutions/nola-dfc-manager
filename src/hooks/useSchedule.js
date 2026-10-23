@@ -105,6 +105,10 @@ export function mergeSavedEvents(feedEvents, savedEvents, { feedFailed = false, 
         timestamp: Math.floor(jsDate.getTime() / 1000),
         eventType: row.eventType,
         isCancelled: row.isCancelled || false,
+        // Set on events the app runs (sql/app_schedule_migration.sql); absent on feed events.
+        endTimestamp: row.endDate ? Math.floor(new Date(row.endDate).getTime() / 1000) : null,
+        arrivalMinutes: row.arrivalMinutes ?? null,
+        uniform: row.uniform || null,
         teamId: team?.id || null,
         teamName: team?.name || null,
         ...toDisplayFields(jsDate),
@@ -139,7 +143,26 @@ export const useSchedule = (user, team = null) => {
     }
     setBlackoutDates(blackoutsList);
 
-    // 2. Determine iCal URL
+    // 2. A schedule the app runs is read from team_events alone: no feed.
+    if (team?.scheduleSource === 'app') {
+      let saved = [];
+      try {
+        saved = await supabaseService.getTeamEvents(team.id);
+      } catch (err) {
+        console.warn('Skipping saved events:', err.message);
+      }
+      const now = Math.floor(Date.now() / 1000);
+      const all = mergeSavedEvents([], saved, { feedFailed: true, now, team });
+      setEvents({
+        upcoming: all.filter((e) => e.timestamp >= now && !e.isCancelled).sort((a, b) => a.timestamp - b.timestamp),
+        past: all.filter((e) => e.timestamp < now).sort((a, b) => b.timestamp - a.timestamp),
+      });
+      setLoading(false);
+      done();
+      return;
+    }
+
+    // 3. Determine iCal URL
     const icsUrl = team?.icalUrl || LEGACY_ICAL_URL;
     if (!icsUrl) {
       setEvents({ upcoming: [], past: [] });
@@ -201,7 +224,7 @@ export const useSchedule = (user, team = null) => {
     });
     setLoading(false);
     done();
-  }, [team?.id, team?.icalUrl]);
+  }, [team?.id, team?.icalUrl, team?.scheduleSource]);
 
   useEffect(() => {
     fetchScheduleData();
@@ -246,6 +269,33 @@ export const useSchedule = (user, team = null) => {
     [team?.id, team?.icalUrl],
   );
 
+  // Switching a team to run its schedule here: everything the feed lists (practices too, not only the games a
+  // sync keeps) is copied into team_events once, owned by the app from then on.
+  const importFeed = useCallback(async () => {
+    const icsUrl = team?.icalUrl;
+    if (!icsUrl || !team?.id) return 0;
+    const icsString = await fetchIcs(icsUrl);
+    const vcalendar = new ICAL.Component(ICAL.parse(icsString));
+    const parsed = vcalendar.getAllSubcomponents('vevent').map((vevent) => {
+      const event = new ICAL.Event(vevent);
+      const descProp = vevent.getFirstPropertyValue('description');
+      const description = descProp ? String(descProp) : '';
+      const status = vevent.getFirstPropertyValue('status') || 'CONFIRMED';
+      const eventType = classifyEvent(event.summary, description, detectFeedSource(icsUrl));
+      const title = eventType === 'tournament' ? extractTournamentName(description) || event.summary : event.summary;
+      return {
+        id: event.uid,
+        title,
+        description,
+        location: event.location || 'TBD',
+        timestamp: event.startDate.toUnixTime(),
+        eventType,
+        isCancelled: status.toUpperCase() === 'CANCELLED',
+      };
+    });
+    return await supabaseService.syncTeamEvents(team.id, groupTournaments(parsed), { source: 'app' });
+  }, [team?.id, team?.icalUrl]);
+
   const toggleBlackout = async (dateStr) => {
     const isCurrentlyBlackout = blackoutDates.includes(dateStr);
     try {
@@ -267,6 +317,7 @@ export const useSchedule = (user, team = null) => {
     toggleBlackout,
     refreshSchedule: fetchScheduleData,
     syncCalendar,
+    importFeed,
     loading,
     loadedFor,
   };

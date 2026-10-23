@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 export default function PageTabs({ tabs = [], active, onChange, label, trailing, className }) {
   return (
     <div className={cn('page-tabs', className)}>
-      <div role="tablist" aria-label={label} className="flex h-full min-w-0 flex-1 gap-1 overflow-x-auto">
+      <div role="tablist" aria-label={label} className="no-scrollbar flex h-full min-w-0 flex-1 gap-1 overflow-x-auto">
         {tabs.map((tab) => {
           const isActive = tab.id === active;
           return (

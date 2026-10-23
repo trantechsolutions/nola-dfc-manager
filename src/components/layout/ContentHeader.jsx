@@ -36,7 +36,10 @@ export default function ContentHeader() {
     <div className="app-content-header">
       <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
       {siblings.length > 0 && (
-        <nav aria-label={t('nav.sectionPages')} className="-mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 pb-1">
+        <nav
+          aria-label={t('nav.sectionPages')}
+          className="no-scrollbar -mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 pb-1"
+        >
           {siblings.map((item) => {
             const isActive = item.id === currentView;
             return (

@@ -10,6 +10,35 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-22 — App-run schedule, team chat, phone film and access control (51a594b..0461e48)
+
+**Scope.** Four commits, 50 files, ~5,350 insertions: app-run scheduling, team chat with private and group
+chats, a phone redesign of the game film, a scrollbar fix, and an access-control fix found while building chat.
+
+**Decision: the app can replace the external calendar, per team.** A setting chooses the feed or the app;
+switching imports the feed once so nothing is lost. Matches what families expect from Ollie or TeamSnap
+(RSVPs, repeating practices, a subscribe link) without a second app.
+
+**Decision: notifications are opt-in per change.** Staff tick "Notify the team" on each save, so routine edits
+don't page every family.
+
+**Decision: private chats are visible to team admins.** Youth-sports safeguarding expects no hidden
+adult-to-family conversations. Team managers, club admins and super admins can read and moderate a team's
+private and group chats; members are told up front. Who may start chats is a per-team setting (everyone /
+staff / nobody).
+
+**Risk: access-control gap (high, fixed in code, pending the database run).** On the live database any team
+role could give itself the club admin role, and every team role had club-wide access to players, guardians,
+documents and more. The fix limits club-wide access to staff and role-granting to admins. Two existing fixes
+were found unapplied: medical forms readable by all club staff, and the player-documents storage bucket
+readable by any signed-in user. All four SQL files need running in order.
+
+**Open.** Run the access-control migration, the chat oversight migration, and the two existing medical and
+storage fixes. Staff roles (treasurer, assistant coach) still see other teams' players club-wide by design; a
+narrower per-team model is a possible next step. notify-push does not check the caller.
+
+---
+
 ## 2026-10-22 — Game film inside the manager (ab4c813..ab4c813)
 
 **Scope.** First phase of moving the stand-alone game film site into the

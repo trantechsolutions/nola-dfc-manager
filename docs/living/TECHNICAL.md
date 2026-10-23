@@ -26,6 +26,61 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-10-22 — App-run schedule, team chat, phone film and access control (51a594b..0461e48)
+
+**Commits.**
+
+- `51a594b fix: stop team roles from granting themselves club-wide access`
+- `255cd36 fix: hide scrollbars on sideways-scrolling tab and chip rows`
+- `6bbeac1 feat: rework the game film pages for phones`
+- `0461e48 feat: run the schedule in the app and add team chat`
+
+**Touched.**
+
+- SQL: `app_schedule_migration.sql`, `team_chat_migration.sql`, `chat_threads_migration.sql`,
+  `chat_admin_oversight_migration.sql`, `fix_access_control_migration.sql` (new)
+- Edge functions: `team-calendar` (new, deploy with `--no-verify-jwt`), `notify-push` (+ `excludeUserIds`)
+- Scheduling: `utils/eventSeries.js`, `components/EventEditor.jsx`, `EventRsvp.jsx`, `ScheduleSourceCard.jsx`,
+  `services/scheduleService.js`, `teamService.js`, `hooks/useSchedule.js`, `views/team/ScheduleView.jsx`,
+  `TeamSettingsView.jsx`, `App.jsx`, `AppRoutes.jsx`, `utils/panelRoute.js` (`EVENT_EDITOR`)
+- Chat: `views/general/ChatView.jsx`, `context/ChatContext.jsx`, `services/chatService.js`,
+  `components/CountBadge.jsx`, `ChatSettingsCard.jsx`, header bubble in `layout/AppHeader.jsx`, `/chat`
+  route, `i18n/{en,es}/chat.js`, `utils/pageMeta.js`
+- Film: `views/film/*` (score bug, game-only breadcrumb, sections, report rows, compact timeline)
+- Scrollbars: `.no-scrollbar` in `index.css`; `PageTabs`, `ContentHeader`, `SettingsShell`,
+  `EvaluationSessionDetail`, the schedule filter row
+- Preview: `page=schedule&source=app`, `page=chat` with sample data
+
+**Schema/API.**
+
+- `teams.schedule_source` ('feed' | 'app'); `team_events` + `end_date`, `arrival_minutes`, `uniform`,
+  `opponent`, `is_home`, `series_id`, `series_detached`, `source`; `team_event_series`, `event_rsvps`,
+  `team_calendar_tokens` + `team_calendar_token()`; `schedule_editor_team_ids()`; team_events writes limited to
+  schedule editors.
+- `team_messages` (+ `thread_id`), `team_chat_reads`, `chat_threads`, `chat_thread_members`,
+  `team_chat_settings`; functions `chat_member`, `chat_staff`, `chat_display_name`, `chat_people`,
+  `chat_start`, `chat_add_members`, `chat_leave`, `chat_rename`, `chat_close`, `chat_set_policy`,
+  `chat_mark_thread_read`, `chat_inbox`, `chat_oversight`, `chat_can_start`, `chat_can_manage`.
+- `user_club_ids()` excludes 'parent'/'scorekeeper'; new `can_grant_role()`; rewritten `user_roles`,
+  `invitations`, `teams` (insert/update/delete/select), `clubs` (select/update) policies.
+
+**Rationale.** Scheduling reuses `team_events` so the feed and app paths share one event shape; cancelled
+upcoming events are re-added only on the schedule screen so other consumers of `events.upcoming` stay
+unchanged. Chat names resolve at read time through `chat_display_name()` so corrections apply to history.
+Access control was fixed at the `user_club_ids()` root (17 tables) rather than rewriting each policy, then
+tightened where even staff shouldn't write.
+
+**Tests.** `vitest run`: 92 files, 1309 tests passing (18 new for `eventSeries`). `npm run build` clean;
+ESLint 0 errors. All five migrations run against production in a rolled-back transaction except the first
+four already applied; `fix_access_control_migration.sql` + `chat_admin_oversight_migration.sql` dry-run
+cleanly with no residue. Phone and desktop screenshots via the preview harness.
+
+**Rollback.** Revert the four commits. Database: the access-control migration is reversible by re-creating
+the previous `user_club_ids()` and policies from `rls_policies.sql`; the chat and schedule tables are additive
+and can be dropped. Delete `team-calendar` with `supabase functions delete team-calendar`.
+
+---
+
 ## 2026-10-22 — Game film inside the manager (ab4c813..ab4c813)
 
 **Commits.** `ab4c813 feat: bring the game film into the manager`

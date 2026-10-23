@@ -22,7 +22,33 @@ import AttentionStrip from '../components/AttentionStrip';
 import TeamOverviewView from '../views/team/TeamOverviewView';
 import ParentView from '../views/team/ParentView';
 import ScheduleView from '../views/team/ScheduleView';
+import FilmView from '../views/film/FilmView';
+import { filmService } from '../services/filmService';
+import { scheduleService } from '../services/scheduleService';
+import { chatService } from '../services/chatService';
+import { ChatProvider } from '../context/ChatContext';
+import ChatView from '../views/general/ChatView';
+import { fixtureGame } from '../film/lib/fixture';
 import { buildCompliance } from '../utils/compliance';
+import { Route, Routes } from 'react-router-dom';
+
+// ── Sample game film ──────────────────────────────────────────────────────
+// Real games can be dropped into src/preview/film.local/sample.json
+// ({ shortName, games, breakdowns }); *.local is git-ignored, so they never
+// leave this machine. Without it, the schema's test fixture stands in.
+const FILM_SAMPLE = Object.values(import.meta.glob('./film.local/*.json', { eager: true }))[0]?.default;
+const FILM = FILM_SAMPLE || {
+  shortName: 'DFC',
+  games: [fixtureGame()].map(({ coaches: _c, ...g }) => g),
+  breakdowns: { [fixtureGame().slug]: fixtureGame().coaches },
+};
+Object.assign(filmService, {
+  getLibrary: async () => ({ shortName: FILM.shortName, games: FILM.games }),
+  isCoach: async () => true,
+  getBreakdowns: async () => FILM.breakdowns,
+  getSquadRows: async () => ({ players: [], positions: [], lineups: [] }),
+  getClipLinks: async () => ({ urls: {}, expiresIn: 3600 }),
+});
 
 // ── Sample season ─────────────────────────────────────────────────────────
 // Dates are built relative to today so "next up", "tomorrow" and the
@@ -76,7 +102,154 @@ const TEAM_EVENTS = [...UPCOMING, ...PAST].map((e) => ({
   typeLocked: false,
   scoreFor: SCORES[e.id]?.[0] ?? null,
   scoreAgainst: SCORES[e.id]?.[1] ?? null,
+  // What an event the app runs carries (source=app): an arrive-by, a uniform and an end time.
+  ...(e.id === 'u1'
+    ? {
+        arrivalMinutes: 45,
+        uniform: 'White jerseys, black socks',
+        endDate: new Date((e.timestamp + 5400) * 1000).toISOString(),
+      }
+    : {}),
+  ...(e.id === 'u2' ? { arrivalMinutes: 15, seriesId: 'series-1' } : {}),
 }));
+
+// ── Sample team chat ──────────────────────────────────────────────────────
+// Kept in memory: page=chat shows the conversation, and every page shows the
+// unread count on the chat bubble in the top bar.
+const ago = (minutes) => new Date(Date.now() - minutes * 60000).toISOString();
+const CHAT = [
+  ['m1', 'u-dana', 'Coach Dana', 'staff', 'Practice moves to Field 3 tonight, same time.', ago(60 * 26)],
+  ['m2', 'u-sam', 'Sam Thompson', 'family', 'Thanks! Maya will be there.', ago(60 * 25)],
+  ['m3', 'u-ava', 'Kim Broussard', 'family', 'Who has snacks Saturday?', ago(95)],
+  ['m4', 'u-dana', 'Coach Dana', 'staff', 'Landry family has snacks. Arrive 8:15 for warm-up, white jerseys.', ago(90)],
+  ['m5', 'u-dana', 'Coach Dana', 'staff', 'Forecast says rain; check here Saturday morning before you leave.', ago(88)],
+  ['m6', 'u-lila', 'Mai Nguyen', 'family', 'Lila has a cold, she will sit this one out.', ago(12)],
+].map(([id, authorId, authorName, authorRole, body, createdAt]) => ({
+  id,
+  teamId: 't1',
+  authorId,
+  authorName,
+  authorRole,
+  body,
+  clientId: null,
+  createdAt,
+  editedAt: null,
+  deletedAt: null,
+}));
+const PEOPLE = [
+  { userId: 'u-dana', name: 'Dana Whitfield', role: 'staff', detail: '' },
+  { userId: 'u-ray', name: 'Ray Castillo', role: 'staff', detail: '' },
+  { userId: 'u-sam', name: 'Sam Thompson', role: 'family', detail: 'Maya' },
+  { userId: 'u-ava', name: 'Kim Broussard', role: 'family', detail: 'Ava' },
+  { userId: 'u-zoe', name: 'Paul Landry', role: 'family', detail: 'Zoe' },
+  { userId: 'u-lila', name: 'Mai Nguyen', role: 'family', detail: 'Lila' },
+];
+const GROUP_CHAT = [
+  ['g1', 'u-zoe', 'Paul Landry', 'family', 'Can anyone take Zoe Saturday? I work till 10.', ago(40)],
+  ['g2', 'u-sam', 'Sam Thompson', 'family', 'We have room, pick her up at 7:45.', ago(35)],
+  ['g3', 'u-dana', 'Dana Whitfield', 'staff', 'Thank you both!', ago(30)],
+].map(([id, authorId, authorName, authorRole, body, createdAt]) => ({
+  id,
+  teamId: 't1',
+  threadId: 'c-carpool',
+  authorId,
+  authorName,
+  authorRole,
+  body,
+  clientId: null,
+  createdAt,
+  editedAt: null,
+  deletedAt: null,
+}));
+const inboxRow = (row) => ({
+  members: null,
+  closed: false,
+  canStart: true,
+  canManage: true,
+  teamId: 't1',
+  teamName: 'U12 Girls Premier',
+  ...row,
+});
+Object.assign(chatService, {
+  getInbox: async () => [
+    inboxRow({
+      kind: 'team',
+      id: 't1',
+      title: 'U12 Girls Premier',
+      unread: 3,
+      lastBody: CHAT[CHAT.length - 1].body,
+      lastAuthor: 'Mai Nguyen',
+      lastAt: CHAT[CHAT.length - 1].createdAt,
+    }),
+    inboxRow({
+      kind: 'group',
+      id: 'c-carpool',
+      title: 'Saturday carpool',
+      unread: 1,
+      lastBody: 'Thank you both!',
+      lastAuthor: 'Dana Whitfield',
+      lastAt: ago(30),
+      members: 3,
+    }),
+    inboxRow({
+      kind: 'direct',
+      id: 'c-sam',
+      title: 'Sam Thompson',
+      unread: 0,
+      lastBody: 'Will do, see you then.',
+      lastAuthor: 'Sam Thompson',
+      lastAt: ago(60 * 30),
+      members: 2,
+    }),
+  ],
+  getMessages: async (conv) => (conv.kind === 'team' ? CHAT : conv.id === 'c-carpool' ? GROUP_CHAT : []),
+  getPeople: async () => PEOPLE,
+  getMembers: async (id) => (id === 'c-carpool' ? ['u-dana', 'u-sam', 'u-zoe'] : ['u-dana', 'u-sam']),
+  start: async () => 'c-carpool',
+  send: async (conv, body, clientId) => ({
+    id: `sent-${clientId}`,
+    teamId: 't1',
+    threadId: conv.kind === 'team' ? null : conv.id,
+    authorId: 'u-dana',
+    authorName: 'Dana Whitfield',
+    authorRole: 'staff',
+    body,
+    clientId,
+    createdAt: new Date().toISOString(),
+    editedAt: null,
+    deletedAt: null,
+  }),
+  markRead: async () => {},
+  getStartPolicy: async () => 'everyone',
+  // A team admin's review list: a private chat between two families.
+  getOversight: async () => [
+    {
+      kind: 'direct',
+      id: 'c-review',
+      teamId: 't1',
+      teamName: 'U12 Girls Premier',
+      title: 'Kim Broussard, Paul Landry',
+      unread: 0,
+      lastBody: 'Can you drop Ava off after practice?',
+      lastAuthor: 'Kim Broussard',
+      lastAt: ago(120),
+      members: 2,
+      closed: false,
+      canStart: false,
+      canManage: true,
+      oversight: true,
+    },
+  ],
+});
+
+// source=app: the app runs the schedule, so RSVPs and the subscribe link come from it. Answers are kept
+// in memory for the preview.
+const SAMPLE_RSVPS = [
+  { eventId: 'db-u1', playerId: 'p-2', status: 'going' },
+  { eventId: 'db-u1', playerId: 'p-3', status: 'going' },
+  { eventId: 'db-u1', playerId: 'p-4', status: 'maybe' },
+  { eventId: 'db-u1', playerId: 'p-5', status: 'no' },
+];
 
 const isoIn = (days) => new Date((now + days * DAY) * 1000).toISOString().slice(0, 10);
 
@@ -135,7 +308,9 @@ export default function PreviewApp({ params }) {
   const { t, setLocale } = useT();
   const role = params.get('role') === 'parent' ? 'parent' : 'staff';
   const isStaff = role === 'staff';
-  const [view, setView] = useState(params.get('page') === 'schedule' ? 'schedule' : 'dashboard');
+  const [view, setView] = useState(
+    { schedule: 'schedule', film: 'film/t1', chat: 'chat' }[params.get('page')] || 'dashboard',
+  );
 
   useEffect(() => {
     if (params.get('lang') === 'es') setLocale?.('es');
@@ -151,7 +326,24 @@ export default function PreviewApp({ params }) {
     icalUrl: 'https://calendar.google.com/calendar/ical/demo/public/basic.ics',
     activeSeasonId: SEASON,
     paymentInfo: 'Checks payable to NOLA DFC, or Venmo @NOLADFC-U12G.',
+    scheduleSource: params.get('source') === 'app' ? 'app' : 'feed',
   };
+  if (team.scheduleSource === 'app') {
+    Object.assign(scheduleService, {
+      getRsvps: async () => SAMPLE_RSVPS,
+      setRsvp: async () => {},
+      getCalendarFeedUrl: async () => 'https://example.supabase.co/functions/v1/team-calendar?t=preview',
+      getSeries: async () => ({
+        id: 'series-1',
+        weekdays: [2, 4],
+        startTime: '18:00',
+        endTime: '19:30',
+        startsOn: isoIn(-20),
+        endsOn: isoIn(40),
+        skipBlackouts: true,
+      }),
+    });
+  }
   const players = isStaff ? PLAYERS : PLAYERS.slice(0, 1);
   const compliance = buildCompliance({ items: CHECKLIST, responses: RESPONSES, players, seasonId: SEASON });
 
@@ -223,7 +415,13 @@ export default function PreviewApp({ params }) {
   };
 
   const page =
-    view === 'schedule' ? (
+    view === 'chat' ? (
+      <ChatView user={{ id: 'u-dana' }} />
+    ) : view.startsWith('film') ? (
+      <Routes>
+        <Route path="/film/:teamId/*" element={<FilmView />} />
+      </Routes>
+    ) : view === 'schedule' ? (
       <ScheduleView
         events={events}
         blackoutDates={[]}
@@ -234,6 +432,9 @@ export default function PreviewApp({ params }) {
         onScoreChange={isStaff ? async () => {} : null}
         selectedSeason={SEASON}
         seasonIds={[SEASON]}
+        players={PLAYERS}
+        myPlayers={isStaff ? [] : players}
+        onScheduleChanged={async () => {}}
       />
     ) : (
       <div className={`space-y-6 pt-4 md:pt-6 ${isStaff ? '' : 'mx-auto max-w-3xl'}`}>
@@ -289,7 +490,9 @@ export default function PreviewApp({ params }) {
       <DataContext.Provider value={data}>
         <FinanceContext.Provider value={finance}>
           <ScheduleContext.Provider value={{ events, scheduleLoading: loading }}>
-            <AppShell>{page}</AppShell>
+            <ChatProvider userId="u-dana">
+              <AppShell>{page}</AppShell>
+            </ChatProvider>
           </ScheduleContext.Provider>
         </FinanceContext.Provider>
       </DataContext.Provider>

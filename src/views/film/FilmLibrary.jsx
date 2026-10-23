@@ -1,13 +1,12 @@
 import { Link } from 'react-router-dom';
-import { FileText, PlayCircle } from 'lucide-react';
-import { useFilm, useFilmText } from '../../film/FilmContext';
-import { T } from '../../film/RichText';
-import { Eyebrow, Res, outcome } from './filmUi';
+import { PlayCircle } from 'lucide-react';
+import { formatDate, useFilm, useFilmText } from '../../film/FilmContext';
+import { Res, outcome, stripVenue } from './filmUi';
 
 /** Every game in the library, newest first, with its record so far. */
 export default function FilmLibrary() {
   const { games: all, teamId } = useFilm();
-  const { t, locale } = useFilmText();
+  const { t, tx, locale } = useFilmText();
   // Newest first; same-day games keep their published order.
   const games = all
     .map((g, i) => ({ g, i }))
@@ -18,20 +17,6 @@ export default function FilmLibrary() {
   const d = results.filter((r) => r === 'D').length;
   const gf = games.reduce((s, g) => s + g.score.us, 0);
   const ga = games.reduce((s, g) => s + g.score.them, 0);
-
-  const day = (iso) => {
-    const [y, m, dd] = iso.split('-').map(Number);
-    const dt = new Date(Date.UTC(y, m - 1, dd));
-    return {
-      day: new Intl.DateTimeFormat(locale, {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-        timeZone: 'UTC',
-      }).format(dt),
-      year: y,
-    };
-  };
 
   return (
     <div className="space-y-4">
@@ -52,51 +37,43 @@ export default function FilmLibrary() {
           </b>
         </span>
       </div>
-      <Eyebrow>{t('listIntro')}</Eyebrow>
-
-      <ol className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card shadow-sm">
+      {/* Each row opens the game's report; the play button beside it goes straight to the clips. */}
+      <ol className="-mx-4 divide-y divide-border border-y border-border bg-card sm:mx-0 sm:rounded-md sm:border sm:shadow-sm">
         {games.map((g) => {
-          const f = day(g.date);
           const base = `/film/${teamId}/game/${g.slug}`;
+          const context = stripVenue(tx(g.listContext));
+          const where = g.home === null ? '' : g.home ? t('homeShort') : t('awayShort');
           return (
-            <li key={g.slug} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-              <p className="w-28 shrink-0 text-xs text-muted-foreground">
-                <b className="block text-sm text-foreground">{f.day}</b>
-                {f.year}
-                {g.time ? ` · ${g.time}` : ''}
-              </p>
-              <div className="min-w-0 flex-1">
-                <Link to={`${base}/report`} className="text-base font-bold text-foreground hover:underline">
-                  <span className="mr-1 text-xs font-semibold uppercase text-muted-foreground">{t('vs')}</span>
-                  {g.opponent}
-                </Link>
-                <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                  <Res r={outcome(g.score.us, g.score.them)} />
-                  <b className="tabular-nums text-foreground">
-                    {g.score.us}–{g.score.them}
-                  </b>
-                  <span>·</span>
-                  <T t={g.listContext} />
-                </p>
-              </div>
-              <div className="flex gap-2">
-                {g.highlights.clips.length > 0 && (
-                  <Link
-                    to={`${base}/highlights`}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:bg-background"
-                  >
-                    <PlayCircle size={13} />
-                    {t('highlights')}
-                  </Link>
-                )}
+            <li key={g.slug} className="flex items-center">
+              <Link
+                to={`${base}/report`}
+                aria-label={`${t('matchReport')}: ${t('vs')} ${g.opponent}, ${g.score.us}–${g.score.them}`}
+                className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 hover:bg-background"
+              >
+                <Res r={outcome(g.score.us, g.score.them)} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-bold text-foreground">{g.opponent}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {[formatDate(g.date, locale, 'short'), g.time, where].filter(Boolean).join(' · ')}
+                  </span>
+                  {context && <span className="block truncate text-xs text-muted-foreground/80">{context}</span>}
+                </span>
+                <span className="shrink-0 font-numeral text-2xl font-bold tabular-nums text-foreground">
+                  {g.score.us}–{g.score.them}
+                </span>
+              </Link>
+              {g.highlights.clips.length > 0 ? (
                 <Link
-                  to={`${base}/report`}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold hover:bg-background"
+                  to={`${base}/highlights`}
+                  aria-label={`${t('highlights')}: ${t('vs')} ${g.opponent}`}
+                  title={t('highlights')}
+                  className="mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-background hover:text-foreground"
                 >
-                  <FileText size={13} />
-                  {t('matchReport')}
+                  <PlayCircle size={22} />
                 </Link>
-              </div>
+              ) : (
+                <span className="mr-2 w-11 shrink-0" aria-hidden="true" />
+              )}
             </li>
           );
         })}

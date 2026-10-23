@@ -26,6 +26,8 @@ export default {
   },
 
   toast: {
+    scheduleNowApp: 'The app now runs the schedule. {{n}} events copied in.',
+    scheduleNowFeed: 'The calendar feed runs the schedule again.',
     categoryUpdated: 'Category updated',
     categoryCreated: 'Category created',
     categoryDeleted: 'Category deleted',

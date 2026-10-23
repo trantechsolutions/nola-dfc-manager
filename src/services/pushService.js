@@ -117,6 +117,17 @@ export const pushService = {
     return data;
   },
 
+  // A new team chat message, to everyone on the team but its sender. Notifications share the chat's address
+  // as their tag, so a burst of messages stacks into one notification per team.
+  // A private or group chat names its members (userIds) instead of a team.
+  async chatMessage({ teamId, userIds, title, body, url, excludeUserIds = [] }) {
+    const { data, error } = await supabase.functions.invoke('notify-push', {
+      body: { eventType: 'chat', teamId, userIds, title, body, url, excludeUserIds },
+    });
+    if (error) throw error;
+    return data;
+  },
+
   // Notify specific user IDs (used for targeted alerts like compliance)
   async notifyUsers({ userIds, title, body, url = '/', eventType = 'alert' }) {
     const { data, error } = await supabase.functions.invoke('notify-push', {

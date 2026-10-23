@@ -14,6 +14,7 @@ const STATIC_PAGES = {
   'club-players': { key: 'nav.players', fallback: 'Players', section: 'club' },
   // /film/:teamId/… — every page under it is the team's game film.
   film: { key: 'film.appTitle', fallback: 'Game film', section: 'team' },
+  chat: { key: 'chat.title', fallback: 'Chat', section: null },
 };
 
 // Nav groups that carry no explicit `section` on their items.
