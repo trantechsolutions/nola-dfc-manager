@@ -10,6 +10,26 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-23 — RSVP icons everywhere, player sign-in and scorekeeper exits (6841484..dc00a16)
+
+**Scope.** Four commits: colour-coded RSVPs across Home, schedule and calendar with optional decline reasons;
+player self sign-in; a scorekeeper navigation fix; and de-localised marketing sample data.
+
+**Decision: players see the team side only.** Schedule, their own RSVP, live games, film and team chat. Money,
+documents, medical forms and the checklist stay with guardians. Players are kept out of private and group chats
+for safeguarding.
+
+**Decision: phone sign-in waits for Twilio.** It is built but hidden until an SMS provider is connected in
+Supabase (about 1¢ a text plus a monthly number).
+
+**Risk (high until done).** `sql/player_login_migration.sql` must run before this reaches production: the roster
+form now saves two new player columns, and adding or editing a player fails without them. It has been dry-run
+(rolled back) cleanly.
+
+**Open.** Run the migration; then merge to main. Connect Twilio if phone sign-in is wanted.
+
+---
+
 ## 2026-10-23 — Public calendar for signed-in users and screenshots in the hero (1d424f9..8ed8ecc)
 
 **Scope.** Two small commits: a routing fix and a marketing visual change.
