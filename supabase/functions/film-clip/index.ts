@@ -66,6 +66,10 @@ serve(async (req) => {
     global: { headers: { Authorization: authorization } },
     auth: { persistSession: false },
   });
+  // The gateway can't check the project's ES256 sign-ins (deployed with --no-verify-jwt), so check here.
+  const { data: who } = await db.auth.getUser(authorization.replace(/^Bearer\s+/i, ''));
+  if (!who?.user) return json(401, { error: 'Sign in first' });
+
   const { data, error } = await db
     .from('film_games')
     .select('content->highlights->clips')
