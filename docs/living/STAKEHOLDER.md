@@ -10,6 +10,10 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-24 — Highlight clips load again (cdd3ff4..cdd3ff4)
+
+Game highlight videos had stopped playing for everyone. They play again once the clip service is redeployed. No clips were lost.
+
 ## 2026-10-23 — Ollie-style event form (1c472c7..1c472c7)
 
 - **Adding a game works like Ollie.** Pick the opponent from teams you've played, set an "arrive by" time, and
