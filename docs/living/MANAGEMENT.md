@@ -10,6 +10,13 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-24 — Highlight clips load again (cdd3ff4..cdd3ff4)
+
+- **Scope:** Restores highlight clip playback.
+- **Cause:** The sign-in system moved to a newer key type; the clip service's gateway check only accepted the old type and rejected every request.
+- **Decision:** The service now verifies the sign-in itself; team-only access is unchanged.
+- **Open:** Requires a manual redeploy of the clip service. Push notifications likely have the same issue and are not yet fixed.
+
 ## 2026-10-23 — Ollie-style event form (1c472c7..1c472c7)
 
 **Scope.** One commit bringing the event editor to parity with Ollie's "Create Game": opponent suggestions,

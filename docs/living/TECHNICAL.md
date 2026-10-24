@@ -26,6 +26,14 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-10-24 — Highlight clips load again (cdd3ff4..cdd3ff4)
+
+- `supabase/functions/film-clip/index.ts` — verify caller via `auth.getUser()` before reading `film_games`. Project JWTs are now ES256 (JWKS), which the gateway's legacy `verify_jwt` rejects (`UNAUTHORIZED_LEGACY_JWT`).
+- **Deploy:** `npx supabase functions deploy film-clip --no-verify-jwt` (pending, manual).
+- **Verified:** `npm run film -- check` — 11 games, 68 clips in bucket.
+- **Follow-up:** `notify-push` still has `verify_jwt: true`; likely same failure.
+- **Rollback:** revert cdd3ff4 and redeploy with JWT verification.
+
 ## 2026-10-23 — Ollie-style event form (1c472c7..1c472c7)
 
 **Commits.**
