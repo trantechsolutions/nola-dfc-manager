@@ -1,0 +1,18 @@
+{
+  "appId": "com.canteramanager.app",
+  "appName": "Cantera",
+  "webDir": "dist",
+  "backgroundColor": "#0f172a",
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "backgroundColor": "#0f172a"
+    },
+    "Keyboard": {
+      "resizeOnFullScreen": true
+    },
+    "FirebaseMessaging": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
+}

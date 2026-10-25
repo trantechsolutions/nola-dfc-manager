@@ -1,6 +1,6 @@
 # ADR-004: Progressive Web App Over Native Shell for Mobile Delivery
 
-**Status:** Proposed
+**Status:** Superseded by ADR-005 (2026-10-25)
 **Date:** 2026-07-29
 **Author:** Jonathan V Tran
 **Deciders:** Jonathan V Tran

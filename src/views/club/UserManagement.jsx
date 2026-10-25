@@ -22,6 +22,7 @@ import PanelHost from '../../components/layout/PanelHost';
 import { usePanelRoute } from '../../hooks/usePanelRoute';
 import { ALL_ROLES, CLUB_ROLES, TEAM_ROLES, CLUB_ASSIGNABLE_ROLES } from '../../utils/roles';
 import { PANELS } from '../../utils/panelRoute';
+import { publicOrigin } from '../../native';
 
 const ROLE_COLORS = {
   club_admin: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
@@ -135,7 +136,7 @@ export default function UserManagement({ club, teams, showToast, showConfirm, re
   };
 
   const copyInviteLink = (token) => {
-    const url = `${window.location.origin}/invite/${token}`;
+    const url = `${publicOrigin()}/invite/${token}`;
     navigator.clipboard.writeText(url).then(() => showToast('Invite link copied!'));
   };
 

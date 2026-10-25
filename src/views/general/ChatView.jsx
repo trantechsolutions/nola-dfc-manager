@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
+  Bell,
+  BellOff,
   Check,
   Info,
   Loader2,
@@ -24,10 +26,11 @@ import { supabase } from '../../supabase';
 import { useT } from '../../i18n/I18nContext';
 import { useChat } from '../../context/ChatContext';
 import { chatService, conversationKey, PAGE_SIZE } from '../../services/chatService';
-import { pushService } from '../../services/pushService';
 import CountBadge from '../../components/CountBadge';
 import { ResponsiveModal } from '../../components/layout';
 import { formControl } from '../../components/layout/formControl';
+import { useNotificationMutes } from '../../hooks/useNotificationMutes';
+import { muteScope } from '../../services/notificationPrefs';
 
 const newClientId = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
@@ -83,7 +86,9 @@ export default function ChatView({ user }) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-[19rem_minmax(0,1fr)]">
+    // minmax(0,…) on phones too: an implicit column sizes to its widest line, and a truncated preview of a long
+    // message is one unbroken line, so the list would stretch past the screen.
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[19rem_minmax(0,1fr)]">
       <aside className={cn('space-y-3 md:block', current && 'hidden')}>
         <NamePrompt user={user} teamId={inbox[0]?.teamId} />
         {startable.length > 0 && (
@@ -684,9 +689,14 @@ function Thread({ conv, user, multiTeam, onBack, onRead, onLeft }) {
   const [people, setPeople] = useState([]);
   const [members, setMembers] = useState([]);
   const [panel, setPanel] = useState(null); // 'details' | 'add'
+  const section = useRef(null);
   const scroller = useRef(null);
   const stickToBottom = useRef(true);
   const isTeam = conv.kind === 'team';
+  const keyboard = useKeyboardViewport(section);
+  const { muted, toggle: toggleMute } = useNotificationMutes(!conv.oversight);
+  const muteKey = isTeam ? muteScope.teamChat(conv.id) : muteScope.thread(conv.id);
+  const isMuted = muted.has(muteKey);
 
   // Names come from the people on the team, so a corrected name shows on old messages too.
   const loadPeople = useCallback(() => {
@@ -754,6 +764,17 @@ function Thread({ conv, user, multiTeam, onBack, onRead, onLeft }) {
     const el = scroller.current;
     if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
   }, [messages]);
+  // The same when the list itself gets shorter (a keyboard opening, the composer growing): the newest message
+  // stays in view instead of slipping under the box.
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(() => {
+      if (stickToBottom.current) el.scrollTop = el.scrollHeight;
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const onScroll = () => {
     const el = scroller.current;
     if (el) stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
@@ -794,19 +815,7 @@ function Thread({ conv, user, multiTeam, onBack, onRead, onLeft }) {
     try {
       const saved = await chatService.send(conv, body, clientId);
       setMessages((list) => list.map((m) => (m.clientId === clientId ? { ...saved } : m)));
-      // Everyone else in the conversation gets a push: the whole team, or the chat's members.
-      const others = members.filter((id) => id !== user?.id);
-      if (isTeam || others.length) {
-        pushService
-          .chatMessage({
-            ...(isTeam ? { teamId: conv.teamId } : { userIds: others }),
-            title: conv.title,
-            body: `${nameOf(saved)}: ${body}`.slice(0, 180),
-            url: isTeam ? `/chat?team=${conv.id}` : `/chat?chat=${conv.id}`,
-            excludeUserIds: user?.id ? [user.id] : [],
-          })
-          .catch(() => {});
-      }
+      // Everyone else in the conversation is notified by the database once the message is saved.
     } catch {
       setMessages((list) => list.map((m) => (m.clientId === clientId ? { ...m, pending: false, failed: true } : m)));
     }
@@ -827,7 +836,25 @@ function Thread({ conv, user, multiTeam, onBack, onRead, onLeft }) {
 
   return (
     <section
+      ref={section}
       aria-label={conv.title}
+      // While a phone keyboard is up the thread takes exactly the visible strip above it, so its header and the
+      // latest messages stay on screen rather than being scrolled off the top to make room for the box.
+      style={
+        keyboard
+          ? {
+              position: 'fixed',
+              top: keyboard.top,
+              left: 0,
+              right: 0,
+              height: keyboard.height,
+              minHeight: 0,
+              margin: 0,
+              borderRadius: 0,
+              zIndex: 1040,
+            }
+          : undefined
+      }
       className="m-bleed flex h-[calc(100dvh-var(--app-header-h)-var(--app-tabbar-h)-env(safe-area-inset-bottom)-4rem)] min-h-[22rem] flex-col overflow-hidden rounded-lg border border-border bg-card md:h-[calc(100dvh-var(--app-header-h)-9rem)]"
     >
       <header className="flex items-center gap-2 border-b border-border px-3 py-2">
@@ -846,6 +873,17 @@ function Thread({ conv, user, multiTeam, onBack, onRead, onLeft }) {
           <h2 className="truncate text-base font-bold text-foreground">{conv.title || t('chat.untitled')}</h2>
           <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
         </div>
+        {!conv.oversight && (
+          <button
+            type="button"
+            onClick={() => toggleMute(muteKey, !isMuted)}
+            aria-label={isMuted ? t('chat.unmute') : t('chat.mute')}
+            aria-pressed={isMuted}
+            className="grid h-10 w-10 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+          >
+            {isMuted ? <BellOff size={18} /> : <Bell size={18} />}
+          </button>
+        )}
         {!isTeam && (
           <button
             type="button"
@@ -1008,7 +1046,7 @@ function Bubble({ m, name, mine, showName, onRetry, onChanged }) {
           )}
         </span>
       )}
-      <div className={cn('flex max-w-[85%] items-end gap-1', mine && 'flex-row-reverse')}>
+      <div className={cn('flex min-w-0 max-w-[85%] items-end gap-1', mine && 'flex-row-reverse')}>
         {editing ? (
           <form
             className="flex w-full flex-col gap-1.5"
@@ -1040,7 +1078,8 @@ function Bubble({ m, name, mine, showName, onRetry, onChanged }) {
         ) : (
           <div
             className={cn(
-              'whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm leading-relaxed',
+              // `anywhere`, not break-word: only it lets a long link or word shrink the bubble instead of widening it.
+              'min-w-0 whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm leading-relaxed [overflow-wrap:anywhere]',
               mine ? 'rounded-br-md bg-primary text-primary-foreground' : 'rounded-bl-md bg-muted text-foreground',
               m.pending && 'opacity-60',
             )}
@@ -1182,12 +1221,66 @@ function Composer({ onSend, placeholder }) {
         type="submit"
         disabled={!text.trim()}
         aria-label={t('chat.send')}
+        // Keeps focus (and the phone keyboard) in the box: a tap that moved focus here would drop the keyboard
+        // and bring it straight back as the box is refocused.
+        onPointerDown={(e) => e.preventDefault()}
         className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:opacity-40"
       >
         <Send size={18} />
       </button>
     </form>
   );
+}
+
+/**
+ * The visible strip of the screen while someone types inside `container` with a phone keyboard up, or null
+ * otherwise. Phone browsers keep the page its full height under the keyboard and scroll it to reveal the focused
+ * box, which pushes everything above the box off the top; the visual viewport is what's actually showing.
+ */
+function useKeyboardViewport(container) {
+  const [box, setBox] = useState(null);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return undefined;
+    // Measured against the tallest the viewport has been at this width, so an Android WebView that resizes the
+    // whole page for the keyboard reads the same as a browser that only shrinks the visual viewport.
+    let width = vv.width;
+    let tallest = vv.height;
+    let frame = 0;
+    const measure = () => {
+      if (vv.width !== width) {
+        width = vv.width;
+        tallest = vv.height;
+      }
+      tallest = Math.max(tallest, vv.height);
+      const el = document.activeElement;
+      const typing = el && container.current?.contains(el) && (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT');
+      const open = typing && vv.height < tallest - 120;
+      setBox((prev) => {
+        if (!open) return null;
+        if (prev && prev.top === vv.offsetTop && prev.height === vv.height) return prev;
+        return { top: vv.offsetTop, height: vv.height };
+      });
+    };
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measure);
+    };
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    document.addEventListener('focusin', update);
+    document.addEventListener('focusout', update);
+    return () => {
+      cancelAnimationFrame(frame);
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+      document.removeEventListener('focusin', update);
+      document.removeEventListener('focusout', update);
+    };
+  }, [container]);
+
+  return box;
 }
 
 function groupByDay(messages) {

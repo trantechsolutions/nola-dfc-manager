@@ -10,6 +10,16 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-25 — Server-sent notifications, reminders and the native app shell (1718cc7..1718cc7)
+
+- **Scope:** Notifications moved from the sender's device to the server, with retries and per-device delivery records; automatic event reminders; per-person mute settings; wider family matching; mobile chat layout fixes; Capacitor native-app scaffolding including phone-app notifications.
+- **Decisions:** ADR-005 supersedes ADR-004 — the app will also ship through the App Store and Play Store via Capacitor, alongside the web app. Staff broadcasts and player alerts cannot be muted. Reminders run at 6pm the day before and two hours before, in Central time by default.
+- **Risk:** Closes a security gap where any signed-in user could send notifications to any team. **Until the database migration is applied and the notification service redeployed, broadcasts, schedule notices and turning notifications on will fail in production**, and chat messages will not notify.
+- **Effort:** One working session; 1354 automated tests pass.
+- **Open:** Apply `sql/notifications_migration.sql` with its two Vault secrets; redeploy notify-push. Phone-app notifications need a Firebase project, an Apple Developer account and an APNs key. The iOS/Android projects are not generated yet.
+
+---
+
 ## 2026-10-24 — Highlight clips load again (cdd3ff4..cdd3ff4)
 
 - **Scope:** Restores highlight clip playback.

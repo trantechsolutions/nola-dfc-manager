@@ -149,7 +149,7 @@ self.addEventListener('push', (event) => {
     payload = { title: 'Cantera', body: event.data.text(), url: '/' };
   }
 
-  const { title = 'Cantera', body = '', url = '/', icon, badge } = payload;
+  const { title = 'Cantera', body = '', url = '/', tag, icon, badge } = payload;
 
   const options = {
     body,
@@ -158,36 +158,48 @@ self.addEventListener('push', (event) => {
     data: { url },
     vibrate: [200, 100, 200],
     requireInteraction: false,
-    tag: url,
+    // Same tag, same slot: a burst of chat messages shows as one notification, updated, not ten.
+    tag: tag || url,
+    renotify: true,
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+// A tap opens the screen the notification is about. An app window that's already open is brought forward and
+// sent there (comparing the whole address — a chat's lives in its ?team= / ?chat=), rather than a second copy
+// of the app being opened beside it.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || '/';
+  const target = new URL(event.notification.data?.url || '/', self.location.origin);
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      for (const client of windowClients) {
-        const clientUrl = new URL(client.url);
-        if (clientUrl.pathname === targetUrl && 'focus' in client) {
-          return client.focus();
-        }
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windowClients) => {
+      const same = windowClients.find((c) => {
+        const u = new URL(c.url);
+        return u.pathname + u.search === target.pathname + target.search;
+      });
+      if (same) return same.focus();
+      const open = windowClients.find((c) => new URL(c.url).origin === target.origin && 'navigate' in c);
+      if (open) {
+        const focused = await open.focus();
+        // navigate() only works on a window this worker controls; anything else gets a fresh one.
+        return Promise.resolve((focused || open).navigate(target.href)).catch(() => clients.openWindow(target.href));
       }
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
+      return clients.openWindow ? clients.openWindow(target.href) : undefined;
     }),
   );
 });
 
+// The browser replaced the subscription. Renewing needs the same server key as before (without it subscribe()
+// fails everywhere); the open page then files the new one under the signed-in account. If no page is open, the
+// app's start-up refresh (pushService.refresh) catches it next time.
 self.addEventListener('pushsubscriptionchange', (event) => {
+  const key = event.oldSubscription?.options?.applicationServerKey || import.meta.env.VITE_VAPID_PUBLIC_KEY;
   event.waitUntil(
     self.registration.pushManager
-      .subscribe({ userVisibleOnly: true })
+      .subscribe({ userVisibleOnly: true, applicationServerKey: key })
       .then((newSubscription) => {
         return self.clients.matchAll().then((allClients) => {
           allClients.forEach((client) =>

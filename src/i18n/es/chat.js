@@ -25,6 +25,8 @@ export default {
     people: '{{n}} personas',
     you: 'tú',
     details: 'Detalles del chat',
+    mute: 'Silenciar las notificaciones de este chat',
+    unmute: 'Activar las notificaciones de este chat',
     rename: 'Renombrar',
     leave: 'Salir del chat',
     close: 'Cerrar chat',

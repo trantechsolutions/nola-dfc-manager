@@ -6,12 +6,15 @@ import { ThemeProvider } from './theme/ThemeContext';
 import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary';
 import { registerServiceWorker } from './registerSW';
+import { initNative, isNative } from './native';
 import '@fontsource-variable/geist';
 // Matchday numerals only: dates, jersey numbers, scores — see DESIGN.md.
 import '@fontsource-variable/big-shoulders-display';
 import './index.css';
 
-registerServiceWorker();
+// The shell ships its bundle inside the app and updates through the store, so it gets no service worker.
+if (isNative) initNative();
+else registerServiceWorker();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

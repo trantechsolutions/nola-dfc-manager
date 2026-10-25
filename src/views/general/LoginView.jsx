@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Globe, Smartphone } from 'lucide-react';
 import { supabase } from '../../supabase';
 import { useT } from '../../i18n/I18nContext';
+import { authRedirectUrl, isNative, openAuthUrl } from '../../native';
 
 // 'signin' | 'register' | 'forgot' | 'magiclink' | 'phone'
 const MODES = { SIGNIN: 'signin', REGISTER: 'register', FORGOT: 'forgot', MAGICLINK: 'magiclink', PHONE: 'phone' };
@@ -74,13 +75,16 @@ export default function Login() {
 
   const handleGoogleLogin = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      // The shell opens Google itself (see openAuthUrl); a browser lets Supabase redirect the page.
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + window.location.pathname,
+          redirectTo: authRedirectUrl(),
+          skipBrowserRedirect: isNative,
         },
       });
       if (error) throw error;
+      if (isNative && data?.url) await openAuthUrl(data.url);
     } catch (err) {
       setError(t('auth.errorGoogle'));
     }
@@ -94,7 +98,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/',
+        redirectTo: authRedirectUrl('/'),
       });
     } catch {
       // swallow — same confirmation regardless, see comment above
@@ -112,7 +116,7 @@ export default function Login() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.origin + window.location.pathname,
+          emailRedirectTo: authRedirectUrl(),
           shouldCreateUser: false, // sign-in only — registration goes through the password form
         },
       });

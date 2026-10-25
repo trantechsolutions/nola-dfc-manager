@@ -26,6 +26,24 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-10-25 — Server-sent notifications, reminders and the native app shell (1718cc7..1718cc7)
+
+**Commits.**
+
+- `1718cc7 feat: send notifications from the server and scaffold the native app`
+
+**Touched.** Notifications: `notify-push/index.ts` (rewritten: acts on a `notifications.id` only, requires `x-notify-secret` == `NOTIFY_PUSH_SECRET`, per-target delivery rows, retry status, web push `urgency`), `notify-push/fcm.ts` (new FCM HTTP v1 sender, service-account JWT via WebCrypto), `pushService.js` (`queue`/`broadcast`/`scheduleChange`/`playerAlert` insert rows; `saveSubscription`, `refresh`, `forgetDevice`; `getRegistration` instead of `serviceWorker.ready`), `usePushNotifications.js`, `useNotificationMutes.js`, `notificationPrefs.js`, `service-worker.js` (tag/renotify, `notificationclick` path+query match with navigate fallback, `pushsubscriptionchange` passes `applicationServerKey`), `AppHeader.jsx` (mute switches, broadcast error, `forgetDevice` before sign-out), `EventEditor.jsx`, `playerService.js`. Native: `capacitor.config.json`, `src/native/{platform,index,push}.js`, `main.jsx` (skips the SW in the shell), `LoginView.jsx` (deep-link auth), `publicOrigin()` for shared links in `UserManagement`, `EvaluationSessionDetail`, `PublicCalendarView`; `useInstallPrompt.js`. Chat: `ChatView.jsx` (`grid-cols-[minmax(0,1fr)]`, `[overflow-wrap:anywhere]`, `useKeyboardViewport`, scroll-pinning ResizeObserver, per-chat mute, client push removed). Deps: `@capacitor/{core,app,browser,keyboard,splash-screen,status-bar}`, `@capacitor-firebase/messaging`, `@capacitor/cli`. ADR-005 added; ADR-004 marked superseded.
+
+**Schema/API.** `sql/notifications_migration.sql` (**not yet applied**): extensions `pg_net`, `pg_cron`; tables `notifications`, `device_tokens`, `notification_deliveries`, `notification_mutes`; functions `notification_recipients`, `notify_family_user_ids`, `notify_dispatch`, `notify_staff_team`, `notify_queue_reminders`, `notify_retry`, `register_device_token`, `unregister_device_token`, `save_push_subscription`, `unregister_push_subscription`; triggers `team_messages_notify`, `notifications_dispatch`, `notifications_guard` (20 per hour per user); cron jobs `notify-reminders`, `notify-retry` (`*/5`), `notify-prune` (daily, 90 days). Setup: Vault secrets `notify_push_url` and `notify_push_secret`, function secret `NOTIFY_PUSH_SECRET` (and `FCM_SERVICE_ACCOUNT` for the native app), `supabase functions deploy notify-push --no-verify-jwt`, Auth redirect `com.canteramanager.app://auth-callback`.
+
+**Rationale.** A client-side fire-and-forget push was lost whenever the sender went offline, and the service-role function accepted arbitrary payloads from any JWT (including the anon key). A DB outbox with a trigger plus pg_net dispatch makes the save and the notification atomic, puts authorization in RLS, and gives retries and an audit trail. FCM carries both platforms so there is one native sender; the plugin is registered by name to keep the Firebase web SDK out of the bundle.
+
+**Tests.** New `src/__tests__/services/pushService.test.js` (8). Full suite 1354 pass; `vite build` OK; the built SW contains the VAPID key. The migration has not been run against a database.
+
+**Rollback.** Revert 1718cc7 and redeploy the previous notify-push. If the migration was applied: `select cron.unschedule('notify-reminders'), cron.unschedule('notify-retry'), cron.unschedule('notify-prune');` then drop trigger `team_messages_notify on team_messages` and the tables `notification_mutes`, `notification_deliveries`, `device_tokens`, `notifications` (cascade), and the new functions. `push_subscriptions` is unchanged.
+
+---
+
 ## 2026-10-24 — Highlight clips load again (cdd3ff4..cdd3ff4)
 
 - `supabase/functions/film-clip/index.ts` — verify caller via `auth.getUser()` before reading `film_games`. Project JWTs are now ES256 (JWKS), which the gateway's legacy `verify_jwt` rejects (`UNAUTHORIZED_LEGACY_JWT`).

@@ -19,6 +19,9 @@ import { useAttention } from '../../hooks/useAttention';
 import { tabTarget } from '../../utils/navMemory';
 import { roleLabel } from '../../utils/roleLabel';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
+import { useNotificationMutes } from '../../hooks/useNotificationMutes';
+import { MUTABLE_KINDS, muteScope } from '../../services/notificationPrefs';
+import SettingsToggle from './SettingsToggle';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 import { pushService } from '../../services/pushService';
 import { useChat } from '../../context/ChatContext';
@@ -338,8 +341,9 @@ function AccountMenu() {
             icon={LogOut}
             label={t('nav.signOut')}
             destructive
-            onClick={() => {
+            onClick={async () => {
               close();
+              await pushService.forgetDevice();
               supabase.auth.signOut();
             }}
           />
@@ -387,15 +391,18 @@ function NotificationsMenu() {
   const { t } = useT();
   const { isSubscribed, isSupported, subscribe } = usePushNotifications();
   const { needsManualInstall } = useInstallPrompt();
+  const { muted, toggle } = useNotificationMutes(isSubscribed);
   const [showIosSheet, setShowIosSheet] = useState(false);
   const [broadcastMsg, setBroadcastMsg] = useState('');
   const [broadcastSending, setBroadcastSending] = useState(false);
+  const [broadcastFailed, setBroadcastFailed] = useState(false);
 
   const selectedTeam = teams.find((team) => team.id === selectedTeamId) || null;
 
   const handleBroadcast = async (close) => {
     if (!broadcastMsg.trim()) return;
     setBroadcastSending(true);
+    setBroadcastFailed(false);
     try {
       await pushService.broadcast({
         teamId: selectedTeamId || undefined,
@@ -406,7 +413,9 @@ function NotificationsMenu() {
       setBroadcastMsg('');
       close();
     } catch (e) {
+      // Saving the notification is the only part that can fail here; the database does the sending.
       console.error('[broadcast]', e);
+      setBroadcastFailed(true);
     } finally {
       setBroadcastSending(false);
     }
@@ -445,9 +454,23 @@ function NotificationsMenu() {
             ) : (
               isSupported &&
               (isSubscribed ? (
-                <p className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-success">
-                  <Bell size={16} /> {t('nav.notificationsOn')}
-                </p>
+                <>
+                  <p className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-success">
+                    <Bell size={16} /> {t('nav.notificationsOn')}
+                  </p>
+                  {/* What to be told about. Staff broadcasts and alerts about your own child always come through. */}
+                  <div className="space-y-1 px-4 pb-2.5">
+                    {MUTABLE_KINDS.map((kind) => (
+                      <SettingsToggle
+                        key={kind}
+                        label={t(`nav.notify_${kind}`)}
+                        checked={!muted.has(muteScope.kind(kind))}
+                        onChange={(on) => toggle(muteScope.kind(kind), !on)}
+                      />
+                    ))}
+                    <p className="text-xs text-muted-foreground">{t('nav.notifyAlwaysOn')}</p>
+                  </div>
+                </>
               ) : (
                 <MenuItem icon={Bell} label={t('nav.turnOnNotifications')} onClick={subscribe} />
               ))
@@ -474,6 +497,11 @@ function NotificationsMenu() {
                 >
                   {broadcastSending ? t('nav.sending') : t('nav.sendMessage')}
                 </button>
+                {broadcastFailed && (
+                  <p role="alert" className="mt-1.5 text-xs text-destructive">
+                    {t('nav.broadcastFailed')}
+                  </p>
+                )}
               </div>
             )}
           </>

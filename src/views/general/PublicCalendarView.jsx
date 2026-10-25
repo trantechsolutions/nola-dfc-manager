@@ -19,6 +19,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import ICAL from 'ical.js';
 import ResponsiveModal from '../../components/layout/ResponsiveModal';
 import { fetchIcs } from '../../utils/fetchIcs';
+import { publicOrigin } from '../../native';
 
 const PUBLIC_HEADERS = {
   apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -285,7 +286,7 @@ export default function PublicCalendarView({ onBack, signedIn = false }) {
 
   // ── Share link ──
   const shareUrl = useMemo(() => {
-    const base = `${window.location.origin}${window.location.pathname}`;
+    const base = `${publicOrigin()}${window.location.pathname}`;
     if (selectedTeamId === 'all') return `${base}#/calendar`;
     return `${base}#/calendar/${selectedTeamId}`;
   }, [selectedTeamId]);

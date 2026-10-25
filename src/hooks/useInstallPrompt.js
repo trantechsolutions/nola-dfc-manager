@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { INSTALL_STATE, getInstallState, isStandalone, needsIosManualInstall } from '../utils/platform';
+import { isNative } from '../native/platform';
 
 /**
  * useInstallPrompt — drives the "add this app to your device" flow.
@@ -11,7 +12,9 @@ import { INSTALL_STATE, getInstallState, isStandalone, needsIosManualInstall } f
  */
 export function useInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isInstalled, setIsInstalled] = useState(() => isStandalone());
+  // The iOS / Android app is installed by definition; without this, iPhone users in the app would be told to
+  // add it to their Home Screen before notifications can work.
+  const [isInstalled, setIsInstalled] = useState(() => isNative || isStandalone());
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (event) => {
