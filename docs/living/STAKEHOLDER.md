@@ -10,6 +10,20 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-10-25 — Server-sent notifications, reminders and the native app shell (1718cc7..1718cc7)
+
+Notifications are much more dependable. When someone posts in a chat, changes the schedule or sends a team message, everyone is told even if the sender closes the app straight away. New this time:
+
+- **Reminders** the evening before and two hours before every practice, game and event.
+- **Choices**: turn chat, schedule-change or reminder notifications off, or mute a single chat. Team announcements and news about your own player always come through.
+- **Families who were being missed** — parents whose sign-in email differed from the one on their child's record — now get notifications, and so do players who sign in themselves.
+- Tapping a notification opens the right chat or screen, and a burst of chat messages shows as one notification.
+- On phones, long chat messages no longer push the screen sideways, and the keyboard no longer hides the message you're replying to.
+
+Groundwork for an iPhone and Android app is in place. These changes switch on once the club's administrator completes a one-time setup.
+
+---
+
 ## 2026-10-24 — Highlight clips load again (cdd3ff4..cdd3ff4)
 
 Game highlight videos had stopped playing for everyone. They play again once the clip service is redeployed. No clips were lost.
