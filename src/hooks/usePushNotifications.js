@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { pushService } from '../services/pushService';
+import { isNative } from '../native/platform';
+import { nativePush } from '../native/push';
 
 /**
  * Manages push notification subscription state for the authenticated user.
  * Registers the service worker on mount and exposes subscribe/unsubscribe.
+ * Inside the iOS / Android app the same switch drives the phone's own notifications (src/native/push.js).
  */
 export function usePushNotifications() {
   const [isSupported, setIsSupported] = useState(false);
@@ -12,30 +15,34 @@ export function usePushNotifications() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    if (isNative) {
+      let live = true;
+      setIsSupported(true);
+      nativePush.getPermission().then((p) => live && setPermission(p));
+      nativePush.isSubscribed().then((on) => live && setIsSubscribed(on));
+      return () => {
+        live = false;
+      };
+    }
+
     const supported = pushService.isSupported();
     setIsSupported(supported);
     if (!supported) return;
 
     setPermission(Notification.permission);
 
-    // Register SW and check existing subscription
-    pushService.registerServiceWorker().then(() => {
-      pushService.isSubscribed().then(setIsSubscribed);
-    });
+    // Register the worker, re-file this browser's subscription with the server, then read the switch's state.
+    pushService
+      .refresh()
+      .then(() => pushService.isSubscribed())
+      .then(setIsSubscribed);
 
-    // Listen for subscription renewal from the SW
+    // The worker renewed a subscription the browser replaced: file the new one under this account.
     const handleMessage = (event) => {
       if (event.data?.type === 'PUSH_SUBSCRIPTION_CHANGED') {
         const sub = event.data.subscription;
         if (sub) {
-          import('../supabase').then(({ supabase }) => {
-            supabase
-              .from('push_subscriptions')
-              .upsert(
-                { endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth },
-                { onConflict: 'endpoint' },
-              );
-          });
+          pushService.saveSubscription(sub).catch(() => {});
           setIsSubscribed(true);
         } else {
           setIsSubscribed(false);
@@ -49,7 +56,7 @@ export function usePushNotifications() {
   const subscribe = useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await pushService.subscribe();
+      const result = await (isNative ? nativePush : pushService).subscribe();
       if (result.success) {
         setIsSubscribed(true);
         setPermission('granted');
@@ -63,7 +70,7 @@ export function usePushNotifications() {
   const unsubscribe = useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await pushService.unsubscribe();
+      const result = await (isNative ? nativePush : pushService).unsubscribe();
       if (result.success) setIsSubscribed(false);
       return result;
     } finally {

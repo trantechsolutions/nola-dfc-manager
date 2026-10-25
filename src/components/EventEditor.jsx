@@ -164,7 +164,7 @@ export default function EventEditor({
   const tell = async (title, body) => {
     if (!notify) return;
     try {
-      await pushService.broadcast({ teamId, title, body, url: '/schedule' });
+      await pushService.scheduleChange({ teamId, title, body });
     } catch (err) {
       console.warn('[schedule] notify failed:', err?.message);
     }

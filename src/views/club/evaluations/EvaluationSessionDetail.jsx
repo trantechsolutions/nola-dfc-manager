@@ -23,6 +23,7 @@ import { useEvaluationManager } from '../../../hooks/useEvaluationManager';
 import { supabaseService } from '../../../services/supabaseService';
 import { getUSAgeGroup } from '../../../utils/ageGroup';
 import { PANELS } from '../../../utils/panelRoute';
+import { publicOrigin } from '../../../native';
 
 const TABS = [
   { key: 'setup', icon: Settings, labelKey: 'evaluations.tabs.setup', fallback: 'Setup' },
@@ -601,12 +602,12 @@ export default function EvaluationSessionDetail({ sessionId, club, teams, season
             <div className="flex items-center gap-2">
               <input
                 readOnly
-                value={`${window.location.origin}/evaluate/${sessionId}`}
+                value={`${publicOrigin()}/evaluate/${sessionId}`}
                 className="flex-1 text-xs font-mono bg-card border border-indigo-200 dark:border-indigo-700 rounded-lg px-3 py-1.5 text-foreground"
               />
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/evaluate/${sessionId}`);
+                  navigator.clipboard.writeText(`${publicOrigin()}/evaluate/${sessionId}`);
                   showToast?.('Link copied!');
                 }}
                 className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-colors"

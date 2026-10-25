@@ -1,4 +1,6 @@
 import { supabase } from '../supabase';
+import { isNative } from '../native/platform';
+import { nativePush } from '../native/push';
 
 // VAPID public key — generated once per deployment, must match the private key in Edge Function secrets
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
@@ -56,21 +58,7 @@ export const pushService = {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
 
-      const json = subscription.toJSON();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      const { error } = await supabase.from('push_subscriptions').upsert(
-        {
-          user_id: user.id,
-          endpoint: json.endpoint,
-          p256dh: json.keys.p256dh,
-          auth: json.keys.auth,
-        },
-        { onConflict: 'endpoint' },
-      );
-
-      if (error) throw error;
+      await this.saveSubscription(subscription.toJSON());
       return { success: true, subscription };
     } catch (e) {
       console.error('[push] Subscribe failed:', e.message);
@@ -78,15 +66,51 @@ export const pushService = {
     }
   },
 
+  // Files this browser's subscription under whoever is signed in now.
+  async saveSubscription(json) {
+    if (!json?.endpoint || !json.keys) return;
+    const { error } = await supabase.rpc('save_push_subscription', {
+      p_endpoint: json.endpoint,
+      p_p256dh: json.keys.p256dh,
+      p_auth: json.keys.auth,
+    });
+    if (error) throw error;
+  },
+
+  /**
+   * On every start with notifications allowed: make sure the server has this browser's current subscription.
+   * Browsers quietly replace or drop subscriptions now and then, and a notification sent to the old one never
+   * arrives — so it's re-saved (or renewed) here rather than only when someone taps "turn on".
+   */
+  async refresh() {
+    if (!this.isSupported() || Notification.permission !== 'granted' || !VAPID_PUBLIC_KEY) return;
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return;
+      const reg = await this.registerServiceWorker();
+      if (!reg) return;
+      const sub =
+        (await reg.pushManager.getSubscription()) ||
+        (await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        }));
+      await this.saveSubscription(sub.toJSON());
+    } catch (e) {
+      console.warn('[push] refresh failed:', e?.message);
+    }
+  },
+
   async unsubscribe() {
     try {
-      const reg = await navigator.serviceWorker.ready;
-      const subscription = await reg.pushManager.getSubscription();
+      const subscription = await this.getCurrentSubscription();
       if (!subscription) return { success: true };
 
       const endpoint = subscription.endpoint;
       await subscription.unsubscribe();
-      await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint);
+      await supabase.rpc('unregister_push_subscription', { p_endpoint: endpoint });
       return { success: true };
     } catch (e) {
       console.error('[push] Unsubscribe failed:', e.message);
@@ -96,8 +120,11 @@ export const pushService = {
 
   async getCurrentSubscription() {
     try {
-      const reg = await navigator.serviceWorker.ready;
-      return await reg.pushManager.getSubscription();
+      // getRegistration, not `ready`: `ready` never settles where no worker was registered (dev, the app shell),
+      // which would hang anything waiting on it — signing out included.
+      if (!this.isSupported()) return null;
+      const reg = await navigator.serviceWorker.getRegistration('/');
+      return reg ? await reg.pushManager.getSubscription() : null;
     } catch {
       return null;
     }
@@ -108,32 +135,45 @@ export const pushService = {
     return !!sub;
   },
 
-  // Send a broadcast notification to a team via Edge Function
-  async broadcast({ teamId, clubId, title, body, url = '/' }) {
-    const { data, error } = await supabase.functions.invoke('notify-push', {
-      body: { eventType: 'broadcast', teamId, clubId, title, body, url },
-    });
-    if (error) throw error;
-    return data;
+  // Called just before signing out: this device stops getting the account's notifications.
+  async forgetDevice() {
+    if (isNative) return nativePush.forgetDevice();
+    try {
+      const sub = await this.getCurrentSubscription();
+      if (sub) await supabase.rpc('unregister_push_subscription', { p_endpoint: sub.endpoint });
+    } catch {
+      // Signing out goes ahead regardless.
+    }
   },
 
-  // A new team chat message, to everyone on the team but its sender. Notifications share the chat's address
-  // as their tag, so a burst of messages stacks into one notification per team.
-  // A private or group chat names its members (userIds) instead of a team.
-  async chatMessage({ teamId, userIds, title, body, url, excludeUserIds = [] }) {
-    const { data, error } = await supabase.functions.invoke('notify-push', {
-      body: { eventType: 'chat', teamId, userIds, title, body, url, excludeUserIds },
+  // Notifications are rows in `notifications`; the database sends them (sql/notifications_migration.sql), so
+  // one only fails here if it couldn't be saved — not because this phone went offline afterwards.
+  // Chat messages need nothing from the app: a trigger turns each new message into a notification.
+  async queue({ kind, teamId, playerId = null, title, body, url = '/', tag = null }) {
+    const { error } = await supabase.from('notifications').insert({
+      kind,
+      team_id: teamId,
+      player_id: playerId,
+      title: String(title).slice(0, 120),
+      body: String(body).slice(0, 500),
+      url,
+      tag,
     });
     if (error) throw error;
-    return data;
   },
 
-  // Notify specific user IDs (used for targeted alerts like compliance)
-  async notifyUsers({ userIds, title, body, url = '/', eventType = 'alert' }) {
-    const { data, error } = await supabase.functions.invoke('notify-push', {
-      body: { eventType, userIds, title, body, url },
-    });
-    if (error) throw error;
-    return data;
+  // A message from staff to everyone on a team.
+  broadcast({ teamId, title, body, url = '/' }) {
+    return this.queue({ kind: 'broadcast', teamId, title, body, url });
+  },
+
+  // A schedule change, to everyone on the team.
+  scheduleChange({ teamId, title, body }) {
+    return this.queue({ kind: 'schedule', teamId, title, body, url: '/schedule', tag: `schedule-${teamId}` });
+  },
+
+  // Something about one player (a compliance item approved or flagged), to that player's family.
+  playerAlert({ teamId, playerId, title, body, url = '/dashboard' }) {
+    return this.queue({ kind: 'alert', teamId, playerId, title, body, url });
   },
 };

@@ -24,6 +24,8 @@ export default {
     people: '{{n}} people',
     you: 'you',
     details: 'Chat details',
+    mute: 'Mute notifications for this chat',
+    unmute: 'Unmute notifications for this chat',
     rename: 'Rename',
     leave: 'Leave chat',
     close: 'Close chat',

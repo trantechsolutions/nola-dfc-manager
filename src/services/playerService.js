@@ -309,39 +309,25 @@ export const playerService = {
       try {
         const { data: player } = await supabase
           .from('players')
-          .select('first_name, last_name, guardians(email)')
+          .select('first_name, last_name, team_id')
           .eq('id', playerId)
           .single();
 
-        if (player) {
-          const guardianEmails = (player.guardians || []).map((g) => g.email?.toLowerCase()).filter(Boolean);
-
-          if (guardianEmails.length > 0) {
-            const { data: profiles } = await supabase
-              .from('user_profiles')
-              .select('user_id')
-              .in('email', guardianEmails);
-
-            const userIds = (profiles || []).map((p) => p.user_id);
-            if (userIds.length > 0) {
-              const label =
-                {
-                  medicalRelease: 'Medical Release',
-                  reePlayerWaiver: 'Player Waiver',
-                  clubRegistration: 'Club Registration',
-                }[field] || 'Compliance';
-              const status = value ? 'approved' : 'flagged';
-              pushService
-                .notifyUsers({
-                  userIds,
-                  eventType: 'compliance',
-                  title: `${player.first_name} ${player.last_name} — ${label}`,
-                  body: `${label} has been ${status} for ${seasonId}.`,
-                  url: '/dashboard',
-                })
-                .catch(() => {});
-            }
-          }
+        if (player?.team_id) {
+          const label =
+            {
+              medicalRelease: 'Medical Release',
+              reePlayerWaiver: 'Player Waiver',
+              clubRegistration: 'Club Registration',
+            }[field] || 'Compliance';
+          const status = value ? 'approved' : 'flagged';
+          // The database works out the player's family and sends it.
+          await pushService.playerAlert({
+            teamId: player.team_id,
+            playerId,
+            title: `${player.first_name} ${player.last_name} — ${label}`,
+            body: `${label} has been ${status} for ${seasonId}.`,
+          });
         }
       } catch {
         // Non-fatal — push notification failure should not break the update
