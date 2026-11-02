@@ -26,6 +26,16 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-11-02 — Scorekeeper retakes and in-app scorekeeper (a33c64b..a33c64b)
+
+**Files:** src/film/pages/Keep.tsx (retake routes, take labels and pick buttons, past-games list, ToApp back control, lineup drag via useDrag, setup layout classes), src/film/keeper.tsx (admin flag, picks, `pick()`), src/film/lib/takes.ts + takes.test.ts (take grouping, official-take resolution), src/film/components/KeepPitch.tsx (tap swallows the follow-up click), src/film/keeper.css (nav, enter animation, swipeable bench with `touch-action: pan-x`, lineup stage grid, `@media (max-height:560px)` for setup and live), src/views/film/KeepView.jsx (history-aware `leave()`, back label), src/services/liveGameService.js (`official`, `takes`), src/views/team/ScheduleView.jsx (prefer official take), tools/film/film.ts (season stats use official takes), src/i18n/{en,es}/film.js.
+
+**Schema:** sql/keeper_retake_migration.sql — `keeper_is_admin(team)`; table `keeper_game_picks` (PK team_id, event_id, RLS select); RPC `keeper_pick_take` (admin only); `keeper_forget_game` also clears the pick; `keeper_entry_ok` lets admins skip the time window for the team's own events; `keeper_game_summaries` recreated with `official boolean, takes int`. Must be applied manually.
+
+**Tests:** film Vitest suite (65) passes incl. takes.test.ts; `npm run build` passes; Playwright checks at 740×360 and 950×430 for setup fit and lineup drag (bench→slot, slot↔slot, slot→bench).
+
+**Rollback:** revert a33c64b. The migration is additive; to undo, drop `keeper_game_picks` and `keeper_pick_take`/`keeper_is_admin` and restore the previous `keeper_entry_ok` and `keeper_game_summaries`.
+
 ## 2026-11-01 — Opponent kickoff tap no longer closes itself (a2b78f0..a2b78f0)
 
 **Commits.** a2b78f0 fix: stop the tap that opens a sheet from also closing it

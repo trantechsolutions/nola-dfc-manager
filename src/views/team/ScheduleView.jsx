@@ -522,7 +522,9 @@ function useLiveGames(teamId) {
         (list) => {
           if (!live) return;
           const next = {};
-          for (const g of list) if (g.eventId && !next[g.eventId]) next[g.eventId] = g;
+          // A game kept more than once shows the take that counts.
+          for (const g of list)
+            if (g.eventId && (!next[g.eventId] || (g.official && !next[g.eventId].official))) next[g.eventId] = g;
           setByEvent(next);
         },
         () => {},

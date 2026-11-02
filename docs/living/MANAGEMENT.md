@@ -10,6 +10,16 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-11-02 — Scorekeeper retakes and in-app scorekeeper (a33c64b..a33c64b)
+
+**Delivered:** admin retakes of game stats with an official-take pick; scorekeeper integrated into the app's navigation; mobile layout for setup and lineup, with drag-and-drop; smaller live-screen text on phones.
+
+**Decisions:** each retake is stored as its own game rather than overwriting, so nothing is lost and a pick can be changed later. With no pick, the first take counts. Admins may record stats outside the normal two-hour game window so past games can be redone.
+
+**Risk:** low to medium. A database migration (sql/keeper_retake_migration.sql) must be run in Supabase before retakes and picks work; until then the app behaves as before. Touch dragging was tested in a desktop browser only, not on a real phone.
+
+**Open:** run the migration; check lineup dragging on a phone at the field.
+
 ## 2026-11-01 — Opponent kickoff tap no longer closes itself (a2b78f0..a2b78f0)
 
 - **Scope:** Bug fix in the live scorekeeper — tapping an opponent to kick off now opens and keeps the start prompt on phones.
