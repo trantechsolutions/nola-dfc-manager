@@ -26,6 +26,17 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-11-01 — Opponent kickoff tap no longer closes itself (a2b78f0..a2b78f0)
+
+**Commits.** a2b78f0 fix: stop the tap that opens a sheet from also closing it
+**Touched.** src/film/components/KeepPitch.tsx (useDrag)
+**Schema/API.** none
+**Rationale.** On touch, the compatibility click fires after pointerup at the tap point; when the tap opened a Sheet, that click hit .kp-scrim and called onClose. Opponent pills sit in .kp-head outside the sheet, so their kickoff prompt always closed; voice bypasses the sheet. useDrag now swallows the next window click (capture, once, 400ms timeout) after a tap.
+**Tests.** tsc clean; vitest src/film 60/60 pass. No touch-event test added.
+**Rollback.** git revert a2b78f0.
+
+---
+
 ## 2026-10-25 — Server-sent notifications, reminders and the native app shell (1718cc7..1718cc7)
 
 **Commits.**

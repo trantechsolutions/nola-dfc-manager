@@ -10,6 +10,16 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-11-01 — Opponent kickoff tap no longer closes itself (a2b78f0..a2b78f0)
+
+- **Scope:** Bug fix in the live scorekeeper — tapping an opponent to kick off now opens and keeps the start prompt on phones.
+- **Decisions:** Fixed once in the shared tap handling rather than per button, so every tap-opened prompt benefits.
+- **Risk:** Low; a stray click within 0.4s of a tap is ignored.
+- **Effort:** Under an hour.
+- **Open:** Confirm on a phone at the next game.
+
+---
+
 ## 2026-10-25 — Server-sent notifications, reminders and the native app shell (1718cc7..1718cc7)
 
 - **Scope:** Notifications moved from the sender's device to the server, with retries and per-device delivery records; automatic event reminders; per-person mute settings; wider family matching; mobile chat layout fixes; Capacitor native-app scaffolding including phone-app notifications.
