@@ -10,6 +10,12 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-11-02 — Goal times with the score, newest games first (0e9240c..14cf567)
+
+- **Saving a game's score works again** once the database update is applied, and if it ever fails the message now says why (setup, permission, or connection).
+- **Goal times.** When you enter a past game's score you can also type the minute of each goal, ours and theirs. They show under the game in the schedule ("Goals 39′ 43′ 58′ · Them 10′") and help with the game film breakdowns.
+- **Stats page** now lists games newest first.
+
 ## 2026-11-02 — Scorekeeper retakes and in-app scorekeeper (a33c64b..a33c64b)
 
 - **Retake a game's stats.** If a game's stats were kept badly, an admin (club admin or team manager) can keep them again. Every attempt is saved, and the admin picks which one counts. The schedule and season stats only use the chosen one.

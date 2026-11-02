@@ -10,6 +10,16 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-11-02 — Goal times with the score, newest games first (0e9240c..14cf567)
+
+**Delivered:** fix for score saving, optional goal minutes per goal, newest-first ordering on the Stats overview.
+
+**Decisions:** the score failure was most likely missing score columns in the database (an earlier migration never applied), so the new migration re-adds them alongside the goal-minute columns rather than shipping a separate fix. Goal minutes are optional and only sent when entered, so saving a score never depends on them.
+
+**Risk:** low. sql/event_goal_times_migration.sql must be run in Supabase; until then score saves report "database setup" instead of a generic error. The root cause wasn't confirmed against the database directly.
+
+**Open:** run the migration; film tooling could read these goal minutes when Ollie has none.
+
 ## 2026-11-02 — Scorekeeper retakes and in-app scorekeeper (a33c64b..a33c64b)
 
 **Delivered:** admin retakes of game stats with an official-take pick; scorekeeper integrated into the app's navigation; mobile layout for setup and lineup, with drag-and-drop; smaller live-screen text on phones.

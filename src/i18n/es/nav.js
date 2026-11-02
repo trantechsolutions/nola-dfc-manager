@@ -38,6 +38,13 @@ export default {
   scoreUs: 'Nosotros',
   scoreThem: 'Ellos',
   scoreSaveFailed: 'No se guardó el resultado. Revisa la conexión e inténtalo de nuevo.',
+  scoreSaveSetup:
+    'No se guardó el resultado: a la base de datos le faltan las columnas del resultado. Ejecuta sql/event_goal_times_migration.sql en Supabase.',
+  scoreSaveDenied: 'No se guardó el resultado: no tienes permiso para editar el calendario de este equipo.',
+  goalMinutes: 'Minutos de los goles (minuto del partido, opcional)',
+  goalMinuteLabel: 'Minuto del gol {{n}} de {{side}}',
+  goalsUs: 'Goles',
+  goalsThem: 'Ellos',
   home: 'Inicio',
   team: 'Equipo',
   money: 'Dinero',

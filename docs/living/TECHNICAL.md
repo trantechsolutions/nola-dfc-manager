@@ -26,6 +26,20 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-11-02 — Goal times with the score, newest games first (0e9240c..14cf567)
+
+**Files:** sql/event_goal_times_migration.sql (new), src/services/scheduleService.js, src/App.jsx, src/views/team/ScheduleView.jsx, src/i18n/{en,es}/nav.js, src/views/film/FilmSeason.jsx.
+
+**Schema:** `team_events` gets `score_for`/`score_against` (if missing, with range check) and `goal_minutes_for`/`goal_minutes_against smallint[]` (each 0–130, check constraint); ends with `notify pgrst, 'reload schema'`. Idempotent; run manually.
+
+**API:** `updateTeamEventScore(id, for, against, goalMinutes?)` sends goal minutes only when given, uses `.select('id')` to detect zero-row (RLS) updates, and throws an Error with `reason` 'setup' | 'denied' | 'failed'. `getTeamEvents` maps `goalMinutesFor`/`goalMinutesAgainst`.
+
+**UI:** ScoreEditor renders one minute input per goal (max 15 a side), sorted on save; GoalTimes line under past games. FilmSeason renders form strip, results and numbers from a reversed copy of `season().lines`; season totals and head-to-head stay oldest first.
+
+**Tests:** full Vitest suite (1359) passed; ESLint clean on touched files.
+
+**Rollback:** revert 0e9240c and 14cf567. The migration is additive; drop the two goal-minute columns and their constraint to undo it.
+
 ## 2026-11-02 — Scorekeeper retakes and in-app scorekeeper (a33c64b..a33c64b)
 
 **Files:** src/film/pages/Keep.tsx (retake routes, take labels and pick buttons, past-games list, ToApp back control, lineup drag via useDrag, setup layout classes), src/film/keeper.tsx (admin flag, picks, `pick()`), src/film/lib/takes.ts + takes.test.ts (take grouping, official-take resolution), src/film/components/KeepPitch.tsx (tap swallows the follow-up click), src/film/keeper.css (nav, enter animation, swipeable bench with `touch-action: pan-x`, lineup stage grid, `@media (max-height:560px)` for setup and live), src/views/film/KeepView.jsx (history-aware `leave()`, back label), src/services/liveGameService.js (`official`, `takes`), src/views/team/ScheduleView.jsx (prefer official take), tools/film/film.ts (season stats use official takes), src/i18n/{en,es}/film.js.

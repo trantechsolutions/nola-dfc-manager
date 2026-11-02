@@ -38,6 +38,13 @@ export default {
   scoreUs: 'Us',
   scoreThem: 'Them',
   scoreSaveFailed: 'Score not saved. Check the connection and try again.',
+  scoreSaveSetup:
+    'Score not saved: the database is missing the score columns. Run sql/event_goal_times_migration.sql in Supabase.',
+  scoreSaveDenied: "Score not saved: you don't have permission to edit this team's schedule.",
+  goalMinutes: 'Goal times (minute of the game, optional)',
+  goalMinuteLabel: '{{side}} goal {{n}} minute',
+  goalsUs: 'Goals',
+  goalsThem: 'Them',
   home: 'Home',
   team: 'Team',
   money: 'Money',
