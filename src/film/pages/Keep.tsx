@@ -17,13 +17,14 @@ import {
 } from "../lib/keeplog";
 import { candidates, POSITIONS, type RosterPlayer } from "../lib/positions";
 import { sec } from "../lib/time";
+import { officialTakes, takeOf, takesByEvent, type Take } from "../lib/takes";
 import type { KeepEntry, KeepSetup, KeepType, ScheduledGame } from "../schema";
 
 // ---------- Routing inside /keep/<team> (the manager's router) ----------
 
 // One scorekeeper is open at a time, so its base address and the router's navigate live here for go() and KLink.
-const nav: { base: string; navigate: ((to: string) => void) | null; leave: () => void; openedAtHome: boolean } = {
-  base: "", navigate: null, leave: () => {}, openedAtHome: true,
+const nav: { base: string; navigate: ((to: string) => void) | null; leave: () => void; openedAtHome: boolean; backLabel: string } = {
+  base: "", navigate: null, leave: () => {}, openedAtHome: true, backLabel: "",
 };
 const go = (path: string) => nav.navigate?.(`${nav.base}${path}`);
 // Back out of a game, a practice run or a closed window: to the scorekeeper's home if that's where this visit
@@ -32,12 +33,23 @@ const backOut = (homePath = "") => (nav.openedAtHome ? go(homePath) : nav.leave(
 function KLink({ to, ...rest }: { to: string; className?: string; "aria-label"?: string; children: ReactNode }) {
   return <Link to={`${nav.base}${to}`} {...rest} />;
 }
+/** Out of the scorekeeper, back into the app where it was opened from. The same button on every screen. */
+function ToApp({ compact = false }: { compact?: boolean }) {
+  return (
+    <button type="button" className="btn-line kp-to-app" onClick={() => nav.leave()} aria-label={nav.backLabel} title={nav.backLabel}>
+      <span aria-hidden="true">‹</span>{compact ? null : <span className="kp-lbl"> {nav.backLabel}</span>}
+    </button>
+  );
+}
 
-/** The scorekeeper for one team, as the signed-in account. `onLeave` returns to where it was opened from. */
-export function KeepApp({ teamId, teamName, onLeave }: { teamId: string; teamName: string; onLeave: () => void }) {
+/** The scorekeeper for one team, as the signed-in account. `onLeave` returns to where it was opened from, and
+ *  `backLabel` names it ("Back to Schedule"). */
+export function KeepApp({ teamId, teamName, onLeave, backLabel }: { teamId: string; teamName: string; onLeave: () => void; backLabel?: string }) {
+  const { t } = useI18n();
   nav.base = `/keep/${teamId}`;
   nav.navigate = useNavigate();
   nav.leave = onLeave;
+  nav.backLabel = backLabel || t("kp_backTo", { place: t("kp_place_app") });
   // Where this visit started, read once: the scorekeeper's home, or straight onto a game or practice run.
   const { pathname } = useLocation();
   const [entry] = useState(() => pathname.replace(/\/+$/, ""));
@@ -52,29 +64,33 @@ function KeepRoutes() {
   const portrait = usePortrait();
   useEffect(() => { document.title = t("kp_title"); }, [t]);
   if (portrait) return <TurnSideways />;
-  if (!k.roster) return <div className="status wrap kp-wrap" role="status"><p>{t("kp_needConnection")}</p><button className="btn-line" onClick={k.signOut}>{t("kp_leave")}</button></div>;
+  if (!k.roster) return <div className="status wrap kp-wrap" role="status"><p>{t("kp_needConnection")}</p><ToApp /></div>;
   const parts = pathname.slice(nav.base.length).split("/").filter(Boolean).map(decodeURIComponent);
-  if (parts[0] === "event" && parts[1]) return <FromEvent eventId={parts[1]} />;
+  // /event/<id>/new: an admin starting another take of a game that's already kept.
+  if (parts[0] === "event" && parts[1]) return <FromEvent eventId={parts[1]} retake={parts[2] === "new" && k.admin} />;
   if (parts[0] === "practice") return <Setup slug={null} practice />;
   if (parts[0] === "g" && parts[1]) {
-    // A game's log opens only inside its stat window (2 hours either side of the game); a practice run always.
+    // A game's log opens only inside its stat window (2 hours either side of the game), except for an admin;
+    // a practice run always.
     const setup = replay(k.entries(parts[1])).setup;
-    if (setup && !setup.practice && !isOpen(k.windowOf(setup.eventId), Date.now())) return <WindowClosed slug={parts[1]} />;
+    if (setup && !setup.practice && !k.admin && !isOpen(k.windowOf(setup.eventId), Date.now())) return <WindowClosed slug={parts[1]} />;
     return parts[2] === "setup" ? <Setup slug={parts[1]} /> : <Live slug={parts[1]} />;
   }
   return <Home />;
 }
 
-/** Opened from a game in the schedule: that game's log if this phone (or another) already keeps it, else its setup. */
-function FromEvent({ eventId }: { eventId: string }) {
+/** Opened from a game in the schedule: the take that counts if this phone (or another) already keeps it, else its
+ *  setup. `retake` (admins) always starts a new take. */
+function FromEvent({ eventId, retake = false }: { eventId: string; retake?: boolean }) {
   const k = useKeeper();
   const { t } = useI18n();
   const [ready, setReady] = useState(false);
   useEffect(() => { k.refresh().finally(() => setReady(true)); }, [k.refresh]);
   if (!ready) return <div className="status wrap kp-wrap" role="status"><p>{t("loading")}</p></div>;
-  const kept = k.games.find(slug => replay(k.entries(slug)).setup?.eventId === eventId);
-  if (kept) return <Navigate to={`${nav.base}/g/${encodeURIComponent(kept)}`} replace />;
-  if (!isOpen(k.windowOf(eventId), Date.now())) return <WindowClosed eventId={eventId} />;
+  const takes = takesByEvent(k.games.map(slug => takeOf(slug, k.entries(slug))).filter((x): x is Take => !!x)).get(eventId) ?? [];
+  const kept = takes.find(x => x.slug === k.picks[eventId]) ?? takes[0];
+  if (kept && !retake) return <Navigate to={`${nav.base}/g/${encodeURIComponent(kept.slug)}`} replace />;
+  if (!k.admin && !isOpen(k.windowOf(eventId), Date.now())) return <WindowClosed eventId={eventId} />;
   return <Setup slug={null} eventId={eventId} />;
 }
 
@@ -91,7 +107,7 @@ function WindowClosed({ slug, eventId }: { slug?: string; eventId?: string }) {
       <p>{msg}</p>
       <div className="kp-row">
         {slug && setup ? <Link className="btn-solid" to={`/live/${nav.base.split("/")[2]}/${encodeURIComponent(slug)}`}>{t("kp_viewStats")}</Link> : null}
-        <button type="button" className="btn-line" onClick={() => backOut()}>{t("kp_back")}</button>
+        {nav.openedAtHome ? <button type="button" className="btn-line" onClick={() => backOut()}>‹ {t("kp_back")}</button> : <ToApp />}
       </div>
     </div>
   );
@@ -111,14 +127,12 @@ function TurnSideways() {
       <span className="icon" aria-hidden="true">📱</span>
       <h1>{t("kp_rotateTitle")}</h1>
       <p className="sub">{t("kp_rotateNote")}</p>
-      {document.fullscreenEnabled ? <button type="button" className="btn-solid" onClick={full}>{t("kp_fullscreen")}</button> : null}
+      <div className="kp-row">
+        {document.fullscreenEnabled ? <button type="button" className="btn-solid" onClick={full}>{t("kp_fullscreen")}</button> : null}
+        <ToApp />
+      </div>
     </main>
   );
-}
-
-function LangToggle() {
-  const { lang, setLang, t } = useI18n();
-  return <button type="button" className="btn-line" lang={lang === "en" ? "es" : "en"} aria-label={t("languageLabel")} onClick={() => setLang(lang === "en" ? "es" : "en")}>{t("language")}</button>;
 }
 
 // ---------- Shared bits ----------
@@ -185,14 +199,36 @@ function Home() {
   const k = useKeeper();
   const { t, locale } = useI18n();
   const [del, setDel] = useState<{ slug: string; label: string } | null>(null);
+  const [pickErr, setPickErr] = useState("");
   useEffect(() => { k.refresh(); }, [k.refresh]);
   const rows = k.games.map(slug => ({ slug, s: replay(k.entries(slug)) })).filter(r => r.s.setup);
   const open = k.openGames(Date.now());
+  // A game kept more than once: which take each row is, and the one that counts.
+  const takes = rows.map(r => takeOf(r.slug, k.entries(r.slug))).filter((x): x is Take => !!x);
+  const byEvent = takesByEvent(takes);
+  const official = officialTakes(takes, k.picks);
+  const takeNo = (slug: string, eventId?: string) => {
+    const list = eventId ? byEvent.get(eventId) ?? [] : [];
+    return { n: list.findIndex(x => x.slug === slug) + 1, of: list.length };
+  };
+  // Admins: past games in the schedule that nobody kept, to take now (newest first).
+  const past = k.admin
+    ? k.roster!.schedule.filter(g => g.date <= today() && !byEvent.has(g.eventId) && !open.some(o => o.eventId === g.eventId))
+      .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8)
+    : [];
+  const choose = (eventId: string, slug: string) => {
+    setPickErr("");
+    k.pick(eventId, slug).catch(err => setPickErr(err instanceof Error ? err.message : String(err)));
+  };
   return (
     <main className="kp-wrap kp-home">
-      <header className="kp-top">
-        <h1>{t("kp_titleA")} <span>{t("kp_titleB")}</span></h1>
-        <div className="kp-row"><SyncBadge /><LangToggle /><button type="button" className="btn-line" onClick={k.signOut}>{t("kp_leave")}</button></div>
+      <header className="kp-top kp-nav">
+        <ToApp />
+        <div className="kp-nav-title">
+          <span className="eyebrow">{k.roster!.us}</span>
+          <h1>{t("kp_titleA")} <span>{t("kp_titleB")}</span></h1>
+        </div>
+        <SyncBadge />
       </header>
       {/* Stats are kept per scheduled game, from 2 hours before it until 2 hours after. */}
       {open.length ? (
@@ -203,19 +239,40 @@ function Home() {
             </button>
           ))}
         </div>
-      ) : <p className="sub">{t("kp_noOpenGames")}</p>}
+      ) : k.admin ? null : <p className="sub">{t("kp_noOpenGames")}</p>}
+      {past.length ? (
+        <section className="kp-sched" aria-label={t("kp_pastGames")}>
+          <p className="eyebrow">{t("kp_pastGames")} <span className="muted">· {t("kp_pastGamesHint")}</span></p>
+          <div className="kp-row">
+            {past.map(g => (
+              <button key={g.eventId} type="button" className="btn-line" onClick={() => go(`/event/${g.eventId}/new`)}>
+                {formatDate(g.date, locale, "short")} · {g.opponent ? `${t("vs")} ${g.opponent}` : g.title}
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+      {pickErr ? <p className="sub kp-warn" role="alert">{pickErr}</p> : null}
       {rows.length ? (
         <ul className="kp-games">
-          {rows.map(({ slug, s }) => (
-            <li key={slug}>
-              <KLink to={`/g/${encodeURIComponent(slug)}`}>
-                <span className="eyebrow">{formatDate(s.setup!.date, locale, "short")}{s.setup!.time ? ` · ${s.setup!.time}` : ""} · {s.setup!.format}v{s.setup!.format}</span>
-                <span className="kp-g-line"><b>{k.roster!.us} {s.score.us}–{s.score.them} {s.setup!.opponent}</b><span className="muted">{s.setup!.practice ? `${t("kp_practiceTag")} · ` : ""}{t(`kp_phase_${s.phase}`)}</span></span>
-              </KLink>
-              <button type="button" className="btn-line kp-del" aria-label={`${t("kp_delete")}: ${s.setup!.opponent}`}
-                onClick={() => setDel({ slug, label: `${formatDate(s.setup!.date, locale, "short")} · ${k.roster!.us} ${s.score.us}–${s.score.them} ${s.setup!.opponent}` })}>{t("kp_delete")}</button>
-            </li>
-          ))}
+          {rows.map(({ slug, s }) => {
+            const eventId = s.setup!.eventId;
+            const { n, of } = takeNo(slug, eventId);
+            const counts = official.has(slug);
+            return (
+              <li key={slug}>
+                <KLink to={`/g/${encodeURIComponent(slug)}`}>
+                  <span className="eyebrow">{formatDate(s.setup!.date, locale, "short")}{s.setup!.time ? ` · ${s.setup!.time}` : ""} · {s.setup!.format}v{s.setup!.format}</span>
+                  <span className="kp-g-line"><b>{k.roster!.us} {s.score.us}–{s.score.them} {s.setup!.opponent}</b><span className="muted">{s.setup!.practice ? `${t("kp_practiceTag")} · ` : ""}{t(`kp_phase_${s.phase}`)}</span></span>
+                  {of > 1 ? <span className="eyebrow">{t("kp_takeOf", { n, of })} · {counts ? <b>{t("kp_takeCounts")}</b> : <span className="muted">{t("kp_takeHistory")}</span>}</span> : null}
+                </KLink>
+                {k.admin && eventId && of > 1 && !counts ? <button type="button" className="btn-line" onClick={() => choose(eventId, slug)}>{t("kp_useTake")}</button> : null}
+                {k.admin && eventId && counts ? <button type="button" className="btn-line" onClick={() => go(`/event/${eventId}/new`)}>{t("kp_retake")}</button> : null}
+                <button type="button" className="btn-line kp-del" aria-label={`${t("kp_delete")}: ${s.setup!.opponent}`}
+                  onClick={() => setDel({ slug, label: `${formatDate(s.setup!.date, locale, "short")} · ${k.roster!.us} ${s.score.us}–${s.score.them} ${s.setup!.opponent}` })}>{t("kp_delete")}</button>
+              </li>
+            );
+          })}
         </ul>
       ) : <p className="sub">{t("kp_noGames")}</p>}
       <p className="sub">{t("kp_homeSaved")} {t("kp_homeNote")}</p>
@@ -250,16 +307,23 @@ function Setup({ slug, practice: practiceProp = false, eventId: presetEvent }: {
   const existing = slug ? replay(k.entries(slug)).setup : null;
   // A practice run keeps nothing beyond this phone, so it has no schedule entry to pick.
   const practice = existing?.practice ?? practiceProp;
-  // Only games whose stat window is open now; a practice run has none.
-  const scheduled = useMemo(() => (slug || practice ? [] : k.openGames(Date.now())), [slug, practice, k]);
+  // The game it was opened from (an admin's retake can be any time after its window).
+  const preset = !slug && presetEvent ? k.roster!.schedule.find(g => g.eventId === presetEvent) ?? null : null;
+  // Only games whose stat window is open now, plus the one it was opened from; a practice run has none.
+  const scheduled = useMemo(() => {
+    if (slug || practice) return [];
+    const open = k.openGames(Date.now());
+    return preset && !open.some(g => g.eventId === preset.eventId) ? [preset, ...open] : open;
+  }, [slug, practice, k, preset]);
   const previous = useMemo(() => k.games.filter(g => g !== slug).map(g => replay(k.entries(g)).setup).find(Boolean) ?? null, [k.games, slug, k]);
   const seed = existing ?? previous;
 
   const [step, setStep] = useState<SetupStep>("details");
-  const [opponent, setOpponent] = useState(existing?.opponent ?? (practice ? t("kp_practiceName") : ""));
-  const [date, setDate] = useState(existing?.date ?? today());
-  const [time, setTime] = useState(existing?.time ?? "");
-  const [home, setHome] = useState<"home" | "away" | "unknown">(existing ? (existing.home == null ? "unknown" : existing.home ? "home" : "away") : "unknown");
+  const [opponent, setOpponent] = useState(existing?.opponent ?? preset?.opponent ?? (practice ? t("kp_practiceName") : ""));
+  const [date, setDate] = useState(existing?.date ?? preset?.date ?? today());
+  const [time, setTime] = useState(existing?.time ?? preset?.time ?? "");
+  const presetHome = existing?.home ?? preset?.home;
+  const [home, setHome] = useState<"home" | "away" | "unknown">(presetHome == null ? "unknown" : presetHome ? "home" : "away");
   const [eventId, setEventId] = useState(existing?.eventId ?? presetEvent);
   const fromSchedule = (g: ScheduledGame) => {
     setOpponent(g.opponent); setDate(g.date); setTime(g.time);
@@ -326,6 +390,24 @@ function Setup({ slug, practice: practiceProp = false, eventId: presetEvent }: {
     if (sel?.kind === "slot") { const i = sel.i; setSlots(prev => prev.map((s, j) => (j === i ? { ...s, player: name } : s))); setSel(null); return; }
     setSel(sel?.kind === "bench" && sel.name === name ? null : { kind: "bench", name });
   };
+  // Drag as well as tap: a squad name onto a spot puts them there, a spot onto another swaps them, and a spot
+  // dragged back onto the names empties it. Swiping the names sideways scrolls them instead (touch-action).
+  const drag = useDrag(
+    (src, d) => {
+      setSel(null);
+      if (d.kind !== "token") return;
+      const to = d.id.startsWith("s:") ? Number(d.id.slice(2)) : null;
+      if (src.startsWith("b:") && to != null) {
+        const name = src.slice(2);
+        setSlots(prev => prev.map((s, j) => (j === to ? { ...s, player: name } : s)));
+      } else if (src.startsWith("s:")) {
+        const from = Number(src.slice(2));
+        if (to != null && to !== from) setSlots(prev => { const n = prev.map(s => ({ ...s })); [n[from].player, n[to].player] = [n[to].player, n[from].player]; return n; });
+        else if (d.id === "bench") setSlots(prev => prev.map((s, j) => (j === from ? { ...s, player: null } : s)));
+      }
+    },
+    src => (src.startsWith("b:") ? tapBench(src.slice(2)) : tapSlot(Number(src.slice(2)))),
+  );
 
   function submit() {
     const start = level === "advanced" ? slots.filter((s): s is { pos: string; player: string } => !!s.player).map(s => ({ pos: s.pos, player: s.player })) : [];
@@ -352,9 +434,9 @@ function Setup({ slug, practice: practiceProp = false, eventId: presetEvent }: {
   const bench = players.filter(p => !slots.some(s => s.player === p.name));
 
   return (
-    <main className="kp-wrap kp-setup">
+    <main className={`kp-wrap kp-setup step-${step}`}>
       <header className="kp-top">
-        <button type="button" className="btn-line" onClick={back}>‹ {t("kp_back")}</button>
+        <button type="button" className="btn-line" onClick={back}>‹ {at === 0 && !slug && !nav.openedAtHome ? nav.backLabel : t("kp_back")}</button>
         <h1>{title}</h1>
         {nextBtn}
       </header>
@@ -453,33 +535,40 @@ function Setup({ slug, practice: practiceProp = false, eventId: presetEvent }: {
 
       {step === "starters" ? (
         <>
-          <div className="kp-row kp-lineup-tools">
-            <span className="eyebrow">{t("kp_startingLineup")} · {slots.filter(s => s.player).length}/{slots.length}</span>
-            <button type="button" className="btn-line" onClick={autoFill}>{t("kp_autoFill")}</button>
-            {previous?.start.length ? <button type="button" className="btn-line" onClick={sameAsLast}>{t("kp_sameAsLast")}</button> : null}
-            <button type="button" className="btn-line" onClick={() => setSlots(slots.map(s => ({ ...s, player: null })))}>{t("kp_clear")}</button>
-          </div>
-          <div className="kp-bench setup" aria-label={t("kp_bench")}>
+          {/* The squad on one line that scrolls sideways; the pitch below, with the lineup tools beside it. */}
+          <div className="kp-bench setup" aria-label={t("kp_bench")} data-drop="bench">
             {bench.map(p => (
-              <button key={p.name} type="button" className={`kp-pill bench${sel?.kind === "bench" && sel.name === p.name ? " sel" : ""}`} onClick={() => tapBench(p.name)}>
+              <button key={p.name} type="button" className={`kp-pill bench${sel?.kind === "bench" && sel.name === p.name ? " sel" : ""}${drag.dragging === `b:${p.name}` ? " lifted" : ""}`}
+                onPointerDown={e => drag.start(e, `b:${p.name}`, <span className="kp-pill bench ghost"><span className="num">{p.number ?? initials(p.name)}</span>{firstName(p.name)}</span>)}>
                 <span className="num">{p.number ?? initials(p.name)}</span>{firstName(p.name)}
               </button>
             ))}
+            {!bench.length ? <span className="muted">{t("kp_benchEmpty")}</span> : null}
           </div>
-          <p className="sub">{t("kp_swapHint")}</p>
+          <p className="sub kp-swap-hint">{t("kp_swapHint")}</p>
           {started ? <p className="sub kp-warn">{t("kp_editAfterKickoff")}</p> : null}
-          <Pitch label={t("kp_startingLineup")}>
-            {placedSlots.map(sl => (
-              <button key={sl.i} type="button" className={`kp-pill us slot${sl.player ? "" : " empty"}${sel?.kind === "slot" && sel.i === sl.i ? " sel" : ""}`} style={place(sl.x, sl.y)} onClick={() => tapSlot(sl.i)}>
-                <span className="num">{sl.player ? tokenText(players, sl.player) : "+"}</span>{sl.player ? firstName(sl.player) : ""}<i>{sl.pos}</i>
-              </button>
-            ))}
-          </Pitch>
+          <div className="kp-lineup-stage">
+            <Pitch label={t("kp_startingLineup")}>
+              {placedSlots.map(sl => (
+                <button key={sl.i} type="button" data-drop={`s:${sl.i}`} className={`kp-pill us slot${sl.player ? "" : " empty"}${sel?.kind === "slot" && sel.i === sl.i ? " sel" : ""}${drag.dragging === `s:${sl.i}` ? " lifted" : ""}`} style={place(sl.x, sl.y)}
+                  onPointerDown={e => drag.start(e, `s:${sl.i}`, <span className="kp-pill us ghost"><span className="num">{sl.player ? tokenText(players, sl.player) : "+"}</span>{sl.player ? firstName(sl.player) : sl.pos}</span>)}>
+                  <span className="num">{sl.player ? tokenText(players, sl.player) : "+"}</span>{sl.player ? firstName(sl.player) : ""}<i>{sl.pos}</i>
+                </button>
+              ))}
+            </Pitch>
+            <div className="kp-lineup-tools">
+              <span className="eyebrow">{t("kp_startingLineup")} · {slots.filter(s => s.player).length}/{slots.length}</span>
+              <button type="button" className="btn-line" onClick={autoFill}>{t("kp_autoFill")}</button>
+              {previous?.start.length ? <button type="button" className="btn-line" onClick={sameAsLast}>{t("kp_sameAsLast")}</button> : null}
+              <button type="button" className="btn-line" onClick={() => setSlots(slots.map(s => ({ ...s, player: null })))}>{t("kp_clear")}</button>
+            </div>
+          </div>
         </>
       ) : null}
 
       <p className="msg" role="alert">{err}</p>
-      <div className="kp-row">{nextBtn}</div>
+      <div className="kp-row kp-bottom-next">{nextBtn}</div>
+      {drag.layer}
 
       {posSheet != null ? (
         <Sheet title={`${slots[posSheet].player ?? ""} · ${t("kp_position")}`} onClose={() => setPosSheet(null)}>
@@ -545,7 +634,7 @@ function Live({ slug }: { slug: string }) {
   }, []);
 
   const drag = useDrag((src, d) => onDrop(src, d), src => onTap(src), src => onLong(src));
-  if (!s.setup) return <div className="status wrap kp-wrap"><p>{t("notFound")}</p><KLink className="btn-line" to="">{t("kp_back")}</KLink></div>;
+  if (!s.setup) return <div className="status wrap kp-wrap"><p>{t("notFound")}</p><ToApp /></div>;
   const setup = s.setup;
   const beginner = setup.level === "beginner";
   const us = k.roster!.us, opp = setup.opponent;
@@ -840,7 +929,7 @@ function Live({ slug }: { slug: string }) {
   return (
     <main className={`kp-live${voiceOn ? " voice" : ""}`}>
       <header className="kp-bar">
-        <button type="button" className="btn-line" aria-label={t("kp_back")} onClick={() => backOut()}>‹</button>
+        <button type="button" className="btn-line" aria-label={nav.openedAtHome ? t("kp_back") : nav.backLabel} title={nav.openedAtHome ? t("kp_back") : nav.backLabel} onClick={() => backOut()}>‹</button>
         <button type="button" className="btn-line kp-undo" disabled={!last} aria-label={t("kp_undo")} onClick={() => last && undo(last.id)}><span aria-hidden="true">↶</span><span className="kp-lbl"> {t("kp_undo")}</span></button>
         <div className="kp-score" aria-live="polite"><span className="dfc-t">{us}</span> <b>{s.score.us}–{s.score.them}</b> <span className="opp-t">{opp}</span></div>
         <button type="button" className={`kp-clock mono${running ? " run" : ""}${over ? " over" : ""}`} onClick={() => setSheet({ kind: "clock" })} aria-label={t("kp_clockTitle")}>

@@ -22,6 +22,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { replay, toRaw } from "../../src/film/lib/keeplog";
+import { officialTakes, takeOf, type Take } from "../../src/film/lib/takes";
 import { halfLengths, playLineup } from "../../src/film/lib/lineup";
 import { fromKeeper, fromLibrary, fromOllie, seasonStats, type SourceGame } from "../../src/film/lib/playerStats";
 import { matchGame } from "../../src/film/lib/schedule";
@@ -104,9 +105,14 @@ if (cmd === "teams") {
       const e = KeepEntry.safeParse(r.entry);
       if (e.success) byGame.set(r.game as string, [...(byGame.get(r.game as string) ?? []), e.data]);
     }
-    const kept = fromKeeper([...byGame.values()]);
+    // A game kept more than once counts once: the take an admin picked, else its first (lib/takes.ts).
+    const picked = await db.from("keeper_game_picks").select("event_id, game").eq("team_id", teamId);
+    if (picked.error) console.warn(`  picked takes: ${picked.error.message} (first takes count)`);
+    const picks = Object.fromEntries((picked.data ?? []).map(r => [r.event_id as string, r.game as string]));
+    const official = officialTakes([...byGame].map(([slug, entries]) => takeOf(slug, entries)).filter((x): x is Take => !!x), picks);
+    const kept = fromKeeper([...byGame].filter(([slug]) => official.has(slug)).map(([, entries]) => entries));
     sources.push(...kept);
-    console.log(`scorekeeper: ${kept.length} games`);
+    console.log(`scorekeeper: ${kept.length} games${byGame.size > official.size ? ` (${byGame.size - official.size} other takes left out)` : ""}`);
   }
   const history = dataJson("ollie/history.json"), olliePlayers = dataJson("ollie/players.json");
   if (history && olliePlayers) {

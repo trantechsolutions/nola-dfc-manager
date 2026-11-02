@@ -19,7 +19,7 @@ const parse = (raw) => {
 export const liveGameService = {
   /**
    * Every kept game on the team, newest first:
-   * [{ game, eventId, opponent, gameDate, startedAt, lastAt, finished, score: { us, them }, live }]
+   * [{ game, eventId, opponent, gameDate, startedAt, lastAt, finished, score: { us, them }, live, official, takes }]
    */
   async getSummaries(teamId) {
     if (!teamId) return [];
@@ -39,6 +39,9 @@ export const liveGameService = {
       finished: !!r.finished,
       score: { us: r.score_us || 0, them: r.score_them || 0 },
       live: !r.finished && !!r.started_at && now - new Date(r.last_at).getTime() < QUIET_MS,
+      // Before sql/keeper_retake_migration.sql there's one take per game, and it counts.
+      official: r.official ?? true,
+      takes: r.takes ?? 1,
     }));
   },
 

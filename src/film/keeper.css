@@ -3000,6 +3000,45 @@ html:not(.dark) .film-keep {
 .film-keep .kp-top h1 span {
   color: var(--dfc-ink);
 }
+/* Home's top row: back into the app on the left, the team and title, then the sync state. */
+.film-keep .kp-nav {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding-top: max(12px, env(safe-area-inset-top));
+}
+.film-keep .kp-nav-title {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.film-keep .kp-to-app {
+  min-height: 40px;
+  white-space: nowrap;
+}
+@media (max-width: 520px) {
+  .film-keep .kp-nav .kp-to-app .kp-lbl {
+    display: none;
+  }
+}
+/* Opening the scorekeeper: it rises in over the app instead of cutting to it. */
+.film-keep.kp-enter {
+  animation: kp-enter 220ms ease-out both;
+}
+@keyframes kp-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .film-keep.kp-enter {
+    animation: none;
+  }
+}
 .film-keep .muted {
   color: var(--kp-muted);
 }
@@ -3717,6 +3756,57 @@ html:not(.dark) .film-keep {
   }
 }
 
+/* The game screen on a phone held sideways: a size smaller all round, so the pitch keeps the room. */
+@media (max-height: 560px) {
+  .film-keep .kp-live .kp-pill {
+    font-size: 0.76rem;
+    min-height: 32px;
+    padding: 2px 9px 2px 3px;
+    gap: 5px;
+  }
+  .film-keep .kp-live .kp-pill .num {
+    min-width: 24px;
+    height: 24px;
+    font-size: 0.78rem;
+  }
+  .film-keep .kp-live .kp-bench .kp-pill {
+    min-height: 30px;
+  }
+  .film-keep .kp-live .kp-bench .muted {
+    font-size: 0.78rem;
+    line-height: 1.3;
+  }
+  .film-keep .kp-live .kp-pitch {
+    height: calc(100dvh - 166px);
+  }
+  .film-keep .kp-live.voice .kp-pitch {
+    height: calc(100dvh - 260px);
+  }
+  .film-keep .kp-live .kp-prompt {
+    font-size: clamp(0.85rem, 2.6vw, 1.1rem);
+    min-height: 2.2em;
+  }
+  .film-keep .kp-live .kp-score {
+    font-size: 1rem;
+  }
+  .film-keep .kp-live .kp-score b {
+    font-size: 1.2rem;
+  }
+  .film-keep .kp-live .kp-clock {
+    font-size: 0.95rem;
+    min-height: 36px;
+  }
+  .film-keep .kp-live .kp-bar .btn-line,
+  .film-keep .kp-live .kp-go {
+    min-height: 36px;
+  }
+  .film-keep .kp-live .kp-act-btn {
+    font-size: 0.8rem;
+    min-height: 36px;
+    padding-inline: 12px;
+  }
+}
+
 .film-keep .kp-head {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -3770,9 +3860,122 @@ html:not(.dark) .film-keep {
   line-height: 1.35;
   color: var(--kp-muted);
 }
+/* Setup's bench: one line that scrolls sideways (swipe for more), so the pitch keeps the height. */
 .film-keep .kp-bench.setup {
-  flex-wrap: wrap;
-  overflow: visible;
+  flex-wrap: nowrap;
+  overflow: auto hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  mask-image: linear-gradient(to right, transparent, #000 10px, #000 calc(100% - 24px), transparent);
+  padding-inline: 2px 24px;
+}
+.film-keep .kp-bench.setup .kp-pill {
+  scroll-snap-align: start;
+  /* A sideways swipe scrolls the names; any other drag picks the player up. */
+  touch-action: pan-x;
+}
+.film-keep .kp-bench.setup .muted {
+  flex: none;
+}
+.film-keep .kp-bench.setup {
+  scrollbar-width: none;
+}
+.film-keep .kp-bench.setup::-webkit-scrollbar {
+  display: none;
+}
+/* The starters step: the pitch, with the lineup tools in a column on its right. */
+.film-keep .kp-lineup-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+.film-keep .kp-lineup-stage .kp-lineup-tools {
+  display: grid;
+  gap: 8px;
+  width: clamp(130px, 22vw, 190px);
+}
+.film-keep .kp-lineup-stage .kp-lineup-tools .eyebrow {
+  margin-right: 0;
+}
+.film-keep .kp-lineup-stage .kp-lineup-tools .btn-line {
+  width: 100%;
+  white-space: normal;
+  line-height: 1.15;
+  text-align: center;
+}
+.film-keep .kp-setup .msg:empty {
+  display: none;
+}
+/* Every setup step on a phone held sideways: one screen, no scrolling. The step count, hints and the second
+   Next button go (Next stays in the top bar) and the choices shrink to the height there is. */
+@media (max-height: 560px) {
+  .film-keep:has(.kp-setup) {
+    padding-bottom: 0;
+  }
+  .film-keep .kp-setup {
+    gap: 8px;
+    padding-block: max(8px, env(safe-area-inset-top)) 8px;
+  }
+  .film-keep .kp-setup > .eyebrow,
+  .film-keep .kp-setup .kp-swap-hint,
+  .film-keep .kp-setup .kp-bottom-next {
+    display: none;
+  }
+  .film-keep main.kp-setup .kp-top h1 {
+    font-size: 1.35rem;
+  }
+  .film-keep .kp-setup.step-minutes .kp-tiles {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .film-keep .kp-setup .kp-top .btn-line,
+  .film-keep .kp-setup .kp-next,
+  .film-keep .kp-setup .kp-lineup-tools .btn-line,
+  .film-keep .kp-setup .kp-bench .kp-pill {
+    min-height: 36px;
+  }
+  .film-keep .kp-setup .kp-tile {
+    min-height: 60px;
+    padding: 6px;
+    gap: 2px;
+  }
+  .film-keep .kp-setup .kp-tile b {
+    font-size: 1.45rem;
+  }
+  .film-keep .kp-setup .kp-tile.tall {
+    min-height: 0;
+    padding: 10px;
+  }
+  .film-keep .kp-setup .kp-tiles {
+    gap: 8px;
+  }
+  .film-keep .kp-setup .kp-form input {
+    min-height: 38px;
+    padding-block: 4px;
+  }
+  .film-keep .kp-setup .sub {
+    font-size: 0.85rem;
+    line-height: 1.35;
+  }
+  .film-keep .kp-setup .kp-side-pick {
+    padding: 6px;
+    gap: 4px;
+  }
+  .film-keep .kp-setup .kp-side-pick svg {
+    height: calc(100dvh - 190px);
+    max-height: 200px;
+    min-height: 90px;
+  }
+  .film-keep .kp-setup.step-starters .kp-pitch {
+    max-width: min(900px, calc((100dvh - 120px) * 1000 / 620));
+    min-width: 240px;
+  }
+  .film-keep .kp-setup .kp-pitch .kp-pill.slot {
+    padding: 2px 6px;
+    min-width: 46px;
+    gap: 1px;
+  }
 }
 
 .film-keep .kp-zones {
@@ -4193,9 +4396,14 @@ html:not(.dark) .film-keep {
 
 .film-keep .kp-games li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: auto;
   gap: 8px;
   align-items: stretch;
+}
+.film-keep .kp-games li > .btn-line {
+  align-self: center;
 }
 .film-keep .kp-del {
   align-self: center;

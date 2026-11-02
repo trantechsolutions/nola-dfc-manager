@@ -51,6 +51,13 @@ interface KeeperApi {
   openGames: (now: number) => ScheduledGame[];
   sync: { state: SyncState; pending: number; error: string };
   version: number;
+  /** Super admin, club admin or team manager: keeps stats at any time, retakes a game and picks the take that
+   *  counts (sql/keeper_retake_migration.sql). */
+  admin: boolean;
+  /** The picked take per scheduled game (team_events id → game). */
+  picks: Record<string, string>;
+  /** Makes `slug` the take that counts for its scheduled game. */
+  pick: (eventId: string, slug: string) => Promise<void>;
 }
 
 const Ctx = createContext<KeeperApi | null>(null);
@@ -113,7 +120,11 @@ export function KeeperProvider({ teamId, teamName, onLeave, children }: {
     log: `dfc-keeper-log:${teamId}:`,
     index: `dfc-keeper-games:${teamId}`,
     forgot: `dfc-keeper-deleted:${teamId}`,
+    admin: `dfc-keeper-admin:${teamId}`,
+    picks: `dfc-keeper-picks:${teamId}`,
   }), [teamId]);
+  const [admin, setAdmin] = useState(() => read<boolean>(K.admin) === true);
+  const [picks, setPicks] = useState<Record<string, string>>(() => read<Record<string, string>>(K.picks) ?? {});
   const [roster, setRoster] = useState<KeeperRoster | null>(() => read<KeeperRoster>(K.roster));
   const [windows, setWindows] = useState<Record<string, GameWindow>>(() => read<Record<string, GameWindow>>(K.windows) ?? {});
   const [games, setGames] = useState<string[]>(() => read<string[]>(K.index) ?? []);
@@ -179,6 +190,10 @@ export function KeeperProvider({ teamId, teamName, onLeave, children }: {
       r => { if (live) { setRoster(r.roster); write(K.roster, r.roster); setWindows(r.windows); write(K.windows, r.windows); } },
       err => console.warn("[keeper] squad:", err?.message ?? err),
     );
+    // Before the retake migration the function is missing: nobody is an admin here.
+    supabase.rpc("keeper_is_admin", { p_team_id: teamId }).then(({ data, error }) => {
+      if (live && !error) { setAdmin(data === true); write(K.admin, data === true); }
+    });
     return () => { live = false; };
   }, [teamId, teamName, K]);
 
@@ -260,7 +275,19 @@ export function KeeperProvider({ teamId, teamName, onLeave, children }: {
       addGame(slug);
     }
     if (changed) setVersion(v => v + 1);
+    const p = await supabase.from("keeper_game_picks").select("event_id, game").eq("team_id", teamId);
+    if (!p.error) {
+      const next = Object.fromEntries((p.data ?? []).map(r => [r.event_id as string, r.game as string]));
+      setPicks(next);
+      write(K.picks, next);
+    }
   }, [teamId, K, logOf, save, addGame]);
+
+  const pick = useCallback(async (eventId: string, slug: string) => {
+    const { error } = await supabase.rpc("keeper_pick_take", { p_team_id: teamId, p_event_id: eventId, p_game: slug });
+    if (error) throw new Error(error.message);
+    setPicks(prev => { const next = { ...prev, [eventId]: slug }; write(K.picks, next); return next; });
+  }, [teamId, K]);
 
   const flushSoon = useRef<ReturnType<typeof setTimeout>>(undefined);
   const forget = useCallback((slug: string) => {
@@ -290,12 +317,12 @@ export function KeeperProvider({ teamId, teamName, onLeave, children }: {
     signIn: async () => {},
     // "Sign out" leaves the scorekeeper; the logs stay on the device, sent or still waiting.
     signOut: onLeave,
-    games, append, refresh, forget, sync, version,
+    games, append, refresh, forget, sync, version, admin, picks, pick,
     clearPractice: () => discard(unfinishedPractice()),
     windowOf: eventId => (eventId ? windows[eventId] ?? null : null),
     openGames: now => (roster?.schedule ?? []).filter(g => isOpen(windows[g.eventId], now)),
     entries: slug => logOf(slug).entries,
-  }), [roster, onLeave, games, append, refresh, forget, sync, version, logOf, discard, unfinishedPractice, windows]);
+  }), [roster, onLeave, games, append, refresh, forget, sync, version, logOf, discard, unfinishedPractice, windows, admin, picks, pick]);
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 }

@@ -44,17 +44,34 @@ export default function KeepView() {
   }, []);
 
   // Back where it was opened from (the schedule or the Stats page, passed as location state by the links in);
-  // opened any other way, the Stats page. Never history -1: the scorekeeper's own screens add history entries,
-  // so one step back usually lands inside it again.
+  // opened any other way, the Stats page.
   const location = useLocation();
   const [from] = useState(() => {
     const path = location.state?.from;
     return typeof path === 'string' && path.startsWith('/') && !path.startsWith('/keep/') ? path : null;
   });
-  const leave = () => navigate(from || `/film/${teamId}`);
+  // Where the scorekeeper's first screen sits in the browser history (React Router keeps `idx` there). Leaving
+  // steps back past every screen it added, so the phone's back button afterwards doesn't land inside it again.
+  const [startIdx] = useState(() => window.history.state?.idx);
+  const leave = () => {
+    const idx = window.history.state?.idx;
+    if (from && Number.isInteger(startIdx) && Number.isInteger(idx) && idx >= startIdx && startIdx > 0) {
+      navigate(-(idx - startIdx + 1));
+    } else {
+      navigate(from || `/film/${teamId}`, { replace: true });
+    }
+  };
+  const place = !from
+    ? 'stats'
+    : from.startsWith('/schedule')
+      ? 'schedule'
+      : from.startsWith('/film/')
+        ? 'stats'
+        : 'app';
+  const backLabel = t('film.kp_backTo', { place: t(`film.kp_place_${place}`) });
 
   return (
-    <div className="film-keep fixed inset-0 z-[2000] overflow-y-auto">
+    <div className="film-keep kp-enter fixed inset-0 z-[2000] overflow-y-auto">
       {state.status === 'checking' && (
         <div className="flex min-h-full items-center justify-center">
           <Loader2 className="animate-spin" />
@@ -64,11 +81,13 @@ export default function KeepView() {
         <div className="status wrap kp-wrap" role="alert">
           <p>{t('film.kp_notAllowed')}</p>
           <button type="button" className="btn-line" onClick={leave}>
-            {t('film.kp_leave')}
+            ‹ {backLabel}
           </button>
         </div>
       )}
-      {state.status === 'ok' && <KeepApp teamId={teamId} teamName={state.teamName} onLeave={leave} />}
+      {state.status === 'ok' && (
+        <KeepApp teamId={teamId} teamName={state.teamName} onLeave={leave} backLabel={backLabel} />
+      )}
     </div>
   );
 }
