@@ -14,6 +14,8 @@ export default function FilmSeason() {
     document.title = `${US} · ${t('season')}`;
   }, [US, t]);
 
+  // Lists on this page run newest game first; season() keeps them oldest first for its running totals.
+  const latest = useMemo(() => [...s.lines].reverse(), [s.lines]);
   const n = s.lines.length;
   const num = (x) => x.toLocaleString(locale, { maximumFractionDigits: 1 });
   const pair = (p, unit = '') => (p ? `${num(p[0])}${unit}–${num(p[1])}${unit}` : '—');
@@ -52,7 +54,7 @@ export default function FilmSeason() {
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-1" aria-label={t('formLabel')}>
           <Eyebrow className="mr-2">{t('form')}</Eyebrow>
-          {s.lines.map((l) => (
+          {latest.map((l) => (
             <Res key={l.slug} r={l.result} />
           ))}
         </div>
@@ -70,7 +72,7 @@ export default function FilmSeason() {
 
       <FilmSection id="results" eyebrow={t('resultsEyebrow')} title={t('results')}>
         <ol className="divide-y divide-border">
-          {s.lines.map((l) => {
+          {latest.map((l) => {
             const where = l.home === null ? '' : l.home ? t('homeShort') : t('awayShort');
             return (
               <li key={l.slug}>
@@ -208,7 +210,7 @@ export default function FilmSeason() {
               </tr>
             </thead>
             <tbody className="tabular-nums">
-              {s.lines.map((l) => (
+              {latest.map((l) => (
                 <tr key={l.slug} className="border-b border-border last:border-0">
                   <th scope="row" className="py-2 pr-3 text-left font-medium">
                     <Link to={report(l.slug)} className="hover:underline">
