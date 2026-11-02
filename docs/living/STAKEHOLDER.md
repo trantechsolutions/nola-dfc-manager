@@ -10,6 +10,12 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-11-01 — Opponent kickoff tap no longer closes itself (a2b78f0..a2b78f0)
+
+In the scorekeeper, you can start a game again by tapping the opponent. Before, the "Start the game?" box closed the moment it opened on a phone, so only a player tap or voice could kick off. The same fix stops the bench-player box from snapping shut.
+
+---
+
 ## 2026-10-25 — Server-sent notifications, reminders and the native app shell (1718cc7..1718cc7)
 
 Notifications are much more dependable. When someone posts in a chat, changes the schedule or sends a team message, everyone is told even if the sender closes the app straight away. New this time:
