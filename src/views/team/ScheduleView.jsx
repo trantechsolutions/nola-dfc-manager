@@ -257,6 +257,8 @@ const EventRow = ({
           </button>
         )}
 
+        {isPast && isGame && dbEvent && <GoalTimes dbEvent={dbEvent} />}
+
         {isPast && isGame && dbEvent && onScoreChange && (
           <ScoreEditor dbEvent={dbEvent} onScoreChange={onScoreChange} />
         )}
@@ -387,31 +389,55 @@ const ScoreChip = ({ scoreFor, scoreAgainst }) => {
   );
 };
 
-/** Staff enter or correct a past game's result in place; blank both to clear it. */
+// One minute box per goal, up to this many a side; a blowout past it keeps the score without every minute.
+const MAX_GOAL_MINUTES = 15;
+
+/** "Goals 12′ 30′ 55′ · Them 40′" under a past game, when the goal times were entered. */
+const GoalTimes = ({ dbEvent }) => {
+  const { t } = useT();
+  const ours = dbEvent.goalMinutesFor || [];
+  const theirs = dbEvent.goalMinutesAgainst || [];
+  if (!ours.length && !theirs.length) return null;
+  const list = (mins) => mins.map((m) => `${m}′`).join(' ');
+  return (
+    <p className="mt-2 text-xs tabular-nums text-muted-foreground">
+      {ours.length > 0 && `${t('nav.goalsUs')} ${list(ours)}`}
+      {ours.length > 0 && theirs.length > 0 && ' · '}
+      {theirs.length > 0 && `${t('nav.goalsThem')} ${list(theirs)}`}
+    </p>
+  );
+};
+
+/** Staff enter or correct a past game's result in place, with the minute of each goal if known; Clear removes it. */
 const ScoreEditor = ({ dbEvent, onScoreChange }) => {
   const { t } = useT();
   const hasScore = dbEvent.scoreFor != null && dbEvent.scoreAgainst != null;
+  const hadMinutes = !!(dbEvent.goalMinutesFor?.length || dbEvent.goalMinutesAgainst?.length);
   const [open, setOpen] = useState(false);
   const [us, setUs] = useState('');
   const [them, setThem] = useState('');
+  const [minsUs, setMinsUs] = useState([]);
+  const [minsThem, setMinsThem] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState(null);
 
   const start = () => {
     setUs(hasScore ? String(dbEvent.scoreFor) : '');
     setThem(hasScore ? String(dbEvent.scoreAgainst) : '');
-    setError(false);
+    setMinsUs((dbEvent.goalMinutesFor || []).map(String));
+    setMinsThem((dbEvent.goalMinutesAgainst || []).map(String));
+    setError(null);
     setOpen(true);
   };
 
-  const save = async (scoreFor, scoreAgainst) => {
+  const save = async (scoreFor, scoreAgainst, goalMinutes) => {
     setSaving(true);
-    setError(false);
+    setError(null);
     try {
-      await onScoreChange(dbEvent.id, scoreFor, scoreAgainst);
+      await onScoreChange(dbEvent.id, scoreFor, scoreAgainst, goalMinutes);
       setOpen(false);
-    } catch {
-      setError(true);
+    } catch (err) {
+      setError(err?.reason || 'failed');
     } finally {
       setSaving(false);
     }
@@ -419,6 +445,23 @@ const ScoreEditor = ({ dbEvent, onScoreChange }) => {
 
   const parse = (v) => (v === '' ? null : Math.max(0, Math.min(99, parseInt(v, 10) || 0)));
   const ready = us !== '' && them !== '';
+
+  // The minutes typed for as many goals as the score says, earliest first; null when none were.
+  const minutesOf = (mins, goals) => {
+    const out = mins
+      .slice(0, Math.min(goals ?? 0, MAX_GOAL_MINUTES))
+      .filter((m) => m !== '')
+      .map((m) => Math.max(0, Math.min(130, parseInt(m, 10) || 0)))
+      .sort((a, b) => a - b);
+    return out.length ? out : null;
+  };
+  const submit = () => {
+    const scoreFor = parse(us);
+    const scoreAgainst = parse(them);
+    const mins = { for: minutesOf(minsUs, scoreFor), against: minutesOf(minsThem, scoreAgainst) };
+    // Goal minutes go only when there are some to save or old ones to clear.
+    save(scoreFor, scoreAgainst, mins.for || mins.against || hadMinutes ? mins : null);
+  };
 
   if (!open) {
     return (
@@ -444,16 +487,59 @@ const ScoreEditor = ({ dbEvent, onScoreChange }) => {
     </label>
   );
 
+  const minuteRow = (label, goals, mins, setMins) => {
+    const n = Math.min(parse(goals) ?? 0, MAX_GOAL_MINUTES);
+    if (!n) return null;
+    return (
+      <div className="flex w-full flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+        <span className="w-12 shrink-0">{label}</span>
+        {Array.from({ length: n }, (_, i) => (
+          <input
+            key={i}
+            type="number"
+            inputMode="numeric"
+            min="0"
+            max="130"
+            placeholder="min"
+            aria-label={t('nav.goalMinuteLabel', { side: label, n: i + 1 })}
+            value={mins[i] ?? ''}
+            onChange={(e) =>
+              setMins((prev) => {
+                const next = [...prev];
+                next[i] = e.target.value;
+                return next;
+              })
+            }
+            className="w-14 rounded-md border border-input bg-card px-1.5 py-1 text-center text-sm tabular-nums text-foreground outline-none placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-ring"
+          />
+        ))}
+      </div>
+    );
+  };
+
+  const errorText = {
+    setup: t('nav.scoreSaveSetup'),
+    denied: t('nav.scoreSaveDenied'),
+    failed: t('nav.scoreSaveFailed'),
+  };
+
   return (
     <form
       className="mt-3 flex flex-wrap items-center gap-3"
       onSubmit={(e) => {
         e.preventDefault();
-        if (ready) save(parse(us), parse(them));
+        if (ready) submit();
       }}
     >
       {field(t('nav.scoreUs'), us, setUs)}
       {field(t('nav.scoreThem'), them, setThem)}
+      {(parse(us) || parse(them)) > 0 && (
+        <div className="w-full space-y-1.5">
+          <p className="text-xs font-semibold text-muted-foreground">{t('nav.goalMinutes')}</p>
+          {minuteRow(t('nav.scoreUs'), us, minsUs, setMinsUs)}
+          {minuteRow(t('nav.scoreThem'), them, minsThem, setMinsThem)}
+        </div>
+      )}
       <button
         type="submit"
         disabled={!ready || saving}
@@ -465,7 +551,7 @@ const ScoreEditor = ({ dbEvent, onScoreChange }) => {
         <button
           type="button"
           disabled={saving}
-          onClick={() => save(null, null)}
+          onClick={() => save(null, null, hadMinutes ? { for: null, against: null } : null)}
           className="text-sm font-semibold text-muted-foreground hover:text-foreground"
         >
           {t('nav.clearScore')}
@@ -480,7 +566,7 @@ const ScoreEditor = ({ dbEvent, onScoreChange }) => {
       </button>
       {error && (
         <p role="alert" className="w-full text-sm text-destructive">
-          {t('nav.scoreSaveFailed')}
+          {errorText[error] || errorText.failed}
         </p>
       )}
     </form>

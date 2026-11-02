@@ -129,13 +129,21 @@ export const scheduleService = {
     if (error) throw error;
   },
 
-  // Columns from sql/event_scores_migration.sql. Null clears a score.
-  updateTeamEventScore: async (id, scoreFor, scoreAgainst) => {
-    const { error } = await supabase
-      .from('team_events')
-      .update({ score_for: scoreFor, score_against: scoreAgainst, updated_at: new Date().toISOString() })
-      .eq('id', id);
-    if (error) throw error;
+  // Columns from sql/event_scores_migration.sql; goal minutes from sql/event_goal_times_migration.sql, sent only
+  // when given so a database without them still saves the score. Null clears a score. Throws an Error whose
+  // `reason` is 'setup' (a column is missing), 'denied' (no row updated: not this team's editor) or 'failed'.
+  updateTeamEventScore: async (id, scoreFor, scoreAgainst, goalMinutes = null) => {
+    const patch = { score_for: scoreFor, score_against: scoreAgainst, updated_at: new Date().toISOString() };
+    if (goalMinutes) {
+      patch.goal_minutes_for = goalMinutes.for;
+      patch.goal_minutes_against = goalMinutes.against;
+    }
+    const { data, error } = await supabase.from('team_events').update(patch).eq('id', id).select('id');
+    if (error) {
+      const missing = error.code === 'PGRST204' || error.code === '42703' || /column/i.test(error.message || '');
+      throw Object.assign(new Error(error.message), { reason: missing ? 'setup' : 'failed', cause: error });
+    }
+    if (!data?.length) throw Object.assign(new Error('No event updated'), { reason: 'denied' });
   },
 
   getTeamEvents: async (teamId) => {
@@ -160,6 +168,9 @@ export const scheduleService = {
       // Absent until sql/event_scores_migration.sql has run; null means no result yet.
       scoreFor: e.score_for ?? null,
       scoreAgainst: e.score_against ?? null,
+      // Absent until sql/event_goal_times_migration.sql has run; null means not entered.
+      goalMinutesFor: e.goal_minutes_for ?? null,
+      goalMinutesAgainst: e.goal_minutes_against ?? null,
       // Absent until sql/app_schedule_migration.sql has run.
       endDate: e.end_date ?? null,
       arrivalMinutes: e.arrival_minutes ?? null,

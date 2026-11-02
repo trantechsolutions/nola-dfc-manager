@@ -680,9 +680,13 @@ function App() {
   };
 
   // A blank field clears the score, so a mistyped result can be taken back.
-  const handleTeamEventScore = async (dbEventId, scoreFor, scoreAgainst) => {
-    await supabaseService.updateTeamEventScore(dbEventId, scoreFor, scoreAgainst);
-    updateTeamEvent(dbEventId, { scoreFor, scoreAgainst });
+  const handleTeamEventScore = async (dbEventId, scoreFor, scoreAgainst, goalMinutes = null) => {
+    await supabaseService.updateTeamEventScore(dbEventId, scoreFor, scoreAgainst, goalMinutes);
+    updateTeamEvent(dbEventId, {
+      scoreFor,
+      scoreAgainst,
+      ...(goalMinutes && { goalMinutesFor: goalMinutes.for, goalMinutesAgainst: goalMinutes.against }),
+    });
   };
 
   // Returns the in-band result so the expense form can surface a save failure
