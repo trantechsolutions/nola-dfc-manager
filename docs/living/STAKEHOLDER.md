@@ -10,6 +10,13 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-11-02 — Scorekeeper retakes and in-app scorekeeper (a33c64b..a33c64b)
+
+- **Retake a game's stats.** If a game's stats were kept badly, an admin (club admin or team manager) can keep them again. Every attempt is saved, and the admin picks which one counts. The schedule and season stats only use the chosen one.
+- **The scorekeeper feels like part of the app.** It slides in over the app, and every screen has a back button that returns you to the schedule or Stats page you came from.
+- **Starting lineup on a phone.** Player names sit in one row you swipe left and right. Drag a name onto the pitch, drag one spot onto another to swap, or drag a spot back to the row to clear it. Tapping still works. "Fill from squad" and "Fill from previous game" are beside the pitch, and every setup screen fits a phone held sideways.
+- **Game screen** text is a little smaller on phones so the pitch has more room.
+
 ## 2026-11-01 — Opponent kickoff tap no longer closes itself (a2b78f0..a2b78f0)
 
 In the scorekeeper, you can start a game again by tapping the opponent. Before, the "Start the game?" box closed the moment it opened on a phone, so only a player tap or voice could kick off. The same fix stops the bench-player box from snapping shut.
