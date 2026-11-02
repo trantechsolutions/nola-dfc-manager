@@ -56,7 +56,15 @@ export function useDrag(onDrop: (src: string, d: Drop) => void, onTap: (src: str
     const up = (ev: PointerEvent) => {
       stop();
       if (long) return;
-      if (!moved) { cb.current.onTap(src); return; }
+      if (!moved) {
+        // A tap that opens a sheet must not also land on the sheet's scrim (touch fires the click after
+        // pointerup, at the same spot) and close it straight away.
+        const swallow = (c: MouseEvent) => { c.stopPropagation(); c.preventDefault(); };
+        window.addEventListener("click", swallow, { capture: true, once: true });
+        setTimeout(() => window.removeEventListener("click", swallow, true), 400);
+        cb.current.onTap(src);
+        return;
+      }
       const d = hit(ev.clientX, ev.clientY);
       if (d.kind === "token" && d.id === src) return;
       cb.current.onDrop(src, d);
