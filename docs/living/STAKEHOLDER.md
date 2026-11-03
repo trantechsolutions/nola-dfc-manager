@@ -10,6 +10,14 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-11-03 — Game stats from the video (b7d42a7..8eadaaa)
+
+- **Possession, passes and turnovers now come from the game video.** A computer program follows the players and the ball on the tape and estimates the numbers. Before, they came from Ollie, which a parent taps live and which tends to cut possession short. Ollie is still used for any game the video hasn't been run on, marked with a †.
+- **Each match report has two new tables:** ball and possession for the whole game and each half, and our possession in every 5-minute stretch.
+- **Recurring themes opens with "Possession through the game":** where in a half the ball tends to get away from us, averaged over the season. Stoppage time counts in each half's last stretch.
+- **An asterisk means the program struggled to tell the two kits apart** in that game, so those numbers may be off. They still show, but they don't count in the season averages. Four games are marked for now: CSC Eagles, both LA Fire games and SSC Storm.
+- All of these are estimates: good for spotting trends and weak spells, not exact counts.
+
 ## 2026-11-02 — Goal times with the score, newest games first (0e9240c..14cf567)
 
 - **Saving a game's score works again** once the database update is applied, and if it ever fails the message now says why (setup, permission, or connection).
