@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { formatDate, useFilm, useFilmText } from '../../film/FilmContext';
-import { RECENT, WINDOWS, season, themes } from '../../film/lib/season';
+import { LOW, RECENT, WINDOWS, season, stretches, themes } from '../../film/lib/season';
 import { Eyebrow, FilmSection, Res, Toc } from './filmUi';
 
 /** Season overview: every game summed up. Positions only, no names; the recurring themes are coaches only. */
@@ -206,7 +206,9 @@ export default function FilmSeason() {
                 <th className="py-2 pr-3 font-semibold">{t('colScore')}</th>
                 <th className="py-2 pr-3 font-semibold">{t('colShots')}</th>
                 <th className="py-2 pr-3 font-semibold">{t('colOnTarget')}</th>
-                <th className="py-2 font-semibold">{t('colPossession')}</th>
+                <th className="py-2 pr-3 font-semibold">{t('colPossession')}</th>
+                <th className="py-2 pr-3 font-semibold">{t('colPasses')}</th>
+                <th className="py-2 font-semibold">{t('colTurnovers')}</th>
               </tr>
             </thead>
             <tbody className="tabular-nums">
@@ -225,7 +227,19 @@ export default function FilmSeason() {
                   </td>
                   <td className="py-2 pr-3">{pair(l.shots)}</td>
                   <td className="py-2 pr-3">{pair(l.onTarget)}</td>
-                  <td className="py-2">{pair(l.possession, '%')}</td>
+                  <td className="whitespace-nowrap py-2 pr-3">
+                    {pair(l.possession, '%')}
+                    {l.possession && !l.fromVideo && <span title={t('fromOllie')}>†</span>}
+                    {l.unsure && <Unsure />}
+                  </td>
+                  <td className="whitespace-nowrap py-2 pr-3">
+                    {pair(l.passes)}
+                    {l.unsure && <Unsure />}
+                  </td>
+                  <td className="whitespace-nowrap py-2">
+                    {pair(l.turnovers)}
+                    {l.unsure && <Unsure />}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -239,11 +253,14 @@ export default function FilmSeason() {
                 </td>
                 <td className="py-2 pr-3">{pair(s.avg.shots)}</td>
                 <td className="py-2 pr-3">{pair(s.avg.onTarget)}</td>
-                <td className="py-2">{pair(s.avg.possession, '%')}</td>
+                <td className="py-2 pr-3">{pair(s.avg.possession, '%')}</td>
+                <td className="py-2 pr-3">{pair(s.avg.passes)}</td>
+                <td className="py-2">{pair(s.avg.turnovers)}</td>
               </tr>
             </tfoot>
           </table>
         </div>
+        {s.lines.some((l) => l.unsure) && <p className="mt-2 text-xs text-muted-foreground">* {t('unsureNote')}</p>}
       </FilmSection>
 
       {coach && <Themes />}
@@ -302,11 +319,13 @@ function Themes() {
       themes(games.filter((g) => breakdowns[g.slug]).map((g) => ({ date: g.date, coaches: breakdowns[g.slug] }))),
     [games, breakdowns],
   );
+  const flow = useMemo(() => stretches(games), [games]);
   const n = games.length;
   const recent = Math.min(RECENT, n);
 
   return (
     <FilmSection id="themes" eyebrow={t('themesEyebrow')} title={t('themes')} sub={t('themesSub', { n: recent })}>
+      {flow.length > 0 && <Flow stretches={flow} />}
       {!list ? (
         <p className="text-sm text-muted-foreground">{t('loading')}</p>
       ) : (
@@ -347,5 +366,62 @@ function Themes() {
         </ul>
       )}
     </FilmSection>
+  );
+}
+
+/** Marks a video estimate the model was unsure of: it struggled to tell the kits apart. */
+function Unsure() {
+  const { t } = useFilmText();
+  return <span title={t('unsureNote')}>*</span>;
+}
+
+/** Our possession through a game, stretch by stretch, averaged over the games with video estimates.
+ *  The halves sit side by side on wide screens; stoppage time is folded into each half's last stretch. */
+function Flow({ stretches }) {
+  const { t } = useFilmText();
+  const most = Math.max(...stretches.map((x) => x.games));
+  return (
+    <div className="mb-6">
+      <h3 className="text-sm font-semibold">{t('flowTitle')}</h3>
+      <p className="mt-1 text-xs text-muted-foreground">{t('flowSub', { n: most, low: LOW })}</p>
+      <div className="mt-3 grid gap-4 lg:grid-cols-2">
+        {[1, 2].map((h) => {
+          const half = stretches.filter((x) => x.half === h);
+          return (
+            <section key={h} aria-label={h === 1 ? t('half1') : t('half2')}>
+              <Eyebrow>{h === 1 ? t('half1') : t('half2')}</Eyebrow>
+              <ol className="mt-1 grid gap-1" style={{ gridTemplateColumns: `repeat(${half.length}, minmax(0, 1fr))` }}>
+                {half.map((x) => {
+                  const weak = x.dfc < 45;
+                  const span = x.to - x.from > 5 ? `${x.from}'+` : `${x.from}–${x.to}'`;
+                  return (
+                    <li
+                      key={x.from}
+                      className="flex flex-col items-center gap-0.5 text-center"
+                      aria-label={t('flowCell', { from: x.from, to: x.to, pct: x.dfc, low: x.low, n: x.games })}
+                    >
+                      <span className="relative block h-12 w-full overflow-hidden rounded bg-muted" aria-hidden="true">
+                        <span
+                          className={`absolute inset-x-0 bottom-0 ${weak ? 'bg-destructive/70' : 'bg-primary'}`}
+                          style={{ height: `${x.dfc}%` }}
+                        />
+                        <span className="absolute inset-x-0 top-1/2 border-t border-dashed border-foreground/30" />
+                      </span>
+                      <span className={`text-xs font-semibold tabular-nums ${weak ? 'text-destructive' : ''}`}>
+                        {x.dfc}%
+                      </span>
+                      <span className="text-[10px] leading-tight text-muted-foreground tabular-nums">{span}</span>
+                      <span className="min-h-[1.25em] text-[10px] leading-tight text-muted-foreground tabular-nums">
+                        {x.low > 0 ? t('flowLow', { x: x.low, n: x.games }) : ''}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+          );
+        })}
+      </div>
+    </div>
   );
 }
