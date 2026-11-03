@@ -27,6 +27,16 @@ Working files live in `private/film/`. It is git-ignored and stays on the coach'
 
 If the scorekeeper logged the game, run `npm run film -- keeper pull <game> --as <slug>` before writing the file. It writes the moments to `data/raw/<slug>-live.json` and the lineup to `lineups.json`.
 
+## Computer vision (pilot)
+
+Runs on the GPU in its own Python env, `private/film/.venv` (PyTorch for CUDA 12.8, ultralytics), with models in `private/film/models/`. Nothing leaves the PC.
+
+- `private/film/.venv/Scripts/python tools/film/cv_pilot.py <slug> --from 0:00 --len 5:00` follows the players and the ball over a stretch and writes rough possession, passes and turnovers, plus a marked-up video, to `data/raw/<slug>-cv/`.
+- `private/film/.venv/Scripts/python tools/film/cv_label.py` is the ball labelling screen. It saves to `data/cv/ball/` for training a ball detector on our own footage.
+- `cv_train.py` trains our own player-and-ball detector (`models/ball.pt`) from those labels.
+- `cv_game.py prepare | confirm | run | apply | report` does whole games: learns each game's kits, has the coach mark which look-alike group is DFC and which the opponent, runs both halves, writes the estimates into the match report and prints the season table. A game where the model can't tell the kits apart is marked unsure, and the app shows its numbers with an asterisk and leaves them out of the averages. The top of the file has the details.
+- `npm run film:vision -- <slug>` is the paid alternative: Claude follows the play frame by frame (needs an Anthropic API key).
+
 ## Other commands
 
 `npm run film -- teams | roster | check | keeper games | keeper forget <game> | move-keeper`. The top of `film.ts` describes each one. `npm run film:ollie` pulls the latest Ollie history.
