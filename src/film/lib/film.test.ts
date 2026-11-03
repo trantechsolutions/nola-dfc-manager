@@ -5,7 +5,7 @@ import { Game, KeepEntry, Roster, type Lineup, type Lineups, type OlliePlayers }
 import { fixtureGame } from "./fixture";
 import { parseMarkup, stripMarkup } from "./markup";
 import { candidates, couldPlay, playerLabel, splitPositions } from "./positions";
-import { season, statOf, themes } from "./season";
+import { STRETCH_TABLE, VIDEO_TABLE, gameLine, season, statOf, stretches, themes } from "./season";
 import { lineupFor, playLineup, positionsOf, secondsOn, whoAt, whoPlayed } from "./lineup";
 import { nameMoment } from "./naming";
 import { playerSeasons } from "./players";
@@ -120,6 +120,53 @@ describe("season", () => {
     expect(statOf(g, "possession")).toEqual([61, 39]);
     expect(statOf(withStats([["Shots on goal", 3, 1]]), "shots")).toBeNull(); // "Shots on goal" is not "Shots"
     expect(statOf(withStats([["Shots on goal", 3, 1]]), "onTarget")).toEqual([3, 1]);
+  });
+
+  it("prefers the video estimates to Ollie's possession, and falls back to Ollie without them", () => {
+    const g = withStats([["Possession %", 60, 40]]);
+    expect(gameLine(g)).toMatchObject({ possession: [60, 40], passes: null, turnovers: null, fromVideo: false });
+    g.report.numbers.tables.push({ title: T(VIDEO_TABLE), rows: [
+      { label: T("Possession"), us: 51, them: 49, unit: "%" },
+      { label: T("Possession, first half"), us: 45, them: 55, unit: "%" },
+      { label: T("Completed passes"), us: 230, them: 206 },
+      { label: T("Turnovers"), us: 198, them: 197 },
+    ] });
+    expect(gameLine(g)).toMatchObject({ possession: [51, 49], passes: [230, 206], turnovers: [198, 197], fromVideo: true });
+  });
+
+  it("averages our possession per 5-minute stretch over the games with video estimates", () => {
+    const flow = (rows: [string, number][]) => {
+      const g = withStats([["Goals", 1, 0]]);
+      g.report.numbers.tables.push({ title: T(STRETCH_TABLE), rows: rows.map(([l, us]) => ({ label: T(l), us, them: 100 - us, unit: "%" })) });
+      return g;
+    };
+    const s = stretches([
+      flow([["1st half 0–5'", 20], ["1st half 5–10'", 60], ["2nd half 30–35'", 50]]),
+      flow([["1st half 0–5'", 50], ["1st half 5–10'", 70], ["2nd half 30–35'", 40], ["2nd half 35–39'", 20]]), // stoppage time folds in
+      withStats([["Goals", 0, 0]]), // no video: left out
+    ]);
+    expect(s).toEqual([
+      { half: 1, from: 0, to: 5, dfc: 35, games: 2, low: 1 },
+      { half: 1, from: 5, to: 10, dfc: 65, games: 2, low: 0 },
+      { half: 2, from: 30, to: 39, dfc: 40, games: 2, low: 1 },
+    ]);
+  });
+
+  it("marks video estimates the model was unsure of and leaves them out of the averages", () => {
+    const video = (us: number, unsure?: boolean) => {
+      const g = withStats([["Goals", 1, 0]]);
+      g.report.numbers.tables.push(
+        { title: T(VIDEO_TABLE), ...(unsure ? { unsure } : {}), rows: [{ label: T("Possession"), us, them: 100 - us, unit: "%" }] },
+        { title: T(STRETCH_TABLE), ...(unsure ? { unsure } : {}), rows: [{ label: T("1st half 0–5'"), us, them: 100 - us, unit: "%" }] },
+      );
+      return g;
+    };
+    const sure = video(50), doubtful = video(10, true);
+    expect(gameLine(doubtful)).toMatchObject({ possession: [10, 90], unsure: true });
+    expect(gameLine(sure).unsure).toBe(false);
+    const s = season([sure, doubtful]);
+    expect(s.avg.possession).toEqual([50, 50]);
+    expect(s.stretches).toEqual([{ half: 1, from: 0, to: 5, dfc: 50, games: 1, low: 0 }]);
   });
 
   it("totals the record, goal windows, half-time states and repeat opponents", () => {

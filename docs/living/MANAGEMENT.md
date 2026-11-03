@@ -10,6 +10,18 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-11-03 — Game stats from the video (b7d42a7..8eadaaa)
+
+**Delivered:** a local computer-vision pipeline that estimates possession, passes, turnovers and 5-minute possession stretches from each game's tape. Run on 13 games. The season overview and recurring themes now lead with these numbers, and readings the model was unsure of are flagged.
+
+**Decisions:** the video estimates replace Ollie as the main source, because Ollie is tapped live by a volunteer and passes logged late make possession come out short. It runs on the club PC's GPU at no cost per game, rather than the paid Claude-based option (also included, unused). Telling the teams apart is the hard part, so the coach confirms each game's kit groups once, about 10 seconds a game. A game is flagged unsure when the model sees far more of one kit than the other, or can't place most players. Flagged games are shown but kept out of the averages.
+
+**Risk:** the numbers are approximate. Four of 13 games have unreliable kit readings: white against our washed-out light blue, and one game where few players were placed. The game data and the new Ascension 4th-goal clip still need publishing (`npm run film -- publish`) before the app shows them.
+
+**Effort:** about 30 minutes of GPU time per game, run overnight.
+
+**Open:** rerun the four flagged games with finer kit grouping; publish the film data; Ascension's write-up gets DFC's kit colour wrong.
+
 ## 2026-11-02 — Goal times with the score, newest games first (0e9240c..14cf567)
 
 **Delivered:** fix for score saving, optional goal minutes per goal, newest-first ordering on the Stats overview.

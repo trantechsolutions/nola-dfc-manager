@@ -241,15 +241,26 @@ export default {
     scoredBy: '{{team}} goal',
     conceded: 'Conceded',
     numbersEyebrow: 'Game by game',
-    numbersSub: "{{us}} first. A dash means that game's report didn't record it.",
+    numbersSub:
+      "{{us}} first. Possession, passes and turnovers are estimated from the video by a computer model following the players and the ball; a dagger (†) marks possession from Ollie, for games the video hasn't been run on, and an asterisk marks a game where the model struggled to tell the kits apart (left out of the per-game averages). Ollie is tapped live by a parent, and passes logged late make possession come out short. Treat all of it as a guide to trends, not a count. A dash means that game's report didn't record it.",
     colGameShort: 'Game',
     colScore: 'Score',
     colShots: 'Shots',
     colOnTarget: 'On target',
     colPossession: 'Possession',
+    colPasses: 'Passes',
+    colTurnovers: 'Turnovers',
+    fromOllie: "From Ollie: this game's video hasn't been run yet",
+    unsureNote:
+      "The model had trouble telling the two teams' kits apart in this game, so these numbers may be off; it's a poor reading, not necessarily a poor game.",
+    flowTitle: 'Possession through the game (from the video)',
+    flowSub:
+      "Our average share of the ball in each 5-minute stretch, over up to {{n}} games with video estimates. Red bars are stretches where we average under 45%; under each stretch, how many games we had under {{low}}% of the ball. Stoppage time counts in each half's last stretch.",
+    flowCell: "{{from}}–{{to}}': {{pct}}% average possession, under 40% in {{low}} of {{n}} games",
+    flowLow: '<40% in {{x}}/{{n}}',
     perGame: 'Per game',
     themes: 'Recurring themes',
-    themesEyebrow: "What the coaches' breakdowns keep coming back to",
+    themesEyebrow: "What the video and the coaches' breakdowns keep coming back to",
     themesSub:
       'Ranked by how many games had a high-priority fix in each area (the solid part of each bar). The lighter part adds games where it came up at medium or low priority. "Last {{n}}" counts high-priority games among the most recent.',
     themesLocked: "The recurring themes come from the coaches' breakdowns, so they open with the coach password.",
@@ -292,7 +303,7 @@ export default {
     cameOn: 'came on',
     noMoments: 'No logged moment names their position while they were on.',
     seasonFooter:
-      "Built from every game in the library. Results and goal times come from the play-by-play, shot numbers from each match report, recurring themes from each coaches' breakdown.",
+      "Built from every game in the library. Results and goal times come from the play-by-play, shot numbers from each match report, possession, passes and turnovers from the video estimates (Ollie's possession where a game has none), and recurring themes from the video and each coaches' breakdown.",
     ghPrev: 'The game before',
     ghNext: 'The game after',
     ghPages: "This game's pages",

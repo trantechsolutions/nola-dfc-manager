@@ -26,6 +26,42 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-11-03 — Game stats from the video (b7d42a7..8eadaaa)
+
+**Commits.**
+
+```
+8eadaaa feat: lead the season overview with the video estimates
+b7d42a7 feat: estimate game stats from the tape with local computer vision
+```
+
+**Touched.**
+
+- Tooling, `tools/film/`:
+  - `cv_pilot.py`: detection with a custom YOLO11s player-and-ball model, ByteTrack, team split and possession analysis.
+  - `cv_label.py`: ball labelling screen. `cv_train.py`: detector training.
+  - `cv_teams.py`: SigLIP embeddings, then UMAP, KMeans and the coach's confirm screen, then a LogisticRegression saved as `teams.pkl`.
+  - `cv_game.py`: whole-game runner, `apply` into `report.numbers.tables`, the kit-reading check, and the season report.
+  - `vision.ts` and the `film:vision` script, with `@anthropic-ai/sdk` as a dev dependency: Claude-based alternative.
+  - `README.md`. `.gitignore`: `__pycache__/`.
+- App:
+  - `src/film/schema.ts`: `StatTable.unsure`.
+  - `src/film/lib/season.ts`: video-first `gameLine` (passes, turnovers, `fromVideo`, `unsure`); `stretches()` with stoppage time folded at 30'; unsure games excluded from the averages and stretches.
+  - `src/views/film/FilmSeason.jsx`: Passes and Turnovers columns, the Flow block, the \* and † markers.
+  - `src/views/film/FilmMatchReport.jsx`: \* on unsure tables, plus a note.
+  - `src/i18n/{en,es}/film.js`.
+
+**Schema/API.** No database change. Game JSON: an optional `unsure: boolean` on stat tables. The app doesn't validate game data when it reads it, so older builds just ignore the field.
+
+**Rationale.**
+
+- The kit check (`cv_game.py`): balance is min/max of DFC and opponent player sightings, which should be about 1 since both teams field the same number. Read is the share of sightings placed on a team. A game is unsure if balance is under 0.6 or read is under 0.35. This flags CSC Eagles (0.32), both LA Fire games (0.12 and 0.22) and SSC Storm (read 0.16); clean games sit at 0.62–0.94.
+- `ollie()` now ignores the video tables, so it no longer reads our own numbers back as Ollie's.
+
+**Tests.** `film.test.ts`: video-first possession, the stretch average with stoppage-time folding, and unsure games excluded. 68 tests pass. ESLint and Prettier are clean. `npm run film:validate` passes.
+
+**Rollback.** Revert 8eadaaa (app) and b7d42a7 (tooling). Video tables already written into game files are harmless on their own, and `cv_game.py apply` replaces them on a rerun.
+
 ## 2026-11-02 — Goal times with the score, newest games first (0e9240c..14cf567)
 
 **Files:** sql/event_goal_times_migration.sql (new), src/services/scheduleService.js, src/App.jsx, src/views/team/ScheduleView.jsx, src/i18n/{en,es}/nav.js, src/views/film/FilmSeason.jsx.

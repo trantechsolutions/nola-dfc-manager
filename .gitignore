@@ -56,3 +56,4 @@ playwright-report/
 .claude
 # Game film working files (game data, clips, keys); never committed
 /private/
+__pycache__/

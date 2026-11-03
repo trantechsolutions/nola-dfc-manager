@@ -148,8 +148,15 @@ export default function FilmMatchReport({ game: g }) {
                   <span className="text-right text-accent">{g.opponent}</span>
                 </div>
                 {tb.rows.map((r, j) => (
-                  <BarRow key={j} label={<T t={r.label} />} us={r.us} them={r.them} unit={r.unit ?? tb.unit ?? ''} />
+                  <BarRow
+                    key={j}
+                    label={<T t={r.label} />}
+                    us={r.us}
+                    them={r.them}
+                    unit={(r.unit ?? tb.unit ?? '') + (tb.unsure ? '*' : '')}
+                  />
                 ))}
+                {tb.unsure && <p className="mt-1 text-xs text-muted-foreground">* {t('unsureNote')}</p>}
               </div>
             ))}
           </div>

@@ -245,15 +245,26 @@ export default {
     scoredBy: 'Gol de {{team}}',
     conceded: 'En contra',
     numbersEyebrow: 'Partido a partido',
-    numbersSub: '{{us}} primero. Un guion significa que la crónica de ese partido no lo registró.',
+    numbersSub:
+      '{{us}} primero. La posesión, los pases y las pérdidas se estiman a partir del video con un modelo que sigue a los jugadores y el balón; una cruz (†) marca la posesión de Ollie, en los partidos cuyo video aún no se ha procesado, y un asterisco marca un partido en que al modelo le costó distinguir las equipaciones (no cuenta en los promedios). Ollie lo anota en directo un padre, y los pases anotados tarde hacen que la posesión salga más corta. Tómalo todo como guía de tendencias, no como un conteo. Un guion significa que la crónica de ese partido no lo registró.',
     colGameShort: 'Partido',
     colScore: 'Marcador',
     colShots: 'Tiros',
     colOnTarget: 'A puerta',
     colPossession: 'Posesión',
+    colPasses: 'Pases',
+    colTurnovers: 'Pérdidas',
+    fromOllie: 'De Ollie: el video de este partido aún no se ha procesado',
+    unsureNote:
+      'Al modelo le costó distinguir las equipaciones de los dos equipos en este partido, así que estos números pueden estar desviados: es una mala lectura, no necesariamente un mal partido.',
+    flowTitle: 'La posesión a lo largo del partido (a partir del video)',
+    flowSub:
+      'Nuestra parte media del balón en cada tramo de 5 minutos, en hasta {{n}} partidos con estimación del video. Las barras rojas son tramos en que promediamos menos del 45 %; debajo de cada tramo, en cuántos partidos tuvimos menos del {{low}} % del balón. El tiempo añadido cuenta en el último tramo de cada parte.',
+    flowCell: "{{from}}–{{to}}': {{pct}} % de posesión media, menos del 40 % en {{low}} de {{n}} partidos",
+    flowLow: '<40 % en {{x}}/{{n}}',
     perGame: 'Por partido',
     themes: 'Temas que se repiten',
-    themesEyebrow: 'Lo que los análisis de los entrenadores siguen señalando',
+    themesEyebrow: 'Lo que el video y los análisis de los entrenadores siguen señalando',
     themesSub:
       'Ordenados por cuántos partidos tuvieron una corrección de prioridad alta en cada aspecto (la parte sólida de cada barra). La parte más clara suma los partidos en que salió con prioridad media o baja. «Últimos {{n}}» cuenta los partidos con prioridad alta entre los más recientes.',
     themesLocked:
@@ -299,7 +310,7 @@ export default {
     cameOn: 'entró de cambio',
     noMoments: 'Ningún momento registrado nombra su posición mientras estaba en el campo.',
     seasonFooter:
-      'Hecho con todos los partidos de la biblioteca. Los resultados y los minutos de los goles salen de la crónica minuto a minuto, los tiros de cada crónica del partido y los temas que se repiten de cada análisis de los entrenadores.',
+      'Hecho con todos los partidos de la biblioteca. Los resultados y los minutos de los goles salen de la crónica minuto a minuto, los tiros de cada crónica del partido, la posesión, los pases y las pérdidas de las estimaciones del video (la posesión de Ollie si un partido no la tiene) y los temas que se repiten del video y de cada análisis de los entrenadores.',
     ghPrev: 'El partido anterior',
     ghNext: 'El partido siguiente',
     ghPages: 'Páginas de este partido',

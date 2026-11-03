@@ -48,6 +48,7 @@ const ReportHalf = z.object({
 const StatTable = z.object({
   title: Text.nullable(),
   unit: z.string().optional(),     // e.g. "%" for possession rows; per-row below wins
+  unsure: z.boolean().optional(),  // video estimates where the model struggled to tell the kits apart
   rows: z.array(z.object({ label: Text, us: z.number(), them: z.number(), unit: z.string().optional() }).strict()).min(1),
 }).strict();
 
