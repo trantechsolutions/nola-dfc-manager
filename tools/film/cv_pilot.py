@@ -26,6 +26,15 @@ NAMES = {US: "DFC", THEM: "OPP", OTHER: "other"}
 DRAW = {US: (230, 200, 90), THEM: (40, 40, 230), OTHER: (160, 160, 160)}
 
 
+def load_game(slug):
+    """The game file, or before it's written the tape's timing from npm run film -- postgame
+    (data/raw/<slug>-cv/tape.json: highlights.source and video.kickoff/halfLength, nothing else)."""
+    for f in (DATA / "games" / f"{slug}.json", DATA / "raw" / f"{slug}-cv" / "tape.json"):
+        if f.exists():
+            return json.loads(f.read_text(encoding="utf8"))
+    sys.exit(f"No game file or tape for {slug}")
+
+
 def secs(t):
     s = 0.0
     for p in str(t).split(":"):
@@ -101,7 +110,7 @@ def main():
     from ultralytics.utils import IterableSimpleNamespace, YAML
     from ultralytics.utils.checks import check_yaml
 
-    game = json.loads((DATA / "games" / f"{a.slug}.json").read_text(encoding="utf8"))
+    game = load_game(a.slug)
     video = Path(game["highlights"]["source"])
     if not video.exists():
         sys.exit(f"The tape isn't on this PC: {video}")

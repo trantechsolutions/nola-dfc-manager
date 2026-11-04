@@ -26,14 +26,22 @@ BALANCE, READ = 0.6, 0.35
 
 
 def games(slugs):
+    """Games whose tape is on this PC: every game file, and the tapes npm run film -- postgame has placed for games
+    not written up yet (raw/<slug>-cv/tape.json). A game file wins over its tape."""
+    found = {p.parent.name[:-3]: p for p in sorted((DATA / "raw").glob("*-cv/tape.json"))}
+    found.update({p.stem: p for p in sorted((DATA / "games").glob("*.json"))})
     out = []
-    for p in sorted((DATA / "games").glob("*.json")):
-        if slugs and p.stem not in slugs:
+    for slug in sorted(found):
+        if slugs and slug not in slugs:
             continue
-        g = json.loads(p.read_text(encoding="utf8"))
+        g = json.loads(found[slug].read_text(encoding="utf8"))
         if Path(g.get("highlights", {}).get("source", "")).is_file() and g.get("video", {}).get("kickoff"):
-            out.append((p.stem, g))
+            out.append((slug, g))
     return out
+
+
+def written_up(slug):
+    return (DATA / "games" / f"{slug}.json").exists()
 
 
 def folder(slug):
@@ -42,6 +50,8 @@ def folder(slug):
 
 def ollie(g):
     """Ollie's whole-game numbers as the game file reports them (DFC first), where it has them."""
+    if "report" not in g:  # a tape with no game file yet
+        return {}
     ours = (TITLE["en"], STRETCH_TITLE["en"])
     tables = [t for t in g["report"]["numbers"]["tables"] if (t.get("title") or {}).get("en") not in ours]
     s = json.dumps({**g, "report": {**g["report"], "numbers": {**g["report"]["numbers"], "tables": tables}}}, ensure_ascii=False)
@@ -118,6 +128,9 @@ def apply(slug):
     """Writes the game's estimates into its match report (report.numbers), next to Ollie's tables, which are
     left as they are. Running it again replaces the estimated tables."""
     path = DATA / "games" / f"{slug}.json"
+    if not path.exists():
+        print(f"  {slug}: no game file yet; its estimates go into the match report once it's written (cv_game.py apply)", flush=True)
+        return
     g = json.loads(path.read_text(encoding="utf8"))
     r = json.loads((folder(slug) / "game.json").read_text(encoding="utf8"))
     if "kits" not in r:  # run before the kit check existed
@@ -154,6 +167,7 @@ def main():
     ap.add_argument("step", choices=["prepare", "confirm", "run", "apply", "report"])
     ap.add_argument("slugs", nargs="*")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--yes", action="store_true", help="confirm: keep a first guess that has both teams without the screen")
     ap.add_argument("--groups", type=int, default=10, help="look-alike groups per game; pale kits need more")
     a = ap.parse_args()
     todo = games(a.slugs)
@@ -165,7 +179,7 @@ def main():
     elif a.step == "confirm":
         from cv_teams import confirm
         confirm([s for s, _ in todo if (folder(s) / "looks.npz").exists()
-                 and (a.force or not (folder(s) / "teams.pkl").exists())])
+                 and (a.force or not (folder(s) / "teams.pkl").exists())], auto=a.yes)
     elif a.step == "run":
         for slug, g in todo:
             if not (folder(slug) / "teams.pkl").exists():
@@ -182,7 +196,7 @@ def main():
             apply(slug)
     elif a.step == "apply":
         for slug, _ in todo:
-            if (folder(slug) / "game.json").exists():
+            if (folder(slug) / "game.json").exists() and written_up(slug):
                 apply(slug)
     else:
         report()

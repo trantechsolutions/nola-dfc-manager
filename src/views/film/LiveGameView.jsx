@@ -8,6 +8,7 @@ import PageTabs from '../../components/layout/PageTabs';
 import { liveGameService } from '../../services/liveGameService';
 import { clockAt, clockStr, replay, stats } from '../../film/lib/keeplog';
 import { newGoals, playByPlay, resultOf } from '../../film/liveFeed';
+import { stretchRows, videoRows } from '../../film/lib/postgame';
 import { Md } from '../../film/RichText';
 import { BarRow } from './filmUi';
 import GoalCelebration from './GoalCelebration';
@@ -60,6 +61,22 @@ export default function LiveGameView() {
   }, [teamId, game]);
 
   const s = useMemo(() => (entries ? replay(entries) : null), [entries]);
+
+  // The numbers estimated from the video, once the tape has been run after the game (npm run film -- postgame).
+  const [video, setVideo] = useState(null);
+  const eventId = s?.setup?.eventId;
+  const done = s?.phase === 'done';
+  useEffect(() => {
+    if (!done) return undefined;
+    let live = true;
+    liveGameService.getVideoStats(teamId, game, eventId).then(
+      (v) => live && setVideo(v),
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
+  }, [teamId, game, eventId, done]);
   const moments = useMemo(() => (entries && s ? playByPlay(entries, s, us) : []), [entries, s, us]);
   const opp = s?.setup?.opponent || '';
 
@@ -234,8 +251,43 @@ export default function LiveGameView() {
         </section>
       )}
 
+      {tab === 'stats' && video && <VideoEstimates video={video} us={us} opp={opp} lang={lang} t={t} />}
+
       {celebration && <GoalCelebration {...celebration} onDone={dismiss} />}
     </div>
+  );
+}
+
+/** Possession, passes and turnovers estimated from the video, then possession by 5-minute stretch. */
+function VideoEstimates({ video, us, opp, lang, t }) {
+  const stretches = stretchRows(video.stats);
+  const mark = video.unsure ? '*' : '';
+  return (
+    <section className="rounded-lg border border-border bg-card p-4 sm:p-5">
+      <h2 className="text-sm font-bold text-foreground">
+        {t('film.live_videoTitle')}
+        {mark}
+      </h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {t('film.live_videoNote')}
+        {video.unsure && ` ${t('film.live_videoUnsure')}`}
+      </p>
+      <div className="mt-3 grid grid-cols-2 text-xs font-bold">
+        <span className="text-primary">{us}</span>
+        <span className="text-right text-accent">{opp}</span>
+      </div>
+      {videoRows(video.stats).map((r) => (
+        <BarRow key={r.label.en} label={r.label[lang]} us={r.us} them={r.them} unit={r.unit || ''} />
+      ))}
+      {stretches.length > 0 && (
+        <>
+          <h3 className="mt-4 text-xs font-bold text-foreground">{t('film.live_videoStretches')}</h3>
+          {stretches.map((r) => (
+            <BarRow key={r.label.en} label={r.label[lang]} us={r.us} them={r.them} unit={r.unit || ''} />
+          ))}
+        </>
+      )}
+    </section>
   );
 }
 

@@ -57,6 +57,24 @@ export const liveGameService = {
     return (data || []).map((r) => parse(r.entry)).filter(Boolean);
   },
 
+  /**
+   * The game's numbers estimated from the video (sql/film_video_stats_migration.sql), written after the game by
+   * `npm run film -- postgame`: { stats, unsure, updatedAt } or null. Found by the kept game, or by its schedule
+   * entry so a retake picked later still shows them.
+   */
+  async getVideoStats(teamId, game, eventId) {
+    if (!teamId || !game) return null;
+    let query = supabase.from('film_video_stats').select('game, stats, unsure, updated_at').eq('team_id', teamId);
+    query = eventId ? query.or(`game.eq.${game},event_id.eq.${eventId}`) : query.eq('game', game);
+    const { data, error } = await query.order('updated_at', { ascending: false }).limit(5);
+    if (error) {
+      if (['42P01', 'PGRST205'].includes(error.code) || /film_video_stats/.test(error.message || '')) return null;
+      throw error;
+    }
+    const row = (data || []).find((r) => r.game === game) || (data || [])[0];
+    return row ? { stats: row.stats, unsure: !!row.unsure, updatedAt: row.updated_at } : null;
+  },
+
   /** Calls `onEntry` with each new entry as the scorekeeper logs it. Returns the unsubscribe. */
   subscribe(teamId, game, onEntry) {
     const channel = supabase

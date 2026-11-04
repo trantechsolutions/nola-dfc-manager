@@ -38,6 +38,12 @@ export default {
     live_backToSchedule: 'Calendario',
     live_follow: 'En directo {{us}}–{{them}}',
     live_gameStats: 'Estadísticas {{us}}–{{them}}',
+    live_videoTitle: 'Estimado a partir del video',
+    live_videoNote:
+      'Un modelo siguió a los jugadores y el balón en la grabación. Tómelo como guía de tendencias y tramos flojos, no como un conteo.',
+    live_videoUnsure:
+      '* Al modelo le costó distinguir las equipaciones, así que estas cifras son más aproximadas de lo normal.',
+    live_videoStretches: 'Nuestra posesión por tramos de 5 minutos',
     kp_practiceRun: 'Práctica',
     kp_practiceName: 'Práctica',
     kp_practiceTag: 'Práctica',

@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cv_pilot import DATA, DRAW, MODELS, NAMES, OTHER, THEM, US, shirt  # noqa: E402
+from cv_pilot import DATA, DRAW, MODELS, NAMES, OTHER, THEM, US, load_game, shirt  # noqa: E402
 
 SIGLIP = "google/siglip-base-patch16-224"
 
@@ -70,7 +70,7 @@ def prepare(slug, every=4, groups=10, model="ball.pt"):
     from ultralytics import YOLO
     import umap
 
-    game = json.loads((DATA / "games" / f"{slug}.json").read_text(encoding="utf8"))
+    game = load_game(slug)
     cap = cv2.VideoCapture(game["highlights"]["source"])
     det = YOLO(str(MODELS / model))
     person = {v: k for k, v in det.names.items()}.get("player", 0)
@@ -140,9 +140,22 @@ def sheet(samples, teams, pick=None):
     return np.vstack(rows)
 
 
-def confirm(slugs):
+def confirm(slugs, auto=False):
     """One screen per game: each row is a look-alike group. Pick a row with its number (0 is row 10) or W/S, then D (DFC), O (the
-    opponent) or N (neither: referees, keepers, spectators). Enter saves the game and moves on; Q stops."""
+    opponent) or N (neither: referees, keepers, spectators). Enter saves the game and moves on; Q stops.
+    With auto, a game whose first guess already has both teams is saved without the screen (light blue against red)."""
+    if auto:
+        rest = []
+        for slug in slugs:
+            guess = [int(x) for x in np.load(DATA / "raw" / f"{slug}-cv" / "looks.npz")["guess"]]
+            if US in guess and THEM in guess:
+                finish(slug, guess)
+                print(f"  {slug}: " + " ".join(NAMES[t] for t in guess) + " (first guess, not checked)", flush=True)
+            else:
+                rest.append(slug)
+        slugs = rest
+        if not slugs:
+            return
     win = "Teams: 1-9, 0 or W/S pick a row, D = DFC, O = opponent, N = neither, Enter = save game, Q = stop"
     cv2.namedWindow(win, cv2.WINDOW_NORMAL)
     for slug in slugs:

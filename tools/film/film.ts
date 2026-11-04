@@ -18,6 +18,13 @@
 //                                           scorekeeper password (private/film/.keeper-password) and copies them
 //                                           into keeper_entries; safe to run again
 //   npm run film -- check                   the project, the team, and what the film tables hold
+//   npm run film -- postgame <Reeplayer link> [--game <kept game>] [--kickoff m:ss,m:ss] [--halves m:ss,m:ss]
+//                            [--out <dir>] [--yes] [--force] [--dry-run]
+//                                           after a game: downloads the tape, finds the kept game it shows and
+//                                           where each half sits on it (the scorekeeper's taps, pulled onto the
+//                                           referee's whistles), runs the computer-vision estimates and puts them
+//                                           on the kept game's page (film_video_stats). --yes skips the kit screen
+//                                           when the first guess has both teams; --dry-run only works out the plan
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -27,6 +34,7 @@ import { halfLengths, playLineup } from "../../src/film/lib/lineup";
 import { fromKeeper, fromLibrary, fromOllie, seasonStats, type SourceGame } from "../../src/film/lib/playerStats";
 import { matchGame } from "../../src/film/lib/schedule";
 import { sec } from "../../src/film/lib/time";
+import { keeperHalves, pickTake, tapeTiming, zonedEpoch, type Halves, type TapeTiming, type Whistle } from "../../src/film/lib/postgame";
 import { KeepEntry, Lineups, OllieHistory, OlliePlayers, Roster, type Game, type Lineup, type PublicGame } from "../../src/film/schema";
 import { DATA, PRIVATE, ROOT, admin, dataJson, fail, needTeam, readSecret, scheduleOf, settings, team } from "./common";
 import { deriveKeeperKeys, openEntry } from "./keeperCrypto";
@@ -353,6 +361,128 @@ if (cmd === "teams") {
     if (e) fail(`keeper_entries: ${e.message}. Run sql/keeper_native_migration.sql first.`);
   }
   console.log(`✓ ${rows.length} scorekeeper entries moved into the manager.`);
+} else if (cmd === "postgame") {
+  const VALUED = ["--game", "--kickoff", "--halves", "--out"];
+  const opt = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] ?? fail(`${name} needs a value`) : undefined; };
+  const link = args.find((a, i) => !a.startsWith("--") && !VALUED.includes(args[i - 1]))
+    ?? fail("usage: npm run film -- postgame <Reeplayer link> [--game <kept game>] [--kickoff m:ss,m:ss] [--halves m:ss,m:ss] [--out <dir>] [--yes] [--force] [--dry-run]");
+  const pair = (name: string) => {
+    const v = opt(name);
+    if (v == null) return null;
+    const p = v.split(",");
+    if (p.length !== 2 || !p.every(x => /^\d{1,3}:\d{2}$/.test(x.trim()))) fail(`${name} takes the two halves as m:ss,m:ss`);
+    return p.map(x => x.trim()) as [string, string];
+  };
+  const kickoffArg = pair("--kickoff"), halvesArg = pair("--halves");
+  const s = settings();
+  const teamId = needTeam(s);
+  const db = admin(s);
+  const force = args.includes("--force");
+
+  // 1. The tape (tools/film/reeplayer.js): on a dry run only where it is.
+  const out = opt("--out");
+  const dl = spawnSync(process.execPath, [join(ROOT, "tools", "film", "reeplayer.js"), link, ...(out ? ["--out", out] : []), ...(dry ? ["--info"] : [])],
+    { stdio: ["inherit", "pipe", "inherit"], encoding: "utf8" });
+  if (dl.status !== 0) fail("Couldn't get the tape (above).");
+  const info = JSON.parse(dl.stdout.trim().split(/\r?\n/).pop() ?? "{}") as { share: string; title: string | null; recorded: string | null; duration: number | null; file: string | null };
+  const duration = info.duration ?? fail("Reeplayer didn't say how long the tape is.");
+  console.log(`tape: ${info.title ?? info.share}${info.recorded ? `, recorded ${info.recorded}` : ""}, ${Math.round(duration / 60)} min${info.file ? `\n  ${info.file}` : ""}`);
+
+  // 2. The kept game it shows: the take whose kick-off falls inside the recording, or --game.
+  const { data: rows, error } = await db.from("keeper_entries").select("game, entry").eq("team_id", teamId).order("created_at");
+  if (error) fail(`keeper_entries: ${error.message}`);
+  const byGame = new Map<string, KeepEntry[]>();
+  for (const r of rows ?? []) {
+    const e = KeepEntry.safeParse(r.entry);
+    if (e.success) byGame.set(r.game as string, [...(byGame.get(r.game as string) ?? []), e.data]);
+  }
+  const takes = [...byGame].map(([slug, entries]) => ({ slug, setup: replay(entries).setup, halves: keeperHalves(entries) as Halves }))
+    .filter(t => t.setup && !t.setup.practice);
+  const recStart = info.recorded ? zonedEpoch(info.recorded, s.timeZone) : null;
+  const wanted = opt("--game");
+  const take = wanted
+    ? takes.find(t => t.slug === wanted) ?? (dataJson(`games/${wanted}.json`) ? null : fail(`No kept game or game file ${wanted}. Run: npm run film -- keeper games`))
+    : recStart != null ? pickTake(takes, recStart, duration) : null;
+  const slug = take?.slug ?? wanted ?? fail(
+    `No kept game was played while this tape was recording${info.recorded ? ` (${info.recorded})` : ""}. ` +
+    `Name it with --game <slug> (npm run film -- keeper games lists them)` +
+    (info.recorded ? `; kept that day: ${takes.filter(t => t.setup!.date === info.recorded!.slice(0, 10)).map(t => t.slug).join(", ") || "none"}` : ""));
+  console.log(`game: ${slug}${take?.setup ? ` (${take.setup.opponent})` : ""}`);
+
+  // 3. Where each half sits on the tape. A written-up game keeps its own (hand-checked) timing.
+  const cvDir = join(DATA, "raw", `${slug}-cv`);
+  const gameFile = join(DATA, "games", `${slug}.json`);
+  const written = existsSync(gameFile) ? JSON.parse(readFileSync(gameFile, "utf8")) as Game : null;
+  const venv = join(PRIVATE, ".venv");
+  const py = [join(venv, "Scripts", "python.exe"), join(venv, "bin", "python")].find(existsSync) ?? fail(`No Python env at ${venv} (see tools/film/README.md, Computer vision).`);
+  const python = (script: string, ...a: string[]) => {
+    const r = spawnSync(py, [join(ROOT, "tools", "film", script), ...a], { stdio: "inherit" });
+    if (r.status !== 0) fail(`${script} ${a[0] ?? ""} failed (above).`);
+  };
+  let timing: TapeTiming;
+  if (written) {
+    timing = { kickoff: written.video.kickoff, halfLength: written.video.halfLength };
+    console.log("timing: from the game file");
+  } else {
+    let keeperTiming: TapeTiming | null = null;
+    if (take && recStart != null && (!kickoffArg || !halvesArg)) {
+      let whistles: Whistle[] = [];
+      const cues = join(cvDir, "cues.json");
+      if (info.file && !dry) {
+        mkdirSync(cvDir, { recursive: true });
+        if (!existsSync(cues)) python("scan_tape.py", "cues", info.file, "--out", cues);
+        whistles = JSON.parse(readFileSync(cues, "utf8"));
+      }
+      try {
+        keeperTiming = tapeTiming(take.halves, recStart, duration, take.setup!.halfMin, whistles);
+      } catch (e) {
+        if (!kickoffArg) fail(`${(e as Error).message}. Give the kick-offs with --kickoff m:ss,m:ss (time into the tape) and --halves m:ss,m:ss.`);
+      }
+    }
+    const k = kickoffArg ? { 1: sec(kickoffArg[0]), 2: sec(kickoffArg[1]) } : keeperTiming?.kickoff;
+    const l = halvesArg ? { 1: halvesArg[0], 2: halvesArg[1] } : keeperTiming?.halfLength;
+    if (!k || !l) fail("Can't place the halves on the tape without the scorekeeper's log. Give --kickoff m:ss,m:ss and --halves m:ss,m:ss.");
+    timing = { kickoff: k!, halfLength: l! };
+    console.log(`timing: ${kickoffArg || halvesArg ? "given" : "from the scorekeeper's taps and the whistles"}`);
+  }
+  const at = (x: number) => `${Math.floor(x / 60)}:${String(Math.round(x % 60)).padStart(2, "0")}`;
+  console.log(`  1st half from ${at(timing.kickoff[1])} for ${timing.halfLength[1]}, 2nd half from ${at(timing.kickoff[2])} for ${timing.halfLength[2]}`);
+  if (dry) { console.log("(dry run: nothing downloaded, run or written)"); process.exit(0); }
+
+  // 4. The tape where the vision step looks for it: the game file's highlights.source, or raw/<slug>-cv/tape.json.
+  const file = info.file ?? fail("No tape file.");
+  mkdirSync(cvDir, { recursive: true });
+  if (written) {
+    if (!existsSync(written.highlights.source)) {
+      written.highlights.source = file;
+      writeFileSync(gameFile, JSON.stringify(written, null, 2) + "\n");
+      console.log(`  ${slug}.json: highlights.source is now the downloaded tape`);
+    }
+  } else {
+    const tape = { slug, date: take?.setup?.date ?? slug.slice(0, 10), opponent: take?.setup?.opponent ?? "",
+      highlights: { source: file }, video: timing, reeplayer: { share: info.share, title: info.title, recorded: info.recorded } };
+    writeFileSync(join(cvDir, "tape.json"), JSON.stringify(tape, null, 1) + "\n");
+  }
+
+  // 5. The estimates (tools/film/cv_game.py): the kits, the kit check (a screen, unless --yes), both halves.
+  const again = force ? ["--force"] : [];
+  python("cv_game.py", "prepare", slug, ...again);
+  python("cv_game.py", "confirm", slug, ...again, ...(args.includes("--yes") ? ["--yes"] : []));
+  if (!existsSync(join(cvDir, "teams.pkl"))) fail("The kits weren't confirmed, so nothing was run. Run the command again to confirm them.");
+  python("cv_game.py", "run", slug, ...again);
+  const result = JSON.parse(readFileSync(join(cvDir, "game.json"), "utf8"));
+
+  // 6. Onto the kept game's page.
+  const { ollie: _ollie, slug: _slug, opponent: _opp, ...stats } = result;
+  const { error: upErr } = await db.from("film_video_stats").upsert({
+    team_id: teamId, game: slug, event_id: take?.setup?.eventId ?? null, stats: { ...stats, halfLength: timing.halfLength },
+    unsure: !!result.kits?.unsure, source: info.share, updated_at: new Date().toISOString(),
+  }, { onConflict: "team_id,game" });
+  if (upErr) fail(`film_video_stats: ${upErr.message}. Run sql/film_video_stats_migration.sql first.`);
+  console.log(`✓ ${slug}: possession ${result.possession.join("–")}%, passes ${result.passes.join("–")}, turnovers ${result.turnovers.join("–")}` +
+    `${result.kits?.unsure ? " (marked unsure: the kits weren't told apart)" : ""}`);
+  console.log(take ? `  on the game's page now: /live/${teamId}/${slug} (Stats)` : "  no kept game, so it shows once the game is written up and published");
+  if (written) console.log("  written into the match report too; run npm run film -- publish to update it");
 } else if (cmd === "check") {
   const s = settings();
   const db = admin(s);
@@ -370,5 +500,5 @@ if (cmd === "teams") {
     if (n != null) console.log(`✓ clips bucket: ${n} clips`);
   }
 } else {
-  fail("usage: npm run film -- teams | roster [--dry-run] | publish [--dry-run] | stats [--dry-run] | keeper games|pull|forget | move-keeper [--dry-run] | check");
+  fail("usage: npm run film -- teams | roster [--dry-run] | publish [--dry-run] | stats [--dry-run] | keeper games|pull|forget | move-keeper [--dry-run] | check | postgame <Reeplayer link>");
 }

@@ -38,6 +38,11 @@ export default {
     live_backToSchedule: 'Schedule',
     live_follow: 'Live {{us}}–{{them}}',
     live_gameStats: 'Game stats {{us}}–{{them}}',
+    live_videoTitle: 'Estimated from the video',
+    live_videoNote:
+      'A computer model followed the players and the ball on the tape. Treat these as a guide to trends and weak stretches, not a count.',
+    live_videoUnsure: '* The model struggled to tell the kits apart, so these are rougher than usual.',
+    live_videoStretches: 'Our possession by 5-minute stretch',
     kp_practiceRun: 'Practice run',
     kp_practiceName: 'Practice',
     kp_practiceTag: 'Practice',

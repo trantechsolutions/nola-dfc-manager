@@ -27,6 +27,24 @@ Working files live in `private/film/`. It is git-ignored and stays on the coach'
 
 If the scorekeeper logged the game, run `npm run film -- keeper pull <game> --as <slug>` before writing the file. It writes the moments to `data/raw/<slug>-live.json` and the lineup to `lineups.json`.
 
+## Right after a game: video stats from the Reeplayer link
+
+```
+npm run film -- postgame <Reeplayer share link>
+```
+
+One command, once the game's video is up on Reeplayer. It:
+
+1. downloads the tape (as `film:tape` does);
+2. finds the kept game it shows: the scorekeeper's game whose kick-off falls inside the recording (the recording start is in the file name), so a retake kept later from the film isn't picked;
+3. works out where each half sits on the tape from the scorekeeper's kick-off and end taps, then pulls each one onto the nearest long referee whistle (`scan_tape.py cues`);
+4. runs the computer vision below (`cv_game.py prepare`, `confirm`, `run`). The kit screen opens for the ~10 s check. Add `--yes` to skip it when the first guess already has both teams (light blue against red);
+5. writes possession, passes, turnovers and the 5-minute stretches to `film_video_stats` (run `sql/film_video_stats_migration.sql` once). They show under **Stats** on the game's page in the app, marked as estimates.
+
+No game file is needed. Until the game is written up, the timing is kept in `data/raw/<slug>-cv/tape.json`. Once `data/games/<slug>.json` exists, its own `video` timing is used, the estimates are written into the match report, and `npm run film -- publish` puts them there.
+
+Options: `--game <kept game>` when the tape can't be matched, `--kickoff m:ss,m:ss --halves m:ss,m:ss` (time into the tape, then each half's length) when there's no scorekeeper log or the taps are off, `--force` to redo every step, `--dry-run` to see the match and the timing without downloading. Takes about 35 minutes a game on the GPU.
+
 ## Computer vision (pilot)
 
 Runs on the GPU in its own Python env, `private/film/.venv` (PyTorch for CUDA 12.8, ultralytics), with models in `private/film/models/`. Nothing leaves the PC.
