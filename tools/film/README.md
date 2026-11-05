@@ -33,7 +33,9 @@ Runs on the GPU in its own Python env, `private/film/.venv` (PyTorch for CUDA 12
 
 - `private/film/.venv/Scripts/python tools/film/cv_pilot.py <slug> --from 0:00 --len 5:00` follows the players and the ball over a stretch and writes rough possession, passes and turnovers, plus a marked-up video, to `data/raw/<slug>-cv/`.
 - `private/film/.venv/Scripts/python tools/film/cv_label.py` is the ball labelling screen. It saves to `data/cv/ball/` for training a ball detector on our own footage.
+- `cv_goals.py` is the goal labelling screen over the same pictures (two clicks a goal). With it, `cv_train.py` also teaches the detector to see goals.
 - `cv_train.py` trains our own player-and-ball detector (`models/ball.pt`) from those labels.
+- `cv_shots.py find | review | apply` counts shots, shots on target and saves. The model flags candidate strikes near a goal (about an hour a game), the coach says on a review screen what each one was (about 5 minutes), and apply writes the table into the match report. Goals are checked against the logged goals: a logged goal the model missed is still counted, and each goal takes the scorer from the log.
 - `cv_game.py prepare | confirm | run | apply | report` does whole games: learns each game's kits, has the coach mark which look-alike group is DFC and which the opponent, runs both halves, writes the estimates into the match report and prints the season table. A game where the model can't tell the kits apart is marked unsure, and the app shows its numbers with an asterisk and leaves them out of the averages. The top of the file has the details.
 - `npm run film:vision -- <slug>` is the paid alternative: Claude follows the play frame by frame (needs an Anthropic API key).
 
