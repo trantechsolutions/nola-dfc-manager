@@ -10,6 +10,18 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-11-05 — Shots and saves, checked by the coach (6fdc329..9f4c11c)
+
+**Delivered:** shots, shots on target and saves from the game video. The model flags candidate shots and a coach confirms each one on a review screen, about 5 minutes a game. A Saves column on the season overview. One game done (HFC 9/26); the other 12 are being processed.
+
+**Decisions:** the coach confirms every candidate, because the model alone flags about seven false shots for each real one. Goals are reconciled with the logged goal times and scorers: the model missed two of HFC's seven goals (a free kick lost in flight, and one in the first half), and a goal marked twice or for the wrong side is corrected automatically. Saves are a keeper's: ours are the opponent's shots on target that didn't go in.
+
+**Risk:** on HFC the checked counts came out lower than the hand-logged ones (shots 8–9 against 10–8, on target 6–4 against 8–6). The review screen pre-fills the model's guess of which team shot, and that guess was wrong on three of six goals, so the team split on non-goal shots is unreliable until the screen is changed to require a choice.
+
+**Effort:** about an hour of GPU time a game to find candidates, run overnight; about 5 minutes of coach review a game.
+
+**Open:** make the review screen require a team on every shot; review and apply the other 12 games; publish the film data.
+
 ## 2026-11-03 — Game stats from the video (b7d42a7..8eadaaa)
 
 **Delivered:** a local computer-vision pipeline that estimates possession, passes, turnovers and 5-minute possession stretches from each game's tape. Run on 13 games. The season overview and recurring themes now lead with these numbers, and readings the model was unsure of are flagged.

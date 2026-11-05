@@ -26,6 +26,38 @@ Vitest + Testing Library, ESLint. Deployed on Vercel.
 
 ---
 
+## 2026-11-05 — Shots and saves, checked by the coach (6fdc329..9f4c11c)
+
+**Commits.**
+
+```
+9f4c11c feat: show saves and the coach-checked shots on the season overview
+6fdc329 feat: find shots and saves on the tape for the coach to confirm
+```
+
+**Touched.**
+
+- Tooling, `tools/film/`:
+  - `cv_goals.py` (new): goal box labelling over the ball-labelled images, writes `data/cv/ball/goals.json`.
+  - `cv_train.py`: adds class 2 `goal` when every labelled image has goal labels.
+  - `cv_shots.py` (new): `find` (scan one frame in 12 for a goal in view with play near it, then follow every 2nd frame of those windows with ByteTrack and the team split; follow results cached in `data/raw/<slug>-cv/follow/`), `review` (OpenCV loop, verdicts saved under `shots.json` `review`), `apply` (writes the "Shots and saves (from the video, checked by the coach)" table).
+  - `README.md`.
+- App:
+  - `src/film/lib/season.ts`: `SHOTS_TABLE` checked first in `statOf`; `saves` in `GameLine` and `avg`.
+  - `src/views/film/FilmSeason.jsx`: Saves column. `src/i18n/{en,es}/film.js`: `colSaves`.
+  - `src/film/lib/film.test.ts`: checked shots take precedence; saves under either label.
+
+**Schema/API.** No database change. Game JSON gains one more stat table, using the existing table shape.
+
+**Rationale.**
+
+- Candidate shot rule: speed 6–40 player heights a second, heading within cos 0.75 of the goal, struck from within 5 goal widths, gaps of up to 1.2 s bridged if the next sighting is at the goal. Candidates within 1.5 s merge.
+- `counts()` reconciles marks with the logged `Goal` events: a "goal" mark takes the side of the logged goal within 10 s, a duplicate is dropped, a mark with no logged goal becomes "saved", and unflagged logged goals are added as on-target goals. HFC's 2H 25:43 free kick was struck from about 5.6 goal widths and lost for 3.4 s in flight while the camera panned, outside both limits; widening them would multiply false candidates.
+
+**Tests.** `npx vitest run src/film`: 69 passed.
+
+**Rollback.** Revert 9f4c11c and 6fdc329. Remove the shots table from any applied game JSON, or leave it: older builds ignore it.
+
 ## 2026-11-03 — Game stats from the video (b7d42a7..8eadaaa)
 
 **Commits.**

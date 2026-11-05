@@ -14,7 +14,7 @@ type Pair = [us: number, them: number];
 export interface GameLine {
   slug: string; date: string; opponent: string; home: boolean | null;
   us: number; them: number; htUs: number; htThem: number; result: Result;
-  shots: Pair | null; onTarget: Pair | null; possession: Pair | null;
+  shots: Pair | null; onTarget: Pair | null; saves: Pair | null; possession: Pair | null;
   passes: Pair | null; turnovers: Pair | null;
   fromVideo: boolean;                   // possession is the video estimate, not Ollie's
   unsure: boolean;                      // the model struggled to tell the kits apart; left out of averages
@@ -22,6 +22,7 @@ export interface GameLine {
 
 export const VIDEO_TABLE = "Ball and possession (estimated from the video)";
 export const STRETCH_TABLE = "Possession by 5-minute stretch (estimated from the video)";
+export const SHOTS_TABLE = "Shots and saves (from the video, checked by the coach)";
 
 const table = (g: PublicGame, title: string) => g.report.numbers.tables.find(t => t.title?.en === title);
 
@@ -31,15 +32,19 @@ function videoStat(g: PublicGame, label: RegExp): Pair | null {
 }
 
 // Stat tables are written per game with free-text labels ("Shots on goal", "On target", "Possession %"),
-// so rows are matched by their English label. The first match wins: the first table is the full game.
-const STAT: Record<"shots" | "onTarget" | "possession", RegExp> = {
+// so rows are matched by their English label. The first match wins: the shots the coach checked on the video
+// (tools/film/cv_shots.py) come first, then the tables in order, the first being the full game.
+// Saves are a keeper's: "us" is our keeper's saves.
+const STAT: Record<"shots" | "onTarget" | "saves" | "possession", RegExp> = {
   shots: /^shots$/i,
   onTarget: /\bon (goal|target)\b/i,
+  saves: /\bsaves$/i,
   possession: /possession/i,
 };
 
 export function statOf(g: PublicGame, kind: keyof typeof STAT): Pair | null {
-  for (const tb of g.report.numbers.tables) {
+  const checked = table(g, SHOTS_TABLE);
+  for (const tb of [...(checked ? [checked] : []), ...g.report.numbers.tables]) {
     const r = tb.rows.find(r => STAT[kind].test(r.label.en.trim()));
     if (r) return [r.us, r.them];
   }
@@ -52,7 +57,7 @@ export function gameLine(g: PublicGame): GameLine {
   return {
     slug: g.slug, date: g.date, opponent: g.opponent, home: g.home,
     us, them, htUs, htThem, result: result(us, them),
-    shots: statOf(g, "shots"), onTarget: statOf(g, "onTarget"), possession: video ?? statOf(g, "possession"),
+    shots: statOf(g, "shots"), onTarget: statOf(g, "onTarget"), saves: statOf(g, "saves"), possession: video ?? statOf(g, "possession"),
     passes: videoStat(g, /^completed passes$/i), turnovers: videoStat(g, /^turnovers$/i), fromVideo: video !== null,
     unsure: table(g, VIDEO_TABLE)?.unsure === true,
   };
@@ -117,7 +122,7 @@ export interface Season {
   /** Opponents met more than once, each with its games oldest first. */
   repeats: { opponent: string; lines: GameLine[] }[];
   /** Averages over the games that recorded the stat; video estimates the model was unsure of are left out. */
-  avg: Record<"shots" | "onTarget" | "possession" | "passes" | "turnovers", Pair | null>;
+  avg: Record<"shots" | "onTarget" | "saves" | "possession" | "passes" | "turnovers", Pair | null>;
   stretches: Stretch[];
 }
 
@@ -154,7 +159,7 @@ export function season(games: PublicGame[]): Season {
     return [r(xs.reduce((s, p) => s + p[0], 0)), r(xs.reduce((s, p) => s + p[1], 0))];
   };
 
-  const avg = { shots: mean("shots"), onTarget: mean("onTarget"), possession: mean("possession"), passes: mean("passes"), turnovers: mean("turnovers") };
+  const avg = { shots: mean("shots"), onTarget: mean("onTarget"), saves: mean("saves"), possession: mean("possession"), passes: mean("passes"), turnovers: mean("turnovers") };
   return { lines, record, timing, fromHalfTime, repeats, avg, stretches: stretches(sorted) };
 }
 

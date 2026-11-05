@@ -10,6 +10,13 @@ Each entry here has a matching entry, under the same heading, in
 
 ---
 
+## 2026-11-05 — Shots and saves, checked by the coach (6fdc329..9f4c11c)
+
+- **Shots, shots on target and saves are coming from the game video.** The computer program spots the moments that look like a shot, and a coach watches each one for a few seconds and says what it was. That keeps the numbers honest without the coach watching the whole game again.
+- **The season overview has a new Saves column:** how many saves our keeper made, next to the other team's keeper.
+- **Every goal is counted, even ones the program misses.** Goals are checked against the logged goal times, so a long free kick the camera lost in flight still counts, for the right team.
+- The first game done is HFC on 26 Sept. The other games are being worked through and will appear once a coach has reviewed them and the film data is published.
+
 ## 2026-11-03 — Game stats from the video (b7d42a7..8eadaaa)
 
 - **Possession, passes and turnovers now come from the game video.** A computer program follows the players and the ball on the tape and estimates the numbers. Before, they came from Ollie, which a parent taps live and which tends to cut possession short. Ollie is still used for any game the video hasn't been run on, marked with a †.

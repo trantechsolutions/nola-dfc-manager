@@ -251,6 +251,7 @@ export default {
     colScore: 'Marcador',
     colShots: 'Tiros',
     colOnTarget: 'A puerta',
+    colSaves: 'Paradas',
     colPossession: 'Posesión',
     colPasses: 'Pases',
     colTurnovers: 'Pérdidas',

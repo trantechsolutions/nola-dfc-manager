@@ -247,6 +247,7 @@ export default {
     colScore: 'Score',
     colShots: 'Shots',
     colOnTarget: 'On target',
+    colSaves: 'Saves',
     colPossession: 'Possession',
     colPasses: 'Passes',
     colTurnovers: 'Turnovers',

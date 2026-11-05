@@ -206,6 +206,7 @@ export default function FilmSeason() {
                 <th className="py-2 pr-3 font-semibold">{t('colScore')}</th>
                 <th className="py-2 pr-3 font-semibold">{t('colShots')}</th>
                 <th className="py-2 pr-3 font-semibold">{t('colOnTarget')}</th>
+                <th className="py-2 pr-3 font-semibold">{t('colSaves')}</th>
                 <th className="py-2 pr-3 font-semibold">{t('colPossession')}</th>
                 <th className="py-2 pr-3 font-semibold">{t('colPasses')}</th>
                 <th className="py-2 font-semibold">{t('colTurnovers')}</th>
@@ -227,6 +228,7 @@ export default function FilmSeason() {
                   </td>
                   <td className="py-2 pr-3">{pair(l.shots)}</td>
                   <td className="py-2 pr-3">{pair(l.onTarget)}</td>
+                  <td className="py-2 pr-3">{pair(l.saves)}</td>
                   <td className="whitespace-nowrap py-2 pr-3">
                     {pair(l.possession, '%')}
                     {l.possession && !l.fromVideo && <span title={t('fromOllie')}>†</span>}
@@ -253,6 +255,7 @@ export default function FilmSeason() {
                 </td>
                 <td className="py-2 pr-3">{pair(s.avg.shots)}</td>
                 <td className="py-2 pr-3">{pair(s.avg.onTarget)}</td>
+                <td className="py-2 pr-3">{pair(s.avg.saves)}</td>
                 <td className="py-2 pr-3">{pair(s.avg.possession, '%')}</td>
                 <td className="py-2 pr-3">{pair(s.avg.passes)}</td>
                 <td className="py-2">{pair(s.avg.turnovers)}</td>

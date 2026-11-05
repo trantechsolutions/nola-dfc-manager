@@ -5,7 +5,7 @@ import { Game, KeepEntry, Roster, type Lineup, type Lineups, type OlliePlayers }
 import { fixtureGame } from "./fixture";
 import { parseMarkup, stripMarkup } from "./markup";
 import { candidates, couldPlay, playerLabel, splitPositions } from "./positions";
-import { STRETCH_TABLE, VIDEO_TABLE, gameLine, season, statOf, stretches, themes } from "./season";
+import { SHOTS_TABLE, STRETCH_TABLE, VIDEO_TABLE, gameLine, season, statOf, stretches, themes } from "./season";
 import { lineupFor, playLineup, positionsOf, secondsOn, whoAt, whoPlayed } from "./lineup";
 import { nameMoment } from "./naming";
 import { playerSeasons } from "./players";
@@ -150,6 +150,17 @@ describe("season", () => {
       { half: 1, from: 5, to: 10, dfc: 65, games: 2, low: 0 },
       { half: 2, from: 30, to: 39, dfc: 40, games: 2, low: 1 },
     ]);
+  });
+
+  it("prefers the shots the coach checked on the video, and finds saves under either label", () => {
+    const g = withStats([["Shots", 10, 8], ["Shots on goal", 8, 6], ["GK saves", 3, 4]]);
+    expect(gameLine(g)).toMatchObject({ shots: [10, 8], onTarget: [8, 6], saves: [3, 4] });
+    g.report.numbers.tables.push({ title: T(SHOTS_TABLE), rows: [
+      { label: T("Shots"), us: 12, them: 7 },
+      { label: T("Shots on target"), us: 7, them: 5 },
+      { label: T("Saves"), us: 2, them: 3 },
+    ] });
+    expect(gameLine(g)).toMatchObject({ shots: [12, 7], onTarget: [7, 5], saves: [2, 3] });
   });
 
   it("marks video estimates the model was unsure of and leaves them out of the averages", () => {

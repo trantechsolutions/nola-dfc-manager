@@ -3,7 +3,8 @@
     private/film/.venv/Scripts/python tools/film/cv_train.py [--epochs 100] [--base yolo11s.pt] [--batch 2]
 
 The ball boxes are the clicks; the player boxes on the same frames come from the stock model (yolo11x),
-which already finds players well. Classes: 0 player, 1 ball. Frames are split 85/15 into train and
+which already finds players well; the goal boxes come from cv_goals.py, once every frame has been through
+it (until then the model is trained without goals). Classes: 0 player, 1 ball, 2 goal. Frames are split 85/15 into train and
 check sets by a fixed shuffle, so reruns compare like with like.
 
 Writes the label files next to data/cv/ball/images/, then trains into models/runs/<name>/; the finished
@@ -25,6 +26,11 @@ def build():
 
     labels = [l for l in json.loads((BALL / "labels.json").read_text(encoding="utf8")) if l["kind"] != "skip"]
     (BALL / "labels").mkdir(exist_ok=True)
+    gp = BALL / "goals.json"
+    goals = json.loads(gp.read_text(encoding="utf8")) if gp.exists() else {}
+    if goals and not all(l["image"] in goals for l in labels):
+        print(f"Only {len(goals)}/{len(labels)} frames have their goals boxed: training without goals. Finish cv_goals.py first.")
+        goals = {}
     stock = YOLO(str(MODELS / "yolo11x.pt"))
     for n, l in enumerate(labels, 1):
         img = BALL / "images" / l["image"]
@@ -34,6 +40,8 @@ def build():
         if l["kind"] == "ball":
             bx, by, s = l["ball"]
             rows.append(f"1 {bx / W:.6f} {by / H:.6f} {s / W:.6f} {s / H:.6f}")
+        for x1, y1, x2, y2 in goals.get(l["image"], []):
+            rows.append(f"2 {(x1 + x2) / 2 / W:.6f} {(y1 + y2) / 2 / H:.6f} {(x2 - x1) / W:.6f} {(y2 - y1) / H:.6f}")
         (BALL / "labels" / img.with_suffix(".txt").name).write_text("\n".join(rows) + "\n", encoding="utf8")
         if n % 50 == 0:
             print(f"  labelled {n}/{len(labels)}", flush=True)
@@ -43,7 +51,7 @@ def build():
     (BALL / "train.txt").write_text("\n".join(imgs[:cut]) + "\n", encoding="utf8")
     (BALL / "val.txt").write_text("\n".join(imgs[cut:]) + "\n", encoding="utf8")
     (BALL / "data.yaml").write_text(f"path: {BALL.resolve().as_posix()}\ntrain: train.txt\nval: val.txt\n"
-                                    "names:\n  0: player\n  1: ball\n", encoding="utf8")
+                                    "names:\n  0: player\n  1: ball\n" + ("  2: goal\n" if goals else ""), encoding="utf8")
     print(f"{cut} frames to train on, {len(imgs) - cut} to check against")
 
 
